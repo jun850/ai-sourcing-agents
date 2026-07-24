@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCANA</title>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-root=".." data-search="Search fabrics, materials, suppliers…">
+<div id="hdr"></div>
+
+<main class="wrap">
+  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur" id="crumbCat">Fabrics</span></nav>
+
+  <div class="listing">
+    <!-- filter rail -->
+    <aside class="filter-rail">
+      <div class="frl-head"><b data-i18n="cat.filters">Filters</b><a href="#" id="clearFilters" data-i18n="cat.reset">Reset</a></div>
+      <div class="frl-block">
+        <h5 data-i18n="cat.oemavail">OEM availability</h5>
+        <label class="frl-opt"><input type="radio" name="avail" value="all" checked> <span data-i18n="cat.all">All</span></label>
+        <label class="frl-opt"><input type="radio" name="avail" value="oem"> <span data-i18n="cat.oemAvailable">OEM available</span></label>
+        <label class="frl-opt"><input type="radio" name="avail" value="nonoem"> <span data-i18n="cat.nonoem">Non-OEM</span></label>
+      </div>
+      <div class="frl-block">
+        <h5 data-i18n="cat.material">Material</h5>
+        <div id="matOpts"></div>
+      </div>
+      <div class="frl-block">
+        <h5 data-i18n="cat.price">Price (US$ / unit)</h5>
+        <div class="frl-price"><input type="number" id="pmin" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" placeholder="Max" min="0"></div>
+      </div>
+      <div class="frl-block">
+        <h5 data-i18n="cat.certs">Certifications</h5>
+        <label class="frl-opt"><input type="checkbox" disabled> GRS <span class="cnt">128</span></label>
+        <label class="frl-opt"><input type="checkbox" disabled> Oeko-Tex <span class="cnt">340</span></label>
+        <label class="frl-opt"><input type="checkbox" disabled> GOTS <span class="cnt">92</span></label>
+      </div>
+    </aside>
+
+    <!-- main -->
+    <div class="listing-main">
+      <div class="list-top">
+        <h1 id="listTitle">Fabrics</h1>
+        <div class="cnt" id="listSub"><b style="color:var(--ink)">1,246+</b> options from <b style="color:var(--ink)">520+</b> verified suppliers</div>
+      </div>
+      <div class="sortbar">
+        <span class="lbl" data-i18n="cat.sort">Sort</span>
+        <div class="sort-chips" id="sortChips">
+          <button class="sort-chip on" data-sort="rec" data-i18n="sort.rec">Recommended</button>
+          <button class="sort-chip" data-sort="new" data-i18n="sort.new">Newest</button>
+          <button class="sort-chip" data-sort="moq" data-i18n="sort.moq">MOQ: Low</button>
+          <button class="sort-chip" data-sort="price" data-i18n="sort.price">Price: Low</button>
+        </div>
+        <span class="count" id="resCount"></span>
+      </div>
+      <div class="prod-grid" id="grid"></div>
+    </div>
+  </div>
+  <div style="height:40px"></div>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/copilot.js"></script>
+<script src="../js/components.js"></script>
+<script>
+window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+  // ---- Sourcing Copilot results mode ----
+  if(new URLSearchParams(location.search).get('copilot')==='1'){ return runCopilot(); }
+
+  function runCopilot(){
+    const Cop=window.ARCANA_Copilot;
+    const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
+    const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
+    const SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>';
+
+    const main=document.querySelector('main.wrap');
+    const listing=document.querySelector('.listing');
+    document.querySelector('.filter-rail').style.display='none';
+    document.querySelector('.list-top').style.display='none';
+    document.querySelector('.sortbar').style.display='none';
+    listing.style.display='block';
+    document.getElementById('crumbCat').textContent='Sourcing Copilot';
+    const grid=document.getElementById('grid'); grid.className='cop-grid';
+
+    const bar=document.createElement('section'); bar.className='cop-bar';
+    main.insertBefore(bar, listing);
+
+    function skeleton(){
+      grid.innerHTML=Array.from({length:6}).map(()=>`
+        <div class="sk"><div class="sk-img cop-shimmer"></div>
+          <div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>`).join('');
+      grid.className='cop-skel';
+    }
+    function streamText(el, text){
+      if(reduce){ el.textContent=text; return Promise.resolve(); }
+      return new Promise(res=>{ let i=0; const tick=()=>{ i++; el.textContent=text.slice(0,i);
+        if(i<text.length) setTimeout(tick, 11); else res(); }; tick(); });
+    }
+    function resultHTML(r,i){
+      const p=r.p;
+      const card=window.ARCANA_card(p,{href:'product.html?id='+p.id, fabricSpec:p.cat==='fabrics'});
+      const lbl = r.total ? `${r.matched}/${r.total} criteria met` : 'Relevant to your brief';
+      const hits=r.hits.map(h=>`<span class="cop-hit">${CHK}${h}</span>`).join('');
+      const miss=r.miss.map(m=>`<span class="cop-missc">${DSH}${m}</span>`).join('');
+      return `<div class="cop-result${i===0?' top':''}">${card}
+        <div class="cop-reason">
+          <div class="cop-reason-head">
+            <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
+            <div class="cop-score-lbl"><b>${r.score}% match</b>${lbl}</div>
+            ${i===0?'<span class="cop-topflag">Top match</span>':''}
+          </div>
+          <div class="cop-chips">${hits}${miss}</div>
+        </div></div>`;
+    }
+
+    let editing=false;
+    function paintBar(brief, summaryText, intent){
+      const chips = intent ? Cop.describe(intent) : [];
+      bar.innerHTML=`
+        <div class="cop-bar-top">
+          <span class="cop-avatar">${SPARK}</span>
+          <div style="flex:1;min-width:0">
+            <div class="cop-role">Sourcing Copilot</div>
+            <div class="cop-summary" data-cop-summary role="status" aria-live="polite"></div>
+          </div>
+          <div class="cop-actions">
+            <button type="button" data-cop-refine>${SPARK.replace('width="1.6"','width="1.8"')} Refine</button>
+            <button type="button" class="cop-clear" data-cop-clear>Clear</button>
+          </div>
+        </div>
+        ${chips.length?`<div class="cop-brief"><span class="lbl">Reading your brief as</span>${chips.map(c=>`<span class="cop-tag">${c}</span>`).join('')}</div>`:''}
+        <form class="cop-editform" data-cop-edit hidden>
+          <input type="text" value="${(brief||'').replace(/"/g,'&quot;')}" aria-label="Refine your sourcing brief" placeholder="Describe what you're sourcing…">
+          <button class="cop-ask" type="submit">Search</button>
+        </form>`;
+      bar.querySelector('[data-cop-clear]').addEventListener('click',()=>{ Cop.clearBrief(); location.href='category.html'; });
+      const editForm=bar.querySelector('[data-cop-edit]');
+      bar.querySelector('[data-cop-refine]').addEventListener('click',()=>{
+        editing=!editing; editForm.hidden=!editing; if(editing) editForm.querySelector('input').focus();
+      });
+      editForm.addEventListener('submit',e=>{ e.preventDefault();
+        const v=editForm.querySelector('input').value.trim(); if(!v) return;
+        Cop.setBrief(v); run(v);
+      });
+      return bar.querySelector('[data-cop-summary]');
+    }
+
+    async function run(text){
+      skeleton();
+      const sumEl=paintBar(text, '', Cop.parse(text));
+      const {matches, summary, intent}=await Cop.ask(text);
+      grid.className='cop-grid';
+      const list=matches.slice(0,12);
+      grid.innerHTML = list.length
+        ? list.map(resultHTML).join('')
+        : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>Try relaxing one constraint — a higher price ceiling, a larger MOQ, or one fewer certification — then search again.</p></div>`;
+      window.ARCANA_wireCards(grid);
+      await streamText(sumEl, summary);
+    }
+
+    const brief=Cop.getBrief();
+    if(brief && brief.text){ run(brief.text); }
+    else {
+      grid.className='cop-grid'; grid.innerHTML='';
+      const sumEl=paintBar('', '', null);
+      sumEl.textContent='Describe what you’re sourcing and I’ll match it against every verified SKU.';
+      editing=true; const ef=bar.querySelector('[data-cop-edit]'); ef.hidden=false; ef.querySelector('input').focus();
+    }
+  }
+
+  const M=window.ARCANA_PRODUCT_MAP;
+  const DEAL=Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
+  const META={
+    fabrics:{title:'Fabrics',sub:['1,246+','520+'],noun:'fabric options'},
+    accessories:{title:'Accessories',sub:['680+','210+'],noun:'accessory options'},
+    trims:{title:'Trims',sub:['540+','180+'],noun:'trim options'},
+    yarns:{title:'Yarns & Threads',sub:['390+','140+'],noun:'yarn & thread options'},
+    oem:{title:'OEM Services',sub:['320+','260+'],noun:'service packages'},
+  };
+  const qs=new URLSearchParams(location.search);
+  let cat=qs.get('cat'); if(!META[cat])cat='fabrics';
+  const q=(qs.get('q')||'').trim().toLowerCase();
+  const meta=META[cat];
+  const heading = q ? q.replace(/\b\w/g,c=>c.toUpperCase()) : meta.title;
+  document.getElementById('crumbCat').textContent=heading;
+  document.getElementById('listTitle').textContent=heading;
+
+  document.getElementById('listSub').innerHTML= q
+    ? `${heading} in <a href="category.html?cat=${cat}" style="color:var(--green);font-weight:600">${meta.title}</a>`
+    : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${meta.noun} from <b style="color:var(--ink)">${meta.sub[1]}</b> verified suppliers`;
+  const isFabric=cat==='fabrics';
+  const items=window.ARCANA_PRODUCTS.filter(p=>p.cat===cat && (!q || (p.name+' '+p.comp+' '+p.spec).toLowerCase().includes(q)));
+  // deterministic mock rating/sold
+  const rnd=(id,a,b)=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return a+(h%(Math.round((b-a)*10)+1))/10;};
+  const soldOf=id=>[ '500+','1rb+','2rb+','5rb+','800+' ][id.charCodeAt(4)%5];
+  // materials facet
+  const mats=['Cotton','Polyester','Linen','Nylon','Wool','Viscose','Spandex'];
+  document.getElementById('matOpts').innerHTML=mats.map(m=>{
+    const n=items.filter(p=>p.comp.toLowerCase().includes(m.toLowerCase())).length;
+    return `<label class="frl-opt"><input type="checkbox" value="${m}" ${n?'':'disabled'}> <span data-mat="${m}">${window.ARCANA_TR(m)}</span> <span class="cnt">${n}</span></label>`;
+  }).join('');
+  if(!items.some(p=>mats.some(m=>p.comp.toLowerCase().includes(m.toLowerCase())))) document.getElementById('matOpts').closest('.frl-block').style.display='none';
+
+  let avail='all', sort='rec', mat=[], pmin=null, pmax=null;
+  const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
+  const grid=document.getElementById('grid'), resCount=document.getElementById('resCount');
+
+  function render(){
+    const TR=window.ARCANA_TR, T=window.ARCANA_T;
+    const heTitle = q ? heading : TR(meta.title);
+    document.getElementById('crumbCat').textContent = heTitle;
+    document.getElementById('listTitle').textContent = heTitle;
+    // subtitle + material facet labels (re-translate on language switch)
+    document.getElementById('listSub').innerHTML = q
+      ? `${heading} in <a href="category.html?cat=${cat}" style="color:var(--green);font-weight:600">${TR(meta.title)}</a>`
+      : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${T('noun.'+cat)} · <b style="color:var(--ink)">${meta.sub[1]}</b> ${T('cat.verified')}`;
+    document.querySelectorAll('#matOpts [data-mat]').forEach(el=>{ el.textContent = TR(el.dataset.mat); });
+    let list=items.filter(p=>{
+      if(avail==='oem' && !(p.badge==='oem'||p.badge==='recycle')) return false;
+      if(avail==='nonoem' && p.badge!=='nonoem') return false;
+      if(mat.length && !mat.some(m=>p.comp.toLowerCase().includes(m.toLowerCase()))) return false;
+      if(pmin!=null && p.price<pmin) return false;
+      if(pmax!=null && p.price>pmax) return false;
+      return true;
+    });
+    if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
+    else if(sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
+    else if(sort==='new') list=[...list].reverse();
+    resCount.textContent=`${list.length} ${T(list.length===1?'result':'results')}`;
+
+    grid.innerHTML = list.length
+      ? list.map(p=>window.ARCANA_card(p,{href:'product.html?id='+p.id, fabricSpec:isFabric})).join('')
+      : `<div style="grid-column:1/-1;padding:60px;text-align:center;color:var(--muted)">No ${meta.noun} match these filters. <a href="#" id="reset2" style="color:var(--green);font-weight:600">Reset filters</a></div>`;
+
+    window.ARCANA_wireCards(grid);
+    const r2=document.getElementById('reset2'); if(r2) r2.addEventListener('click',e=>{e.preventDefault();resetAll();});
+  }
+
+  function resetAll(){ avail='all'; sort='rec'; mat=[]; pmin=pmax=null;
+    document.querySelector('[name=avail][value=all]').checked=true;
+    document.querySelectorAll('#matOpts input').forEach(c=>c.checked=false);
+    document.getElementById('pmin').value=''; document.getElementById('pmax').value='';
+    document.querySelectorAll('.sort-chip').forEach(c=>c.classList.toggle('on',c.dataset.sort==='rec'));
+    render();
+  }
+
+  document.querySelectorAll('[name=avail]').forEach(r=>r.addEventListener('change',()=>{avail=r.value;render();}));
+  document.getElementById('matOpts').addEventListener('change',()=>{mat=[...document.querySelectorAll('#matOpts input:checked')].map(c=>c.value);render();});
+  document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;render();});
+  document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;render();});
+  document.querySelectorAll('.sort-chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');sort=c.dataset.sort;render();}));
+  document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
+  render();
+  window.ARCANA_onLang(render);
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCANA</title>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-hdr="a" data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
+<div id="hdr"></div>
+
+<main class="wrap">
+  <!-- BANNER CAROUSEL -->
+  <section class="banner-carousel" id="banner" aria-label="Promotions" aria-roledescription="carousel">
+    <div class="bslide on" data-slide>
+      <img src="assets/banner-source.webp" alt="Folded premium fabrics on display">
+      <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h2 data-i18n="hero.h1">The wholesale marketplace for your next collection</h2><p data-i18n="hero.p1">Quality materials and trusted, verified factories — built for brand owners.</p><a class="btn btn-gold" href="pages/category.html" data-i18n="hero.cta1">Start sourcing</a></div>
+    </div>
+    <div class="bslide" data-slide>
+      <img src="assets/banner-sale.webp" alt="11.11 fabric sale">
+      <div class="bov"><span class="btag" data-i18n="hero.btag2">LIMITED · 11.11 SALE</span><h2 data-i18n="hero.h2">Up to 50% off verified fabrics &amp; OEM</h2><p data-i18n="hero.p2">Stock your next collection for less — from mills you can trust.</p><a class="btn btn-gold" href="pages/campaign.html" data-i18n="hero.cta2">Shop the sale</a></div>
+    </div>
+    <button class="barrow prev" data-prev aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg></button>
+    <button class="barrow next" data-next aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
+    <div class="bdots" data-dots></div>
+  </section>
+
+  <!-- POPULAR CATEGORIES + QUICK REQUEST -->
+  <div class="home-2col">
+    <div class="pop-cat">
+      <div class="pc-body">
+        <h3 data-i18n="home.popcat">Popular Categories</h3>
+        <p data-i18n="home.popcatdesc">Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.</p>
+        <a class="btn" href="pages/category.html" data-i18n="home.explore">Explore now</a>
+      </div>
+      <img class="pc-img" src="assets/fabric-stack.webp" alt="Stack of apparel fabrics">
+    </div>
+    <div class="quick-panel">
+      <div class="qp-head"><b data-i18n="home.quickreq">Quick sourcing request</b><a href="pages/category.html" data-i18n="home.browseall">Browse all</a></div>
+      <div class="qp-tabs" data-tabs><span data-tab class="on" data-i18n="quick.fabrics">Fabrics</span><span data-tab data-i18n="quick.trims">Trims</span><span data-tab data-i18n="quick.oem">OEM</span></div>
+      <form data-quick>
+        <div class="qp-row">
+          <div class="qp-field"><label data-i18n="home.material">Material</label><select><option data-i18n="mat.cotton">Cotton</option><option data-i18n="mat.linen">Linen</option><option data-i18n="mat.polyester">Polyester</option><option data-i18n="mat.wool">Wool</option><option data-i18n="mat.nylon">Nylon</option></select></div>
+          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input placeholder="e.g. 500 m" data-i18n-ph="home.qtyph"></div>
+        </div>
+        <button class="btn btn-green btn-block" type="submit" data-i18n="home.getquotes">Get quotes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- CATEGORY PILLS -->
+  <nav class="cat-pills" aria-label="Category shortcuts">
+    <a class="cat-pill" href="pages/category.html?cat=fabrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.fabrics">Fabrics</span></a>
+    <a class="cat-pill" href="pages/category.html?cat=accessories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9zM7.5 7.5h.01"/></svg><span data-i18n="pill.accessories">Accessories</span></a>
+    <a class="cat-pill" href="pages/category.html?cat=trims"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span data-i18n="pill.trims">Trims</span></a>
+    <a class="cat-pill" href="pages/category.html?cat=yarns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg><span data-i18n="pill.yarns">Yarns &amp; Threads</span></a>
+    <a class="cat-pill" href="pages/category.html?cat=oem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16"/></svg><span data-i18n="pill.oem">OEM Services</span></a>
+    <a class="cat-pill" href="pages/factories.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.factories">Factories</span></a>
+  </nav>
+
+  <!-- PROMO STRIP -->
+  <a class="promo-strip" href="pages/campaign.html">
+    <div class="ps-l"><span class="ps-badge">11.11</span><b data-i18n="promo.title">Mega Sourcing Sale — up to 50% off verified fabrics &amp; OEM</b></div>
+    <span class="btn" data-i18n="promo.shopnow">Shop now</span>
+  </a>
+
+  <!-- CURATED -->
+  <section class="section">
+    <div class="sec-head"><h2 data-i18n="home.curated">Curated for you</h2><a class="link-arrow" href="pages/category.html"><span data-i18n="home.viewall">View all products</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    <div class="tabs" data-tabs id="curatedTabs">
+      <span data-tab data-cat="all" class="on" data-i18n="home.tab.all">All</span><span data-tab data-cat="fabrics" data-i18n="home.tab.fabrics">Fabrics</span><span data-tab data-cat="accessories" data-i18n="home.tab.accessories">Accessories</span><span data-tab data-cat="trims" data-i18n="home.tab.trims">Trims</span>
+    </div>
+    <div class="prod-grid" id="curatedGrid" style="margin-top:16px"></div>
+  </section>
+
+  <!-- SEO CONTENT -->
+  <section class="seo-block">
+    <h2 data-i18n="seo.h1">Wholesale Fabric &amp; Garment Sourcing for Fashion Brands</h2>
+    <p data-i18n="seo.p1">ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.</p>
+    <h3 data-i18n="seo.h2">Source from verified factories across Asia and beyond</h3>
+    <p data-i18n="seo.p2">Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, ARCANA's OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.</p>
+  </section>
+</main>
+
+<div id="ftr"></div>
+<script src="js/data.js"></script>
+<script src="js/copilot.js"></script>
+<script src="js/components.js"></script>
+<script>
+window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
+  // banner carousel
+  const banner=document.getElementById('banner');
+  if(banner){
+    const slides=[...banner.querySelectorAll('[data-slide]')], dots=banner.querySelector('[data-dots]');
+    let i=0, timer;
+    dots.innerHTML=slides.map((_,n)=>`<button aria-label="Slide ${n+1}"${n===0?' class="on"':''}></button>`).join('');
+    const dotEls=[...dots.children];
+    const go=n=>{i=(n+slides.length)%slides.length;slides.forEach((s,k)=>s.classList.toggle('on',k===i));dotEls.forEach((d,k)=>d.classList.toggle('on',k===i));};
+    const reset=()=>{clearInterval(timer);timer=setInterval(()=>go(i+1),6000);};
+    dotEls.forEach((d,n)=>d.addEventListener('click',()=>{go(n);reset();}));
+    banner.querySelector('[data-next]').addEventListener('click',()=>{go(i+1);reset();});
+    banner.querySelector('[data-prev]').addEventListener('click',()=>{go(i-1);reset();});
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) reset();
+  }
+  // quick sourcing request
+  const qf=document.querySelector('[data-quick]');
+  if(qf) qf.addEventListener('submit',e=>{e.preventDefault();toast('Sourcing request sent — matching suppliers');setTimeout(()=>location.href='pages/category.html',700);});
+
+  // curated grid — standardized product cards (shared renderer)
+  const grid=document.getElementById('curatedGrid');
+  let curCat='all';
+  function renderCurated(cat){
+    curCat=cat;
+    const list=window.ARCANA_PRODUCTS.filter(p=>cat==='all'?true:p.cat===cat).slice(0,12);
+    grid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
+    window.ARCANA_wireCards(grid);
+  }
+  renderCurated('all');
+  document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>renderCurated(t.dataset.cat)));
+  window.ARCANA_onLang(()=>renderCurated(curCat));
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARCANA</title>
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
+<div id="hdr"></div>
+
+<main class="wrap" style="padding-bottom:40px">
+  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><a href="cart.html">Cart</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Checkout</span></nav>
+  <div id="coRoot"></div>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script>
+window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+  const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('coRoot');
+  const money=n=>window.ARCANA_money(n);
+  const TR=window.ARCANA_TR, T=window.ARCANA_T;
+  const cart=Store.cart().filter(i=>M[i.id]);
+  const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
+  const fee=+(subtotal*0.05).toFixed(2), ship=120;
+  const ad=Store.addons();
+  const qcFee=ad.qc?+(subtotal*0.05).toFixed(2):0, insFee=ad.ins?+(subtotal*0.01).toFixed(2):0;
+  const total=subtotal+fee+ship+qcFee+insFee;
+  let step=1, pay='tt';
+  const terms={name:'',company:'',addr:'',city:'',country:'United States',incoterm:'FOB',po:''};
+
+  if(!cart.length){
+    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h3>${T('Nothing to check out')}</h3><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a></div>`;
+    return;
+  }
+
+  const summaryRail=()=>`<aside><section class="panel summary" style="position:sticky;top:88px">
+    <h3>${T('Order Summary')}</h3>
+    ${cart.map(i=>{const p=M[i.id];return `<div class="sum-row"><span class="k">${TR(p.name)} × ${i.qty}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}
+    <div class="sum-row strong"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
+    <div class="sum-row"><span class="k">${T('Service fee')}</span><span>${money(fee)}</span></div>
+    ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection (5%)')}</span><span>${money(qcFee)}</span></div>`:''}
+    ${insFee?`<div class="sum-row"><span class="k">${T('Insurance (1%)')}</span><span>${money(insFee)}</span></div>`:''}
+    <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${money(ship)}</span></div>
+    <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply')}</small></div></div>
+    <div class="secure-note" style="margin-top:14px"><span>${IC.lock} ${T('Secure checkout')}</span> · <span>${T('SSL encrypted')}</span></div>
+  </section></aside>`;
+
+  const stepper=()=>{const items=[['Shipping & Terms',1],['Payment',2],['Review',3]];
+    return `<div class="stepper">${items.map((it,idx)=>{const n=it[1];const cls=step>n?'done':step===n?'active':'';
+      return `<div class="step ${cls}"><span class="sn">${step>n?'✓':n}</span>${it[0]}</div>${idx<2?'<span class="step-line"></span>':''}`;}).join('')}</div>`;}
+
+  function view(){
+    if(step===4){ confirmation(); return; }
+    root.innerHTML=`${stepper()}<div class="co-wrap"><div class="panel co-panel" id="stepPanel"></div>${summaryRail()}</div>`;
+    const panel=document.getElementById('stepPanel');
+    if(step===1) panel.innerHTML=stepShipping();
+    if(step===2) panel.innerHTML=stepPayment();
+    if(step===3) panel.innerHTML=stepReview();
+    bind();
+  }
+
+  const stepShipping=()=>`
+    <h2>Shipping &amp; terms</h2><p class="ph">Where should this order ship, and on what trade terms?</p>
+    <div class="co-grid">
+      <div class="field-lg full" data-field><label>Contact name</label><input data-t="name" value="${terms.name}" placeholder="Jessica Smith"><span class="err">Required.</span></div>
+      <div class="field-lg full" data-field><label>Company</label><input data-t="company" value="${terms.company}" placeholder="Luxe Apparel Co."><span class="err">Required.</span></div>
+      <div class="field-lg full" data-field><label>Ship-to address</label><input data-t="addr" value="${terms.addr}" placeholder="Street, building, unit"><span class="err">Required.</span></div>
+      <div class="field-lg" data-field><label>City</label><input data-t="city" value="${terms.city}" placeholder="New York"><span class="err">Required.</span></div>
+      <div class="field-lg"><label>Country</label><select data-t="country">${['United States','China','India','Vietnam','Turkey','United Kingdom'].map(c=>`<option ${c===terms.country?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field-lg"><label>Incoterms</label><select data-t="incoterm">${['FOB','EXW','CIF','DDP'].map(c=>`<option ${c===terms.incoterm?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field-lg"><label>PO number <span class="muted" style="font-weight:400">(optional)</span></label><input data-t="po" value="${terms.po}" placeholder="e.g. LA-20251111"></div>
+    </div>
+    <div class="co-nav"><a class="btn btn-out" href="cart.html">Back to cart</a><button class="btn btn-green" data-next>Continue to payment</button></div>`;
+
+  const stepPayment=()=>`
+    <h2>Payment method</h2><p class="ph">Choose how you'd like to pay. Funds and terms are protected by ARCANA.</p>
+    <div data-pay-group>
+      <div class="pay-opt ${pay==='tt'?'sel':''}" data-pay="tt">
+        <div class="po-hd">${IC.factory}<b>Bank Transfer (T/T)</b><span class="po-radio"></span></div>
+        <p class="po-desc">Standard for wholesale orders. Place the order now and transfer using the reference below; production starts once payment is verified.</p>
+        ${pay==='tt'?`<div class="pay-detail">
+          <div class="bank-row"><span class="k">Beneficiary</span><span class="v">ARCANA Marketplace Ltd.</span></div>
+          <div class="bank-row"><span class="k">Bank</span><span class="v">DBS Bank, Singapore</span></div>
+          <div class="bank-row"><span class="k">Account</span><span class="v">0072-88-114529</span></div>
+          <div class="bank-row"><span class="k">SWIFT</span><span class="v">DBSSSGSG</span></div>
+          <div class="bank-row"><span class="k">Reference</span><span class="v">Your order number (shown next)</span></div>
+        </div>`:''}
+      </div>
+      <div class="pay-opt ${pay==='paypal'?'sel':''}" data-pay="paypal">
+        <div class="po-hd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 21l1.5-9M9 12h4a4 4 0 0 0 0-8H7l-2 13"/><path d="M10 17h3.5a3.5 3.5 0 0 0 0-7"/></svg><b>PayPal</b><span class="po-radio"></span></div>
+        <p class="po-desc">Pay instantly and securely with your PayPal account. Best for samples and smaller lots. You'll be redirected to approve.</p>
+      </div>
+    </div>
+    <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-green" data-next>Review order</button></div>`;
+
+  const stepReview=()=>`
+    <h2>Review &amp; place order</h2><p class="ph">Check everything is right before you place the order.</p>
+    <div class="co-review">
+      <div class="co-rev-block"><div class="rt"><b>Items (${cart.length})</b></div>
+        ${cart.map(i=>{const p=M[i.id];return `<div class="rl" style="display:flex;justify-content:space-between"><span>${p.name} × ${i.qty} · ${p.seller}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}</div>
+      <div class="co-rev-block"><div class="rt"><b>Shipping &amp; terms</b><a class="edit" href="#" data-goto="1">Edit</a></div>
+        <div class="rl">${terms.name||'—'}, ${terms.company||'—'}<br>${terms.addr||'—'}, ${terms.city||''} ${terms.country}<br>Incoterms: ${terms.incoterm}${terms.po?` · PO ${terms.po}`:''}</div></div>
+      <div class="co-rev-block"><div class="rt"><b>Payment</b><a class="edit" href="#" data-goto="2">Edit</a></div>
+        <div class="rl">${pay==='tt'?'Bank Transfer (T/T) — pay via reference after placing order':'PayPal — approve on redirect'}</div></div>
+    </div>
+    <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${money(total)}</button></div>`;
+
+  function confirmation(){
+    const ordno='ARC-'+Math.floor(100000+Math.random()*899999);
+    const ttFirst = pay==='tt';
+    root.innerHTML=`<div class="panel confirm">
+      <span class="cf-ic">${IC.check}</span>
+      <h1>Order placed</h1>
+      <p class="ordno">Order <b>${ordno}</b> · Total ${money(total)} · ${ttFirst?'Bank Transfer (T/T)':'PayPal'}</p>
+      <div class="timeline">
+        <div class="tl-row cur"><span class="tl-dot">${IC.check}</span><div><b>Order received</b><p>We've sent a confirmation to your email.</p></div></div>
+        <div class="tl-row"><span class="tl-dot"></span><div><b>${ttFirst?'Awaiting payment':'Payment confirmed'}</b><p>${ttFirst?`Transfer ${money(total)} quoting reference <b>${ordno}</b>.`:'PayPal payment received.'}</p></div></div>
+        <div class="tl-row"><span class="tl-dot"></span><div><b>In production</b><p>Supplier confirms and begins production.</p></div></div>
+        <div class="tl-row"><span class="tl-dot"></span><div><b>Shipped</b><p>Tracking shared once your order ships.</p></div></div>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;margin-top:28px">
+        <a class="btn btn-green" href="../index.html">Continue sourcing</a>
+        <a class="btn btn-out" href="brand-owner.html#orders">View my orders</a>
+      </div>
+    </div>`;
+    Store.clearCart();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function bind(){
+    root.querySelectorAll('[data-t]').forEach(el=>el.addEventListener('input',()=>terms[el.dataset.t]=el.value));
+    const nextBtn=root.querySelector('[data-next]');
+    if(nextBtn) nextBtn.addEventListener('click',()=>{
+      if(step===1){ let ok=true;
+        root.querySelectorAll('[data-field]').forEach(f=>{const inp=f.querySelector('[data-t]');if(!inp)return;const req=['name','company','addr','city'].includes(inp.dataset.t);const bad=req&&!inp.value.trim();f.classList.toggle('invalid',bad);if(bad)ok=false;});
+        if(!ok){toast('Please complete the required fields');return;}
+      }
+      step++; view();
+    });
+    const backBtn=root.querySelector('[data-back]'); if(backBtn) backBtn.addEventListener('click',()=>{step--;view();});
+    root.querySelectorAll('[data-pay]').forEach(o=>o.addEventListener('click',()=>{pay=o.dataset.pay;view();}));
+    root.querySelectorAll('[data-goto]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();step=+a.dataset.goto;view();}));
+    const place=root.querySelector('[data-place]'); if(place) place.addEventListener('click',()=>{step=4;view();});
+  }
+  view();
+};
+</script>
+</body>
+</html>

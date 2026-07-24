@@ -1,0 +1,742 @@
+/* ARCANA shared layer: stores, header/footer, toast, full interaction wiring */
+(function(){
+'use strict';
+
+/* ---------- path helpers ---------- */
+const ROOT = document.body.dataset.root === '..'; // true inside /pages
+const P  = n => ROOT ? n : 'pages/' + n;          // link to a /pages file
+const HOME = ROOT ? '../index.html' : 'index.html';
+const ASSET = f => (ROOT ? '../assets/' : 'assets/') + f;
+
+/* ---------- stores (localStorage, mocked backend) ---------- */
+const LS = {
+  get(k, d){ try{ return JSON.parse(localStorage.getItem('arcana_'+k)) ?? d }catch(_){ return d } },
+  set(k, v){ localStorage.setItem('arcana_'+k, JSON.stringify(v)); }
+};
+const Store = {
+  session(){ return LS.get('session', null); },
+  login(role, name){ LS.set('session', {role, name: name||(role==='seller'?'Zhejiang Greenknit':'Jessica Smith')}); },
+  logout(){ localStorage.removeItem('arcana_session'); },
+  cart(){ return LS.get('cart', []); },
+  cartCount(){ return Store.cart().length; },        // distinct SKUs (header badge)
+  cartUnits(){ return Store.cart().reduce((n,i)=>n+i.qty,0); },
+  addToCart(id, qty){
+    qty = qty||1;
+    const c = Store.cart(); const row = c.find(i=>i.id===id);
+    if(row) row.qty += qty; else c.push({id, qty});
+    LS.set('cart', c); syncBadges(); return Store.cartCount();
+  },
+  setQty(id, qty){ const c=Store.cart(); const r=c.find(i=>i.id===id); if(r){ r.qty=Math.max(1,qty); LS.set('cart',c);} },
+  remove(id){ LS.set('cart', Store.cart().filter(i=>i.id!==id)); syncBadges(); },
+  clearCart(){ localStorage.removeItem('arcana_cart'); localStorage.removeItem('arcana_addons'); syncBadges(); },
+  addons(){ return LS.get('addons', {qc:false, ins:false}); },
+  setAddon(k,v){ const a=Store.addons(); a[k]=!!v; LS.set('addons', a); },
+  saved(){ return LS.get('saved', []); },
+  isSaved(id){ return Store.saved().includes(id); },
+  toggleSaved(id){ const s=Store.saved(); const i=s.indexOf(id); if(i>-1)s.splice(i,1); else s.push(id); LS.set('saved',s); syncBadges(); return i<0; }
+};
+window.ARCANA = Store;
+
+/* ---------- icons ---------- */
+const IC = {
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
+  caret:'<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.35-9.3-8.5C1 8 2.8 5 6 5c2 0 3.2 1.2 4 2.3C10.8 6.2 12 5 14 5c3.2 0 5 3 3.3 6.5C19 15.65 12 20 12 20z"/></svg>',
+  globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
+  user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
+  seller:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V9l5-3v15M14 21V9l5 3v9M9 12h.01M9 15h.01"/></svg>',
+  cart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.4 12.4a1.5 1.5 0 0 0 1.5 1.2h8.7a1.5 1.5 0 0 0 1.5-1.2L22 7H6"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg>',
+  medal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="6"/><path d="m9 14-2 7 5-3 5 3-2-7"/></svg>',
+  truck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6h11v11H2zM13 9h4l4 4v4h-8"/><circle cx="6" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',
+  headset:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="2" y="14" width="4" height="6" rx="1.5"/><rect x="18" y="14" width="4" height="6" rx="1.5"/><path d="M20 20a4 4 0 0 1-4 3h-2"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>',
+  chevR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="m9 6 6 6-6 6"/></svg>',
+  logout:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>',
+  factory:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.2"/></svg>',
+  tag:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/></svg>',
+  msg:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg>',
+  box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg>',
+  bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>',
+  camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3.2L9 5.4A1 1 0 0 1 9.8 5h4.4a1 1 0 0 1 .8.4L16.8 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></svg>',
+};
+window.ARCANA_IC = IC;
+
+/* ---------- shared product card (single source, used on every surface) ---------- */
+const DEALMAP = () => Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
+const rndRating = id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return (4.4+(h%7)/10).toFixed(1);};
+const soldOf = id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];
+/* opts: {href, shop=true, fabricSpec=false} — language + currency aware */
+function cardHTML(p, opts){
+  opts = opts||{};
+  const tr = window.ARCANA_TR||(s=>s), t = window.ARCANA_T||(s=>s), money = window.ARCANA_money||(n=>'US$'+n.toFixed(2));
+  const d = DEALMAP()[p.id];
+  const now = d ? p.price*(1-d.disc/100) : p.price;
+  const href = opts.href || (P('product.html')+'?id='+p.id);
+  const isService = p.cat==='oem';
+  const disc = d ? `<span class="tdisc">-${d.disc}%</span>` : '';
+  const badge = d ? '' :
+    isService ? `<span class="tbadge">${t('OEM SERVICE')}</span>` :
+    p.badge==='recycle' ? `<span class="tbadge" style="background:var(--green)">${t('RECYCLED')}</span>` :
+    p.badge==='oem' ? '<span class="tbadge">OEM</span>' : '';
+  const nm = tr(p.name), comp = tr(p.comp), spec = tr(p.spec);
+  const title = (opts.fabricSpec && p.cat==='fabrics') ? `${nm} — ${comp}, ${spec}` : `${nm} — ${comp}`;
+  const priceLine = p.price>0
+    ? `${isService?t('From')+' ':''}${money(now)}<small>/${tr(p.unit)}</small>${d?`<span class="twas">${money(p.price)}</span>`:''}`
+    : `<span class="tquote">${t('Contact for quote')}</span>`;
+  const meta = isService
+    ? `<div class="tmeta">${IC.truck} ${spec} ${t('lead')} <span class="dot">·</span> ${t('MOQ')} ${tr(p.moq)}</div>`
+    : `<div class="tmeta"><span class="star">★</span> ${rndRating(p.id)} <span class="dot">·</span> ${soldOf(p.id)} ${t('sold')}</div>`;
+  const shopRow = (opts.shop===false) ? '' :
+    `<div class="tshop"><span class="tnm">${tr(p.seller)}</span><span class="tvf">${IC.check}</span></div>`;
+  return `<a class="tcard" href="${href}">
+    <div class="tthumb">${disc}${badge}<img src="${ASSET(p.img+'.webp')}" alt="${nm}" loading="lazy"></div>
+    <div class="tbody">
+      <h4>${title}</h4>
+      <div class="tprice">${priceLine}</div>
+      ${meta}
+      ${shopRow}
+      <div class="tloc">${IC.pin}<span>${tr(p.loc)}</span></div>
+    </div></a>`;
+}
+/* pages register a render fn so cards/prices re-render on language switch */
+const langRenderers = [];
+window.ARCANA_onLang = fn => { if(typeof fn==='function'){ langRenderers.push(fn); } };
+/* attach add-to-cart handlers inside a freshly-rendered container */
+function wireCards(container){
+  (container||document).querySelectorAll('.tcard [data-add]').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault();e.stopPropagation();
+    Store.addToCart(b.dataset.add,parseInt(b.dataset.qty||'1',10));
+    const p=window.ARCANA_PRODUCT_MAP&&window.ARCANA_PRODUCT_MAP[b.dataset.add];
+    toast(`Added ${p?p.name:'item'} to cart`, {href:P('cart.html'), label:'View cart'});}));
+}
+window.ARCANA_card = cardHTML;
+window.ARCANA_wireCards = wireCards;
+
+function markSVG(color){return `<svg class="mark" viewBox="0 0 2000 2000" fill="${color||'currentColor'}" aria-hidden="true">
+<path d="M672.85,1077.33c-89.31,71.09-24.4,192-22.2,196.07-5.25-1.36-179.8-48.89-165.65-217.59,2.94-35.09,21.1-70.47,49.87-99.24,162.43-162.43,469.66,21.34,393.78,208.71h0c-42.2-97.19-153.7-169.12-255.8-87.95Z"/>
+<path d="M1349.35,1273.4c2.2-4.07,67.11-124.98-22.2-196.07-121.59-96.68-256.4,23.72-271.9,145.31-15.42,121.59,79.56,198.95,79.56,198.95-81.77,58.55-134.81,153.62-134.81,153.62,0,0-53.04-95.07-134.81-153.62,113.28-92.12,69.22-261.95,239.57-432.3,190.62-190.62,399.61-60.17,410.23,66.51,14.15,168.7-160.4,216.23-165.65,217.59Z"/>
+<path d="M1134.7,888.48l-4.7,5.4c10.52-50.25-1.28-105.4-35.41-144.55l-94.59-108.54-94.5,108.54c-34.21,39.25-46.01,94.41-35.41,144.65l-4.79-5.5c-74.4-85.38-74.4-223.75,0-309.12l134.7-154.56,134.7,154.56c74.4,85.38,74.4,223.75,0,309.12Z"/>
+</svg>`;}
+
+function brand(){
+  return `<a class="brand" href="${HOME}">${markSVG()}<span class="word">ARCANA</span></a>`;
+}
+const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
+  <label class="visually-hidden" for="site-search">Search</label>${IC.search}
+  <span class="s-chip" data-img-chip hidden></span>
+  <input id="site-search" name="q" placeholder="${ph}" data-i18n-ph="search.ph" autocomplete="off" spellcheck="false"
+    role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-pop">
+  <button type="button" class="s-cam" data-cam aria-label="Search by image" title="Search by image">${IC.camera}</button>
+  <div class="s-pop" id="search-pop" role="listbox" aria-label="Search suggestions" data-search-pop hidden></div>
+</form>`;
+
+const KAT=[
+  ['Fabrics','Woven · Knit · Denim · Linen · Satin · Fleece · Canvas','fabrics'],
+  ['Accessories','Zippers · Buttons · Labels · Hooks · Rivets · Buckles','accessories'],
+  ['Trims','Ribbons · Elastics · Tapes · Cords · Lace · Bias binding','trims'],
+  ['Yarns & Threads','Cotton · Polyester · Nylon · Blended · Sewing thread','yarns'],
+  ['OEM Services','Sampling · Cut & Sew · Full Package · Private Label · Bulk','oem'],
+  ['Factories','Verified mills · By region · Sustainable · OEM factories','factories'],
+];
+const katHref=slug=>slug==='factories'?P('factories.html'):P('category.html')+'?cat='+slug;
+function katPanel(){
+  const items=KAT.map((c,i)=>`<button class="kat-item${i===0?' on':''}" data-kat-item="${i}"><span>${c[0]}</span>${IC.chevR}</button>`).join('');
+  const panels=KAT.map((c,i)=>`<div class="kat-detail${i===0?' on':''}" data-kat-detail="${i}"><h4>${c[0]}</h4><div class="kat-subs">${c[1].split(' · ').map(s=>`<a href="${katHref(c[2])}">${s}</a>`).join('')}</div><a class="kat-all" href="${katHref(c[2])}">View all ${c[0]} ${IC.chevR}</a></div>`).join('');
+  return `<div class="kat-panel" data-kat-panel hidden><div class="kat-list">${items}</div><div class="kat-details">${panels}</div></div>`;
+}
+
+/* single auth cluster: one Log in + one Sign up, or account menu when signed in */
+function authCluster(){
+  const s = Store.session();
+  if(s) return accountMenu(s);
+  return `<a class="btn-login" href="${P('login.html')}" data-i18n="auth.login">Log in</a><a class="btn-daftar" href="${P('signup.html')}" data-i18n="auth.signup">Sign up</a>`;
+}
+function accountMenu(s){
+  const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
+  return `<div class="acct" data-acct>
+    <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${initials}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
+    <div class="acct-pop" role="menu" hidden>
+      <div class="acct-hd"><span class="acct-av">${initials}</span><div><b>${s.name}</b><span>${s.role==='seller'?'Factory · Seller':'Brand Owner · Buyer'}</span></div></div>
+      <a role="menuitem" href="${dest}">${s.role==='seller'?'Supplier dashboard':'My profile'}</a>
+      <a role="menuitem" href="${P('cart.html')}">My cart</a>
+      <a role="menuitem" href="#" data-saved-link>Saved items</a>
+      <button role="menuitem" data-logout>${IC.logout}<span>Log out</span></button>
+    </div>
+  </div>`;
+}
+
+function buildHeader(){
+  const body=document.body, root=document.getElementById('hdr');
+  if(!root) return;
+  const s = Store.session();
+  // seller surface = explicit data-surface, or a signed-in seller viewing their workspace
+  const seller = body.dataset.surface==='seller' || (s && s.role==='seller' && body.dataset.surface!=='buyer');
+  const ph = seller ? 'Search your SKUs, orders and buyers…'
+                    : (body.dataset.search || 'Search fabrics, trims, accessories, factories…');
+  root.className='hdr';
+  // seller sees a workspace strip (no buyer "sell" pitch, no cart); buyer sees the sell pitch + cart
+  const topbar = seller
+    ? `<div class="topbar"><div class="topbar-in">
+        <span class="tb-app">${IC.seller}<span>Supplier workspace</span></span>
+        <a class="tb-app" href="${HOME}">Browse the marketplace ${IC.chevR}</a>
+      </div></div>`
+    : '';
+  const cartIcon = seller ? '' :
+    `<a class="ic-link cart-ic" href="${P('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge-count" data-cart-badge hidden></span></a><span class="hdr-div"></span>`;
+  root.innerHTML=`
+  ${topbar}
+  <div class="hdr-in">
+    ${brand()}
+    <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
+    ${searchBox(ph)}
+    ${cartIcon}
+    ${authCluster()}
+    ${katPanel()}
+  </div>`;
+  syncBadges();
+}
+
+function buildFooter(){
+  const el=document.getElementById('ftr'); if(!el) return;
+  const soc={
+    x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-6-5 6H2l8-9L2 2h6l4 5z"/></svg>',
+    li:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zM9 9h3v2a3.5 3.5 0 0 1 3-2c3 0 4 2 4 5v7h-3v-6c0-1.5-.5-2.5-2-2.5S12 14 12 15.5V21H9z"/></svg>',
+    ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>',
+    fb:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v6h3v-6h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>'
+  };
+  el.innerHTML=`
+  <footer class="site-footer"><div class="sf-in">
+    <div class="sf-brand">
+      <div class="sf-word">ARCANA</div>
+      <p data-i18n="ft.tagline">The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.</p>
+    </div>
+    <div class="sf-col">
+      <h5 data-i18n="ft.company">ARCANA</h5>
+      <a href="${HOME}" data-i18n="ft.about">About ARCANA</a>
+      <a href="#" data-i18n="ft.careers">Careers</a>
+      <a href="#" data-i18n="ft.blog">Blog</a>
+      <a href="${P('supplier.html')}" data-i18n="ft.b2b">B2B sourcing</a>
+      <a href="#" data-i18n="ft.trustsafety">Trust &amp; safety</a>
+    </div>
+    <div class="sf-col">
+      <h5 data-i18n="ft.buy">Buy</h5>
+      <a href="${P('category.html')}" data-i18n="ft.sourcing">Sourcing guide</a>
+      <a href="${P('checkout.html')}" data-i18n="ft.payments">Payments</a>
+      <a href="#" data-i18n="ft.shipping">Shipping</a>
+      <a href="#" data-i18n="ft.protection">Buyer protection</a>
+      <h5 style="margin-top:24px" data-i18n="ft.sell">Sell</h5>
+      <a href="${P('sell.html')}" data-i18n="ft.sellon">Sell on ARCANA</a>
+      <a href="${P('dashboard.html')}" data-i18n="ft.dashboard">Supplier dashboard</a>
+    </div>
+    <div class="sf-col">
+      <h5 data-i18n="ft.help">Help &amp; Guides</h5>
+      <a href="#" data-i18n="ft.helpcenter">Help center</a>
+      <a href="#" data-i18n="ft.terms">Terms &amp; conditions</a>
+      <a href="#" data-i18n="ft.privacy">Privacy policy</a>
+      <a href="#" data-i18n="ft.contact">Contact us</a>
+    </div>
+    <div class="sf-col">
+      <h5 data-i18n="ft.security">Security &amp; Compliance</h5>
+      <div class="sf-badges"><span>ISO 9001</span><span>Oeko-Tex® 100</span><span>GRS Certified</span></div>
+      <h5 style="margin-top:24px" data-i18n="ft.follow">Follow us</h5>
+      <div class="sf-social"><a href="#" aria-label="X">${soc.x}</a><a href="#" aria-label="LinkedIn">${soc.li}</a><a href="#" aria-label="Instagram">${soc.ig}</a><a href="#" aria-label="Facebook">${soc.fb}</a></div>
+    </div>
+  </div>
+  <div class="sf-bottom">
+    <span>© 2009 – 2026, ARCANA. <span data-i18n="ft.rights">All rights reserved.</span></span>
+    <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
+      <button data-lang="en">English</button>
+      <button data-lang="ja">日本語</button>
+      <button data-lang="zh">中文</button>
+    </div>
+  </div></footer>`;
+}
+
+/* ---------- live badges ---------- */
+function syncBadges(){
+  const n = Store.cartCount();
+  document.querySelectorAll('[data-cart-badge]').forEach(b=>{ b.textContent=n; b.hidden = n===0; });
+  const s = Store.saved().length;
+  document.querySelectorAll('[data-saved-badge]').forEach(b=>{ b.textContent=s; b.hidden = s===0; });
+}
+
+/* ---------- toast ---------- */
+let toastEl;
+function toast(msg, action){
+  if(!toastEl){ toastEl=document.createElement('div'); toastEl.className='toast-wrap'; document.body.appendChild(toastEl); }
+  const t=document.createElement('div'); t.className='toast'; t.setAttribute('role','status');
+  t.innerHTML=`${IC.check}<span>${msg}</span>${action?`<a href="${action.href}">${action.label}</a>`:''}`;
+  toastEl.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('in'));
+  setTimeout(()=>{ t.classList.remove('in'); setTimeout(()=>t.remove(),250); }, 3200);
+}
+window.ARCANA_toast = toast;
+
+/* ---------- floating Sourcing Copilot launcher (buyer surfaces) ---------- */
+function buildCopilotFab(){
+  if(!window.ARCANA_Copilot) return;
+  const s=Store.session();
+  const seller = document.body.dataset.surface==='seller' || (s && s.role==='seller' && document.body.dataset.surface!=='buyer');
+  if(seller || /login\.html|signup\.html|checkout\.html/.test(location.pathname)) return;
+  const t=window.ARCANA_T||(x=>x);
+  const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EG=['Organic cotton jersey, GOTS, under $7/m, MOQ ≤ 200',
+            'Recycled polyester for activewear, low MOQ, GRS certified',
+            'Denim mill in Guangdong, 12 oz, OEM-ready',
+            'Linen blend woven, lead under 14 days'];
+  const wrap=document.createElement('div'); wrap.className='cop-fab';
+  wrap.innerHTML=`
+    <button type="button" class="cop-fab-btn" aria-expanded="false" aria-haspopup="dialog" aria-label="${esc(t('Sourcing Copilot'))}">${markSVG()}</button>
+    <div class="cop-fab-panel" role="dialog" aria-label="${esc(t('Sourcing Copilot'))}" hidden>
+      <div class="cop-fab-pop" data-cop-pop></div>
+      <form class="cop-fab-bar" data-cop-form>
+        <span class="cfb-mark" aria-hidden="true">${markSVG()}</span>
+        <label class="visually-hidden" for="copFabInput">${esc(t("Describe what you're sourcing…"))}</label>
+        <input id="copFabInput" autocomplete="off" placeholder="${esc(t("Describe what you're sourcing…"))}">
+        <button class="cfb-go" type="submit" aria-label="${esc(t('Ask Copilot'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+      </form>
+    </div>`;
+  document.body.appendChild(wrap);
+  const btn=wrap.querySelector('.cop-fab-btn'), panel=wrap.querySelector('.cop-fab-panel');
+  const pop=wrap.querySelector('[data-cop-pop]'), form=wrap.querySelector('[data-cop-form]');
+  const input=form.querySelector('input');
+  function renderPop(){
+    const brief=window.ARCANA_Copilot.getBrief();
+    let h='';
+    if(brief && brief.text){
+      h+=`<div class="cfp-hd">${esc(t('Recent brief'))}</div>
+          <button type="button" class="cfp-row" data-eg="${esc(brief.text)}">${SPARK}<span>${esc(brief.text)}</span></button>`;
+    }
+    h+=`<div class="cfp-hd">${esc(t('Try asking'))}</div>`+
+      EG.map(e=>`<button type="button" class="cfp-row" data-eg="${esc(e)}">${IC.search}<span>${esc(e)}</span></button>`).join('');
+    pop.innerHTML=h;
+  }
+  function open(){ renderPop(); panel.hidden=false; wrap.dataset.open='1';
+    requestAnimationFrame(()=>panel.classList.add('in'));
+    btn.setAttribute('aria-expanded','true'); input.focus(); }
+  function close(focusBtn){ panel.classList.remove('in'); panel.hidden=true; delete wrap.dataset.open;
+    btn.setAttribute('aria-expanded','false'); if(focusBtn) btn.focus(); }
+  btn.addEventListener('click',open);
+  form.addEventListener('submit',e=>{ e.preventDefault();
+    const v=input.value.trim(); if(!v){ input.focus(); return; }
+    window.ARCANA_Copilot.setBrief(v); location.href=P('category.html')+'?copilot=1'; });
+  pop.addEventListener('click',e=>{ const r=e.target.closest('[data-eg]');
+    if(r){ input.value=r.dataset.eg; input.focus(); } });
+  input.addEventListener('keydown',e=>{ if(e.key==='Escape') close(true); });
+  document.addEventListener('pointerdown',e=>{ if(!wrap.hidden && !wrap.contains(e.target) && !panel.hidden) close(false); });
+  window.ARCANA_onLang(()=>{ input.placeholder=t("Describe what you're sourcing…"); if(!panel.hidden) renderPop(); });
+}
+
+/* ---------- smart search: intent autocomplete + image (visual) search ---------- */
+/* Image cache contract: sessionStorage only (dies with the tab). A hard refresh is
+   detected via Navigation Timing and clears it too, so the photo survives page-to-page
+   navigation but never a reload or a closed tab. */
+const IMG_KEY='arcana_imgsearch';
+try{
+  const nav=performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+  if(nav && nav.type==='reload') sessionStorage.removeItem(IMG_KEY);
+}catch(_){}
+
+/* mock swatch fingerprint per fabric asset: [hue, saturation, lightness] */
+const SWATCH={
+  'cotton-twill':[40,.35,.58],  linen:[45,.30,.72],       'cotton-jersey':[42,.08,.88],
+  denim:[221,.45,.38],          'jersey-knit':[210,.06,.80],'nylon-taslan':[204,.30,.55],
+  'wool-flannel':[220,.08,.45], 'poly-twill':[210,.12,.52], 'recycled-poly':[145,.25,.55],
+  satin:[330,.25,.72],          fleece:[24,.30,.66],        chambray:[214,.38,.66]
+};
+
+function wireSearch(){
+  const form=document.querySelector('[data-search-form]'); if(!form) return;
+  const input=form.querySelector('input'), pop=form.querySelector('[data-search-pop]');
+  const cam=form.querySelector('[data-cam]'), chip=form.querySelector('[data-img-chip]');
+  if(!input||!pop) return;
+  const t=window.ARCANA_T||(s=>s), tr=window.ARCANA_TR||(s=>s), money=window.ARCANA_money||(n=>'US$'+n.toFixed(2));
+  const PROD=window.ARCANA_PRODUCTS||[], FACT=window.ARCANA_FACTORIES||[];
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const norm=s=>String(s||'').toLowerCase().trim();
+
+  /* --- suggestion pool + intent scoring --- */
+  const KW_EXTRA=['low moq fabrics','oem hoodie full package','oem t-shirt cut & sew','recycled polyester grs',
+    'ykk zipper wholesale','denim 12 oz stretch','organic cotton jersey 180 gsm','linen blend shirting',
+    'custom woven labels','wool flannel suiting','sampling package','private label packaging'];
+  const POOL=[...new Set([...PROD.map(p=>p.name.toLowerCase()),...KW_EXTRA])];
+  const POPULAR=['cotton twill','denim','oem full package','linen blend','recycled polyester','ykk zipper'];
+  const SUP_TOKENS=['mill','mills','factory','factories','supplier','suppliers','manufacturer','works','studio',
+    'house','co.','ltd','textile','dye','senshoku','garment','verified'];
+
+  function hit(hay,q,words){
+    hay=norm(hay); if(!hay) return 0; let s=0;
+    if(hay.startsWith(q)) s+=3; if(hay.includes(q)) s+=2;
+    for(const w of words) if(w.length>1&&hay.includes(w)) s+=1;
+    return s;
+  }
+  const prodScore=(p,q,w)=>2*hit(p.name,q,w)+hit(p.comp,q,w)+hit(p.seller,q,w)+hit(p.cat,q,w)+hit(p.spec,q,w);
+  const factScore=(f,q,w)=>2*hit(f.name,q,w)+hit(f.tags.join(' '),q,w)+hit(f.type,q,w)+hit(f.loc+' '+f.region,q,w);
+
+  /* --- open/close --- */
+  let opts=[], sel=-1, scanT=null;
+  const optId=i=>'s-opt-'+i;
+  function open(){ if(pop.hidden){ pop.hidden=false; requestAnimationFrame(()=>pop.classList.add('in')); input.setAttribute('aria-expanded','true'); } }
+  function close(){ pop.classList.remove('in'); pop.hidden=true; sel=-1; input.setAttribute('aria-expanded','false'); input.removeAttribute('aria-activedescendant'); }
+
+  /* --- row templates --- */
+  function mark(k,q){
+    const i=q?k.indexOf(q):-1;
+    if(i<0) return esc(k);
+    return esc(k.slice(0,i+q.length))+'<b>'+esc(k.slice(i+q.length))+'</b>';
+  }
+  const kwHref=k=>P('category.html')+'?q='+encodeURIComponent(k);
+  function kwRow(k,q,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${kwHref(k)}">${IC.search}<span class="s-kw">${mark(k,q)}</span></a>`; }
+  function supRow(f,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${P('supplier.html')+'?id='+f.id}">
+      <img class="s-av" src="${ASSET(f.img+'.webp')}" alt="" loading="lazy">
+      <span class="s-main"><span class="s-nm">${esc(tr(f.name))} ${IC.check}</span>
+      <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(f.loc))} · ★ ${f.rating}</span></span>
+      <span class="s-go">${IC.chevR}</span></a>`; }
+  function prodRow(p,i){ opts.push(1);
+    const price=p.price>0? money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
+    return `<a class="s-row" role="option" id="${optId(i)}" href="${P('product.html')+'?id='+p.id}">
+      <img class="s-th" src="${ASSET(p.img+'.webp')}" alt="" loading="lazy">
+      <span class="s-main"><span class="s-nm">${esc(tr(p.name))}</span>
+      <span class="s-meta">${esc(tr(p.comp))} · ${esc(tr(p.seller))}</span></span>
+      <span class="s-pr">${price}</span></a>`; }
+  function footRow(q,i){ opts.push(1); return `<a class="s-row s-foot" role="option" id="${optId(i)}" href="${kwHref(q)}">${IC.search}<span>${esc(t('See all results for'))} “${esc(q)}”</span>${IC.chevR}</a>`; }
+
+  /* --- image search --- */
+  function getImg(){ try{ return JSON.parse(sessionStorage.getItem(IMG_KEY)); }catch(_){ return null; } }
+  function setImg(v){
+    try{ if(v) sessionStorage.setItem(IMG_KEY,JSON.stringify(v)); else sessionStorage.removeItem(IMG_KEY); }catch(_){}
+    syncChip();
+  }
+  function phFor(key){ const L=I18N[document.documentElement.lang]||I18N.en; return L[key]||I18N.en[key]||''; }
+  function syncChip(){
+    const img=getImg(); if(!chip) return;
+    if(img){
+      chip.innerHTML=`<img src="${img.img}" alt="${esc(t('Photo'))}"><span>${esc(t('Photo'))}</span><button type="button" data-img-x aria-label="${esc(t('Remove photo'))}">×</button>`;
+      chip.hidden=false; input.dataset.i18nPh='search.refine'; input.placeholder=phFor('search.refine');
+    }else{
+      chip.hidden=true; chip.innerHTML=''; input.dataset.i18nPh='search.ph'; input.placeholder=phFor('search.ph');
+    }
+  }
+  function avgHSL(ctx,w,h){
+    let r=0,g=0,b=0,n=0;
+    try{
+      const d=ctx.getImageData(0,0,w,h).data, px=w*h, stride=Math.max(1,Math.floor(px/1200));
+      for(let p=0;p<px;p+=stride){ const i=p*4; r+=d[i]; g+=d[i+1]; b+=d[i+2]; n++; }
+    }catch(_){ return [40,.2,.6]; }
+    r/=255*n; g/=255*n; b/=255*n;
+    const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2; let s=0, hh=0;
+    if(mx!==mn){ const dd=mx-mn; s=l>.5? dd/(2-mx-mn) : dd/(mx+mn);
+      hh=(mx===r? (g-b)/dd+(g<b?6:0) : mx===g? (b-r)/dd+2 : (r-g)/dd+4)*60; }
+    return [hh,s,l];
+  }
+  function visualMatches(img){
+    const a=img.hsl||[40,.2,.6];
+    const dist=b=>{
+      let dh=Math.abs(a[0]-b[0]); dh=Math.min(dh,360-dh)/180;
+      const wH=(a[1]<.12||b[1]<.12)? .15 : 1;      // near-gray: hue is noise
+      return dh*wH*1.6 + Math.abs(a[1]-b[1])*.6 + Math.abs(a[2]-b[2])*1.2;
+    };
+    return PROD.filter(p=>SWATCH[p.img]).map(p=>[dist(SWATCH[p.img]),p]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  }
+  function visualHTML(img){
+    const seen={}, ms=visualMatches(img).filter(p=>!seen[p.img]&&(seen[p.img]=1)).slice(0,6);
+    let h=`<div class="s-hd" role="presentation">${esc(t('Visual matches'))} <i class="s-demo">${esc(t('demo'))}</i></div><div class="s-vgrid" role="presentation">`;
+    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
+    h+=`</div><a class="s-row s-foot" role="option" id="${optId(opts.push(1)-1)}" href="${P('category.html')+'?cat=fabrics&visual=1'}">${IC.search}<span>${esc(t('See all visual matches'))}</span>${IC.chevR}</a>`;
+    return h;
+  }
+  function camPanel(){
+    pop.innerHTML=`<div class="s-drop">
+      <span class="s-drop-ic">${IC.camera}</span>
+      <b>${esc(t('Search by fabric photo'))}</b>
+      <span class="s-drop-sub">${esc(t('Drop an image here, paste it, or'))} <button type="button" class="s-browse" data-browse>${esc(t('browse'))}</button></span>
+      <span class="s-drop-note">${esc(t('Kept only for this tab — cleared on refresh or close'))}</span>
+    </div>`;
+    opts=[]; sel=-1; open();
+  }
+  function scanThenMatches(){
+    const img=getImg(); if(!img) return;
+    pop.innerHTML=`<div class="s-scan"><img src="${img.img}" alt=""><div><b>${esc(t('Matching your swatch…'))}</b><span>${esc(t('Comparing color and texture against verified fabrics'))}</span></div></div>`;
+    opts=[]; sel=-1; open();
+    clearTimeout(scanT); scanT=setTimeout(()=>{ input.focus(); render(); },750);
+  }
+  function process(f){
+    if(!f||!/^image\//.test(f.type)){ toast(t('That file is not an image')); return; }
+    const url=URL.createObjectURL(f), im=new Image();
+    im.onload=()=>{
+      const s=Math.min(1,256/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.width*s)); c.height=Math.max(1,Math.round(im.height*s));
+      const x=c.getContext('2d'); x.drawImage(im,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      let data=null; try{ data=c.toDataURL('image/jpeg',.82); }catch(_){}
+      if(!data){ toast(t('Could not read that image')); return; }
+      setImg({img:data,hsl:avgHSL(x,c.width,c.height),name:f.name||'photo'});
+      scanThenMatches();
+    };
+    im.onerror=()=>{ URL.revokeObjectURL(url); toast(t('Could not read that image')); };
+    im.src=url;
+  }
+
+  /* --- main render --- */
+  function render(){
+    clearTimeout(scanT);
+    const q=norm(input.value), words=q.split(/\s+/).filter(Boolean);
+    const img=getImg();
+    let html=''; opts=[]; let i=0;
+    if(!q){
+      if(img) html+=visualHTML(img), i=opts.length;
+      html+=`<div class="s-hd" role="presentation">${esc(t('Popular on ARCANA'))}</div>`;
+      for(const k of POPULAR) html+=kwRow(k,'',i++);
+      html+=`<div class="s-hd" role="presentation">${esc(t('Verified suppliers'))}</div>`;
+      for(const f of FACT.slice(0,2)) html+=supRow(f,i++);
+    }else if(q.length<2){
+      const kws=POOL.filter(k=>k.startsWith(q)).slice(0,6);
+      for(const k of kws) html+=kwRow(k,q,i++);
+      html+=footRow(q,i++);
+    }else{
+      const kws=POOL.filter(k=>k.includes(q)||words.every(w=>k.includes(w)))
+        .sort((a,b)=>(b.startsWith(q)?1:0)-(a.startsWith(q)?1:0)).slice(0,4);
+      const fs=FACT.map(f=>[factScore(f,q,words),f]).filter(x=>x[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,3);
+      const ps=PROD.map(p=>[prodScore(p,q,words),p]).filter(x=>x[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,5);
+      const supFirst=fs.length&&(SUP_TOKENS.some(tk=>q.includes(tk)) || (ps.length? fs[0][0]>ps[0][0] : true));
+      for(const k of kws) html+=kwRow(k,q,i++);
+      const secS=()=>{ if(fs.length){ html+=`<div class="s-hd" role="presentation">${esc(t('Suppliers'))}</div>`; for(const [,f] of fs) html+=supRow(f,i++); } };
+      const secP=()=>{ if(ps.length){ html+=`<div class="s-hd" role="presentation">${esc(t('Products'))}</div>`; for(const [,p] of ps) html+=prodRow(p,i++); } };
+      if(supFirst){ secS(); secP(); } else { secP(); secS(); }
+      if(!kws.length&&!fs.length&&!ps.length)
+        html+=`<div class="s-empty">${esc(t('No matches in the catalog yet'))}<span>${esc(t('Try a material, product or factory name'))}</span></div>`;
+      html+=footRow(q,i++);
+    }
+    pop.innerHTML=html; sel=-1; input.removeAttribute('aria-activedescendant');
+    open();
+  }
+
+  /* --- events --- */
+  input.addEventListener('input',render);
+  input.addEventListener('focus',render);
+  input.addEventListener('keydown',e=>{
+    if(pop.hidden){ if(e.key==='ArrowDown'){ e.preventDefault(); render(); } return; }
+    const els=[...pop.querySelectorAll('[role=option]')];
+    if((e.key==='ArrowDown'||e.key==='ArrowUp')&&els.length){
+      e.preventDefault();
+      sel=(sel+(e.key==='ArrowDown'?1:-1)+els.length)%els.length;
+      els.forEach((el,j)=>el.classList.toggle('sel',j===sel));
+      input.setAttribute('aria-activedescendant',els[sel].id);
+      els[sel].scrollIntoView({block:'nearest'});
+    }else if(e.key==='Enter'&&sel>-1&&els[sel]){
+      e.preventDefault(); location.href=els[sel].href;
+    }else if(e.key==='Escape'){ close(); }
+  });
+  form.addEventListener('submit',e=>{
+    e.preventDefault();
+    const q=input.value.trim(), img=getImg(), ps=[];
+    if(q) ps.push('q='+encodeURIComponent(q));
+    if(img) ps.push('visual=1');
+    location.href=P('category.html')+(ps.length?'?'+ps.join('&'):'');
+  });
+  if(cam) cam.addEventListener('click',()=>{ input.focus(); getImg()? render() : camPanel(); });
+  const file=document.createElement('input');
+  file.type='file'; file.accept='image/*'; file.hidden=true; form.appendChild(file);
+  file.addEventListener('change',()=>{ if(file.files[0]) process(file.files[0]); file.value=''; });
+  form.addEventListener('click',e=>{
+    const x=e.target.closest('[data-img-x]');
+    if(x){ e.preventDefault(); setImg(null); input.focus(); render(); return; }
+    if(e.target.closest('[data-browse]')) file.click();
+  });
+  input.addEventListener('paste',e=>{
+    const it=[...(e.clipboardData&&e.clipboardData.items||[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
+    if(it){ e.preventDefault(); process(it.getAsFile()); }
+  });
+  ['dragover','dragenter'].forEach(ev=>form.addEventListener(ev,e=>{
+    if(e.dataTransfer&&[...e.dataTransfer.types].includes('Files')){ e.preventDefault(); form.classList.add('drag'); }
+  }));
+  ['dragleave','drop'].forEach(ev=>form.addEventListener(ev,()=>form.classList.remove('drag')));
+  form.addEventListener('drop',e=>{
+    const f=e.dataTransfer&&e.dataTransfer.files[0];
+    if(f){ e.preventDefault(); process(f); }
+  });
+  pop.addEventListener('pointerdown',e=>e.preventDefault()); // keep input focus so row clicks land
+  document.addEventListener('pointerdown',e=>{ if(!form.contains(e.target)) close(); });
+  form.addEventListener('focusout',e=>{ if(!form.contains(e.relatedTarget)) close(); });
+
+  syncChip(); // restore photo chip after cross-page navigation
+}
+
+/* ---------- wiring ---------- */
+function wire(){
+  // favorites (persisted). Elements opt in via [data-fav-id]; legacy .fav without id = local toggle.
+  document.querySelectorAll('.fav').forEach(f=>{
+    const id=f.dataset.favId;
+    if(id && Store.isSaved(id)) f.classList.add('on');
+    f.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation();
+      if(id){ const on=Store.toggleSaved(id); f.classList.toggle('on',on); toast(on?'Saved to your list':'Removed from list'); }
+      else f.classList.toggle('on');
+    });
+  });
+  // add to cart
+  document.querySelectorAll('[data-add]').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault(); e.stopPropagation();
+    const id=b.dataset.add, qty=parseInt(b.dataset.qty||'1',10);
+    Store.addToCart(id, qty);
+    const p=window.ARCANA_PRODUCT_MAP&&window.ARCANA_PRODUCT_MAP[id];
+    toast(`Added ${p?p.name:'item'} to cart`, {href:P('cart.html'), label:'View cart'});
+  }));
+  // simple toggle chips (visual)
+  document.querySelectorAll('[data-toggle-chip]').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+  // tabs
+  document.querySelectorAll('[data-tabs]').forEach(g=>g.querySelectorAll('[data-tab]').forEach(t=>t.addEventListener('click',()=>{
+    g.querySelectorAll('[data-tab]').forEach(x=>x.classList.remove('on'));t.classList.add('on');})));
+  // qty steppers (generic)
+  document.querySelectorAll('[data-qty]').forEach(q=>{const inp=q.querySelector('input');
+    const dec=q.querySelector('[data-dec]'), inc=q.querySelector('[data-inc]');
+    if(dec) dec.onclick=()=>{ inp.value=Math.max(1,(+inp.value||1)-1); inp.dispatchEvent(new Event('change',{bubbles:true})); };
+    if(inc) inc.onclick=()=>{ inp.value=(+inp.value||1)+1; inp.dispatchEvent(new Event('change',{bubbles:true})); };});
+  // oem package select
+  document.querySelectorAll('[data-pkg-group]').forEach(g=>g.querySelectorAll('[data-pkg]').forEach(p=>p.addEventListener('click',()=>{
+    g.querySelectorAll('[data-pkg]').forEach(x=>x.classList.remove('sel'));p.classList.add('sel');})));
+  // categories mega-menu
+  const katBtn=document.querySelector('[data-kat]'), katPanel=document.querySelector('[data-kat-panel]');
+  if(katBtn&&katPanel){
+    const close=()=>{katPanel.hidden=true;katBtn.setAttribute('aria-expanded','false');katBtn.classList.remove('open');};
+    katBtn.addEventListener('click',e=>{e.stopPropagation();const open=katPanel.hidden;katPanel.hidden=!open;katBtn.setAttribute('aria-expanded',String(open));katBtn.classList.toggle('open',open);});
+    katPanel.addEventListener('click',e=>e.stopPropagation());
+    katPanel.querySelectorAll('[data-kat-item]').forEach(it=>{
+      const sel=()=>{const i=it.dataset.katItem;
+        katPanel.querySelectorAll('[data-kat-item]').forEach(x=>x.classList.toggle('on',x===it));
+        katPanel.querySelectorAll('[data-kat-detail]').forEach(d=>d.classList.toggle('on',d.dataset.katDetail===i));};
+      it.addEventListener('mouseenter',sel); it.addEventListener('focus',sel);
+    });
+    document.addEventListener('click',close);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+    if(location.search.indexOf('katopen')>-1){katPanel.hidden=false;katBtn.classList.add('open');}
+  }
+  // account menu
+  document.querySelectorAll('[data-acct]').forEach(a=>{
+    const btn=a.querySelector('.acct-btn'), pop=a.querySelector('.acct-pop');
+    btn.addEventListener('click',e=>{e.stopPropagation(); const open=pop.hidden; pop.hidden=!open; btn.setAttribute('aria-expanded',String(open));});
+    document.addEventListener('click',()=>{ if(!pop.hidden){pop.hidden=true; btn.setAttribute('aria-expanded','false');} });
+  });
+  document.querySelectorAll('[data-logout]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault(); Store.logout(); location.href=HOME;}));
+  document.querySelectorAll('[data-saved-link]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); toast(`${Store.saved().length} item(s) saved. Wishlist view coming soon.`);}));
+  // search submit + suggestions + image search live in wireSearch()
+}
+
+/* ---------- i18n (EN default · JA · ZH) ---------- */
+const I18N={
+  en:{
+    'nav.categories':'Categories','search.ph':'Search fabrics, trims, accessories, factories…','search.refine':'Add keywords to refine your photo search…','auth.login':'Log in','auth.signup':'Sign up',
+    'tb.sell':'Sell on ARCANA — reach 50,000+ verified buyers','tb.about':'About','tb.help':'Help','tb.saved':'Saved',
+    'ft.tagline':'The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.',
+    'ft.company':'ARCANA','ft.about':'About ARCANA','ft.careers':'Careers','ft.blog':'Blog','ft.b2b':'B2B sourcing','ft.trustsafety':'Trust & safety',
+    'ft.buy':'Buy','ft.sourcing':'Sourcing guide','ft.payments':'Payments','ft.shipping':'Shipping','ft.protection':'Buyer protection',
+    'ft.sell':'Sell','ft.sellon':'Sell on ARCANA','ft.dashboard':'Supplier dashboard',
+    'ft.help':'Help & Guides','ft.helpcenter':'Help center','ft.terms':'Terms & conditions','ft.privacy':'Privacy policy','ft.contact':'Contact us',
+    'ft.security':'Security & Compliance','ft.follow':'Follow us','ft.rights':'All rights reserved.',
+    'home.curated':'Curated for you','home.viewall':'View all products','home.tab.all':'All','home.tab.fabrics':'Fabrics','home.tab.accessories':'Accessories','home.tab.trims':'Trims',
+    'hero.btag1':'NEW SEASON SOURCING','hero.h1':'The wholesale marketplace for your next collection','hero.p1':'Quality materials and trusted, verified factories — built for brand owners.','hero.cta1':'Start sourcing',
+    'hero.btag2':'LIMITED · 11.11 SALE','hero.h2':'Up to 50% off verified fabrics & OEM','hero.p2':'Stock your next collection for less — from mills you can trust.','hero.cta2':'Shop the sale',
+    'home.popcat':'Popular Categories','home.popcatdesc':'Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.','home.explore':'Explore now',
+    'home.quickreq':'Quick sourcing request','home.browseall':'Browse all','home.material':'Material','home.quantity':'Quantity','home.qtyph':'e.g. 500 m','home.getquotes':'Get quotes',
+    'quick.fabrics':'Fabrics','quick.trims':'Trims','quick.oem':'OEM',
+    'pill.fabrics':'Fabrics','pill.accessories':'Accessories','pill.trims':'Trims','pill.yarns':'Yarns & Threads','pill.oem':'OEM Services','pill.factories':'Factories',
+    'promo.title':'Mega Sourcing Sale — up to 50% off verified fabrics & OEM','promo.shopnow':'Shop now',
+    'mat.cotton':'Cotton','mat.linen':'Linen','mat.polyester':'Polyester','mat.wool':'Wool','mat.nylon':'Nylon',
+    'cat.filters':'Filters','cat.reset':'Reset','cat.oemavail':'OEM availability','cat.all':'All','cat.oemAvailable':'OEM available','cat.nonoem':'Non-OEM',
+    'cat.material':'Material','cat.price':'Price (US$ / unit)','cat.certs':'Certifications','cat.sort':'Sort','cat.verified':'verified suppliers',
+    'sort.rec':'Recommended','sort.new':'Newest','sort.moq':'MOQ: Low','sort.price':'Price: Low',
+    'noun.fabrics':'fabric options','noun.accessories':'accessory options','noun.trims':'trim options','noun.yarns':'yarn & thread options','noun.oem':'service packages',
+    'seo.h1':'Wholesale Fabric & Garment Sourcing for Fashion Brands',
+    'seo.p1':'ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.',
+    'seo.h2':'Source from verified factories across Asia and beyond',
+    'seo.p2':'Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, ARCANA’s OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.'
+  },
+  ja:{
+    'nav.categories':'カテゴリー','search.ph':'生地・付属品・工場を検索…','search.refine':'キーワードで写真検索を絞り込む…','auth.login':'ログイン','auth.signup':'新規登録',
+    'tb.sell':'ARCANAで販売 — 5万社以上の認証バイヤーへ','tb.about':'会社概要','tb.help':'ヘルプ','tb.saved':'保存済み',
+    'ft.tagline':'ブランドオーナーと認証済みの生地工場・OEM工場をつなぐ卸売マーケットプレイス。',
+    'ft.company':'ARCANA','ft.about':'ARCANAについて','ft.careers':'採用情報','ft.blog':'ブログ','ft.b2b':'B2B調達','ft.trustsafety':'安全性と信頼',
+    'ft.buy':'購入','ft.sourcing':'調達ガイド','ft.payments':'お支払い','ft.shipping':'配送','ft.protection':'バイヤー保護',
+    'ft.sell':'販売','ft.sellon':'ARCANAで販売','ft.dashboard':'サプライヤー管理画面',
+    'ft.help':'ヘルプ・ガイド','ft.helpcenter':'ヘルプセンター','ft.terms':'利用規約','ft.privacy':'プライバシーポリシー','ft.contact':'お問い合わせ',
+    'ft.security':'セキュリティとコンプライアンス','ft.follow':'フォローする','ft.rights':'無断転載を禁じます。',
+    'home.curated':'あなたへのおすすめ','home.viewall':'すべての商品を見る','home.tab.all':'すべて','home.tab.fabrics':'生地','home.tab.accessories':'付属品','home.tab.trims':'トリム',
+    'hero.btag1':'新シーズン調達','hero.h1':'次のコレクションのための卸売マーケットプレイス','hero.p1':'高品質な素材と信頼できる認証工場 — ブランドオーナーのために。','hero.cta1':'調達を始める',
+    'hero.btag2':'期間限定 · 11.11セール','hero.h2':'認証生地・OEMが最大50%オフ','hero.p2':'次のコレクションをお得に — 信頼できる工場から。','hero.cta2':'セールを見る',
+    'home.popcat':'人気カテゴリー','home.popcatdesc':'織物・ニット・デニム・トリム・フルパッケージOEM — 認証工場から。','home.explore':'今すぐ見る',
+    'home.quickreq':'クイック見積り依頼','home.browseall':'すべて見る','home.material':'素材','home.quantity':'数量','home.qtyph':'例: 500 m','home.getquotes':'見積りを取得',
+    'quick.fabrics':'生地','quick.trims':'トリム','quick.oem':'OEM',
+    'pill.fabrics':'生地','pill.accessories':'付属品','pill.trims':'トリム','pill.yarns':'糸・スレッド','pill.oem':'OEMサービス','pill.factories':'工場',
+    'promo.title':'メガ調達セール — 認証生地・OEMが最大50%オフ','promo.shopnow':'今すぐ購入',
+    'mat.cotton':'綿','mat.linen':'リネン','mat.polyester':'ポリエステル','mat.wool':'ウール','mat.nylon':'ナイロン',
+    'cat.filters':'絞り込み','cat.reset':'リセット','cat.oemavail':'OEM対応','cat.all':'すべて','cat.oemAvailable':'OEM対応あり','cat.nonoem':'非OEM',
+    'cat.material':'素材','cat.price':'価格 (¥ / 単位)','cat.certs':'認証','cat.sort':'並び替え','cat.verified':'認証サプライヤー',
+    'sort.rec':'おすすめ','sort.new':'新着','sort.moq':'最小ロット: 少','sort.price':'価格: 安い',
+    'noun.fabrics':'生地','noun.accessories':'付属品','noun.trims':'トリム','noun.yarns':'糸・スレッド','noun.oem':'サービスパッケージ',
+    'seo.h1':'ファッションブランドのための生地・縫製の卸売調達',
+    'seo.p1':'ARCANAは、アパレルブランドが認証済みの工場から高品質な生地・付属品・OEMサービスを直接調達できるB2Bマーケットプレイスです。組成・目付(GSM)・最小ロット・納期で比較し、見積依頼またはカートに追加して安全に決済できます。すべてのサプライヤーは本人・ライセンス・生産能力が認証済みです。',
+    'seo.h2':'アジアを中心とした認証工場から調達',
+    'seo.p2':'中国の浙江・広東・江蘇・山東をはじめ、日本・インド・ベトナム・トルコの工場と直接つながります。小ロットのサンプリングからプライベートラベル、カラーマッチング、量産まで、ARCANAのOEMパッケージが糸から完成品まで対応。T/T・PayPalによる安全な決済と120カ国以上への配送で、調達をシンプルに。'
+  },
+  zh:{
+    'nav.categories':'分类','search.ph':'搜索面料、辅料、工厂…','search.refine':'输入关键词细化图片搜索…','auth.login':'登录','auth.signup':'注册',
+    'tb.sell':'在 ARCANA 上销售 — 触达 5 万+ 认证买家','tb.about':'关于','tb.help':'帮助','tb.saved':'收藏',
+    'ft.tagline':'连接品牌方与认证面料厂及 OEM 工厂的批发采购平台。',
+    'ft.company':'ARCANA','ft.about':'关于 ARCANA','ft.careers':'招聘','ft.blog':'博客','ft.b2b':'B2B 采购','ft.trustsafety':'信任与安全',
+    'ft.buy':'采购','ft.sourcing':'采购指南','ft.payments':'支付','ft.shipping':'物流','ft.protection':'买家保障',
+    'ft.sell':'销售','ft.sellon':'在 ARCANA 上销售','ft.dashboard':'供应商后台',
+    'ft.help':'帮助与指南','ft.helpcenter':'帮助中心','ft.terms':'服务条款','ft.privacy':'隐私政策','ft.contact':'联系我们',
+    'ft.security':'安全与合规','ft.follow':'关注我们','ft.rights':'版权所有。',
+    'home.curated':'为你精选','home.viewall':'查看全部商品','home.tab.all':'全部','home.tab.fabrics':'面料','home.tab.accessories':'辅料','home.tab.trims':'织带',
+    'hero.btag1':'新季采购','hero.h1':'为你的下一个系列而生的批发采购平台','hero.p1':'优质材料与可信认证工厂 — 为品牌方打造。','hero.cta1':'开始采购',
+    'hero.btag2':'限时 · 11.11 大促','hero.h2':'认证面料与OEM低至5折','hero.p2':'以更低成本备货下一季 — 来自可信工厂。','hero.cta2':'抢购大促',
+    'home.popcat':'热门类目','home.popcatdesc':'梭织、针织、牛仔、织带及全包OEM — 来自认证工厂。','home.explore':'立即探索',
+    'home.quickreq':'快速询价','home.browseall':'查看全部','home.material':'材料','home.quantity':'数量','home.qtyph':'例如 500 m','home.getquotes':'获取报价',
+    'quick.fabrics':'面料','quick.trims':'织带','quick.oem':'OEM',
+    'pill.fabrics':'面料','pill.accessories':'辅料','pill.trims':'织带','pill.yarns':'纱线与缝纫线','pill.oem':'OEM服务','pill.factories':'工厂',
+    'promo.title':'超级采购大促 — 认证面料与OEM低至5折','promo.shopnow':'立即抢购',
+    'mat.cotton':'棉','mat.linen':'亚麻','mat.polyester':'涤纶','mat.wool':'羊毛','mat.nylon':'锦纶',
+    'cat.filters':'筛选','cat.reset':'重置','cat.oemavail':'OEM 可选','cat.all':'全部','cat.oemAvailable':'支持 OEM','cat.nonoem':'非 OEM',
+    'cat.material':'材料','cat.price':'价格 (¥ / 单位)','cat.certs':'认证','cat.sort':'排序','cat.verified':'认证供应商',
+    'sort.rec':'推荐','sort.new':'最新','sort.moq':'起订量: 低','sort.price':'价格: 低',
+    'noun.fabrics':'面料','noun.accessories':'辅料','noun.trims':'织带','noun.yarns':'纱线与缝纫线','noun.oem':'服务套餐',
+    'seo.h1':'面向时尚品牌的面料与成衣批发采购',
+    'seo.p1':'ARCANA 是一个 B2B 采购平台，品牌方可直接向认证工厂采购优质面料、辅料及全包 OEM 服务。按成分、克重(GSM)、起订量与交期进行比较，然后索取报价或加入购物车并安全支付。每家供应商均通过身份、资质与产能认证，让你放心下单。',
+    'seo.h2':'从亚洲及全球认证工厂采购',
+    'seo.p2':'连接中国浙江、广东、江苏、山东等制造重镇，以及日本、印度、越南和土耳其的合作工厂。无论是小起订量打样、贴牌生产、定制配色，还是带在线质检的批量生产，ARCANA 的 OEM 套餐都能让你的系列从纱线到成衣一站完成。T/T 与 PayPal 安全支付、透明贸易条款、覆盖 120+ 国家的物流，让采购井然有序。'
+  }
+};
+function applyLang(lang){
+  if(!I18N[lang]) lang='en';
+  try{localStorage.setItem('arcana_lang',lang);}catch(_){}
+  document.documentElement.lang=lang;
+  const d=I18N[lang];
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const v=d[el.dataset.i18n];if(v!=null)el.textContent=v;});
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=>{const v=d[el.dataset.i18nPh];if(v!=null)el.setAttribute('placeholder',v);});
+  document.querySelectorAll('[data-lang-label]').forEach(el=>el.textContent={en:'EN',ja:'日本語',zh:'中文'}[lang]);
+  document.querySelectorAll('[data-lang-switch] button').forEach(b=>b.classList.toggle('on',b.dataset.lang===lang));
+  // re-render dynamic content (product cards, prices, specs) in the new language
+  langRenderers.forEach(fn=>{ try{ fn(lang); }catch(err){ console.error(err); } });
+}
+window.ARCANA_setLang=applyLang;
+function wireLang(){
+  document.querySelectorAll('[data-lang-switch] button').forEach(b=>b.addEventListener('click',()=>applyLang(b.dataset.lang)));
+  const cyc=document.querySelector('[data-lang-cycle]');
+  if(cyc) cyc.addEventListener('click',()=>{const o=['en','ja','zh'];const c=document.documentElement.lang||'en';applyLang(o[(o.indexOf(c)+1)%o.length]);});
+  let saved='en'; try{saved=localStorage.getItem('arcana_lang')||'en';}catch(_){}
+  const q=new URLSearchParams(location.search).get('lang'); if(q&&I18N[q])saved=q;
+  applyLang(saved);
+}
+
+// demo seed: ?seed=cart pre-fills a couple items (for previews)
+if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('LNW-001',300); Store.addToCart('OCJ-002',150); Store.addToCart('DNM-003',500); }
+
+document.addEventListener('DOMContentLoaded',()=>{buildHeader();buildFooter();wire();wireSearch();buildCopilotFab();});
+document.addEventListener('DOMContentLoaded',()=>{ if(window.ARCANA_PAGE) try{window.ARCANA_PAGE({P,ASSET,Store,IC,toast});}catch(err){console.error(err);} wireLang(); });
+})();
