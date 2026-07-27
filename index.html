@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ARCANA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/pages.css">
 </head>
@@ -34,15 +37,15 @@
         <p data-i18n="home.popcatdesc">Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.</p>
         <a class="btn" href="pages/category.html" data-i18n="home.explore">Explore now</a>
       </div>
-      <img class="pc-img" src="assets/fabric-stack.webp" alt="Stack of apparel fabrics">
+      <img loading="lazy" class="pc-img" src="assets/fabric-stack.webp" alt="Stack of apparel fabrics">
     </div>
     <div class="quick-panel">
       <div class="qp-head"><b data-i18n="home.quickreq">Quick sourcing request</b><a href="pages/category.html" data-i18n="home.browseall">Browse all</a></div>
       <div class="qp-tabs" data-tabs><span data-tab class="on" data-i18n="quick.fabrics">Fabrics</span><span data-tab data-i18n="quick.trims">Trims</span><span data-tab data-i18n="quick.oem">OEM</span></div>
       <form data-quick>
         <div class="qp-row">
-          <div class="qp-field"><label data-i18n="home.material">Material</label><select><option data-i18n="mat.cotton">Cotton</option><option data-i18n="mat.linen">Linen</option><option data-i18n="mat.polyester">Polyester</option><option data-i18n="mat.wool">Wool</option><option data-i18n="mat.nylon">Nylon</option></select></div>
-          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input placeholder="e.g. 500 m" data-i18n-ph="home.qtyph"></div>
+          <div class="qp-field"><label for="qp-mat" data-i18n="home.material">Material</label><select id="qp-mat"><option data-i18n="mat.cotton">Cotton</option><option data-i18n="mat.linen">Linen</option><option data-i18n="mat.polyester">Polyester</option><option data-i18n="mat.wool">Wool</option><option data-i18n="mat.nylon">Nylon</option></select></div>
+          <div class="qp-field"><label for="qp-qty" data-i18n="home.quantity">Quantity</label><input id="qp-qty" placeholder="e.g. 500 m" data-i18n-ph="home.qtyph"></div>
         </div>
         <button class="btn btn-green btn-block" type="submit" data-i18n="home.getquotes">Get quotes</button>
       </form>
@@ -77,16 +80,16 @@
   <!-- SEO CONTENT -->
   <section class="seo-block">
     <h2 data-i18n="seo.h1">Wholesale Fabric &amp; Garment Sourcing for Fashion Brands</h2>
-    <p data-i18n="seo.p1">ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.</p>
+    <p data-i18n="seo.p1">ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics (cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester) on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.</p>
     <h3 data-i18n="seo.h2">Source from verified factories across Asia and beyond</h3>
-    <p data-i18n="seo.p2">Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, ARCANA's OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.</p>
+    <p data-i18n="seo.p2">Connect with fabric mills and OEM factories in key manufacturing regions (Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey). Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, ARCANA's OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.</p>
   </section>
 </main>
 
 <div id="ftr"></div>
-<script src="js/data.js"></script>
-<script src="js/copilot.js"></script>
-<script src="js/components.js"></script>
+<script defer src="js/data.js"></script>
+<script defer src="js/copilot.js"></script>
+<script defer src="js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   // banner carousel

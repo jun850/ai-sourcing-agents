@@ -6,15 +6,19 @@
 <title>ARCANA</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+
 <style>.map-svg{position:absolute;inset:0;width:100%;height:100%}</style>
 </head>
 <body data-root=".." data-search="Search fabrics, trims, accessories, factories…">
 <div id="hdr"></div>
 <main class="wrap"><div id="supRoot"></div><div style="height:40px"></div></main>
 <div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/copilot.js"></script>
-<script src="../js/components.js"></script>
+<script defer src="../js/data.js"></script>
+<script defer src="../js/copilot.js"></script>
+<script defer src="../js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const FMAP=window.ARCANA_FACTORY_MAP, PRODUCTS=window.ARCANA_PRODUCTS;

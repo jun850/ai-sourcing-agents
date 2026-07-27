@@ -6,6 +6,10 @@
 <title>ARCANA</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+
 </head>
 <body data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
@@ -16,8 +20,8 @@
 </main>
 
 <div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/components.js"></script>
+<script defer src="../js/data.js"></script>
+<script defer src="../js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('coRoot');
@@ -66,13 +70,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const stepShipping=()=>`
     <h2>Shipping &amp; terms</h2><p class="ph">Where should this order ship, and on what trade terms?</p>
     <div class="co-grid">
-      <div class="field-lg full" data-field><label>Contact name</label><input data-t="name" value="${terms.name}" placeholder="Jessica Smith"><span class="err">Required.</span></div>
-      <div class="field-lg full" data-field><label>Company</label><input data-t="company" value="${terms.company}" placeholder="Luxe Apparel Co."><span class="err">Required.</span></div>
-      <div class="field-lg full" data-field><label>Ship-to address</label><input data-t="addr" value="${terms.addr}" placeholder="Street, building, unit"><span class="err">Required.</span></div>
-      <div class="field-lg" data-field><label>City</label><input data-t="city" value="${terms.city}" placeholder="New York"><span class="err">Required.</span></div>
-      <div class="field-lg"><label>Country</label><select data-t="country">${['United States','China','India','Vietnam','Turkey','United Kingdom'].map(c=>`<option ${c===terms.country?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field-lg"><label>Incoterms</label><select data-t="incoterm">${['FOB','EXW','CIF','DDP'].map(c=>`<option ${c===terms.incoterm?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field-lg"><label>PO number <span class="muted" style="font-weight:400">(optional)</span></label><input data-t="po" value="${terms.po}" placeholder="e.g. LA-20251111"></div>
+      <div class="field-lg full" data-field><label for="co-name">Contact name</label><input id="co-name" data-t="name" value="${terms.name}" placeholder="Jessica Smith"><span class="err">Required.</span></div>
+      <div class="field-lg full" data-field><label for="co-company">Company</label><input id="co-company" data-t="company" value="${terms.company}" placeholder="Luxe Apparel Co."><span class="err">Required.</span></div>
+      <div class="field-lg full" data-field><label for="co-addr">Ship-to address</label><input id="co-addr" data-t="addr" value="${terms.addr}" placeholder="Street, building, unit"><span class="err">Required.</span></div>
+      <div class="field-lg" data-field><label for="co-city">City</label><input id="co-city" data-t="city" value="${terms.city}" placeholder="New York"><span class="err">Required.</span></div>
+      <div class="field-lg"><label for="co-country">Country</label><select id="co-country" data-t="country">${['United States','China','India','Vietnam','Turkey','United Kingdom'].map(c=>`<option ${c===terms.country?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field-lg"><label for="co-incoterm">Incoterms</label><select id="co-incoterm" data-t="incoterm">${['FOB','EXW','CIF','DDP'].map(c=>`<option ${c===terms.incoterm?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="field-lg"><label for="co-po">PO number <span class="muted" style="font-weight:400">(optional)</span></label><input id="co-po" data-t="po" value="${terms.po}" placeholder="e.g. LA-20251111"></div>
     </div>
     <div class="co-nav"><a class="btn btn-out" href="cart.html">Back to cart</a><button class="btn btn-green" data-next>Continue to payment</button></div>`;
 

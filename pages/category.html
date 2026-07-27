@@ -6,6 +6,10 @@
 <title>ARCANA</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
+
 </head>
 <body data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
@@ -29,7 +33,7 @@
       </div>
       <div class="frl-block">
         <h5 data-i18n="cat.price">Price (US$ / unit)</h5>
-        <div class="frl-price"><input type="number" id="pmin" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" placeholder="Max" min="0"></div>
+        <div class="frl-price"><input type="number" id="pmin" placeholder="Min" min="0" aria-label="Minimum price"><span class="muted">–</span><input type="number" id="pmax" placeholder="Max" min="0" aria-label="Maximum price"></div>
       </div>
       <div class="frl-block">
         <h5 data-i18n="cat.certs">Certifications</h5>
@@ -62,9 +66,9 @@
 </main>
 
 <div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/copilot.js"></script>
-<script src="../js/components.js"></script>
+<script defer src="../js/data.js"></script>
+<script defer src="../js/copilot.js"></script>
+<script defer src="../js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // ---- Sourcing Copilot results mode ----

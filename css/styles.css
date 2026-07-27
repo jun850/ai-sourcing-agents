@@ -1,20 +1,34 @@
 /* ============ ARCANA — B2B Fabric Marketplace ============ */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root{
-  --green:#2e4a3a;        --green-d:#25402f;   --green-l:#eef2ee;
-  --gold:#96702b;         --gold-d:#785a20;    --gold-l:#f6eede;
+  --green:#2e4a3a;        --green-d:#25402f;   --green-l:#eef2ee;   --on-green:#dbe3dc;
+  --gold:#96702b;         --gold-d:#785a20;    --gold-l:#f6eede;    --on-gold:#e7d3a8;
   --ink:#1c1c1a;          --muted:#54534e;     --faint:#5c5b54;
   --bg:#f7f6f3;           --panel:#fbfaf8;     --card:#ffffff;
   --line:#e7e3db;         --line-2:#efece5;
   --blue:#3a5a8c;
-  --danger:#c0492f;
+  --danger:#c0492f;       --danger-l:#f7e8e5;
   --radius:16px;          --radius-sm:10px;    --radius-pill:999px;
   --shadow:0 1px 2px rgba(28,28,26,.04), 0 8px 24px rgba(28,28,26,.05);
   --shadow-sm:0 1px 3px rgba(28,28,26,.06);
   --serif:'Playfair Display',Georgia,serif;
   --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   --maxw:1360px;
+}
+
+/* Dark mode */
+@media(prefers-color-scheme:dark){
+  :root{
+    --green:#4a7a5e;       --green-d:#3d6b4e;  --green-l:#1f2e24;   --on-green:#cfe0d3;
+    --gold:#b8955a;        --gold-d:#d4a844;   --gold-l:#2a2214;    --on-gold:#e7d3a8;
+    --ink:#e6e2d9;         --muted:#948f88;    --faint:#6e6a64;
+    --bg:#121210;          --panel:#1a1a17;    --card:#1f1f1c;
+    --line:#33302c;        --line-2:#282622;
+    --blue:#5a7cb0;
+    --danger:#e06045;       --danger-l:#2e1814;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.4);
+    --shadow-sm:0 1px 3px rgba(0,0,0,.35);
+  }
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -182,7 +196,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
   box-shadow:0 10px 30px rgba(0,0,0,.22);font-size:14px;opacity:0;transform:translateY(12px);transition:.25s cubic-bezier(.2,.8,.2,1);pointer-events:auto;max-width:92vw}
 .toast.in{opacity:1;transform:none}
 .toast svg{width:19px;height:19px;flex-shrink:0}
-.toast a{color:#e9c987;font-weight:600;margin-left:6px;white-space:nowrap}
+.toast a{color:var(--gold);font-weight:600;margin-left:6px;white-space:nowrap}
 @media(prefers-reduced-motion:reduce){.toast{transition:opacity .12s}.toast.in{transform:none}}
 
 /* supplier chat drawer */
