@@ -447,7 +447,7 @@ function wireSearch(){
   function visualHTML(img){
     const seen={}, ms=visualMatches(img).filter(p=>!seen[p.img]&&(seen[p.img]=1)).slice(0,6);
     let h=`<div class="s-hd" role="presentation">${esc(t('Visual matches'))} <i class="s-demo">${esc(t('demo'))}</i></div><div class="s-vgrid" role="presentation">`;
-    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img loading="lazy" src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
+    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
     h+=`</div><a class="s-row s-foot" role="option" id="${optId(opts.push(1)-1)}" href="${P('category.html')+'?cat=fabrics&visual=1'}">${IC.search}<span>${esc(t('See all visual matches'))}</span>${IC.chevR}</a>`;
     return h;
   }
@@ -462,7 +462,7 @@ function wireSearch(){
   }
   function scanThenMatches(){
     const img=getImg(); if(!img) return;
-    pop.innerHTML=`<div class="s-scan"><img loading="lazy" src="${img.img}" alt="${esc(t('Uploaded fabric swatch'))}"><div><b>${esc(t('Matching your swatch…'))}</b><span>${esc(t('Comparing color and texture against verified fabrics'))}</span></div></div>`;
+    pop.innerHTML=`<div class="s-scan"><img src="${img.img}" alt=""><div><b>${esc(t('Matching your swatch…'))}</b><span>${esc(t('Comparing color and texture against verified fabrics'))}</span></div></div>`;
     opts=[]; sel=-1; open();
     clearTimeout(scanT); scanT=setTimeout(()=>{ input.focus(); render(); },750);
   }

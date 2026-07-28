@@ -6,10 +6,6 @@
 <title>ARCANA</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
-
 </head>
 <body data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
@@ -21,9 +17,9 @@
 </main>
 
 <div id="ftr"></div>
-<script defer src="../js/data.js"></script>
-<script defer src="../js/copilot.js"></script>
-<script defer src="../js/components.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/copilot.js"></script>
+<script src="../js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('cartRoot');
@@ -43,7 +39,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     }
     const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;return `
       <div class="cart-line" data-row="${p.id}">
-        <img loading="lazy" src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}">
+        <img src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}">
         <div class="cl-info">
           <h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4>
           <div class="m">${TR(p.comp)} · ${TR(p.spec)}</div>
@@ -86,7 +82,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection (5%)')}</span><span>${money(qcFee)}</span></div>`:''}
           ${insFee?`<div class="sum-row"><span class="k">${T('Insurance (1%)')}</span><span>${money(insFee)}</span></div>`:''}
           <div class="sum-row"><span class="k">${T('Estimated shipping')}</span><span>${money(ship)}</span></div>
-          <div class="promo"><input placeholder="${T('Promo code')}" aria-label="${T('Promo code')}"><button class="btn btn-out" data-promo-btn>${T('Apply')}</button></div>
+          <div class="promo"><input placeholder="${T('Promo code')}"><button class="btn btn-out" data-promo-btn>${T('Apply')}</button></div>
           <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
           <button class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>
           <div class="secure-note"><span>${IC.shield} ${T('Secure checkout')}</span> · <span>${T('SSL encrypted')}</span></div>

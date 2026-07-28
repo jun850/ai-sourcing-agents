@@ -6,10 +6,6 @@
 <title>ARCANA</title>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap">
-
 </head>
 <body data-hdr="a" data-root=".." data-allcat="0">
 <div id="hdr"></div>
@@ -51,9 +47,9 @@
 </main>
 
 <div id="ftr"></div>
-<script defer src="../js/data.js"></script>
-<script defer src="../js/copilot.js"></script>
-<script defer src="../js/components.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/copilot.js"></script>
+<script src="../js/components.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // countdown to end of sale (48h from now, demo)
@@ -82,7 +78,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const p=M[deal.id]; if(!p) return '';
     const now=(p.price*(1-deal.disc/100));
     return `<div class="deal-card">
-      <a class="deal-thumb" href="product.html?id=${p.id}"><span class="deal-disc">-${deal.disc}%</span><img loading="lazy" src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}"></a>
+      <a class="deal-thumb" href="product.html?id=${p.id}"><span class="deal-disc">-${deal.disc}%</span><img src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}"></a>
       <div class="deal-body">
         <h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4>
         <div class="deal-price"><span class="now">${money(now)}</span><span class="was">${money(p.price)}</span><span class="deal-unit">/${TR(p.unit)}</span></div>
