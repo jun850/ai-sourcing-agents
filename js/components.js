@@ -33,7 +33,11 @@ const Store = {
   setAddon(k,v){ const a=Store.addons(); a[k]=!!v; LS.set('addons', a); },
   saved(){ return LS.get('saved', []); },
   isSaved(id){ return Store.saved().includes(id); },
-  toggleSaved(id){ const s=Store.saved(); const i=s.indexOf(id); if(i>-1)s.splice(i,1); else s.push(id); LS.set('saved',s); syncBadges(); return i<0; }
+  toggleSaved(id){ const s=Store.saved(); const i=s.indexOf(id); if(i>-1)s.splice(i,1); else s.push(id); LS.set('saved',s); syncBadges(); return i<0; },
+  orders(){ return LS.get('orders', []).slice().reverse(); },
+  getOrder(no){ return LS.get('orders', []).find(o=>o.no===no) || null; },
+  saveOrder(order){ const o=LS.get('orders', []); o.push(order); LS.set('orders', o); },
+  updateOrder(no, patch){ const o=LS.get('orders', []); const r=o.find(x=>x.no===no); if(r) Object.assign(r, patch); LS.set('orders', o); return r; }
 };
 window.ARCANA = Store;
 

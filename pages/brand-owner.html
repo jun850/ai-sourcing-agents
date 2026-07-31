@@ -143,18 +143,39 @@
 <script src="../js/copilot.js"></script>
 <script src="../js/components.js"></script>
 <script>
-window.ARCANA_PAGE=function({toast}){
-  // recent orders (demo) — status drives the pill colour
+window.ARCANA_PAGE=function({Store,toast}){
+  // recent orders — status drives the pill colour
   const M=window.ARCANA_PRODUCT_MAP||{};
-  const orders=[
-    {no:'ARC-481902', id:'LNW-001', qty:'300 m', total:'US$1,560.00', date:'Jul 2, 2026', status:'In production', cls:'b-oem-soft'},
-    {no:'ARC-479815', id:'OCJ-002', qty:'150 kg', total:'US$1,020.00', date:'Jun 24, 2026', status:'Shipped', cls:'b-ok'},
-    {no:'ARC-476330', id:'OEM-401', qty:'1 package', total:'US$45.00', date:'Jun 18, 2026', status:'Quote sent', cls:'b-veri'},
-    {no:'ARC-472204', id:'DNM-003', qty:'500 m', total:'US$3,700.00', date:'May 30, 2026', status:'Delivered', cls:'b-ok'},
+  const money=n=>window.ARCANA_money(n);
+  const STATUS_META={
+    awaiting_payment:{label:'Pending payment', cls:'b-prem'},
+    payment_declared:{label:'Payment declared', cls:'b-prem'},
+    payment_verified:{label:'Payment verified', cls:'b-std'},
+    fulfilling:{label:'In fulfillment', cls:'b-std'},
+    completed:{label:'Completed', cls:'b-ok'},
+    cancelled:{label:'Cancelled', cls:'b-nonoem'},
+    disputed:{label:'Disputed', cls:'b-nonoem'},
+    refunded:{label:'Refunded', cls:'b-nonoem'}
+  };
+  const realOrders=(Store.orders()||[]).map(o=>{
+    const meta=STATUS_META[o.status]||STATUS_META.awaiting_payment;
+    return {no:o.no, href:`order.html?no=${o.no}`,
+      name:o.items.length>1?`${o.items[0].name} +${o.items.length-1} more`:o.items[0].name,
+      seller:o.items.length>1?`${o.items.length} suppliers`:o.items[0].seller,
+      qty:o.items.reduce((s,i)=>s+i.qty,0)+' units', total:money(o.total),
+      date:new Date(o.placedAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+      status:meta.label, cls:meta.cls};
+  });
+  const demoOrders=[
+    {no:'ARC-481902', href:'product.html?id=LNW-001', id:'LNW-001', qty:'300 m', total:'US$1,560.00', date:'Jul 2, 2026', status:'In production', cls:'b-oem-soft'},
+    {no:'ARC-479815', href:'product.html?id=OCJ-002', id:'OCJ-002', qty:'150 kg', total:'US$1,020.00', date:'Jun 24, 2026', status:'Shipped', cls:'b-ok'},
+    {no:'ARC-476330', href:'product.html?id=OEM-401', id:'OEM-401', qty:'1 package', total:'US$45.00', date:'Jun 18, 2026', status:'Quote sent', cls:'b-veri'},
+    {no:'ARC-472204', href:'product.html?id=DNM-003', id:'DNM-003', qty:'500 m', total:'US$3,700.00', date:'May 30, 2026', status:'Delivered', cls:'b-ok'},
   ];
-  document.getElementById('ordTbl').innerHTML=orders.map(o=>{const p=M[o.id]||{name:o.id,seller:'—'};
-    return `<a class="ord-row" href="product.html?id=${o.id}">
-      <div class="ord-main"><b>${p.name}</b><span>${o.no} · ${p.seller}</span></div>
+  const orders=realOrders.length?realOrders:demoOrders;
+  document.getElementById('ordTbl').innerHTML=orders.map(o=>{const p=o.id?(M[o.id]||{name:o.id,seller:'—'}):null;
+    return `<a class="ord-row" href="${o.href}">
+      <div class="ord-main"><b>${p?p.name:o.name}</b><span>${o.no} · ${p?p.seller:o.seller}</span></div>
       <div class="ord-cell"><span>Quantity</span><b>${o.qty}</b></div>
       <div class="ord-cell"><span>Total</span><b>${o.total}</b></div>
       <div class="ord-cell"><span>Ordered</span><b>${o.date}</b></div>

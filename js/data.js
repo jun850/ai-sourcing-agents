@@ -251,3 +251,8 @@ window.ARCANA_money = function(usd, lang){
   const v = (usd||0) * f.rate;
   return f.sym + v.toLocaleString(f.loc, {minimumFractionDigits:f.dec, maximumFractionDigits:f.dec});
 };
+/* tiered QC/insurance rates — below US$1000 subtotal vs. US$1000 and above */
+window.ARCANA_addonRates = function(subtotal){
+  const under = subtotal < 1000;
+  return { qc: under ? 0.02 : 0.01, ins: under ? 0.01 : 0.005 };
+};

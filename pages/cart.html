@@ -53,7 +53,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
     const fee=+(subtotal*0.05).toFixed(2), ship=120;
     const ad=Store.addons();
-    const qcFee=ad.qc?+(subtotal*0.05).toFixed(2):0, insFee=ad.ins?+(subtotal*0.01).toFixed(2):0;
+    const rates=window.ARCANA_addonRates(subtotal);
+    const qcAmt=+(subtotal*rates.qc).toFixed(2), insAmt=+(subtotal*rates.ins).toFixed(2);
+    const qcFee=ad.qc?qcAmt:0, insFee=ad.ins?insAmt:0;
     const total=subtotal+fee+ship+qcFee+insFee;
 
     root.innerHTML=`<div class="cart-wrap">
@@ -68,10 +70,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <div class="sec-title" style="margin-bottom:14px"><span class="ti">${IC.shield}</span><h2 style="font-family:var(--serif);font-size:20px;font-weight:600">${T('Add-on services')}</h2></div>
           <label class="addon${ad.qc?' on':''}"><input type="checkbox" data-addon="qc" ${ad.qc?'checked':''}>
             <span class="ad-body"><b>${T('ARCANA QC Inspection')} <span class="ad-tag">${T('recommended')}</span></b><span>${T('Independent quality check by ARCANA before dispatch')}</span></span>
-            <span class="ad-fee">+5%<small>${T('of order total')}</small></span></label>
+            <span class="ad-fee">+${money(qcAmt)}</span></label>
           <label class="addon${ad.ins?' on':''}"><input type="checkbox" data-addon="ins" ${ad.ins?'checked':''}>
             <span class="ad-body"><b>${T('Shipment Insurance')}</b><span>${T('Covers loss or damage in transit')}</span></span>
-            <span class="ad-fee">+1%<small>${T('of order total')}</small></span></label>
+            <span class="ad-fee">+${money(insAmt)}</span></label>
         </section>
       </div>
       <aside>
@@ -79,8 +81,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <h3>${T('Order Summary')}</h3>
           <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
           <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${money(fee)}</span></div>
-          ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection (5%)')}</span><span>${money(qcFee)}</span></div>`:''}
-          ${insFee?`<div class="sum-row"><span class="k">${T('Insurance (1%)')}</span><span>${money(insFee)}</span></div>`:''}
+          ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection')} (${rates.qc*100}%)</span><span>${money(qcFee)}</span></div>`:''}
+          ${insFee?`<div class="sum-row"><span class="k">${T('Insurance')} (${rates.ins*100}%)</span><span>${money(insFee)}</span></div>`:''}
           <div class="sum-row"><span class="k">${T('Estimated shipping')}</span><span>${money(ship)}</span></div>
           <div class="promo"><input placeholder="${T('Promo code')}"><button class="btn btn-out" data-promo-btn>${T('Apply')}</button></div>
           <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
