@@ -1,0 +1,28 @@
+{
+  "name": "marketplace",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bundle:analytics": "esbuild js/analytics-entry.js --bundle --minify --outfile=js/analytics.bundle.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jun850/marketplace.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/jun850/marketplace/issues"
+  },
+  "homepage": "https://github.com/jun850/marketplace#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  }
+}
