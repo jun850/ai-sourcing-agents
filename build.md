@@ -1,5 +1,10 @@
 # Diffui agent build instructions
 
+> **Secrets note:** the Diffui auth token has been scrubbed from this file and `gen.sh`
+> (replaced with `YOUR_DIFFUI_TOKEN`). Supply your own token via the `DIFFUI_TOKEN` env
+> var — never commit it. The previously committed token was leaked in git history and
+> must be rotated at Diffui.
+
 
 ## Multi-page build
 
@@ -10,7 +15,7 @@ This build contains 7 pages. Implement shared UI first, then each page.
 
 #### Page 1: B2B Fabric Marketplace
 
-Design image: https://diffui.ai/image/B2B_Fabric_Marketplace.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/B2B_Fabric_Marketplace.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a B2B marketplace for fabrics, garment production with main audience will be the brand owner. 
 
@@ -28,28 +33,28 @@ Features that must be available in the UI
 
 #### Page 2: B2B Fabrics Category
 
-Design image: https://diffui.ai/image/B2B_Fabrics_Category.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/B2B_Fabrics_Category.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a category listing page for a B2B fabrics marketplace for brand owners. It should feel like a modern Tokopedia-style layout with clean, trustworthy B2B visuals. It should feature filter chips for fabric type, material, and OEM availability.
 
 
 #### Page 3: Fabric Product Details
 
-Design image: https://diffui.ai/image/Fabric_Product_Details.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/Fabric_Product_Details.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a product detail page for a B2B fabrics marketplace for brand owners. It should feel like a modern Tokopedia-style layout with clean, trustworthy visuals. It should feature an OEM services section with selectable packages.
 
 
 #### Page 4: Supplier Profile
 
-Design image: https://diffui.ai/image/Supplier_Profile.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/Supplier_Profile.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a supplier profile page for a B2B fabrics marketplace for brand owners. It should feel like a modern Tokopedia-style layout with clean, trustworthy visuals. It should feature a factory location and production highlights section.
 
 
 #### Page 5: Supplier Dashboard Setup
 
-Design image: https://diffui.ai/image/Supplier_Dashboard_Setup.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/Supplier_Dashboard_Setup.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a supplier dashboard page that help suppliers either fabrics mills or oem factoriessetup their SKU, ads, profile details, tax document, etc. It should feel like a modern Tokopedia-style layout with clean, trustworthy visuals. 
 
@@ -58,14 +63,14 @@ It should feature dashboard like shopify admin settings and preview mode to see 
 
 #### Page 6: OEM Services Cart
 
-Design image: https://diffui.ai/image/OEM_Services_Cart.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/OEM_Services_Cart.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a cart page after user adding several oem services package. It should feel like a modern Tokopedia-style layout with clean, trustworthy visuals. It should feature a factory location and production highlights section.
 
 
 #### Page 7: Brand Owner Profile
 
-Design image: https://diffui.ai/image/Brand_Owner_Profile.webp?authToken=tB65M2II2pN4
+Design image: https://diffui.ai/image/Brand_Owner_Profile.webp?authToken=YOUR_DIFFUI_TOKEN
 
 Original prompt: Create a brand owner profile page for a B2B fabrics marketplace for brand owners. It should feel like a modern Tokopedia-style layout with clean, trustworthy visuals. It should feature a brand owner details, company details, their interest, and region for operation
 
@@ -118,9 +123,9 @@ For vision analysis, download PNG — append `&format=png` to the design URL, or
 Example (design spec for analysis — not a final asset):
 
 ```bash
-curl -L -o assets/page.png "https://diffui.ai/image/Page_Name.webp?authToken=tB65M2II2pN4&format=png"
+curl -L -o assets/page.png "https://diffui.ai/image/Page_Name.webp?authToken=YOUR_DIFFUI_TOKEN&format=png"
 # or
-curl -L -o assets/page.png "https://diffui.ai/image/Page_Name.png?authToken=tB65M2II2pN4"
+curl -L -o assets/page.png "https://diffui.ai/image/Page_Name.png?authToken=YOUR_DIFFUI_TOKEN"
 ```
 
 Replace `Page_Name` with the slug from each design image URL in this document.
@@ -190,7 +195,7 @@ When the design needs photos or illustrations (avatars, hero images, product sho
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "A portrait of a man for an avatar",
   "width": 512,
   "height": 512,
@@ -200,7 +205,7 @@ When the design needs photos or illustrations (avatars, hero images, product sho
 
 **Required fields:**
 
-- `authToken` — the same token from this build link (`tB65M2II2pN4`).
+- `authToken` — the same token from this build link (`YOUR_DIFFUI_TOKEN`).
 - `prompt` — plain-text description of the image (describe what you want; no negative prompts).
 - `width` and `height` — **required** on every request. Choose dimensions explicitly for each asset.
 
@@ -213,7 +218,7 @@ When the design needs photos or illustrations (avatars, hero images, product sho
 
 ```json
 {
-  "url": "https://diffui.ai/image/generated_example.webp?authToken=tB65M2II2pN4",
+  "url": "https://diffui.ai/image/generated_example.webp?authToken=YOUR_DIFFUI_TOKEN",
   "width": 512,
   "height": 512
 }
@@ -238,7 +243,7 @@ Pick `quality` per asset. **Default to medium** — it is faster, cheaper (1¢),
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "Professional headshot portrait of a woman, neutral background",
   "width": 512,
   "height": 512,
@@ -250,7 +255,7 @@ Pick `quality` per asset. **Default to medium** — it is faster, cheaper (1¢),
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "Wide cinematic illustration of a mountain landscape at sunset, painterly style",
   "width": 2048,
   "height": 1536,
@@ -280,7 +285,7 @@ Pass a Diffui URL from this document (design image or a previously generated ass
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "Recreate only the hero illustration from the reference: saxophonist in black suit and fedora against a New Orleans skyline, yellow sun disc, expressive JAZZ lettering, and purple brushstroke banner — no navigation, buttons, headlines, or page chrome. Match the reference composition, subjects, and color palette.",
   "width": 2048,
   "height": 1536,
@@ -358,7 +363,7 @@ When the design uses a **repeating photographic or organic surface** as a backgr
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "warm off-white paper grain, subtle fiber texture",
   "tilingMode": "both"
 }
@@ -366,7 +371,7 @@ When the design uses a **repeating photographic or organic surface** as a backgr
 
 **Required fields:**
 
-- `authToken` — the same token from this build link (`tB65M2II2pN4`).
+- `authToken` — the same token from this build link (`YOUR_DIFFUI_TOKEN`).
 - `prompt` — describe the surface or material only (what you want the tile to look like).
 
 **Optional fields:**
@@ -378,7 +383,7 @@ Example with a normal map for a lit 3D surface:
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "weathered brushed steel, fine directional scratches",
   "tilingMode": "both",
   "maps": ["normal", "roughness"]
@@ -389,18 +394,18 @@ Example with a normal map for a lit 3D surface:
 
 ```json
 {
-  "url": "https://diffui.ai/image/generated_texture.webp?authToken=tB65M2II2pN4",
+  "url": "https://diffui.ai/image/generated_texture.webp?authToken=YOUR_DIFFUI_TOKEN",
   "width": 1024,
   "height": 1024,
   "tilingMode": "both",
   "maps": [
     {
       "type": "normal",
-      "url": "https://diffui.ai/image/generated_texture_normal.webp?authToken=tB65M2II2pN4"
+      "url": "https://diffui.ai/image/generated_texture_normal.webp?authToken=YOUR_DIFFUI_TOKEN"
     },
     {
       "type": "roughness",
-      "url": "https://diffui.ai/image/generated_texture_roughness.webp?authToken=tB65M2II2pN4"
+      "url": "https://diffui.ai/image/generated_texture_roughness.webp?authToken=YOUR_DIFFUI_TOKEN"
     }
   ]
 }
@@ -433,8 +438,8 @@ When you need a transparent cutout (product on white, profile photo, logo), remo
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
-  "imageUrl": "https://diffui.ai/image/generated_example.webp?authToken=tB65M2II2pN4"
+  "authToken": "YOUR_DIFFUI_TOKEN",
+  "imageUrl": "https://diffui.ai/image/generated_example.webp?authToken=YOUR_DIFFUI_TOKEN"
 }
 ```
 
@@ -446,7 +451,7 @@ Send the file bytes directly as `multipart/form-data` — no hosting required:
 
 ```bash
 curl -X POST "https://diffui.ai/api/build/remove-background" \
-  -F "authToken=tB65M2II2pN4" \
+  -F "authToken=YOUR_DIFFUI_TOKEN" \
   -F "file=@assets/product-photo.png"
 ```
 
@@ -461,7 +466,7 @@ curl -X POST "https://diffui.ai/api/build/remove-background" \
 
 ```json
 {
-  "url": "https://diffui.ai/image/generated_cutout.webp?authToken=tB65M2II2pN4",
+  "url": "https://diffui.ai/image/generated_cutout.webp?authToken=YOUR_DIFFUI_TOKEN",
   "width": 512,
   "height": 512
 }
@@ -488,8 +493,8 @@ Like remove-background, the input is either a remote URL (JSON) or a **local fil
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
-  "imageUrl": "https://diffui.ai/image/generated_example.webp?authToken=tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
+  "imageUrl": "https://diffui.ai/image/generated_example.webp?authToken=YOUR_DIFFUI_TOKEN",
   "maps": ["normal", "height", "roughness"]
 }
 ```
@@ -498,7 +503,7 @@ Like remove-background, the input is either a remote URL (JSON) or a **local fil
 
 ```bash
 curl -X POST "https://diffui.ai/api/build/create-maps" \
-  -F "authToken=tB65M2II2pN4" \
+  -F "authToken=YOUR_DIFFUI_TOKEN" \
   -F "file=@assets/card.png" \
   -F "maps=normal,height,roughness"
 ```
@@ -521,15 +526,15 @@ curl -X POST "https://diffui.ai/api/build/create-maps" \
   "maps": [
     {
       "type": "normal",
-      "url": "https://diffui.ai/image/generated_example_normal.webp?authToken=tB65M2II2pN4"
+      "url": "https://diffui.ai/image/generated_example_normal.webp?authToken=YOUR_DIFFUI_TOKEN"
     },
     {
       "type": "height",
-      "url": "https://diffui.ai/image/generated_example_height.webp?authToken=tB65M2II2pN4"
+      "url": "https://diffui.ai/image/generated_example_height.webp?authToken=YOUR_DIFFUI_TOKEN"
     },
     {
       "type": "roughness",
-      "url": "https://diffui.ai/image/generated_example_roughness.webp?authToken=tB65M2II2pN4"
+      "url": "https://diffui.ai/image/generated_example_roughness.webp?authToken=YOUR_DIFFUI_TOKEN"
     }
   ]
 }
@@ -563,7 +568,7 @@ Describe the icon in `prompt`. Optional `instructions` sets style (flat monochro
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
+  "authToken": "YOUR_DIFFUI_TOKEN",
   "prompt": "Minimal ferris wheel icon for a county fair app, single-color line art",
   "instructions": "Flat monochrome icon. Draw entirely inside the viewBox with comfortable padding; do not extend past the canvas edges.",
   "viewBox": { "minX": 0, "minY": 0, "width": 64, "height": 64 }
@@ -581,8 +586,8 @@ Use **image-to-SVG** only for **large or complex artwork** that should become a 
 
 ```json
 {
-  "authToken": "tB65M2II2pN4",
-  "imageUrl": "https://diffui.ai/image/Hero.webp?authToken=tB65M2II2pN4&format=png&crop=400,80,640,480",
+  "authToken": "YOUR_DIFFUI_TOKEN",
+  "imageUrl": "https://diffui.ai/image/Hero.webp?authToken=YOUR_DIFFUI_TOKEN&format=png&crop=400,80,640,480",
   "viewBox": { "minX": 0, "minY": 0, "width": 512, "height": 384 }
 }
 ```
@@ -601,7 +606,7 @@ Use **image-to-SVG** only for **large or complex artwork** that should become a 
 
 ```json
 {
-  "url": "https://diffui.ai/image/generated_example.svg?authToken=tB65M2II2pN4",
+  "url": "https://diffui.ai/image/generated_example.svg?authToken=YOUR_DIFFUI_TOKEN",
   "width": 24,
   "height": 24
 }

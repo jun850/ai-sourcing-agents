@@ -1,6 +1,7 @@
 #!/bin/bash
 # Generate all Diffui image assets in parallel, download to assets/
-T="tB65M2II2pN4"
+# Diffui auth token — provide via env, never hardcode: `DIFFUI_TOKEN=xxxx ./gen.sh`
+T="${DIFFUI_TOKEN:?Set DIFFUI_TOKEN to your Diffui auth token before running}"
 API="https://diffui.ai/api/build/generate-image"
 mkdir -p assets
 

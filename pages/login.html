@@ -28,10 +28,11 @@
       <button type="button" class="role-opt sel" data-role="buyer"><span class="ro-ic"></span><b>Brand Owner</b><span>Buy &amp; source materials</span></button>
       <button type="button" class="role-opt" data-role="seller"><span class="ro-ic"></span><b>Factory / Mill</b><span>Sell &amp; get discovered</span></button>
     </div>
-    <div class="field-lg" data-field><label for="email">Username</label><input id="email" type="text" placeholder="admin" autocomplete="username"><span class="err">Enter your username.</span></div>
-    <div class="field-lg" data-field><label for="pw">Password</label><input id="pw" type="password" placeholder="••••••••" autocomplete="current-password"><span class="err">Incorrect username or password.</span></div>
-    <div class="auth-meta"><label style="display:flex;gap:7px;align-items:center;font-weight:400;color:var(--muted)"><input type="checkbox" checked style="width:auto"> Keep me signed in</label><a href="#">Forgot password?</a></div>
-    <button class="btn btn-green btn-block" type="submit" style="padding:14px">Log in</button>
+    <div class="field-lg" data-field><label for="email">Email</label><input id="email" type="email" placeholder="you@company.com" autocomplete="username"><span class="err">Enter your email address.</span></div>
+    <div class="field-lg" data-field><label for="pw">Password</label><input id="pw" type="password" placeholder="••••••••" autocomplete="current-password"><span class="err" id="pwErr">Incorrect email or password.</span></div>
+    <div class="auth-meta"><label style="display:flex;gap:7px;align-items:center;font-weight:400;color:var(--muted)"><input type="checkbox" checked style="width:auto"> Keep me signed in</label><a href="forgot-password.html">Forgot password?</a></div>
+    <div class="field-lg" data-field id="formErrWrap" style="margin:-4px 0 14px"><span class="err" id="formErr"></span></div>
+    <button class="btn btn-green btn-block" type="submit" style="padding:14px" id="submitBtn">Log in</button>
     <div class="auth-alt">New to ARCANA? <a href="signup.html">Create an account</a></div>
     <p class="auth-legal">By continuing you agree to ARCANA's <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</p>
   </form>
@@ -42,29 +43,59 @@
 <script src="../js/components.js"></script>
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
 <script>
-window.ARCANA_PAGE = function({P,IC,Store,toast}){
+window.ARCANA_PAGE = function({IC,toast}){
   // fill aside icons
   const aps=document.querySelectorAll('.ap-ic');[IC.shield,IC.medal,IC.lock].forEach((s,i)=>{if(aps[i])aps[i].innerHTML=s;});
   document.querySelector('[data-role="buyer"] .ro-ic').innerHTML=IC.user;
   document.querySelector('[data-role="seller"] .ro-ic').innerHTML=IC.seller;
+  // role toggle is a visual affordance only — login role comes from the profile
   let role = new URLSearchParams(location.search).get('role')==='seller' ? 'seller':'buyer';
   const setRole=r=>{role=r;document.querySelectorAll('[data-role]').forEach(b=>{const on=b.dataset.role===r;b.classList.toggle('sel',on);b.classList.toggle('seller-sel',on&&r==='seller');});};
   setRole(role);
   document.querySelectorAll('[data-role]').forEach(b=>b.addEventListener('click',()=>setRole(b.dataset.role)));
+
   const form=document.getElementById('loginForm');
-  form.addEventListener('submit',e=>{
+  const btn=document.getElementById('submitBtn');
+  const formErrWrap=document.getElementById('formErrWrap'), formErr=document.getElementById('formErr');
+  const clearForm=()=>{ formErrWrap.classList.remove('invalid'); formErr.textContent=''; };
+  const showForm=msg=>{ formErr.textContent=msg; formErrWrap.classList.add('invalid'); };
+  clearForm();
+
+  form.addEventListener('submit',async e=>{
     e.preventDefault();
+    clearForm();
     const email=form.email, pw=form.pw; let ok=true;
     const mark=(inp,valid)=>{inp.closest('[data-field]').classList.toggle('invalid',!valid);if(!valid)ok=false;};
-    const user=email.value.trim();
-    const creds = user==='admin' && pw.value==='123456';
-    mark(email, user.length>0);
-    mark(pw, creds);
+    const em=email.value.trim();
+    mark(email, /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em));
+    mark(pw, pw.value.length>0);
     if(!ok) return;
-    Store.login(role, user);
-    toast('Welcome back — signed in');
-    setTimeout(()=>location.href = role==='seller' ? 'dashboard.html' : '../index.html', 500);
+
+    btn.disabled=true; const label=btn.textContent; btn.textContent='Signing in…';
+    try{
+      const { error } = await window.ARCANA_API.signIn({ email:em, password:pw.value });
+      if(error){
+        const m=(error.message||'').toLowerCase();
+        const code=error.code||'';
+        if(code==='email_not_confirmed' || m.includes('confirm') || m.includes('not confirmed')){
+          showForm('Please confirm your email first — check your inbox for the verification link.');
+        }else{
+          showForm('Incorrect email or password.');
+          pw.closest('[data-field]').classList.add('invalid');
+        }
+        btn.disabled=false; btn.textContent=label; return;
+      }
+      // redirect by PROFILE role, not the visual toggle
+      const profile = await window.ARCANA_API.getSessionProfile();
+      const dest = profile && profile.role==='seller' ? 'dashboard.html' : '../index.html';
+      toast('Welcome back — signed in');
+      setTimeout(()=>location.href=dest, 400);
+    }catch(err){
+      showForm('Something went wrong. Please try again.');
+      btn.disabled=false; btn.textContent=label;
+    }
   });
 };
 </script>

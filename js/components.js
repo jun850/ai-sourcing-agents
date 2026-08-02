@@ -16,7 +16,11 @@ const LS = {
 const Store = {
   session(){ return LS.get('session', null); },
   login(role, name){ LS.set('session', {role, name: name||(role==='seller'?'Zhejiang Greenknit':'Jessica Smith')}); },
-  logout(){ localStorage.removeItem('arcana_session'); },
+  logout(){
+    const clear=()=>{ localStorage.removeItem('arcana_session'); };
+    if(window.ARCANA_API && ARCANA_API.signOut){ return Promise.resolve(ARCANA_API.signOut()).then(clear, clear); }
+    clear(); return Promise.resolve();
+  },
   cart(){ return LS.get('cart', []); },
   cartCount(){ return Store.cart().length; },        // distinct SKUs (header badge)
   cartUnits(){ return Store.cart().reduce((n,i)=>n+i.qty,0); },
@@ -621,15 +625,64 @@ function wire(){
     document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
     if(location.search.indexOf('katopen')>-1){katPanel.hidden=false;katBtn.classList.add('open');}
   }
-  // account menu
-  document.querySelectorAll('[data-acct]').forEach(a=>{
+  // account menu + auth cluster handlers (logout, saved link)
+  bindAuthUI(document);
+  // search submit + suggestions + image search live in wireSearch()
+}
+
+/* ---------- auth cluster binding + Supabase session bridge ---------- */
+function bindAuthUI(scope){
+  scope = scope || document;
+  scope.querySelectorAll('[data-acct]').forEach(a=>{
     const btn=a.querySelector('.acct-btn'), pop=a.querySelector('.acct-pop');
+    if(!btn||!pop) return;
     btn.addEventListener('click',e=>{e.stopPropagation(); const open=pop.hidden; pop.hidden=!open; btn.setAttribute('aria-expanded',String(open));});
     document.addEventListener('click',()=>{ if(!pop.hidden){pop.hidden=true; btn.setAttribute('aria-expanded','false');} });
   });
-  document.querySelectorAll('[data-logout]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault(); Store.logout(); location.href=HOME;}));
-  document.querySelectorAll('[data-saved-link]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); toast(`${Store.saved().length} item(s) saved. Wishlist view coming soon.`);}));
-  // search submit + suggestions + image search live in wireSearch()
+  scope.querySelectorAll('[data-logout]').forEach(b=>b.addEventListener('click',e=>{
+    e.preventDefault();
+    Promise.resolve(Store.logout()).then(()=>{ location.href=HOME; });
+  }));
+  scope.querySelectorAll('[data-saved-link]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); toast(`${Store.saved().length} item(s) saved. Wishlist view coming soon.`);}));
+}
+
+/* Re-render ONLY the header auth cluster (login/signup <-> account menu) in place,
+   preserving search, categories, cart and their bound handlers. */
+function refreshAuth(){
+  const hdrIn=document.querySelector('.hdr-in'); if(!hdrIn) return;
+  hdrIn.querySelectorAll('.btn-login,.btn-daftar,.acct').forEach(n=>n.remove());
+  const panel=hdrIn.querySelector('[data-kat-panel]');
+  const tmp=document.createElement('div'); tmp.innerHTML=authCluster();
+  const added=[...tmp.childNodes];
+  added.forEach(n=>hdrIn.insertBefore(n, panel));
+  // localize freshly-inserted nodes to the active language
+  const lang=document.documentElement.lang||'en', d=I18N[lang]||I18N.en;
+  added.forEach(n=>{
+    if(n.nodeType!==1) return;
+    if(n.dataset && n.dataset.i18n){ const v=d[n.dataset.i18n]; if(v!=null) n.textContent=v; }
+    n.querySelectorAll && n.querySelectorAll('[data-i18n]').forEach(el=>{const v=d[el.dataset.i18n]; if(v!=null) el.textContent=v;});
+  });
+  bindAuthUI(hdrIn);
+  syncBadges();
+}
+
+/* Bridge Supabase's async session into the synchronous arcana_session mirror
+   the header renders off, then re-render the auth cluster. */
+function bootstrapSession(){
+  const api=window.ARCANA_API;
+  if(!api || !api.getSessionProfile) return;
+  const sync=()=>api.getSessionProfile().then(profile=>{
+    if(profile){ LS.set('session',{role:profile.role, name:profile.name}); }
+    else{ localStorage.removeItem('arcana_session'); }
+    refreshAuth();
+  }).catch(()=>{});
+  sync();
+  if(api.onChange){
+    api.onChange((event, session)=>{
+      if(event==='SIGNED_OUT' || !session){ localStorage.removeItem('arcana_session'); refreshAuth(); return; }
+      sync();
+    });
+  }
 }
 
 /* ---------- i18n (EN default · JA · ZH) ---------- */
@@ -741,6 +794,6 @@ function wireLang(){
 // demo seed: ?seed=cart pre-fills a couple items (for previews)
 if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('LNW-001',300); Store.addToCart('OCJ-002',150); Store.addToCart('DNM-003',500); }
 
-document.addEventListener('DOMContentLoaded',()=>{buildHeader();buildFooter();wire();wireSearch();buildCopilotFab();});
+document.addEventListener('DOMContentLoaded',()=>{buildHeader();buildFooter();wire();wireSearch();buildCopilotFab();bootstrapSession();});
 document.addEventListener('DOMContentLoaded',()=>{ if(window.ARCANA_PAGE) try{window.ARCANA_PAGE({P,ASSET,Store,IC,toast});}catch(err){console.error(err);} wireLang(); });
 })();
