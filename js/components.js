@@ -169,11 +169,14 @@ function accountMenu(s){
   const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   const av = s.avatarUrl ? `<img src="${s.avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : initials;
   const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
+  const roleLabel = s.role==='seller' ? 'Factory · Seller' : s.role==='admin' ? 'ARCANA · Admin' : 'Brand Owner · Buyer';
+  const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Order management</a>` : '';
   return `<div class="acct" data-acct>
     <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${av}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
     <div class="acct-pop" role="menu" hidden>
-      <div class="acct-hd"><span class="acct-av">${av}</span><div><b>${s.name}</b><span>${s.role==='seller'?'Factory · Seller':'Brand Owner · Buyer'}</span></div></div>
+      <div class="acct-hd"><span class="acct-av">${av}</span><div><b>${s.name}</b><span>${roleLabel}</span></div></div>
       <a role="menuitem" href="${dest}">${s.role==='seller'?'Supplier dashboard':'My profile'}</a>
+      ${adminLink}
       <a role="menuitem" href="${P('cart.html')}">My cart</a>
       <a role="menuitem" href="#" data-saved-link>Saved items</a>
       <button role="menuitem" data-logout>${IC.logout}<span>Log out</span></button>
@@ -738,7 +741,7 @@ const I18N={
     'hero.btag1':'NEW SEASON SOURCING','hero.h1':'The wholesale marketplace for your next collection','hero.p1':'Quality materials and trusted, verified factories — built for brand owners.','hero.cta1':'Start sourcing',
     'hero.btag2':'LIMITED · 11.11 SALE','hero.h2':'Up to 50% off verified fabrics & OEM','hero.p2':'Stock your next collection for less — from mills you can trust.','hero.cta2':'Shop the sale',
     'home.popcat':'Popular Categories','home.popcatdesc':'Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.','home.explore':'Explore now',
-    'home.quickreq':'Quick sourcing request','home.browseall':'Browse all','home.material':'Material','home.quantity':'Quantity','home.qtyph':'e.g. 500 m','home.getquotes':'Get quotes',
+    'home.quickreq':'Quick sourcing request','home.browseall':'Browse all','home.material':'Material','home.quantity':'Quantity','home.qtyph':'e.g. 500 m','home.note':'Note','home.notetip':"Tell us the characteristics you need: composition, GSM/weight, color, certifications, MOQ flexibility, lead time, or anything else. We'll get back to you.",'home.noteph':'e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ','home.getquotes':'Get quotes',
     'quick.fabrics':'Fabrics','quick.trims':'Trims','quick.oem':'OEM',
     'pill.fabrics':'Fabrics','pill.accessories':'Accessories','pill.trims':'Trims','pill.yarns':'Yarns & Threads','pill.oem':'OEM Services','pill.factories':'Factories',
     'promo.title':'Mega Sourcing Sale — up to 50% off verified fabrics & OEM','promo.shopnow':'Shop now',
@@ -765,7 +768,7 @@ const I18N={
     'hero.btag1':'新シーズン調達','hero.h1':'次のコレクションのための卸売マーケットプレイス','hero.p1':'高品質な素材と信頼できる認証工場 — ブランドオーナーのために。','hero.cta1':'調達を始める',
     'hero.btag2':'期間限定 · 11.11セール','hero.h2':'認証生地・OEMが最大50%オフ','hero.p2':'次のコレクションをお得に — 信頼できる工場から。','hero.cta2':'セールを見る',
     'home.popcat':'人気カテゴリー','home.popcatdesc':'織物・ニット・デニム・トリム・フルパッケージOEM — 認証工場から。','home.explore':'今すぐ見る',
-    'home.quickreq':'クイック見積り依頼','home.browseall':'すべて見る','home.material':'素材','home.quantity':'数量','home.qtyph':'例: 500 m','home.getquotes':'見積りを取得',
+    'home.quickreq':'クイック見積り依頼','home.browseall':'すべて見る','home.material':'素材','home.quantity':'数量','home.qtyph':'例: 500 m','home.note':'備考','home.notetip':'組成、目付(GSM)、色、認証、最低発注数量の柔軟性、リードタイムなど、必要な特性をお知らせください。担当者よりご連絡いたします。','home.noteph':'例: GOTS認証オーガニックコットン、180gsm、無染色、MOQ相談可','home.getquotes':'見積りを取得',
     'quick.fabrics':'生地','quick.trims':'トリム','quick.oem':'OEM',
     'pill.fabrics':'生地','pill.accessories':'付属品','pill.trims':'トリム','pill.yarns':'糸・スレッド','pill.oem':'OEMサービス','pill.factories':'工場',
     'promo.title':'メガ調達セール — 認証生地・OEMが最大50%オフ','promo.shopnow':'今すぐ購入',
@@ -792,7 +795,7 @@ const I18N={
     'hero.btag1':'新季采购','hero.h1':'为你的下一个系列而生的批发采购平台','hero.p1':'优质材料与可信认证工厂 — 为品牌方打造。','hero.cta1':'开始采购',
     'hero.btag2':'限时 · 11.11 大促','hero.h2':'认证面料与OEM低至5折','hero.p2':'以更低成本备货下一季 — 来自可信工厂。','hero.cta2':'抢购大促',
     'home.popcat':'热门类目','home.popcatdesc':'梭织、针织、牛仔、织带及全包OEM — 来自认证工厂。','home.explore':'立即探索',
-    'home.quickreq':'快速询价','home.browseall':'查看全部','home.material':'材料','home.quantity':'数量','home.qtyph':'例如 500 m','home.getquotes':'获取报价',
+    'home.quickreq':'快速询价','home.browseall':'查看全部','home.material':'材料','home.quantity':'数量','home.qtyph':'例如 500 m','home.note':'备注','home.notetip':'请告诉我们您需要的特性：成分、克重(GSM)、颜色、认证、起订量灵活性、交货期等。我们会尽快与您联系。','home.noteph':'例如：GOTS认证有机棉，180gsm，本色未染，起订量可协商','home.getquotes':'获取报价',
     'quick.fabrics':'面料','quick.trims':'织带','quick.oem':'OEM',
     'pill.fabrics':'面料','pill.accessories':'辅料','pill.trims':'织带','pill.yarns':'纱线与缝纫线','pill.oem':'OEM服务','pill.factories':'工厂',
     'promo.title':'超级采购大促 — 认证面料与OEM低至5折','promo.shopnow':'立即抢购',

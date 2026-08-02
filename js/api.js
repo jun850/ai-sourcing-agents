@@ -25,6 +25,7 @@ if(!sb || !sb.auth){
     placeOrder(){ return Promise.resolve({ error: err }); },
     declarePayment(){ return Promise.resolve({ error: err }); },
     getOrder(){ return Promise.resolve({ error: err }); },
+    getMyOrders(){ return Promise.resolve([]); },
     getBankAccount(){ return Promise.resolve(null); },
     getCart(){ return Promise.resolve([]); },
     syncCartItem(){ return Promise.resolve({ error: err }); },
@@ -247,6 +248,21 @@ const API = {
       ]);
       return { order, items: itemsRes.data || [], events: eventsRes.data || [] };
     }catch(error){ return { error }; }
+  },
+
+  /* Buyer's own order history, most recent first, with enough line-item detail
+     to render a summary row without a second round trip per order. */
+  async getMyOrders(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const { data, error } = await sb.from('orders')
+        .select('order_no, status, total, placed_at, order_items(sku_snapshot, name_snapshot, seller_snapshot, qty)')
+        .eq('buyer_profile_id', session.user.id)
+        .order('placed_at', { ascending:false });
+      if(error) return [];
+      return data || [];
+    }catch(_){ return []; }
   },
 
   async getBankAccount(){
