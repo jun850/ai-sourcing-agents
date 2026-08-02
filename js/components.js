@@ -794,6 +794,44 @@ function wireLang(){
 // demo seed: ?seed=cart pre-fills a couple items (for previews)
 if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('LNW-001',300); Store.addToCart('OCJ-002',150); Store.addToCart('DNM-003',500); }
 
+/* ---------- catalog hydration: replace bundled data.js globals with live
+   Supabase data before the page renders. Falls back silently to data.js on
+   any error, so the site always works offline / if the DB is unreachable. ---- */
+function catalogLoadBar(show){
+  let b=document.getElementById('arcanaLoadBar');
+  if(show){
+    if(!b){ b=document.createElement('div'); b.id='arcanaLoadBar';
+      b.style.cssText='position:fixed;top:0;left:0;height:2px;width:100%;z-index:9999;'+
+        'background:var(--brass,#b0863c);transform:scaleX(0);transform-origin:left;'+
+        'transition:transform .4s ease,opacity .3s ease'; document.body.appendChild(b); }
+    requestAnimationFrame(()=>{ b.style.opacity='1'; b.style.transform='scaleX(0.75)'; });
+  } else if(b){ b.style.transform='scaleX(1)'; b.style.opacity='0'; setTimeout(()=>b.remove(),350); }
+}
+async function hydrateCatalog(){
+  if(!(window.ARCANA_API && ARCANA_API.fetchCatalog)) return;
+  catalogLoadBar(true);
+  try{
+    const { products, factories } = await ARCANA_API.fetchCatalog();
+    if(products && products.length){
+      window.ARCANA_PRODUCTS = products;
+      window.ARCANA_PRODUCT_MAP = Object.fromEntries(products.map(p=>[p.id,p]));
+    }
+    if(factories && factories.length){
+      window.ARCANA_FACTORIES = factories;
+      window.ARCANA_FACTORY_MAP = Object.fromEntries(factories.map(f=>[f.id,f]));
+      window.ARCANA_FACTORY_BY_NAME = Object.fromEntries(factories.map(f=>[f.name,f.id]));
+    }
+  }catch(err){
+    console.warn('[ARCANA] live catalog unavailable — using bundled data.js', err && err.message);
+  }finally{ catalogLoadBar(false); }
+}
+
 document.addEventListener('DOMContentLoaded',()=>{buildHeader();buildFooter();wire();wireSearch();buildCopilotFab();bootstrapSession();});
-document.addEventListener('DOMContentLoaded',()=>{ if(window.ARCANA_PAGE) try{window.ARCANA_PAGE({P,ASSET,Store,IC,toast});}catch(err){console.error(err);} wireLang(); });
+document.addEventListener('DOMContentLoaded', async ()=>{
+  // Pages that render catalog data opt in with <body data-catalog> so the live
+  // read completes before ARCANA_PAGE runs. Other pages render immediately.
+  if(document.body.hasAttribute('data-catalog')) await hydrateCatalog();
+  if(window.ARCANA_PAGE) try{window.ARCANA_PAGE({P,ASSET,Store,IC,toast});}catch(err){console.error(err);}
+  wireLang();
+});
 })();

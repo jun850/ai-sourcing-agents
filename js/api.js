@@ -20,7 +20,8 @@ if(!sb || !sb.auth){
     resetRequest(){ return Promise.resolve({ data:null, error: err }); },
     resetConfirm(){ return Promise.resolve({ data:null, error: err }); },
     getSessionProfile(){ return Promise.resolve(null); },
-    onChange(){ return { data:{ subscription:{ unsubscribe(){} } } }; }
+    onChange(){ return { data:{ subscription:{ unsubscribe(){} } } }; },
+    fetchCatalog(){ return Promise.reject(err); }
   };
   return;
 }
@@ -99,6 +100,41 @@ const API = {
 
   onChange(cb){
     return sb.auth.onAuthStateChange((event, session)=>{ try{ cb(event, session); }catch(err){ console.error(err); } });
+  },
+
+  /* ---- Catalog reads (public, RLS: anyone can select) ----
+     Returns products + factories mapped to the legacy js/data.js shape so all
+     existing render code keeps working. Throws on error (caller falls back). */
+  async fetchCatalog(){
+    const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
+    const TYPE_LABEL = { fabric_mill:'Fabric Mill', oem_factory:'OEM Factory', trim_supplier:'Trim Supplier' };
+    const [prodRes, facRes] = await Promise.all([
+      sb.from('products')
+        .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name)')
+        .eq('listing_status','active'),
+      sb.from('factories').select('*')
+    ]);
+    if(prodRes.error) throw prodRes.error;
+    if(facRes.error)  throw facRes.error;
+
+    const factories = (facRes.data||[]).map(f=>({
+      id: f.slug, name: f.name, type: TYPE_LABEL[f.type] || f.type,
+      region: f.region, loc: f.loc, verified: f.verify_state === 'verified',
+      years: f.years, moq: f.moq, lead: f.lead,
+      rating: f.rating != null ? Number(f.rating) : 0,
+      orders: f.orders_label, capacity: f.capacity,
+      certs: f.certs || [], tags: f.tags || [], img: f.img,
+      sales: f.sales, phone: f.phone, web: f.web, founded: f.founded,
+      employees: f.employees, area: f.area, port: f.port, bio: f.bio
+    }));
+    const products = (prodRes.data||[]).map(p=>({
+      id: p.sku, name: p.name, img: p.img, comp: p.comp, spec: p.spec,
+      price: Number(p.price), unit: p.unit_type,
+      moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
+      seller: p.factories ? p.factories.name : '', loc: p.loc,
+      badge: p.badge || '', cat: p.category
+    }));
+    return { products, factories };
   }
 };
 
