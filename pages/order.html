@@ -22,14 +22,43 @@
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
 <script>
-window.ARCANA_PAGE = function({IC,Store,toast}){
+window.ARCANA_PAGE = async function({IC,Store,toast}){
   const money=n=>window.ARCANA_money(n);
   const root=document.getElementById('ordRoot');
   const no=new URLSearchParams(location.search).get('no');
-  let order=no?Store.getOrder(no):null;
+  const API=window.ARCANA_API;
 
-  // stands in for the future `platform_bank_accounts` table (one row per currency)
-  const PLATFORM_BANK={bank:'DBS Bank, Singapore', account:'0072-88-114529', holder:'ARCANA Marketplace Ltd.', swift:'DBSSSGSG'};
+  // Require login: orders are RLS-scoped to their buyer.
+  const profile = await API.getSessionProfile();
+  if(!profile){
+    root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
+      <span class="ce-ic">${IC.lock}</span><h3>Log in to view this order</h3>
+      <p>Your orders are private to your account. Sign in to see the details and payment status.</p>
+      <a class="btn btn-green" href="login.html?next=${encodeURIComponent('order.html'+location.search)}">Log in</a>
+    </div>`;
+    return;
+  }
+
+  // Platform escrow bank account (from platform_bank_accounts).
+  const bank = await API.getBankAccount();
+  const PLATFORM_BANK = bank
+    ? { bank:bank.bank_name, account:bank.account_number, holder:bank.account_name, swift:bank.swift||'—' }
+    : { bank:'—', account:'—', holder:'ARCANA', swift:'—' };
+
+  // Load the order (header + snapshot items) and map to the render shape.
+  let order=null;
+  async function load(){
+    if(!no) return;
+    const { order:o, items, error } = await API.getOrder(no);
+    if(error || !o){ order=null; return; }
+    order={
+      no:o.order_no, placedAt:o.placed_at, status:o.status,
+      items:(items||[]).map(it=>({ name:it.name_snapshot, seller:it.seller_snapshot, qty:Number(it.qty), price:Number(it.unit_price) })),
+      subtotal:Number(o.subtotal), fee:Number(o.fee), ship:Number(o.ship),
+      qcFee:Number(o.qc_fee), insFee:Number(o.ins_fee), total:Number(o.total)
+    };
+  }
+  await load();
 
   const STATUS_META={
     awaiting_payment:{label:'Pending payment', cls:'b-prem'},
@@ -68,14 +97,12 @@ window.ARCANA_PAGE = function({IC,Store,toast}){
         <p class="ord-ref">Use <b>${o.no}</b> as your transfer reference.</p>
         <div class="ord-bank-actions">
           <button class="btn btn-gold" data-transferred>${IC.lock} I have transferred</button>
-          <a href="#" class="ord-cancel" data-cancel>Changed your mind? <span>Cancel order →</span></a>
         </div>
       </section>`;
     if(o.status==='payment_declared') return `
       <section class="panel ord-bank">
         <h2>Payment declared</h2>
         <p class="ph">We're verifying your transfer of ${money(o.total)} against our bank statement — this usually takes up to 2 business days.</p>
-        <a href="#" class="ord-cancel" data-cancel>Changed your mind? <span>Cancel order →</span></a>
       </section>`;
     if(o.status==='cancelled') return `
       <section class="panel ord-bank">
@@ -140,18 +167,12 @@ window.ARCANA_PAGE = function({IC,Store,toast}){
 
   function bind(){
     const t=root.querySelector('[data-transferred]');
-    if(t) t.addEventListener('click',()=>{
-      Store.updateOrder(order.no, {status:'payment_declared', declaredAt:Date.now()});
-      order=Store.getOrder(order.no);
+    if(t) t.addEventListener('click',async ()=>{
+      t.disabled=true; const orig=t.innerHTML; t.textContent='Confirming…';
+      const { error } = await API.declarePayment(order.no);
+      if(error){ toast(`Could not confirm — ${error.message||'please try again.'}`); t.disabled=false; t.innerHTML=orig; return; }
+      await load();
       toast("Marked as transferred — we'll verify and update this page.");
-      render();
-    });
-    const c=root.querySelector('[data-cancel]');
-    if(c) c.addEventListener('click',e=>{
-      e.preventDefault();
-      Store.updateOrder(order.no, {status:'cancelled'});
-      order=Store.getOrder(order.no);
-      toast('Order cancelled');
       render();
     });
   }

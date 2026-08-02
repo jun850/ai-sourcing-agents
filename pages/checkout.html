@@ -22,7 +22,7 @@
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
 <script>
-window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('coRoot');
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
@@ -40,6 +40,20 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h3>${T('Nothing to check out')}</h3><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a></div>`;
     return;
   }
+
+  // Checkout requires a signed-in buyer (place_order needs auth + escrow).
+  const profile = await window.ARCANA_API.getSessionProfile();
+  if(!profile){
+    root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
+      <span class="ce-ic">${IC.lock}</span>
+      <h3>Log in to check out</h3>
+      <p>Sign in to your ARCANA account to place this order securely. Your cart is saved.</p>
+      <a class="btn btn-green" href="login.html?next=checkout.html">Log in to continue</a>
+      <p style="margin-top:14px;font-size:13px;color:var(--muted)">New to ARCANA? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
+    </div>`;
+    return;
+  }
+  if(!terms.company && profile.name) terms.company = profile.name;
 
   const summaryRail=()=>`<aside><section class="panel summary" style="position:sticky;top:88px">
     <h3>${T('Order Summary')}</h3>
@@ -103,18 +117,28 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </div>
     <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${money(total)}</button></div>`;
 
-  function placeOrder(){
-    const order={
-      no:'ARC-'+Math.floor(100000+Math.random()*899999),
-      placedAt:Date.now(),
-      status:'awaiting_payment',
-      terms:{...terms},
-      items:cart.map(i=>({id:i.id, qty:i.qty, name:M[i.id].name, seller:M[i.id].seller, price:M[i.id].price})),
-      subtotal, fee, ship, qcFee, insFee, total
-    };
-    Store.saveOrder(order);
+  async function placeOrder(){
+    const place=root.querySelector('[data-place]');
+    const orig = place ? place.innerHTML : '';
+    if(place){ place.disabled=true; place.textContent='Placing order…'; }
+    const shipAddress=[terms.name,terms.company,terms.addr,terms.city].filter(Boolean).join(', ');
+    const { orderNo, error } = await window.ARCANA_API.placeOrder({
+      items: cart.map(i=>({ id:i.id, qty:i.qty })),
+      shipCountry: terms.country,
+      shipAddress,
+      incoterms: terms.incoterm,
+      notes: terms.po || null,
+      qc: ad.qc, insurance: ad.ins
+    });
+    if(error || !orderNo){
+      const msg=(error && error.message) || 'Please try again.';
+      toast(`Could not place order — ${msg}`);
+      if(place){ place.disabled=false; place.innerHTML=orig; }
+      return;
+    }
+    // place_order cleared the DB cart server-side; clear the local mirror too.
     Store.clearCart();
-    location.href='order.html?no='+order.no;
+    location.href='order.html?no='+encodeURIComponent(orderNo);
   }
 
   function bind(){

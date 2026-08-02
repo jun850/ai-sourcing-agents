@@ -21,7 +21,11 @@ if(!sb || !sb.auth){
     resetConfirm(){ return Promise.resolve({ data:null, error: err }); },
     getSessionProfile(){ return Promise.resolve(null); },
     onChange(){ return { data:{ subscription:{ unsubscribe(){} } } }; },
-    fetchCatalog(){ return Promise.reject(err); }
+    fetchCatalog(){ return Promise.reject(err); },
+    placeOrder(){ return Promise.resolve({ error: err }); },
+    declarePayment(){ return Promise.resolve({ error: err }); },
+    getOrder(){ return Promise.resolve({ error: err }); },
+    getBankAccount(){ return Promise.resolve(null); }
   };
   return;
 }
@@ -135,6 +139,77 @@ const API = {
       badge: p.badge || '', cat: p.category
     }));
     return { products, factories };
+  },
+
+  /* ---- Checkout / orders ----
+     placeOrder syncs the client cart into the DB cart, then calls the
+     place_order RPC which recomputes every total server-side and returns the
+     order_no. Requires a signed-in buyer. items: [{ id:sku, qty }]. */
+  async placeOrder({ items, shipCountry, shipAddress, incoterms, notes, qc, insurance }){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated', code:'not_authenticated' } };
+      const uid = session.user.id;
+
+      // ensure the buyer has a cart row
+      let { data: cart, error: ce } = await sb.from('carts').select('id').eq('profile_id', uid).maybeSingle();
+      if(ce) return { error: ce };
+      if(!cart){
+        const ins = await sb.from('carts').insert({ profile_id: uid }).select('id').single();
+        if(ins.error) return { error: ins.error };
+        cart = ins.data;
+      }
+
+      // map SKUs -> product ids, then replace the DB cart contents
+      const skus = (items||[]).map(i=>i.id);
+      if(!skus.length) return { error:{ message:'cart is empty' } };
+      const { data: prods, error: pe } = await sb.from('products').select('id,sku').in('sku', skus);
+      if(pe) return { error: pe };
+      const idBySku = Object.fromEntries((prods||[]).map(p=>[p.sku, p.id]));
+      const rows = (items||[]).filter(i=>idBySku[i.id]).map(i=>({ cart_id: cart.id, product_id: idBySku[i.id], qty: i.qty }));
+      if(!rows.length) return { error:{ message:'no valid items in cart' } };
+      await sb.from('cart_items').delete().eq('cart_id', cart.id);
+      const ci = await sb.from('cart_items').insert(rows);
+      if(ci.error) return { error: ci.error };
+
+      const { data, error } = await sb.rpc('place_order', {
+        p_ship_country: shipCountry || null,
+        p_ship_address: shipAddress || null,
+        p_incoterms: incoterms || null,
+        p_notes: notes || null,
+        p_qc: !!qc,
+        p_insurance: !!insurance
+      });
+      if(error) return { error };
+      return { orderNo: data };
+    }catch(error){ return { error }; }
+  },
+
+  async declarePayment(orderNo){
+    try{ return await sb.rpc('declare_payment', { p_order_no: orderNo }); }
+    catch(error){ return { error }; }
+  },
+
+  /* Full order for the detail page: header + line snapshots + status events.
+     RLS scopes it to the buyer (or fulfilling factory / admin). */
+  async getOrder(orderNo){
+    try{
+      const { data: order, error } = await sb.from('orders').select('*').eq('order_no', orderNo).maybeSingle();
+      if(error) return { error };
+      if(!order) return { order: null };
+      const [itemsRes, eventsRes] = await Promise.all([
+        sb.from('order_items').select('*').eq('order_id', order.id),
+        sb.from('order_status_events').select('*').eq('order_id', order.id).order('created_at', { ascending:true })
+      ]);
+      return { order, items: itemsRes.data || [], events: eventsRes.data || [] };
+    }catch(error){ return { error }; }
+  },
+
+  async getBankAccount(){
+    try{
+      const { data } = await sb.from('platform_bank_accounts').select('*').eq('is_active', true).maybeSingle();
+      return data || null;
+    }catch(_){ return null; }
   }
 };
 

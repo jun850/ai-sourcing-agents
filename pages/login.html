@@ -87,9 +87,11 @@ window.ARCANA_PAGE = function({IC,toast}){
         }
         btn.disabled=false; btn.textContent=label; return;
       }
-      // redirect by PROFILE role, not the visual toggle
+      // redirect by PROFILE role, honoring a safe same-origin ?next= if present
       const profile = await window.ARCANA_API.getSessionProfile();
-      const dest = profile && profile.role==='seller' ? 'dashboard.html' : '../index.html';
+      const next = new URLSearchParams(location.search).get('next');
+      const safeNext = next && !/^(https?:)?\/\//i.test(next) ? next : null;
+      const dest = safeNext || (profile && profile.role==='seller' ? 'dashboard.html' : '../index.html');
       toast('Welcome back — signed in');
       setTimeout(()=>location.href=dest, 400);
     }catch(err){
