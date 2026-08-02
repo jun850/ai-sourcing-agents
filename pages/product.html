@@ -120,7 +120,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const buy=document.getElementById('buyBtn');
     if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));location.href='checkout.html';});
     const chatBtn=document.getElementById('chatBtn');
-    if(chatBtn) chatBtn.addEventListener('click',()=>openChat(TR(p.seller)));
+    if(chatBtn) chatBtn.addEventListener('click', async ()=>{
+      const profile=await window.ARCANA_API.getSessionProfile();
+      if(!profile){ location.href=`login.html?next=${encodeURIComponent('brand-owner.html#chat')}`; return; }
+      const { id, error }=await window.ARCANA_API.getOrCreateConversation(facId);
+      if(error){ toast(error.message||'Could not start conversation'); return; }
+      location.href=`brand-owner.html?convo=${id}#chat`;
+    });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
     sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'));});
     document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('Product link copied'));});
@@ -161,40 +167,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(120)}</b>`)}
       ${pk(4,T('Bulk Production'),T('Scale with confidence'),[T('Bulk production'),T('In-line QC'),T('Final inspection (AQL)'),T('On-time delivery')],`<b>${T('Custom')}</b>`)}
     </section>`;
-  }
-
-  // supplier chat drawer
-  function openChat(sellerName){
-    const T=window.ARCANA_T;
-    let panel=document.getElementById('chatPanel');
-    if(panel) panel.remove();
-    panel=document.createElement('div');
-    panel.id='chatPanel'; panel.className='chat-panel';
-    panel.innerHTML=`
-      <div class="chat-head">
-        <div class="chat-who"><span class="chat-av">${IC.factory}</span><div><b>${sellerName}</b><span class="chat-status"><i></i> ${T('Online now')} · ${T('Typically replies within 2 hours')}</span></div></div>
-        <button class="chat-x" aria-label="Close" data-chat-close>&times;</button>
-      </div>
-      <div class="chat-log" data-chat-log>
-        <div class="chat-msg them"><p>${T('Hello! Thanks for your interest — how can we help with your order?')}</p></div>
-      </div>
-      <form class="chat-input" data-chat-form>
-        <input type="text" placeholder="${T('Type a message…')}" aria-label="${T('Type a message…')}" required>
-        <button class="btn btn-green" type="submit">${T('Send')}</button>
-      </form>`;
-    document.body.appendChild(panel);
-    requestAnimationFrame(()=>panel.classList.add('in'));
-    const log=panel.querySelector('[data-chat-log]');
-    const close=()=>{panel.classList.remove('in');setTimeout(()=>panel.remove(),250);};
-    panel.querySelector('[data-chat-close]').addEventListener('click',close);
-    panel.querySelector('[data-chat-form]').addEventListener('submit',e=>{
-      e.preventDefault();
-      const inp=e.target.querySelector('input'); const v=inp.value.trim(); if(!v) return;
-      const me=document.createElement('div'); me.className='chat-msg me'; me.innerHTML=`<p></p>`; me.querySelector('p').textContent=v;
-      log.appendChild(me); inp.value=''; log.scrollTop=log.scrollHeight;
-      setTimeout(()=>{ const r=document.createElement('div'); r.className='chat-msg them'; r.innerHTML=`<p></p>`;
-        r.querySelector('p').textContent=window.ARCANA_T('Typically replies within 2 hours'); log.appendChild(r); log.scrollTop=log.scrollHeight; },900);
-    });
   }
 
   build();

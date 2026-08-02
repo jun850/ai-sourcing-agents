@@ -167,7 +167,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
 .acct{position:relative}
 .acct-btn{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
 .acct-av{width:30px;height:30px;border-radius:50%;background:var(--green-l);color:var(--green);
-  font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
 .acct-pop{position:absolute;right:0;top:calc(100% + 10px);width:250px;background:#fff;border:1px solid var(--line);
   border-radius:12px;box-shadow:var(--shadow);padding:8px;z-index:200}
 .acct-hd{display:flex;gap:11px;align-items:center;padding:10px;border-bottom:1px solid var(--line-2);margin-bottom:6px}

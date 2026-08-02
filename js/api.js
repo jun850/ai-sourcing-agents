@@ -25,13 +25,70 @@ if(!sb || !sb.auth){
     placeOrder(){ return Promise.resolve({ error: err }); },
     declarePayment(){ return Promise.resolve({ error: err }); },
     getOrder(){ return Promise.resolve({ error: err }); },
-    getBankAccount(){ return Promise.resolve(null); }
+    getBankAccount(){ return Promise.resolve(null); },
+    getCart(){ return Promise.resolve([]); },
+    syncCartItem(){ return Promise.resolve({ error: err }); },
+    replaceCart(){ return Promise.resolve({ error: err }); },
+    getMyProfile(){ return Promise.resolve(null); },
+    updateProfile(){ return Promise.resolve({ error: err }); },
+    updateEmail(){ return Promise.resolve({ error: err }); },
+    uploadImage(){ return Promise.resolve({ error: err }); },
+    getMyFactory(){ return Promise.resolve(null); },
+    updateFactory(){ return Promise.resolve({ error: err }); },
+    getMyProducts(){ return Promise.resolve({ error: err }); },
+    createProduct(){ return Promise.resolve({ error: err }); },
+    updateProduct(){ return Promise.resolve({ error: err }); },
+    archiveProduct(){ return Promise.resolve({ error: err }); },
+    getPriceBreaks(){ return Promise.resolve([]); },
+    setPriceBreaks(){ return Promise.resolve({ error: err }); },
+    getAddresses(){ return Promise.resolve([]); },
+    createAddress(){ return Promise.resolve({ error: err }); },
+    updateAddress(){ return Promise.resolve({ error: err }); },
+    deleteAddress(){ return Promise.resolve({ error: err }); },
+    setDefaultAddress(){ return Promise.resolve({ error: err }); },
+    getMyConversations(){ return Promise.resolve([]); },
+    getOrCreateConversation(){ return Promise.resolve({ error: err }); },
+    getMessages(){ return Promise.resolve([]); },
+    sendMessage(){ return Promise.resolve({ error: err }); },
+    adminListOrders(){ return Promise.resolve([]); },
+    adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); }
   };
   return;
 }
 
 const REDIRECT_LOGIN = location.origin + '/pages/login.html';
 const REDIRECT_RESET = location.origin + '/pages/reset-password.html';
+
+/* ---- Shared cart helpers (used by placeOrder + the cart-sync methods) ---- */
+async function ensureCart(uid){
+  const { data: cart, error } = await sb.from('carts').select('id').eq('profile_id', uid).maybeSingle();
+  if(error) return { error };
+  if(cart) return { cart };
+  const ins = await sb.from('carts').insert({ profile_id: uid }).select('id').single();
+  if(ins.error) return { error: ins.error };
+  return { cart: ins.data };
+}
+
+/* Replace a cart's contents with items:[{id:sku,qty}]. Unknown SKUs are dropped;
+   returns { matched } = how many rows actually got written, so callers can tell
+   "cart cleared" apart from "every SKU was invalid". */
+async function writeCartRows(cartId, items){
+  const skus = (items||[]).map(i=>i.id);
+  const { data: prods, error: pe } = skus.length
+    ? await sb.from('products').select('id,sku').in('sku', skus)
+    : { data: [], error: null };
+  if(pe) return { error: pe };
+  const idBySku = Object.fromEntries((prods||[]).map(p=>[p.sku, p.id]));
+  const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
+    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty }));
+  const del = await sb.from('cart_items').delete().eq('cart_id', cartId);
+  if(del.error) return { error: del.error };
+  if(rows.length){
+    const ins = await sb.from('cart_items').insert(rows);
+    if(ins.error) return { error: ins.error };
+  }
+  return { matched: rows.length };
+}
 
 const API = {
   /* role: 'buyer' | 'seller'. Signup metadata is consumed by the
@@ -84,20 +141,21 @@ const API = {
       try{
         const { data:profile, error } = await sb
           .from('profiles')
-          .select('role, full_name, company_name')
+          .select('role, full_name, company_name, avatar_url')
           .eq('id', user.id)
           .single();
         if(error || !profile){
-          return { id:user.id, email:user.email, role:'buyer', name:emailName };
+          return { id:user.id, email:user.email, role:'buyer', name:emailName, avatarUrl:null };
         }
         return {
           id: user.id,
           email: user.email,
           role: profile.role || 'buyer',
-          name: profile.company_name || profile.full_name || user.email || emailName
+          name: profile.company_name || profile.full_name || user.email || emailName,
+          avatarUrl: profile.avatar_url || null
         };
       }catch(_){
-        return { id:user.id, email:user.email, role:'buyer', name:emailName };
+        return { id:user.id, email:user.email, role:'buyer', name:emailName, avatarUrl:null };
       }
     }catch(_){ return null; }
   },
@@ -150,27 +208,13 @@ const API = {
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated', code:'not_authenticated' } };
       const uid = session.user.id;
+      if(!(items||[]).length) return { error:{ message:'cart is empty' } };
 
-      // ensure the buyer has a cart row
-      let { data: cart, error: ce } = await sb.from('carts').select('id').eq('profile_id', uid).maybeSingle();
-      if(ce) return { error: ce };
-      if(!cart){
-        const ins = await sb.from('carts').insert({ profile_id: uid }).select('id').single();
-        if(ins.error) return { error: ins.error };
-        cart = ins.data;
-      }
-
-      // map SKUs -> product ids, then replace the DB cart contents
-      const skus = (items||[]).map(i=>i.id);
-      if(!skus.length) return { error:{ message:'cart is empty' } };
-      const { data: prods, error: pe } = await sb.from('products').select('id,sku').in('sku', skus);
-      if(pe) return { error: pe };
-      const idBySku = Object.fromEntries((prods||[]).map(p=>[p.sku, p.id]));
-      const rows = (items||[]).filter(i=>idBySku[i.id]).map(i=>({ cart_id: cart.id, product_id: idBySku[i.id], qty: i.qty }));
-      if(!rows.length) return { error:{ message:'no valid items in cart' } };
-      await sb.from('cart_items').delete().eq('cart_id', cart.id);
-      const ci = await sb.from('cart_items').insert(rows);
-      if(ci.error) return { error: ci.error };
+      const ec = await ensureCart(uid);
+      if(ec.error) return { error: ec.error };
+      const wr = await writeCartRows(ec.cart.id, items);
+      if(wr.error) return { error: wr.error };
+      if(!wr.matched) return { error:{ message:'no valid items in cart' } };
 
       const { data, error } = await sb.rpc('place_order', {
         p_ship_country: shipCountry || null,
@@ -210,6 +254,294 @@ const API = {
       const { data } = await sb.from('platform_bank_accounts').select('*').eq('is_active', true).maybeSingle();
       return data || null;
     }catch(_){ return null; }
+  },
+
+  /* ---- Cart (real-time DB sync for signed-in users) ---- */
+  async getCart(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const { data: cart } = await sb.from('carts').select('id').eq('profile_id', session.user.id).maybeSingle();
+      if(!cart) return [];
+      const { data: items, error } = await sb.from('cart_items').select('qty, products(sku)').eq('cart_id', cart.id);
+      if(error || !items) return [];
+      return items.filter(i=>i.products).map(i=>({ id: i.products.sku, qty: Number(i.qty) }));
+    }catch(_){ return []; }
+  },
+
+  /* Upsert (or, at qty<=0, delete) one cart line for the signed-in user. */
+  async syncCartItem(sku, qty){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const ec = await ensureCart(session.user.id);
+      if(ec.error) return { error: ec.error };
+      const { data: prod, error: pe } = await sb.from('products').select('id').eq('sku', sku).single();
+      if(pe) return { error: pe };
+      if(qty <= 0){
+        const del = await sb.from('cart_items').delete().eq('cart_id', ec.cart.id).eq('product_id', prod.id);
+        return { error: del.error || null };
+      }
+      const up = await sb.from('cart_items').upsert(
+        { cart_id: ec.cart.id, product_id: prod.id, qty },
+        { onConflict: 'cart_id,product_id' }
+      );
+      return { error: up.error || null };
+    }catch(error){ return { error }; }
+  },
+
+  /* Bulk-replace the signed-in user's DB cart (used for the anon->login merge). */
+  async replaceCart(items){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const ec = await ensureCart(session.user.id);
+      if(ec.error) return { error: ec.error };
+      return await writeCartRows(ec.cart.id, items);
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Profile (self-serve edit, avatar upload) ---- */
+  async getMyProfile(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return null;
+      const { data, error } = await sb.from('profiles')
+        .select('id, role, full_name, company_name, country, handle, avatar_url, created_at')
+        .eq('id', session.user.id).single();
+      if(error || !data) return null;
+      return { ...data, email: session.user.email };
+    }catch(_){ return null; }
+  },
+
+  async updateProfile(patch){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const { error } = await sb.from('profiles').update(patch).eq('id', session.user.id);
+      if(error && error.code === '23505') return { error:{ message:'That handle is already taken', code:'23505' } };
+      return { error: error || null };
+    }catch(error){ return { error }; }
+  },
+
+  async updateEmail(newEmail){
+    try{ return await sb.auth.updateUser({ email: newEmail }); }
+    catch(error){ return { data:null, error }; }
+  },
+
+  /* Uploads to the shared public 'uploads' bucket under <uid>/<folder>/<ts>-<name>,
+     scoped writable by RLS to the signer's own uid folder regardless of destination. */
+  async uploadImage(file, folder){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const path = `${session.user.id}/${folder}/${Date.now()}-${file.name}`;
+      const { error } = await sb.storage.from('uploads').upload(path, file, { upsert:true });
+      if(error) return { error };
+      const { data } = sb.storage.from('uploads').getPublicUrl(path);
+      return { url: data.publicUrl };
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Seller: factory + SKU CRUD (RLS scopes writes to the caller's factory) ---- */
+  async getMyFactory(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return null;
+      const { data, error } = await sb.from('factories').select('*').eq('owner_profile_id', session.user.id).maybeSingle();
+      if(error) return null;
+      return data || null;
+    }catch(_){ return null; }
+  },
+
+  async updateFactory(id, patch){
+    try{ const { error } = await sb.from('factories').update(patch).eq('id', id); return { error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async getMyProducts(factoryId){
+    try{
+      const { data, error } = await sb.from('products').select('*').eq('factory_id', factoryId).order('created_at', { ascending:false });
+      if(error) return { error };
+      return { products: data || [] };
+    }catch(error){ return { error }; }
+  },
+
+  async createProduct(payload){
+    try{ const { data, error } = await sb.from('products').insert(payload).select().single(); return { product:data, error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async updateProduct(id, patch){
+    try{ const { error } = await sb.from('products').update(patch).eq('id', id); return { error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async archiveProduct(id){
+    try{ const { error } = await sb.from('products').update({ listing_status:'archived' }).eq('id', id); return { error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async getPriceBreaks(productId){
+    try{
+      const { data, error } = await sb.from('price_breaks').select('min_qty,unit_price').eq('product_id', productId).order('min_qty');
+      if(error) return [];
+      return (data||[]).map(b=>({ minQty:Number(b.min_qty), unitPrice:Number(b.unit_price) }));
+    }catch(_){ return []; }
+  },
+
+  async setPriceBreaks(productId, breaks){
+    try{
+      const del = await sb.from('price_breaks').delete().eq('product_id', productId);
+      if(del.error) return { error: del.error };
+      const rows = (breaks||[]).filter(b=>b.minQty>0 && b.unitPrice>=0)
+        .map(b=>({ product_id: productId, min_qty: b.minQty, unit_price: b.unitPrice }));
+      if(!rows.length) return {};
+      const ins = await sb.from('price_breaks').insert(rows);
+      return { error: ins.error || null };
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Address book (simple, no map/geocoding lookup) ---- */
+  async getAddresses(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const { data, error } = await sb.from('addresses').select('*')
+        .eq('profile_id', session.user.id)
+        .order('is_default', { ascending:false })
+        .order('created_at', { ascending:false });
+      if(error) return [];
+      return data || [];
+    }catch(_){ return []; }
+  },
+
+  async createAddress(payload){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const { data, error } = await sb.from('addresses')
+        .insert({ ...payload, profile_id: session.user.id }).select().single();
+      return { address: data, error: error || null };
+    }catch(error){ return { error }; }
+  },
+
+  async updateAddress(id, patch){
+    try{ const { error } = await sb.from('addresses').update(patch).eq('id', id); return { error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async deleteAddress(id){
+    try{ const { error } = await sb.from('addresses').delete().eq('id', id); return { error: error||null }; }
+    catch(error){ return { error }; }
+  },
+
+  async setDefaultAddress(id){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      await sb.from('addresses').update({ is_default:false }).eq('profile_id', session.user.id);
+      const { error } = await sb.from('addresses').update({ is_default:true }).eq('id', id);
+      return { error: error || null };
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Chat (buyer<->seller, one thread per buyer+factory pair) ---- */
+  async getMyConversations(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const uid = session.user.id;
+      const { data, error } = await sb.from('conversations')
+        .select('id, created_at, buyer_profile_id, factories(name, img), profiles(full_name, company_name)')
+        .order('created_at', { ascending:false });
+      if(error) return [];
+      return (data||[]).map(c=>({
+        id: c.id,
+        withName: c.buyer_profile_id===uid
+          ? (c.factories ? c.factories.name : 'Supplier')
+          : (c.profiles ? (c.profiles.company_name || c.profiles.full_name || 'Buyer') : 'Buyer'),
+        img: c.factories ? c.factories.img : null,
+        createdAt: c.created_at
+      }));
+    }catch(_){ return []; }
+  },
+
+  /* factorySlug is the legacy window.ARCANA_FACTORY_MAP key (factories.slug),
+     not the DB uuid — resolved here so callers never need the real id. */
+  async getOrCreateConversation(factorySlug){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const uid = session.user.id;
+      const { data: factory, error: fe } = await sb.from('factories').select('id').eq('slug', factorySlug).single();
+      if(fe) return { error: fe };
+      const { data: existing } = await sb.from('conversations').select('id')
+        .eq('buyer_profile_id', uid).eq('factory_id', factory.id).maybeSingle();
+      if(existing) return { id: existing.id };
+      const { data, error } = await sb.from('conversations')
+        .insert({ buyer_profile_id: uid, factory_id: factory.id }).select('id').single();
+      if(error) return { error };
+      return { id: data.id };
+    }catch(error){ return { error }; }
+  },
+
+  async getMessages(conversationId){
+    try{
+      const { data, error } = await sb.from('messages').select('*')
+        .eq('conversation_id', conversationId).order('created_at', { ascending:true });
+      if(error) return [];
+      return data || [];
+    }catch(_){ return []; }
+  },
+
+  /* Inserts the message, then fires a best-effort "you have a new message"
+     email to the other participant (not a reply-by-email bridge — replies
+     still happen in-app; see chat-notify-email). A failed notify never blocks
+     the send, which already succeeded. */
+  async sendMessage(conversationId, body){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const { data, error } = await sb.from('messages')
+        .insert({ conversation_id: conversationId, sender_profile_id: session.user.id, body }).select().single();
+      if(!error){
+        try{
+          await sb.functions.invoke('chat-notify-email', {
+            body: { conversationId, preview: body },
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          });
+        }catch(_){ /* best-effort */ }
+      }
+      return { message: data, error: error || null };
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Admin: platform-wide order management ---- */
+  async adminListOrders(){
+    try{ const { data, error } = await sb.rpc('admin_list_orders'); if(error) return []; return data || []; }
+    catch(_){ return []; }
+  },
+
+  /* Updates status (incl. 'cancelled') + logs an order_status_events row via RPC,
+     then fires the order-status-email Edge Function (best-effort — a failed email
+     doesn't roll back the status change, which already succeeded server-side). */
+  async adminUpdateOrderStatus(orderNo, status, note){
+    try{
+      const { data, error } = await sb.rpc('admin_update_order_status', {
+        p_order_no: orderNo, p_status: status, p_note: note || null
+      });
+      if(error) return { error };
+      const row = Array.isArray(data) ? data[0] : data;
+      try{
+        const { data:{ session } } = await sb.auth.getSession();
+        await sb.functions.invoke('order-status-email', {
+          body: { orderNo: row.order_no, status: row.status, buyerEmail: row.buyer_email, buyerName: row.buyer_name, total: row.total, note },
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+      }catch(_){ /* email is best-effort; status change already committed */ }
+      return { order: row };
+    }catch(error){ return { error }; }
   }
 };
 

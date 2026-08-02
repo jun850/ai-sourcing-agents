@@ -9,10 +9,12 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-surface="seller" data-root="..">
+<body data-surface="seller" data-root=".." data-catalog>
 <div id="hdr"></div>
 
-<main class="wrap" style="padding-top:26px;padding-bottom:40px">
+<div id="dashGate" class="wrap" hidden style="padding:80px 0;text-align:center;max-width:520px"></div>
+
+<main class="wrap" id="dashMain" style="padding-top:26px;padding-bottom:40px" hidden>
   <div class="dash">
     <!-- LEFT: dashboard -->
     <div>
@@ -20,25 +22,13 @@
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px">
           <div>
             <p class="dash-kicker">Supplier Dashboard</p>
-            <h1>Welcome, Zhejiang Greenknit Co., Ltd.</h1>
-            <p class="sub">Complete your setup to start connecting with global buyers.</p>
+            <h1 id="welcomeName">Welcome</h1>
+            <p class="sub" id="welcomeSub">Manage your factory's SKUs and profile.</p>
           </div>
-          <div style="min-width:280px;flex:1;max-width:340px">
-            <div class="prog-head"><span>Setup Progress</span><b style="font-size:18px">68%</b></div>
-            <div class="bar"><i style="width:68%"></i></div>
-            <div class="muted" style="font-size:12.5px;margin-top:8px">4 of 6 steps completed</div>
+          <div style="min-width:160px">
+            <div class="muted" style="font-size:12px">Active SKUs</div>
+            <div class="big-num" id="skuStat">0 <small>/ 0</small></div>
           </div>
-        </div>
-        <div class="step-cards">
-          <div class="step-card"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg></span><div><b>SKU Setup</b><span>8 / 12 done</span></div><span class="status st-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span></div>
-          <div class="step-card"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg></span><div><b>Ads Setup</b><span>1 / 3 done</span></div><span class="status st-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span></div>
-          <div class="step-card"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></span><div><b>Profile</b><span style="color:var(--green)">Completed</span></div><span class="status st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-          <div class="step-card"><span class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg></span><div><b>Tax Verification</b><span>Pending</span></div><span class="status st-err"><svg viewBox="0 0 24 24" fill="var(--danger)" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16h.01"/></svg></span></div>
-        </div>
-        <div class="almost">
-          <span class="ai"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg></span>
-          <p>You're almost there! Complete the remaining steps below to get discovered by verified buyers.</p>
-          <button class="btn btn-green">Continue Setup</button>
         </div>
       </section>
 
@@ -71,20 +61,12 @@
       <div class="dash-cols">
         <!-- SKU -->
         <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg><h4>1. SKU Setup</h4></div>
+          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg><h4>SKU Setup</h4></div>
           <p class="mdesc">Add and manage your products with details and pricing.</p>
-          <div class="muted" style="font-size:12px">Products Added</div>
-          <div class="big-num">8 <small>/ 12</small></div>
-          <div class="bar" style="margin-top:8px"><i style="width:66%"></i></div>
-          <div class="mini-list">
-            <div class="muted" style="font-size:12px;margin-top:6px">Recent SKUs</div>
-            <div class="mini-row"><img alt="" src="../assets/linen.webp"><div><b>Linen Blend Plain Weave</b><span>SKU: LNW-001</span></div><span class="st st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="mini-row"><img alt="" src="../assets/cotton-jersey.webp"><div><b>Organic Cotton Twill</b><span>SKU: OCT-002</span></div><span class="st st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="mini-row"><img alt="" src="../assets/rayon-suiting.webp"><div><b>Polyester Rayon Suiting</b><span>SKU: PRS-003</span></div><span class="st st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="mini-row"><img alt="" src="../assets/cotton-rib.webp"><div><b>Cotton Rib Knit</b><span>SKU: CRK-004</span></div><span class="st st-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span></div>
-            <div class="mini-row"><img alt="" src="../assets/houndstooth.webp"><div><b>Wool Blend Houndstooth</b><span>SKU: WBH-005</span></div><span class="st st-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span></div>
-          </div>
-          <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Manage SKUs</button>
+          <div class="muted" style="font-size:12px">Products Listed</div>
+          <div class="big-num" id="skuCount">0</div>
+          <div class="mini-list" id="skuRecent"></div>
+          <button class="btn btn-out btn-block" type="button" id="btnManageSkus" style="margin-top:14px;padding:10px">Manage SKUs</button>
         </div>
 
         <!-- Ads -->
@@ -106,16 +88,16 @@
 
         <!-- Profile -->
         <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><h4>3. Profile Details</h4></div>
-          <p class="mdesc">Tell buyers about your factory and capabilities.</p>
-          <div class="check-list" style="margin-top:8px">
-            <div class="cl-row"><div><b>Basic Information</b><span>Completed</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="cl-row"><div><b>Factory Overview</b><span>Completed</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="cl-row"><div><b>Certifications</b><span>Completed</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="cl-row"><div><b>Production Capacity</b><span>Completed</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-            <div class="cl-row"><div><b>Photos &amp; Videos</b><span>3 / 5 added</span></div><span class="st-warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg></span></div>
-          </div>
-          <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Edit Profile</button>
+          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><h4>Factory Profile</h4></div>
+          <p class="mdesc">Tell buyers about your factory.</p>
+          <form id="factoryForm">
+            <div class="field-lg"><label>Factory name</label><input name="name" required></div>
+            <div class="field-lg"><label>Region</label><input name="region" placeholder="e.g. Zhejiang, China"></div>
+            <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, Zhejiang"></div>
+            <div class="field-lg"><label>About</label><input name="bio" placeholder="A short factory overview"></div>
+            <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
+            <button class="btn btn-green btn-block" type="submit" style="margin-top:4px;padding:10px">Save Profile</button>
+          </form>
         </div>
 
         <!-- Tax -->
@@ -132,6 +114,73 @@
           <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Manage Documents</button>
         </div>
       </div>
+
+      <!-- SKU manager (real CRUD, toggled from the SKU Setup card) -->
+      <section class="panel" id="skuManager" hidden style="margin-top:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <h3 style="font-family:var(--serif);font-size:19px;font-weight:600">Manage SKUs</h3>
+          <button class="btn btn-green" type="button" id="btnAddSku" style="padding:9px 16px">+ Add SKU</button>
+        </div>
+        <div id="skuTable" style="margin-top:14px"></div>
+
+        <form id="skuForm" hidden style="margin-top:20px;border-top:1px solid var(--line);padding-top:18px">
+          <h4 id="skuFormTitle" style="font-family:var(--serif);font-size:19px;font-weight:600;margin-bottom:12px">Add SKU</h4>
+          <input type="hidden" name="id">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
+            <div class="field-lg"><label>SKU</label><input name="sku" required></div>
+            <div class="field-lg"><label>Name</label><input name="name" required></div>
+            <div class="field-lg"><label>Category</label><select name="category">
+              <option value="fabrics">Fabrics</option><option value="accessories">Accessories</option>
+              <option value="trims">Trims</option><option value="yarns">Yarns</option><option value="oem">OEM</option>
+            </select></div>
+            <div class="field-lg"><label>Unit</label><select name="unit_type">
+              <option value="m">Meter (m)</option><option value="kg">Kilogram (kg)</option><option value="pc">Piece (pc)</option>
+              <option value="package">Package</option><option value="style">Style</option><option value="order">Order</option><option value="color">Color</option>
+            </select></div>
+            <div class="field-lg"><label>Pricing mode</label><select name="pricing_mode">
+              <option value="fixed">Fixed price</option><option value="quote">Quote only</option>
+            </select></div>
+            <div class="field-lg"><label>Price (US$)</label><input name="price" type="number" step="0.01" min="0"></div>
+            <div class="field-lg"><label>MOQ</label><input name="moq" type="number" step="1" min="0"></div>
+            <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, China"></div>
+            <div class="field-lg full"><label>Composition</label><input name="comp" placeholder="e.g. 55% Linen 45% Viscose"></div>
+            <div class="field-lg full"><label>Spec</label><input name="spec" placeholder="e.g. 180 GSM, 150cm width"></div>
+            <div class="field-lg"><label>Status</label><select name="listing_status">
+              <option value="active">Active</option><option value="draft">Draft</option>
+            </select></div>
+            <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
+          </div>
+
+          <div style="margin-top:8px">
+            <div class="muted" style="font-size:12px;font-weight:600;margin-bottom:6px">Volume price breaks (optional)</div>
+            <div id="priceBreakRows"></div>
+            <button class="btn btn-out" type="button" id="btnAddBreak" style="padding:7px 12px;font-size:12.5px;margin-top:6px">+ Add tier</button>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:18px">
+            <button class="btn btn-green" type="submit" style="padding:10px 20px">Save SKU</button>
+            <button class="btn btn-out" type="button" id="btnCancelSku" style="padding:10px 20px">Cancel</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Buyer messages -->
+      <section class="panel" id="chatSection" style="margin-top:20px;padding:0;overflow:hidden">
+        <div class="acct-chat-wrap">
+          <div class="acct-chat-list">
+            <div class="acct-panel-head" style="padding:20px 20px 0"><h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Messages</h2></div>
+            <div id="chatConvos"></div>
+          </div>
+          <div class="acct-chat-thread">
+            <div id="chatThreadHead" class="acct-chat-thread-head">Select a conversation</div>
+            <div id="chatMessages" class="acct-chat-messages"></div>
+            <form id="chatForm" class="acct-chat-input-row" hidden>
+              <input name="body" placeholder="Write a message…" autocomplete="off">
+              <button class="btn btn-green" type="submit" style="padding:9px 18px">Send</button>
+            </form>
+          </div>
+        </div>
+      </section>
 
       <!-- bottom -->
       <div class="dash-bottom">
@@ -194,11 +243,248 @@
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
 <script>
-window.ARCANA_PAGE=function({toast}){
+window.ARCANA_PAGE=async function({toast}){
+  const api=window.ARCANA_API;
+  const money=n=>window.ARCANA_money(n);
+  const gate=document.getElementById('dashGate');
+  const main=document.getElementById('dashMain');
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function showGate(title, body, cta){
+    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
+    gate.hidden=false;
+  }
+
+  // ---- Gate: signed in, role=seller, and linked to a factory (admin-assigned) ----
+  const profile=await api.getSessionProfile();
+  if(!profile){
+    showGate('Log in to continue','Sign in to your ARCANA seller account to access the dashboard.',
+      '<a class="btn btn-green" href="login.html?next=dashboard.html" style="margin-top:14px;display:inline-block">Log in</a>');
+    return;
+  }
+  if(profile.role!=='seller'){
+    showGate('Seller access only','This dashboard is for verified ARCANA suppliers. Sign up as a factory or mill to get set up.',
+      '<a class="btn btn-green" href="sell.html" style="margin-top:14px;display:inline-block">Learn about selling</a>');
+    return;
+  }
+  const factory=await api.getMyFactory();
+  if(!factory){
+    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact ARCANA to get set up — this is a short manual step while we’re in early access.',
+      '<a class="link" href="mailto:hello@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact ARCANA</a>');
+    return;
+  }
+  main.hidden=false;
+  document.getElementById('welcomeName').textContent=`Welcome, ${factory.name}`;
+  document.getElementById('welcomeSub').textContent=`Manage ${factory.loc||factory.region||'your factory'}'s SKUs and profile.`;
+
+  // ---- SKU CRUD ----
+  let products=[];
+  function statusBadge(s){
+    return s==='active' ? '<span class="badge b-ok">Active</span>'
+      : s==='draft' ? '<span class="badge b-std">Draft</span>'
+      : '<span class="badge b-nonoem">Archived</span>';
+  }
+  function renderSkuSummary(){
+    const active=products.filter(p=>p.listing_status==='active').length;
+    document.getElementById('skuStat').innerHTML=`${active} <small>/ ${products.length}</small>`;
+    document.getElementById('skuCount').textContent=products.length;
+    const recent=products.slice(0,5);
+    document.getElementById('skuRecent').innerHTML=recent.length ? recent.map(p=>`
+      <div class="mini-row"><img alt="" src="${p.img||'../assets/linen.webp'}"><div><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)}</span></div>${statusBadge(p.listing_status)}</div>
+    `).join('') : '<p class="muted" style="font-size:12.5px;margin-top:8px">No SKUs yet — add your first product.</p>';
+  }
+  function renderSkuTable(){
+    const tbl=document.getElementById('skuTable');
+    if(!products.length){ tbl.innerHTML='<p class="muted">No SKUs yet.</p>'; return; }
+    tbl.innerHTML=products.map(p=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line-2)">
+        <img alt="" src="${p.img||'../assets/linen.webp'}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--panel)">
+        <div style="flex:1;min-width:0">
+          <b style="font-size:13px;display:block">${esc(p.name)}</b>
+          <span class="muted" style="font-size:11.5px">SKU: ${esc(p.sku)} · ${p.category} · ${p.pricing_mode==='quote'?'Quote only':money(p.price)+'/'+p.unit_type}</span>
+        </div>
+        ${statusBadge(p.listing_status)}
+        <button class="btn btn-out" type="button" data-edit="${p.id}" style="padding:6px 12px;font-size:12px">Edit</button>
+        ${p.listing_status!=='archived'?`<button class="btn btn-out" type="button" data-archive="${p.id}" style="padding:6px 12px;font-size:12px">Archive</button>`:''}
+      </div>
+    `).join('');
+    tbl.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openSkuForm(products.find(p=>p.id===b.dataset.edit))));
+    tbl.querySelectorAll('[data-archive]').forEach(b=>b.addEventListener('click', async ()=>{
+      if(!confirm('Archive this SKU? It will be removed from the public catalog.')) return;
+      const { error }=await api.archiveProduct(b.dataset.archive);
+      if(error){ toast(error.message||'Could not archive'); return; }
+      toast('SKU archived'); loadProducts();
+    }));
+  }
+  async function loadProducts(){
+    const r=await api.getMyProducts(factory.id);
+    products=r.products||[];
+    renderSkuSummary(); renderSkuTable();
+  }
+
+  const skuManager=document.getElementById('skuManager');
+  const skuForm=document.getElementById('skuForm');
+  const priceBreakRows=document.getElementById('priceBreakRows');
+
+  document.getElementById('btnManageSkus').addEventListener('click',()=>{
+    skuManager.hidden=!skuManager.hidden;
+    if(!skuManager.hidden) skuManager.scrollIntoView({behavior:'smooth', block:'start'});
+  });
+  document.getElementById('btnAddSku').addEventListener('click',()=>openSkuForm(null));
+  document.getElementById('btnCancelSku').addEventListener('click',()=>{ skuForm.hidden=true; });
+  document.getElementById('btnAddBreak').addEventListener('click',()=>addBreakRow());
+
+  function addBreakRow(minQty,unitPrice){
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:6px';
+    row.innerHTML=`<input type="number" min="1" step="1" placeholder="Min qty" value="${minQty!=null?minQty:''}" style="width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bmin>
+      <input type="number" min="0" step="0.01" placeholder="Unit price (US$)" value="${unitPrice!=null?unitPrice:''}" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bprice>
+      <button type="button" class="btn btn-out" style="padding:5px 10px;font-size:12px" data-brm>Remove</button>`;
+    row.querySelector('[data-brm]').addEventListener('click',()=>row.remove());
+    priceBreakRows.appendChild(row);
+  }
+
+  async function openSkuForm(product){
+    skuForm.hidden=false;
+    document.getElementById('skuFormTitle').textContent=product?`Edit ${product.sku}`:'Add SKU';
+    skuForm.reset();
+    skuForm.elements.id.value=product?product.id:'';
+    priceBreakRows.innerHTML='';
+    if(product){
+      skuForm.elements.sku.value=product.sku;
+      skuForm.elements.name.value=product.name;
+      skuForm.elements.category.value=product.category;
+      skuForm.elements.unit_type.value=product.unit_type;
+      skuForm.elements.pricing_mode.value=product.pricing_mode;
+      skuForm.elements.price.value=product.price;
+      skuForm.elements.moq.value=product.moq!=null?product.moq:'';
+      skuForm.elements.loc.value=product.loc||'';
+      skuForm.elements.comp.value=product.comp||'';
+      skuForm.elements.spec.value=product.spec||'';
+      skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
+      const breaks=await api.getPriceBreaks(product.id);
+      breaks.forEach(b=>addBreakRow(b.minQty,b.unitPrice));
+    }
+    skuForm.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+
+  skuForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const f=skuForm.elements;
+    const id=f.id.value;
+    const payload={
+      sku:f.sku.value.trim(), name:f.name.value.trim(), category:f.category.value,
+      unit_type:f.unit_type.value, pricing_mode:f.pricing_mode.value,
+      price:Number(f.price.value)||0, moq:f.moq.value?Number(f.moq.value):null,
+      loc:f.loc.value.trim(), comp:f.comp.value.trim(), spec:f.spec.value.trim(),
+      listing_status:f.listing_status.value
+    };
+    if(!payload.sku || !payload.name){ toast('SKU and name are required'); return; }
+
+    const file=f.imgFile.files[0];
+    if(file){
+      const up=await api.uploadImage(file,'products');
+      if(up.error){ toast(up.error.message||'Image upload failed'); return; }
+      payload.img=up.url;
+    }
+
+    let productId=id;
+    if(id){
+      const { error }=await api.updateProduct(id, payload);
+      if(error){ toast(error.message||'Could not save SKU'); return; }
+    } else {
+      payload.factory_id=factory.id;
+      const { product, error }=await api.createProduct(payload);
+      if(error){ toast(error.message||'Could not create SKU'); return; }
+      productId=product.id;
+    }
+
+    const breaks=[...priceBreakRows.children].map(row=>({
+      minQty:Number(row.querySelector('[data-bmin]').value)||0,
+      unitPrice:Number(row.querySelector('[data-bprice]').value)||0
+    })).filter(b=>b.minQty>0);
+    await api.setPriceBreaks(productId, breaks);
+
+    toast(id?'SKU updated':'SKU added');
+    skuForm.hidden=true;
+    loadProducts();
+  });
+
+  // ---- Factory profile ----
+  const factoryForm=document.getElementById('factoryForm');
+  factoryForm.elements.name.value=factory.name||'';
+  factoryForm.elements.region.value=factory.region||'';
+  factoryForm.elements.loc.value=factory.loc||'';
+  factoryForm.elements.bio.value=factory.bio||'';
+  factoryForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const f=factoryForm.elements;
+    const patch={ name:f.name.value.trim(), region:f.region.value.trim(), loc:f.loc.value.trim(), bio:f.bio.value.trim() };
+    const file=f.imgFile.files[0];
+    if(file){
+      const up=await api.uploadImage(file,'factories');
+      if(up.error){ toast(up.error.message||'Image upload failed'); return; }
+      patch.img=up.url;
+    }
+    const { error }=await api.updateFactory(factory.id, patch);
+    if(error){ toast(error.message||'Could not save profile'); return; }
+    Object.assign(factory, patch);
+    document.getElementById('welcomeName').textContent=`Welcome, ${factory.name}`;
+    toast('Factory profile updated');
+  });
+
+  await loadProducts();
+
+  // ---- Buyer messages (same conversations/messages backend as My Account's Chat tab) ----
+  let conversations=[], activeConvo=null;
+  async function loadConversations(){
+    conversations=await api.getMyConversations();
+    renderConvoList();
+    const wanted=new URLSearchParams(location.search).get('convo');
+    const initial=(wanted && conversations.find(c=>c.id===wanted)) ? wanted : (conversations[0] && conversations[0].id);
+    if(initial) openConversation(initial);
+  }
+  function renderConvoList(){
+    const el=document.getElementById('chatConvos');
+    el.innerHTML=conversations.length ? conversations.map(c=>`
+      <div class="acct-chat-convo${activeConvo===c.id?' on':''}" data-convo="${c.id}">
+        <span class="cc-ic">${esc((c.withName||'?')[0])}</span>
+        <div><b>${esc(c.withName)}</b><span>${new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span></div>
+      </div>
+    `).join('') : '<p class="muted" style="font-size:12.5px;padding:0 20px">No messages yet. Buyers can message you from any of your product pages.</p>';
+    el.querySelectorAll('[data-convo]').forEach(row=>row.addEventListener('click',()=>openConversation(row.dataset.convo)));
+  }
+  async function openConversation(id){
+    activeConvo=id;
+    renderConvoList();
+    const convo=conversations.find(c=>c.id===id);
+    document.getElementById('chatThreadHead').textContent=convo?convo.withName:'';
+    document.getElementById('chatForm').hidden=false;
+    const messages=await api.getMessages(id);
+    const box=document.getElementById('chatMessages');
+    box.innerHTML=messages.map(m=>`
+      <div class="acct-chat-msg ${m.sender_profile_id===profile.id?'mine':'theirs'}">${esc(m.body)}<span>${new Date(m.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
+    `).join('');
+    box.scrollTop=box.scrollHeight;
+  }
+  document.getElementById('chatForm').addEventListener('submit', async e=>{
+    e.preventDefault();
+    if(!activeConvo) return;
+    const input=e.target.elements.body;
+    const body=input.value.trim();
+    if(!body) return;
+    input.value='';
+    const { error }=await api.sendMessage(activeConvo, body);
+    if(error){ toast(error.message||'Could not send message'); return; }
+    openConversation(activeConvo);
+  });
+  loadConversations();
+
   const Cop=window.ARCANA_Copilot;
-  const SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>';
   const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
-  const SELLER=/greenknit/i; // logged-in supplier
+  // Demand Copilot matches buyer briefs against this seller's real catalog (SELLER
+  // used to be a hardcoded /greenknit/i regex — now derived from the linked factory).
+  const SELLER=new RegExp(String(factory.name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i');
 
   // ---- Demand Copilot: buyer briefs matched to this catalog ----
   const dl=document.getElementById('demandList');
@@ -250,6 +536,7 @@ window.ARCANA_PAGE=function({toast}){
 
   document.querySelectorAll('main button.btn, main .seg button').forEach(b=>{
     if(b.closest('.cop-seller')) return; // Copilot panels wire their own handlers
+    if(b.closest('#skuManager') || b.closest('#factoryForm') || b.closest('#chatSection')) return; // real CRUD wires its own handlers
     b.addEventListener('click',()=>toast(b.textContent.trim().replace(/\s+/g,' ').slice(0,42)||'Updated'));
   });
   document.querySelectorAll('main a[href="#"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();toast('Coming soon');}));

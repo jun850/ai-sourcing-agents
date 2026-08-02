@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Management — ARCANA Admin</title>
+<meta name="description" content="Admin: view and update the status of every ARCANA order.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-root="..">
+<div id="hdr"></div>
+
+<div id="adminGate" class="wrap" hidden style="padding:80px 0;text-align:center;max-width:520px"></div>
+
+<main class="wrap" id="adminMain" style="padding-top:24px;padding-bottom:40px" hidden>
+  <div class="acct-head">
+    <h1>Order Management</h1>
+    <p class="sub">Every order on ARCANA. Update status to notify the buyer by email — including cancellations.</p>
+  </div>
+
+  <div class="panel" style="padding:0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table class="admin-tbl">
+        <thead>
+          <tr>
+            <th>Order</th><th>Buyer</th><th>Items</th><th>Total</th><th>Placed</th><th>Status</th><th>Update</th>
+          </tr>
+        </thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+    <p id="ordersEmpty" class="muted" style="padding:24px;text-align:center" hidden>No orders yet.</p>
+  </div>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script defer src="../js/analytics.bundle.js"></script>
+<script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
+<script>
+window.ARCANA_PAGE=async function({toast}){
+  const api=window.ARCANA_API;
+  const gate=document.getElementById('adminGate');
+  const main=document.getElementById('adminMain');
+  const money=n=>window.ARCANA_money(n);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  const STATUSES=['awaiting_payment','payment_declared','payment_verified','fulfilling','completed','cancelled','disputed','refunded'];
+  const STATUS_META={
+    awaiting_payment:{label:'Awaiting payment', cls:'b-prem'},
+    payment_declared:{label:'Payment declared', cls:'b-prem'},
+    payment_verified:{label:'Payment verified', cls:'b-std'},
+    fulfilling:{label:'In fulfillment', cls:'b-std'},
+    completed:{label:'Completed', cls:'b-ok'},
+    cancelled:{label:'Cancelled', cls:'b-nonoem'},
+    disputed:{label:'Disputed', cls:'b-nonoem'},
+    refunded:{label:'Refunded', cls:'b-nonoem'}
+  };
+  const CONFIRM_STATUSES=new Set(['cancelled','refunded','disputed']);
+
+  function showGate(title, body, cta){
+    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
+    gate.hidden=false;
+  }
+
+  const profile=await api.getSessionProfile();
+  if(!profile){
+    showGate('Log in to continue','Sign in to your ARCANA admin account.',
+      '<a class="btn btn-green" href="login.html?next=admin-orders.html" style="margin-top:14px;display:inline-block">Log in</a>');
+    return;
+  }
+  if(profile.role!=='admin'){
+    showGate('Admin access only','This page is restricted to ARCANA admins.', '');
+    return;
+  }
+  main.hidden=false;
+
+  let orders=[];
+  async function loadOrders(){
+    orders=await api.adminListOrders();
+    renderOrders();
+  }
+  function renderOrders(){
+    const body=document.getElementById('ordersBody');
+    document.getElementById('ordersEmpty').hidden=!!orders.length;
+    body.innerHTML=orders.map(o=>{
+      const meta=STATUS_META[o.status]||STATUS_META.awaiting_payment;
+      return `<tr>
+        <td><a href="order.html?no=${encodeURIComponent(o.order_no)}" style="color:var(--green);font-weight:600">${esc(o.order_no)}</a></td>
+        <td><b>${esc(o.buyer_name||'—')}</b><br><span class="muted" style="font-size:12px">${esc(o.buyer_email||'')}</span></td>
+        <td>${o.item_count}</td>
+        <td>${money(o.total)}</td>
+        <td>${new Date(o.placed_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+        <td><span class="badge ${meta.cls}">${meta.label}</span></td>
+        <td>
+          <div style="display:flex;gap:6px;align-items:center">
+            <select data-status="${o.order_no}" style="border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 8px;font-size:12.5px;font-family:inherit">
+              ${STATUSES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATUS_META[s].label}</option>`).join('')}
+            </select>
+            <button class="btn btn-out" type="button" data-apply="${o.order_no}" style="padding:6px 12px;font-size:12px">Update</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+    body.querySelectorAll('[data-apply]').forEach(btn=>btn.addEventListener('click', async ()=>{
+      const orderNo=btn.dataset.apply;
+      const select=body.querySelector(`select[data-status="${CSS.escape(orderNo)}"]`);
+      const newStatus=select.value;
+      const order=orders.find(o=>o.order_no===orderNo);
+      if(order && order.status===newStatus){ toast('Already ' + STATUS_META[newStatus].label); return; }
+      if(CONFIRM_STATUSES.has(newStatus) && !confirm(`Set ${orderNo} to "${STATUS_META[newStatus].label}"? This emails the buyer.`)) return;
+      const note=CONFIRM_STATUSES.has(newStatus) ? (prompt('Optional note for the buyer (shown in the email):')||'') : '';
+      btn.disabled=true; btn.textContent='Saving…';
+      const { error }=await api.adminUpdateOrderStatus(orderNo, newStatus, note||null);
+      btn.disabled=false; btn.textContent='Update';
+      if(error){ toast(error.message||'Could not update order'); return; }
+      toast(`${orderNo} → ${STATUS_META[newStatus].label}`);
+      loadOrders();
+    }));
+  }
+
+  await loadOrders();
+};
+</script>
+</body>
+</html>

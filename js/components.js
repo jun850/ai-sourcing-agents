@@ -28,10 +28,12 @@ const Store = {
     qty = qty||1;
     const c = Store.cart(); const row = c.find(i=>i.id===id);
     if(row) row.qty += qty; else c.push({id, qty});
-    LS.set('cart', c); syncBadges(); return Store.cartCount();
+    LS.set('cart', c); syncBadges();
+    pushCartItem(id, row ? row.qty : qty);
+    return Store.cartCount();
   },
-  setQty(id, qty){ const c=Store.cart(); const r=c.find(i=>i.id===id); if(r){ r.qty=Math.max(1,qty); LS.set('cart',c);} },
-  remove(id){ LS.set('cart', Store.cart().filter(i=>i.id!==id)); syncBadges(); },
+  setQty(id, qty){ const c=Store.cart(); const r=c.find(i=>i.id===id); if(r){ r.qty=Math.max(1,qty); LS.set('cart',c); pushCartItem(id, r.qty); } },
+  remove(id){ LS.set('cart', Store.cart().filter(i=>i.id!==id)); syncBadges(); pushCartItem(id, 0); },
   clearCart(){ localStorage.removeItem('arcana_cart'); localStorage.removeItem('arcana_addons'); syncBadges(); },
   addons(){ return LS.get('addons', {qc:false, ins:false}); },
   setAddon(k,v){ const a=Store.addons(); a[k]=!!v; LS.set('addons', a); },
@@ -165,11 +167,12 @@ function authCluster(){
 }
 function accountMenu(s){
   const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  const av = s.avatarUrl ? `<img src="${s.avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : initials;
   const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
   return `<div class="acct" data-acct>
-    <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${initials}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
+    <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${av}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
     <div class="acct-pop" role="menu" hidden>
-      <div class="acct-hd"><span class="acct-av">${initials}</span><div><b>${s.name}</b><span>${s.role==='seller'?'Factory · Seller':'Brand Owner · Buyer'}</span></div></div>
+      <div class="acct-hd"><span class="acct-av">${av}</span><div><b>${s.name}</b><span>${s.role==='seller'?'Factory · Seller':'Brand Owner · Buyer'}</span></div></div>
       <a role="menuitem" href="${dest}">${s.role==='seller'?'Supplier dashboard':'My profile'}</a>
       <a role="menuitem" href="${P('cart.html')}">My cart</a>
       <a role="menuitem" href="#" data-saved-link>Saved items</a>
@@ -263,6 +266,13 @@ function buildFooter(){
       <button data-lang="zh">中文</button>
     </div>
   </div></footer>`;
+}
+
+/* Fire-and-forget DB write-through for a cart line, only when signed in. */
+function pushCartItem(sku, qty){
+  const api = window.ARCANA_API;
+  if(!api || api.unavailable || !Store.session()) return;
+  api.syncCartItem(sku, qty).catch(()=>{});
 }
 
 /* ---------- live badges ---------- */
@@ -672,8 +682,12 @@ function bootstrapSession(){
   const api=window.ARCANA_API;
   if(!api || !api.getSessionProfile) return;
   const sync=()=>api.getSessionProfile().then(profile=>{
-    if(profile){ LS.set('session',{role:profile.role, name:profile.name}); }
-    else{ localStorage.removeItem('arcana_session'); }
+    if(profile){
+      LS.set('session',{role:profile.role, name:profile.name, avatarUrl:profile.avatarUrl||null});
+      mergeCartOnce(profile.id).catch(()=>{});
+    } else{
+      localStorage.removeItem('arcana_session');
+    }
     refreshAuth();
   }).catch(()=>{});
   sync();
@@ -683,6 +697,30 @@ function bootstrapSession(){
       sync();
     });
   }
+}
+
+/* Pull the signed-in user's DB cart into the LS mirror. The first time for a
+   given uid this session, also push up any pre-login (anon) local items so
+   they merge into the account cart instead of being lost. */
+async function mergeCartOnce(uid){
+  const api=window.ARCANA_API;
+  if(!api || !api.getCart) return;
+  const flag = 'arcana_cart_merged_'+uid;
+  const dbItems = await api.getCart();
+  if(localStorage.getItem(flag)){
+    LS.set('cart', dbItems); syncBadges();
+    return;
+  }
+  const map = new Map(dbItems.map(i=>[i.id, {...i}]));
+  Store.cart().forEach(li=>{
+    if(map.has(li.id)) map.get(li.id).qty += li.qty;
+    else map.set(li.id, {...li});
+  });
+  const merged = Array.from(map.values());
+  if(merged.length) await api.replaceCart(merged);
+  LS.set('cart', merged);
+  localStorage.setItem(flag, '1');
+  syncBadges();
 }
 
 /* ---------- i18n (EN default · JA · ZH) ---------- */
