@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARCANA</title>
+<title>Browse Fabrics, Trims, Accessories & OEM — ARCANA</title>
+<meta name="description" content="Explore verified fabrics, accessories, trims, yarns and OEM services. Filter by material, price, MOQ and certifications, and source from audited factories.">
+<link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/category.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ARCANA">
+<meta property="og:title" content="Browse Fabrics, Trims, Accessories & OEM — ARCANA">
+<meta property="og:description" content="Explore verified fabrics, accessories, trims, yarns and OEM services. Filter by material, price, MOQ and certifications.">
+<meta property="og:url" content="https://marketplace-three-peach.vercel.app/pages/category.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Browse Fabrics, Trims, Accessories & OEM — ARCANA">
+<meta name="twitter:description" content="Verified fabrics, trims, accessories, yarns and OEM services — filter by material, price, MOQ and certifications.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
@@ -215,6 +225,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   function render(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T;
     const heTitle = q ? heading : TR(meta.title);
+    document.title = `${heTitle} — ARCANA`;
     document.getElementById('crumbCat').textContent = heTitle;
     document.getElementById('listTitle').textContent = heTitle;
     // subtitle + material facet labels (re-translate on language switch)

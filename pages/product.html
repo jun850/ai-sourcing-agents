@@ -3,7 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARCANA</title>
+<title>Product Details — ARCANA</title>
+<meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, and order or request samples on ARCANA.">
+<link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/product.html">
+<meta property="og:type" content="product">
+<meta property="og:site_name" content="ARCANA">
+<meta property="og:title" content="Product Details — ARCANA">
+<meta property="og:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on ARCANA.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Product Details — ARCANA">
+<meta name="twitter:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on ARCANA.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
@@ -33,6 +42,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   function build(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money;
     const nm=TR(p.name), comp=TR(p.comp), spec=TR(p.spec), seller=TR(p.seller), loc=TR(p.loc);
+    document.title = `${nm} — ${seller} — ARCANA`;
     const catLabel=TR({fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'}[p.cat]);
     const specs=[
       [T('Composition'),comp,'M20 7 12 3 4 7v10l8 4 8-4z'],
