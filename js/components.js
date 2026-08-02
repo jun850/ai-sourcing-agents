@@ -170,7 +170,7 @@ function accountMenu(s){
   const av = s.avatarUrl ? `<img src="${s.avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : initials;
   const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
   const roleLabel = s.role==='seller' ? 'Factory · Seller' : s.role==='admin' ? 'ARCANA · Admin' : 'Brand Owner · Buyer';
-  const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Order management</a>` : '';
+  const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Users &amp; orders</a>` : '';
   return `<div class="acct" data-acct>
     <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${av}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
     <div class="acct-pop" role="menu" hidden>

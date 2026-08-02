@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Order Management — ARCANA Admin</title>
-<meta name="description" content="Admin: view and update the status of every ARCANA order.">
+<title>Users &amp; Orders — ARCANA Admin</title>
+<meta name="description" content="Admin: browse every account on ARCANA and manage order status.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -16,24 +16,58 @@
 
 <main class="wrap" id="adminMain" style="padding-top:24px;padding-bottom:40px" hidden>
   <div class="acct-head">
-    <h1>Order Management</h1>
-    <p class="sub">Every order on ARCANA. Update status to notify the buyer by email — including cancellations.</p>
+    <h1>Users &amp; Orders</h1>
+    <p class="sub">Every account on ARCANA. Click a user to see their orders and update status — every change emails the buyer.</p>
   </div>
 
-  <div class="panel" style="padding:0;overflow:hidden">
+  <section class="panel" style="padding:0;overflow:hidden;margin-bottom:20px">
+    <div style="padding:20px 24px 0"><h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Users</h2></div>
     <div style="overflow-x:auto">
       <table class="admin-tbl">
         <thead>
-          <tr>
-            <th>Order</th><th>Buyer</th><th>Items</th><th>Total</th><th>Placed</th><th>Status</th><th>Update</th>
-          </tr>
+          <tr><th>Name</th><th>Company</th><th>Email</th><th>Role</th><th>Orders</th><th>Joined</th></tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+    <p id="usersEmpty" class="muted" style="padding:24px;text-align:center" hidden>No users yet.</p>
+  </section>
+
+  <section class="panel" style="padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:20px 24px 0">
+      <div>
+        <h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Orders</h2>
+        <p class="muted" id="ordersFilterLabel" style="font-size:12.5px;margin-top:4px">Every order on ARCANA.</p>
+      </div>
+      <button class="btn btn-out" type="button" id="clearUserFilter" style="padding:8px 14px;font-size:12.5px" hidden>Show all orders</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="admin-tbl">
+        <thead>
+          <tr><th>Order</th><th>Buyer</th><th>Items</th><th>Total</th><th>Placed</th><th>Status</th><th>Update</th></tr>
         </thead>
         <tbody id="ordersBody"></tbody>
       </table>
     </div>
     <p id="ordersEmpty" class="muted" style="padding:24px;text-align:center" hidden>No orders yet.</p>
-  </div>
+  </section>
 </main>
+
+<!-- confirmation modal — replaces native confirm()/prompt() for finalizing a status change -->
+<div class="modal-overlay" id="statusModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">Update order status</h3>
+    <p id="modalDesc" class="muted" style="font-size:13.5px;margin-top:6px"></p>
+    <div class="field-lg" style="margin-top:16px">
+      <label>Note to buyer <span class="hint">optional, shown in the email</span></label>
+      <textarea id="modalNote" rows="3" placeholder="e.g. Delayed due to customs inspection"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-out" type="button" id="modalCancel">Cancel</button>
+      <button class="btn btn-green" type="button" id="modalConfirm">Confirm update</button>
+    </div>
+  </div>
+</div>
 
 <div id="ftr"></div>
 <script src="../js/data.js"></script>
@@ -60,7 +94,7 @@ window.ARCANA_PAGE=async function({toast}){
     disputed:{label:'Disputed', cls:'b-nonoem'},
     refunded:{label:'Refunded', cls:'b-nonoem'}
   };
-  const CONFIRM_STATUSES=new Set(['cancelled','refunded','disputed']);
+  const ROLE_LABEL={admin:'Admin', seller:'Seller', buyer:'Buyer'};
 
   function showGate(title, body, cta){
     gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
@@ -79,11 +113,54 @@ window.ARCANA_PAGE=async function({toast}){
   }
   main.hidden=false;
 
-  let orders=[];
+  /* ---- Users ---- */
+  let users=[], activeUserId=null, activeUserLabel='';
+  async function loadUsers(){
+    users=await api.adminListUsers();
+    renderUsers();
+  }
+  function renderUsers(){
+    const body=document.getElementById('usersBody');
+    document.getElementById('usersEmpty').hidden=!!users.length;
+    body.innerHTML=users.map(u=>`
+      <tr data-user-row="${u.id}" style="cursor:pointer">
+        <td><b>${esc(u.full_name||'—')}</b></td>
+        <td>${esc(u.company_name||'—')}</td>
+        <td>${esc(u.email)}</td>
+        <td><span class="badge b-std">${ROLE_LABEL[u.role]||u.role}</span></td>
+        <td>${u.order_count}</td>
+        <td>${new Date(u.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</td>
+      </tr>`).join('');
+    body.querySelectorAll('[data-user-row]').forEach(row=>row.addEventListener('click',()=>{
+      const u=users.find(x=>x.id===row.dataset.userRow);
+      selectUser(u.id, u.full_name||u.company_name||u.email);
+    }));
+  }
+
+  /* ---- Orders (optionally filtered to one user) ---- */
+  let allOrders=[], orders=[];
   async function loadOrders(){
-    orders=await api.adminListOrders();
+    allOrders=await api.adminListOrders();
+    applyOrderFilter();
+  }
+  function applyOrderFilter(){
+    orders=activeUserId ? allOrders.filter(o=>o.buyer_profile_id===activeUserId) : allOrders;
     renderOrders();
   }
+  function selectUser(id, label){
+    activeUserId=id; activeUserLabel=label;
+    document.getElementById('ordersFilterLabel').textContent=`Showing orders for ${label}.`;
+    document.getElementById('clearUserFilter').hidden=false;
+    applyOrderFilter();
+    document.getElementById('ordersFilterLabel').closest('section').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+  document.getElementById('clearUserFilter').addEventListener('click',()=>{
+    activeUserId=null;
+    document.getElementById('ordersFilterLabel').textContent='Every order on ARCANA.';
+    document.getElementById('clearUserFilter').hidden=true;
+    applyOrderFilter();
+  });
+
   function renderOrders(){
     const body=document.getElementById('ordersBody');
     document.getElementById('ordersEmpty').hidden=!!orders.length;
@@ -106,24 +183,48 @@ window.ARCANA_PAGE=async function({toast}){
         </td>
       </tr>`;
     }).join('');
-    body.querySelectorAll('[data-apply]').forEach(btn=>btn.addEventListener('click', async ()=>{
+    body.querySelectorAll('[data-apply]').forEach(btn=>btn.addEventListener('click', ()=>{
       const orderNo=btn.dataset.apply;
       const select=body.querySelector(`select[data-status="${CSS.escape(orderNo)}"]`);
       const newStatus=select.value;
       const order=orders.find(o=>o.order_no===orderNo);
       if(order && order.status===newStatus){ toast('Already ' + STATUS_META[newStatus].label); return; }
-      if(CONFIRM_STATUSES.has(newStatus) && !confirm(`Set ${orderNo} to "${STATUS_META[newStatus].label}"? This emails the buyer.`)) return;
-      const note=CONFIRM_STATUSES.has(newStatus) ? (prompt('Optional note for the buyer (shown in the email):')||'') : '';
-      btn.disabled=true; btn.textContent='Saving…';
-      const { error }=await api.adminUpdateOrderStatus(orderNo, newStatus, note||null);
-      btn.disabled=false; btn.textContent='Update';
-      if(error){ toast(error.message||'Could not update order'); return; }
-      toast(`${orderNo} → ${STATUS_META[newStatus].label}`);
-      loadOrders();
+      openStatusModal(orderNo, order?order.status:null, newStatus);
     }));
   }
 
-  await loadOrders();
+  /* ---- Confirmation modal ---- */
+  const modal=document.getElementById('statusModal');
+  const modalNote=document.getElementById('modalNote');
+  const modalConfirm=document.getElementById('modalConfirm');
+  let pending=null;
+  function openStatusModal(orderNo, currentStatus, newStatus){
+    pending={orderNo, newStatus};
+    document.getElementById('modalTitle').textContent=`Update ${orderNo}`;
+    const fromLabel=currentStatus?STATUS_META[currentStatus].label:'its current status';
+    document.getElementById('modalDesc').innerHTML=`Change status from <b>${fromLabel}</b> to <b>${STATUS_META[newStatus].label}</b>? This emails the buyer.`;
+    modalNote.value='';
+    modal.hidden=false;
+    modalNote.focus();
+  }
+  function closeModal(){ modal.hidden=true; pending=null; }
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) closeModal(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !modal.hidden) closeModal(); });
+  modalConfirm.addEventListener('click', async ()=>{
+    if(!pending) return;
+    const { orderNo, newStatus }=pending;
+    const note=modalNote.value.trim();
+    modalConfirm.disabled=true; modalConfirm.textContent='Saving…';
+    const { error }=await api.adminUpdateOrderStatus(orderNo, newStatus, note||null);
+    modalConfirm.disabled=false; modalConfirm.textContent='Confirm update';
+    if(error){ toast(error.message||'Could not update order'); return; }
+    toast(`${orderNo} → ${STATUS_META[newStatus].label}`);
+    closeModal();
+    loadOrders();
+  });
+
+  await Promise.all([loadUsers(), loadOrders()]);
 };
 </script>
 </body>

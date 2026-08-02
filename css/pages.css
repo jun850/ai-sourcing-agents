@@ -406,6 +406,12 @@
 .admin-tbl tr:last-child td{border-bottom:0}
 .admin-tbl tr:hover td{background:var(--panel)}
 
+/* confirmation modal (admin status changes — replaces native confirm()/prompt()) */
+.modal-overlay{position:fixed;inset:0;background:rgba(28,28,26,.45);display:flex;align-items:center;justify-content:center;padding:20px;z-index:590}
+.modal-box{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:26px 28px;width:100%;max-width:440px}
+.modal-box h3{font-family:var(--serif);font-size:19px;font-weight:600}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+
 /* account chat (namespaced acct-chat-* — product.html's supplier chat drawer
    already owns the unprefixed .chat-* classes in styles.css) */
 .acct-chat-wrap{display:grid;grid-template-columns:260px 1fr;min-height:440px}

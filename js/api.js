@@ -52,7 +52,8 @@ if(!sb || !sb.auth){
     getMessages(){ return Promise.resolve([]); },
     sendMessage(){ return Promise.resolve({ error: err }); },
     adminListOrders(){ return Promise.resolve([]); },
-    adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); }
+    adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
+    adminListUsers(){ return Promise.resolve([]); }
   };
   return;
 }
@@ -558,6 +559,11 @@ const API = {
       }catch(_){ /* email is best-effort; status change already committed */ }
       return { order: row };
     }catch(error){ return { error }; }
+  },
+
+  async adminListUsers(){
+    try{ const { data, error } = await sb.rpc('admin_list_users'); if(error) return []; return data || []; }
+    catch(_){ return []; }
   }
 };
 
