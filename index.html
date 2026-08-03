@@ -38,13 +38,15 @@
 
   <!-- POPULAR CATEGORIES + QUICK REQUEST -->
   <div class="home-2col">
-    <div class="pop-cat">
+    <div class="pop-cat" data-reveal>
       <div class="pc-body">
         <h3 data-i18n="home.popcat">Popular Categories</h3>
         <p data-i18n="home.popcatdesc">Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.</p>
         <a class="btn" href="pages/category.html" data-i18n="home.explore">Explore now</a>
       </div>
-      <img class="pc-img" src="assets/fabric-stack.webp" alt="Stack of apparel fabrics">
+      <div class="pc-media">
+        <img class="pc-img" src="assets/fabric-stack-macro.webp" alt="Macro photograph of folded denim, cotton twill and wool fabric bolts" loading="lazy">
+      </div>
     </div>
     <div class="quick-panel">
       <div class="qp-head"><b data-i18n="home.quickreq">Quick sourcing request</b><a href="pages/category.html" data-i18n="home.browseall">Browse all</a></div>
@@ -122,6 +124,19 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     banner.querySelector('[data-prev]').addEventListener('click',()=>{go(i-1);reset();});
     if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) reset();
   }
+  // reveal-on-scroll for the Popular Categories card (single, purposeful entrance)
+  const reveal=document.querySelector('[data-reveal]');
+  if(reveal){
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)){
+      reveal.classList.add('in');
+    } else {
+      const io=new IntersectionObserver(([entry])=>{
+        if(entry.isIntersecting){ reveal.classList.add('in'); io.unobserve(reveal); }
+      }, {threshold:.25});
+      io.observe(reveal);
+    }
+  }
+
   // quick sourcing request — opens a pre-filled email instead of a fake toast
   const qf=document.querySelector('[data-quick]');
   if(qf) qf.addEventListener('submit', async e=>{
@@ -135,7 +150,7 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     const date=new Date().toISOString().slice(0,10);
     const subject=`Quick sourcing request - ${userId}_${date}`;
     const body=[`Category: ${cat}`,`Material: ${material}`,`Quantity: ${qty||'—'}`,`Note: ${note||'—'}`].join('\n');
-    location.href=`mailto:hello@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    location.href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 
   // curated grid — standardized product cards (shared renderer)
