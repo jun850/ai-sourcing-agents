@@ -88,9 +88,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${p.price>0
             ? `<button class="btn btn-gold" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" id="buyBtn">${T('Buy Now')}</button>
                <button class="btn btn-out" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
-               <button class="btn btn-out" data-toast="${T('Sample request sent to supplier')}">${T('Request Sample')}</button>`
+               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`
             : `<button class="btn btn-gold" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
-               <button class="btn btn-out" data-toast="${T('Sample request sent to supplier')}">${T('Request Sample')}</button>`}
+               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`}
         </div>
         <div class="pdp-mini">
           <button class="fav pdp-save" data-fav-id="${p.id}">${IC.bookmark} <span>${T('Save to List')}</span></button>
@@ -120,13 +120,29 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
     if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));location.href='checkout.html';});
+    // Product details shared by the email-based contact CTAs below.
+    const productLines=extra=>[
+      `Product: ${nm} (SKU: ${p.id})`,
+      `Quantity requested: ${qi.value} ${TR(p.unit)}`,
+      `Composition: ${comp}`,
+      `Specification: ${spec}`,
+      `MOQ: ${TR(p.moq)}`,
+      `Supplier: ${seller}, ${loc}`,
+      ...(extra||[]),
+    ];
     const chatBtn=document.getElementById('chatBtn');
-    if(chatBtn) chatBtn.addEventListener('click', async ()=>{
-      const profile=await window.ARCANA_API.getSessionProfile();
-      if(!profile){ location.href=`login.html?next=${encodeURIComponent('brand-owner.html#chat')}`; return; }
-      const { id, error }=await window.ARCANA_API.getOrCreateConversation(facId);
-      if(error){ toast(error.message||'Could not start conversation'); return; }
-      location.href=`brand-owner.html?convo=${id}#chat`;
+    if(chatBtn) chatBtn.addEventListener('click', ()=>{
+      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines()});
+    });
+    const sampleBtn=document.getElementById('sampleBtn');
+    if(sampleBtn) sampleBtn.addEventListener('click', ()=>{
+      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines(['Request: sample'])});
+    });
+    const oemBtn=document.getElementById('oemContactBtn');
+    if(oemBtn) oemBtn.addEventListener('click', ()=>{
+      const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
+      const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
+      window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines([`OEM service selected: ${pkgName}`])});
     });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
     sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'));});
@@ -164,7 +180,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     return `
     <section class="oem-section section" data-pkg-group>
       <div class="oem-intro"><h2>${T('OEM Services')}</h2><span class="badge b-oem-soft" style="margin-top:14px">${T('Built for Your Brand')}</span>
-        <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p></div>
+        <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p>
+        <button class="btn btn-gold" id="oemContactBtn" style="margin-top:18px">${IC.msg||''} ${T('Contact us')}</button></div>
       ${pk(1,T('Sampling Package'),T('Validate quality & design'),[T('Up to 3 samples'),T('Swatch & color cards'),T('Lab testing support'),`5–7 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(45)}</b>`)}
       ${pk(2,T('Private Label'),T('Build your brand identity'),[T('Custom labels & tags'),T('Branded packaging'),T('Care label customization'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(180)}</b>`)}
       ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(120)}</b>`)}

@@ -74,7 +74,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <div class="metric"><span>In Business</span><b>${f.years} yrs</b></div>
       </div>
       <div class="sup-actions">
-        <button class="btn btn-green" data-toast="Message sent to ${f.name}">${IC.msg||''} Contact Supplier</button>
+        <button class="btn btn-green" data-contact-factory>${IC.msg||''} Contact Supplier</button>
         <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} Save Supplier</button>
         <button class="btn btn-out" data-share>Share</button>
       </div>
@@ -111,7 +111,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <div class="ov-row">${IC.medal}<span class="k">Established</span><span class="v">${f.founded}</span></div>
         <div class="ov-row">${IC.globe}<span class="k">Main Region</span><span class="v">${f.region}</span></div>
       </div>
-      <button class="btn btn-green btn-block" style="margin-top:18px" data-toast="Message sent to ${f.name}">Contact this factory</button>
+      <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>Contact this factory</button>
     </aside>
   </div>`;
 
@@ -120,6 +120,14 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   facFav.addEventListener('click',()=>{const on=Store.toggleSaved(f.id);facFav.classList.toggle('on',on);toast(on?'Supplier saved':'Removed');});
   document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast('Factory link copied');});
   document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)));
+  document.querySelectorAll('[data-contact-factory]').forEach(b=>b.addEventListener('click',()=>{
+    window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
+      `Supplier: ${f.name}`,
+      `Location: ${f.loc}`,
+      `MOQ: ${f.moq}`,
+      `Lead time: ${f.lead}`,
+    ]});
+  }));
   window.ARCANA_wireCards(document.querySelector('.prod-grid'));
 };
 </script>
