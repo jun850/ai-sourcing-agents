@@ -89,7 +89,17 @@
     <div class="tabs" data-tabs id="curatedTabs">
       <span data-tab data-cat="all" class="on" data-i18n="home.tab.all">All</span><span data-tab data-cat="fabrics" data-i18n="home.tab.fabrics">Fabrics</span><span data-tab data-cat="accessories" data-i18n="home.tab.accessories">Accessories</span><span data-tab data-cat="trims" data-i18n="home.tab.trims">Trims</span>
     </div>
-    <div class="prod-grid" id="curatedGrid" style="margin-top:16px"></div>
+    <div class="prod-grid" id="curatedGrid" style="margin-top:16px">
+      <!-- Skeleton: visible from first paint, no JS dependency. renderCurated()
+           replaces this the moment live catalog data (or the bundled fallback)
+           is ready — closes the blank-grid gap during hydrateCatalog's fetch. -->
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+    </div>
   </section>
 
   <!-- SEO CONTENT -->
@@ -154,14 +164,22 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     location.href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 
-  // curated grid — standardized product cards (shared renderer)
+  // curated grid — standardized product cards (shared renderer), staggered in
+  // on both first load (skeleton -> real data) and tab switches.
   const grid=document.getElementById('curatedGrid');
+  const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
   function renderCurated(cat){
     curCat=cat;
     const list=window.ARCANA_PRODUCTS.filter(p=>cat==='all'?true:p.cat===cat).slice(0,12);
     grid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
     window.ARCANA_wireCards(grid);
+    if(!reduceMotion){
+      grid.querySelectorAll('.tcard').forEach((el,i)=>{
+        el.style.setProperty('--i', Math.min(i,10));
+        el.classList.add('card-in');
+      });
+    }
   }
   renderCurated('all');
   document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>renderCurated(t.dataset.cat)));

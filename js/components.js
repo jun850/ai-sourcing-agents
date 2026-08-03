@@ -47,6 +47,39 @@ const Store = {
 };
 window.ARCANA = Store;
 
+/* ---------- Copilot match scoping ----------
+   sessionStorage, not localStorage: the "why this matched" panel on a PDP
+   must only reflect the ACTUAL result set from the most recent Copilot
+   search, and must evaporate the moment the user steps outside the
+   Copilot-results <-> PDP loop (home, plain category browsing, cart, nav
+   elsewhere) — never resurface later, never appear on a product that
+   wasn't really shown as a match. Writer: category.html's run(). Reader:
+   product.html's match panel. */
+const COP_MATCH_KEY = 'arcana_copilot_matches';
+function setCopilotMatches(list){
+  try{
+    const items = {};
+    (list||[]).forEach(r=>{ if(r && r.p) items[r.p.id] = {score:r.score, hits:r.hits, miss:r.miss, matched:r.matched, total:r.total}; });
+    sessionStorage.setItem(COP_MATCH_KEY, JSON.stringify({items}));
+  }catch(_){}
+}
+function getCopilotMatchFor(id){
+  try{
+    const raw = sessionStorage.getItem(COP_MATCH_KEY);
+    if(!raw) return null;
+    const data = JSON.parse(raw);
+    return (data && data.items && data.items[id]) || null;
+  }catch(_){ return null; }
+}
+window.ARCANA_setCopilotMatches = setCopilotMatches;
+window.ARCANA_getCopilotMatchFor = getCopilotMatchFor;
+(function pruneCopilotMatchesIfOutsideFlow(){
+  const path = location.pathname;
+  const onCopilotResults = /category\.html$/.test(path) && /(^|[?&])copilot=1(&|$)/.test(location.search);
+  const onPDP = /product\.html$/.test(path);
+  if(!onCopilotResults && !onPDP){ try{ sessionStorage.removeItem(COP_MATCH_KEY); }catch(_){} }
+})();
+
 /* ---------- icons ---------- */
 const IC = {
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
@@ -123,6 +156,16 @@ function wireCards(container){
     Store.addToCart(b.dataset.add,parseInt(b.dataset.qty||'1',10));
     const p=window.ARCANA_PRODUCT_MAP&&window.ARCANA_PRODUCT_MAP[b.dataset.add];
     toast(`Added ${p?p.name:'item'} to cart`, {href:P('cart.html'), label:'View cart'});}));
+  // Fade thumbnails in as they finish loading instead of popping in. Default
+  // (no .will-fade) stays opacity:1, and both load/error add .loaded, so an
+  // image can never get stuck invisible.
+  (container||document).querySelectorAll('.tthumb img').forEach(img=>{
+    if(img.complete) return;
+    img.classList.add('will-fade');
+    const done=()=>img.classList.add('loaded');
+    img.addEventListener('load',done,{once:true});
+    img.addEventListener('error',done,{once:true});
+  });
 }
 window.ARCANA_card = cardHTML;
 window.ARCANA_wireCards = wireCards;

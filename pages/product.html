@@ -136,24 +136,26 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.querySelectorAll('[data-pkg-group] [data-pkg]').forEach(pk=>pk.addEventListener('click',()=>{
       document.querySelectorAll('[data-pkg]').forEach(x=>x.classList.remove('sel'));pk.classList.add('sel');}));
 
-    // Copilot: "why this matches your brief" (only when a brief is active)
-    const Cop=window.ARCANA_Copilot, brief=Cop&&Cop.getBrief();
-    if(brief&&brief.text){
-      const intent=Cop.parse(brief.text), r=Cop.scoreProduct(p,intent);
-      if(r){
-        const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
-        const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
-        const hits=r.hits.map(h=>`<span class="cop-hit">${CHK}${h}</span>`).join('');
-        const miss=r.miss.map(m=>`<span class="cop-missc">${DSH}${m}</span>`).join('');
-        const panel=document.createElement('div'); panel.className='cop-match';
-        panel.innerHTML=`
-          <div class="cm-head">
-            <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
-            <div class="cm-title">Matches your Copilot brief · ${r.score}%<span>“${brief.text}”</span></div>
-          </div>
-          <div class="cop-chips">${hits}${miss}</div>`;
-        const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);
-      }
+    // Copilot: "why this matched" — only for a product that was ACTUALLY in the
+    // most recent Copilot result set (scoped to this tab, see components.js's
+    // ARCANA_getCopilotMatchFor). Never a live re-score against a lingering
+    // brief: that's what let this panel resurface on unrelated PDPs.
+    const brief=window.ARCANA_Copilot&&window.ARCANA_Copilot.getBrief();
+    const r=window.ARCANA_getCopilotMatchFor&&window.ARCANA_getCopilotMatchFor(p.id);
+    if(r&&brief&&brief.text){
+      const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
+      const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
+      const hits=r.hits.map(h=>`<span class="cop-hit">${CHK}${h}</span>`).join('');
+      const miss=r.miss.map(m=>`<span class="cop-missc">${DSH}${m}</span>`).join('');
+      const panel=document.createElement('div'); panel.className='cop-match cop-reveal';
+      panel.innerHTML=`
+        <div class="cm-head">
+          <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
+          <div class="cm-title">Matches your Copilot search · ${r.score}%<span>“${brief.text}”</span></div>
+        </div>
+        <div class="cop-chips">${hits}${miss}</div>`;
+      const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('in')));
     }
   }
 

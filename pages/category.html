@@ -213,6 +213,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const {matches, summary, meta}=await Cop.ask(text);
       grid.className='cop-grid';
       const list=matches.slice(0,12);
+      window.ARCANA_setCopilotMatches(list);
       grid.innerHTML = list.length
         ? list.map(resultHTML).join('')
         : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>Try relaxing one constraint — a higher price ceiling, a larger MOQ, or one fewer certification — then search again.</p></div>`;
