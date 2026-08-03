@@ -203,16 +203,16 @@ function mockSummary(intent, matches){
 async function ask(text){
   const intent = parse(text);
   let matches = match(intent);
-  let summary = null, provider = 'mock';
+  let summary = null, provider = 'mock', meta = null;
   if(typeof window.ARCANA_LLM === 'function'){
     try{
       const r = await window.ARCANA_LLM({text, intent, matches});
-      if(r){ if(r.summary) summary = r.summary; if(Array.isArray(r.matches)) matches = r.matches; provider = 'llm'; }
-    }catch(_){ provider = 'mock'; }
+      if(r){ if(r.summary) summary = r.summary; if(Array.isArray(r.matches)) matches = r.matches; provider = 'llm'; if(r.usage) meta = {usage:r.usage}; }
+    }catch(err){ provider = 'mock'; if(err && err.code) meta = {code:err.code, usage:err.usage||null}; }
   }
   if(provider === 'mock') await sleep(480); // let the thinking/skeleton state read as real work
   if(!summary) summary = mockSummary(intent, matches);
-  return {intent, matches, summary, provider};
+  return {intent, matches, summary, provider, meta};
 }
 
 /* ---------- brief persistence ---------- */

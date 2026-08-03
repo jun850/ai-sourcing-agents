@@ -78,6 +78,7 @@
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // ---- Sourcing Copilot results mode ----
@@ -85,6 +86,30 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   function runCopilot(){
     const Cop=window.ARCANA_Copilot;
+
+    // Copilot is a signed-in perk (basic catalog search stays open to everyone).
+    // Defense in depth: components.js already gates the entry points that link
+    // here, but a direct/shared ?copilot=1 link must be gated too.
+    if(!Store.session()){
+      document.querySelector('.filter-rail').style.display='none';
+      document.querySelector('.list-top').style.display='none';
+      document.querySelector('.sortbar').style.display='none';
+      document.querySelector('.listing').style.display='block';
+      document.getElementById('crumbCat').textContent='Sourcing Copilot';
+      const grid=document.getElementById('grid'); grid.className='';
+      grid.innerHTML=`<div class="panel cart-empty cop-invite" style="max-width:520px;margin:40px auto">
+        <div class="cop-gate-art" style="margin:0 auto 20px"><img src="${ASSET('copilot-gate.webp')}" alt="" width="168" height="168" loading="lazy"></div>
+        <h3>Sign in to use Sourcing Copilot</h3>
+        <p>Copilot matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results.</p>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <a class="btn btn-out" href="login.html?next=${encodeURIComponent('category.html?copilot=1')}">Log in</a>
+          <a class="btn btn-green" href="signup.html">Sign up free</a>
+        </div>
+      </div>`;
+      if(window.ARCANA_openCopilotGate) window.ARCANA_openCopilotGate();
+      return;
+    }
+
     const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
     const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
     const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
@@ -141,11 +166,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
             <div class="cop-summary" data-cop-summary role="status" aria-live="polite"></div>
           </div>
           <div class="cop-actions">
+            <span class="cop-usage" data-cop-usage hidden></span>
             <button type="button" data-cop-refine>${SPARK.replace('width="1.6"','width="1.8"')} Refine</button>
             <button type="button" class="cop-clear" data-cop-clear>Clear</button>
           </div>
         </div>
         ${chips.length?`<div class="cop-brief"><span class="lbl">Reading your brief as</span>${chips.map(c=>`<span class="cop-tag">${c}</span>`).join('')}</div>`:''}
+        <div class="cop-limitnote" data-cop-limitnote hidden></div>
         <form class="cop-editform" data-cop-edit hidden>
           <input type="text" value="${(brief||'').replace(/"/g,'&quot;')}" aria-label="Refine your sourcing brief" placeholder="Describe what you're sourcing…">
           <button class="cop-ask" type="submit">Search</button>
@@ -162,16 +189,36 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       return bar.querySelector('[data-cop-summary]');
     }
 
+    function revealIn(el){
+      el.hidden=false; el.classList.remove('in');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>el.classList.add('in')));
+    }
+    function paintUsage(usage){
+      const el=bar.querySelector('[data-cop-usage]'); if(!el) return;
+      if(!usage){ el.hidden=true; el.classList.remove('in'); return; }
+      el.textContent=`${usage.callCount}/${usage.maxCalls} today`;
+      el.title=`${usage.totalTokens.toLocaleString()} of ${usage.maxTokens.toLocaleString()} AI tokens used today`;
+      revealIn(el);
+    }
+    function paintLimitNote(show){
+      const el=bar.querySelector('[data-cop-limitnote]'); if(!el) return;
+      if(!show){ el.hidden=true; el.classList.remove('in'); el.innerHTML=''; return; }
+      el.innerHTML=`${IC.lock}<span>You've reached today's Copilot AI limit — showing catalog-matched results below, no AI summary. Resets tomorrow.</span>`;
+      revealIn(el);
+    }
+
     async function run(text){
       skeleton();
       const sumEl=paintBar(text, '', Cop.parse(text));
-      const {matches, summary, intent}=await Cop.ask(text);
+      const {matches, summary, meta}=await Cop.ask(text);
       grid.className='cop-grid';
       const list=matches.slice(0,12);
       grid.innerHTML = list.length
         ? list.map(resultHTML).join('')
         : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>Try relaxing one constraint — a higher price ceiling, a larger MOQ, or one fewer certification — then search again.</p></div>`;
       window.ARCANA_wireCards(grid);
+      paintUsage(meta && meta.usage);
+      paintLimitNote(!!(meta && meta.code==='limit_reached'));
       await streamText(sumEl, summary);
     }
 
