@@ -342,6 +342,20 @@ function toast(msg, action){
 }
 window.ARCANA_toast = toast;
 
+/* ---------- contact-by-email: shared by the OEM CTA, "Chat with supplier",
+   "Request Sample" and "Contact Supplier" — all route to a pre-filled
+   mailto instead of an in-app flow. subjectPrefix becomes
+   "<subjectPrefix> - <userId>" (profile id when signed in, else "guest"). */
+async function contactEmail({subjectPrefix, bodyLines}){
+  const api = window.ARCANA_API;
+  const profile = api && api.getSessionProfile ? await api.getSessionProfile().catch(()=>null) : null;
+  const userId = profile ? profile.id : 'guest';
+  const subject = `${subjectPrefix} - ${userId}`;
+  const body = (bodyLines||[]).filter(Boolean).join('\n');
+  location.href = `mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+window.ARCANA_contactEmail = contactEmail;
+
 /* ---------- floating Sourcing Copilot launcher (buyer surfaces) ---------- */
 function buildCopilotFab(){
   if(!window.ARCANA_Copilot) return;
