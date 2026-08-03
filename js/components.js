@@ -72,6 +72,7 @@ const IC = {
   box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg>',
   bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>',
   camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3.2L9 5.4A1 1 0 0 1 9.8 5h4.4a1 1 0 0 1 .8.4L16.8 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>',
 };
 window.ARCANA_IC = IC;
 
@@ -309,8 +310,8 @@ function buildCopilotFab(){
   const SPARK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>';
   const EG=['Organic cotton jersey, GOTS, under $7/m, MOQ ≤ 200',
             'Recycled polyester for activewear, low MOQ, GRS certified',
-            'Denim mill in Guangdong, 12 oz, OEM-ready',
-            'Linen blend woven, lead under 14 days'];
+            'Soft cotton jersey, light enough for a summer shirt',
+            'Warm brushed wool for a winter flannel shirt'];
   const wrap=document.createElement('div'); wrap.className='cop-fab';
   wrap.innerHTML=`
     <button type="button" class="cop-fab-btn" aria-expanded="false" aria-haspopup="dialog" aria-label="${esc(t('Sourcing Copilot'))}">${markSVG()}</button>
@@ -346,13 +347,76 @@ function buildCopilotFab(){
   btn.addEventListener('click',open);
   form.addEventListener('submit',e=>{ e.preventDefault();
     const v=input.value.trim(); if(!v){ input.focus(); return; }
-    window.ARCANA_Copilot.setBrief(v); location.href=P('category.html')+'?copilot=1'; });
+    window.ARCANA_Copilot.setBrief(v);
+    if(!window.ARCANA_requireCopilotAuth()){ close(false); return; }
+    location.href=P('category.html')+'?copilot=1'; });
   pop.addEventListener('click',e=>{ const r=e.target.closest('[data-eg]');
     if(r){ input.value=r.dataset.eg; input.focus(); } });
   input.addEventListener('keydown',e=>{ if(e.key==='Escape') close(true); });
   document.addEventListener('pointerdown',e=>{ if(!wrap.hidden && !wrap.contains(e.target) && !panel.hidden) close(false); });
   window.ARCANA_onLang(()=>{ input.placeholder=t("Describe what you're sourcing…"); if(!panel.hidden) renderPop(); });
 }
+
+/* ---------- Copilot auth gate: public users get a login/signup modal
+   instead of AI-matched results. Basic catalog search stays open to
+   everyone — only the Sourcing Copilot surface (parsed brief, ranked
+   verified matches, LLM summary) is a signed-in perk. The brief is always
+   saved to localStorage BEFORE the gate opens, so login.html's ?next=
+   round-trip lands the user straight back on their results. */
+let copilotGateEl = null;
+function ensureCopilotGate(){
+  if(copilotGateEl) return copilotGateEl;
+  const t = window.ARCANA_T||(x=>x);
+  const esc = x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const next = encodeURIComponent('category.html?copilot=1');
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-overlay cop-gate-overlay'; wrap.hidden = true;
+  wrap.innerHTML = `
+    <div class="modal-box cop-gate cop-invite" role="dialog" aria-modal="true" aria-labelledby="cgTitle" aria-describedby="cgDesc">
+      <button type="button" class="cop-gate-x" data-cg-close aria-label="${esc(t('Close'))}">&times;</button>
+      <div class="cop-gate-art"><img src="${ASSET('copilot-gate.webp')}" alt="" width="168" height="168" loading="lazy"></div>
+      <h3 id="cgTitle">${esc(t('Sign in to use Sourcing Copilot'))}</h3>
+      <p id="cgDesc" class="muted">${esc(t("Copilot matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results."))}</p>
+      <div class="modal-actions" style="justify-content:center">
+        <a class="btn btn-out" href="${P('login.html')}?next=${next}">${esc(t('Log in'))}</a>
+        <a class="btn btn-green" href="${P('signup.html')}">${esc(t('Sign up free'))}</a>
+      </div>
+      <button type="button" class="cop-gate-later" data-cg-close>${esc(t('Continue browsing without Copilot'))}</button>
+    </div>`;
+  document.body.appendChild(wrap);
+  let closeT = null;
+  const close = ()=>{
+    clearTimeout(closeT);
+    wrap.classList.remove('in');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    closeT = setTimeout(()=>{
+      wrap.hidden = true;
+      if(openTrigger && document.contains(openTrigger)) openTrigger.focus();
+    }, reduce?0:180);
+  };
+  wrap.querySelectorAll('[data-cg-close]').forEach(b=>b.addEventListener('click',close));
+  wrap.addEventListener('pointerdown',e=>{ if(e.target===wrap) close(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !wrap.hidden) close(); });
+  copilotGateEl = wrap;
+  return wrap;
+}
+let openTrigger = null;
+function openCopilotGate(){
+  const wrap = ensureCopilotGate();
+  openTrigger = document.activeElement;
+  wrap.hidden = false;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>wrap.classList.add('in')));
+  const focusTarget = wrap.querySelector('.btn-out');
+  if(focusTarget) focusTarget.focus();
+}
+window.ARCANA_openCopilotGate = openCopilotGate;
+/* Call at the point of Copilot submission. Returns true (proceed) when
+   signed in; opens the gate and returns false otherwise. */
+window.ARCANA_requireCopilotAuth = function(){
+  if(Store.session()) return true;
+  openCopilotGate();
+  return false;
+};
 
 /* ---------- smart search: intent autocomplete + image (visual) search ---------- */
 /* Image cache contract: sessionStorage only (dies with the tab). A hard refresh is
@@ -427,6 +491,29 @@ function wireSearch(){
       <span class="s-meta">${esc(tr(p.comp))} · ${esc(tr(p.seller))}</span></span>
       <span class="s-pr">${price}</span></a>`; }
   function footRow(q,i){ opts.push(1); return `<a class="s-row s-foot" role="option" id="${optId(i)}" href="${kwHref(q)}">${IC.search}<span>${esc(t('See all results for'))} “${esc(q)}”</span>${IC.chevR}</a>`; }
+
+  /* --- Sourcing Copilot integration: a natural-language brief typed into the
+     same search box routes to the AI-matched Copilot flow instead of a plain
+     keyword listing. Single/short keyword search stays open to everyone;
+     only this Copilot path is auth-gated (window.ARCANA_requireCopilotAuth). --- */
+  function briefLike(qv){
+    const Cop=window.ARCANA_Copilot; if(!Cop) return false;
+    const intent=Cop.parse(qv);
+    const words2=norm(qv).split(/\s+/).filter(Boolean);
+    return !!(intent.materials.length||intent.gsm||intent.priceMax!=null||intent.moqMax!=null||
+      intent.lowMoq||intent.leadMax!=null||intent.certs.length||intent.region||intent.oem||words2.length>=4);
+  }
+  function triggerCopilotAsk(qv){
+    window.ARCANA_Copilot.setBrief(qv);
+    if(!window.ARCANA_requireCopilotAuth()){ close(); return; }
+    location.href=P('category.html')+'?copilot=1';
+  }
+  function copilotRow(qv,i){
+    opts.push(1);
+    return `<a class="s-row s-copilot" role="option" id="${optId(i)}" href="${P('category.html')}?copilot=1" data-cop-ask="${esc(qv)}">
+      ${IC.spark}<span class="s-main"><span class="s-nm">${esc(t('Ask Sourcing Copilot'))}</span>
+      <span class="s-meta">${esc(t('AI-matched picks for'))} “${esc(qv)}”</span></span>${IC.chevR}</a>`;
+  }
 
   /* --- image search --- */
   function getImg(){ try{ return JSON.parse(sessionStorage.getItem(IMG_KEY)); }catch(_){ return null; } }
@@ -522,6 +609,7 @@ function wireSearch(){
       for(const k of kws) html+=kwRow(k,q,i++);
       html+=footRow(q,i++);
     }else{
+      if(briefLike(input.value)) html+=copilotRow(input.value.trim(),i++);
       const kws=POOL.filter(k=>k.includes(q)||words.every(w=>k.includes(w)))
         .sort((a,b)=>(b.startsWith(q)?1:0)-(a.startsWith(q)?1:0)).slice(0,4);
       const fs=FACT.map(f=>[factScore(f,q,words),f]).filter(x=>x[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,3);
@@ -552,15 +640,23 @@ function wireSearch(){
       input.setAttribute('aria-activedescendant',els[sel].id);
       els[sel].scrollIntoView({block:'nearest'});
     }else if(e.key==='Enter'&&sel>-1&&els[sel]){
-      e.preventDefault(); location.href=els[sel].href;
+      e.preventDefault();
+      if(els[sel].dataset.copAsk) triggerCopilotAsk(els[sel].dataset.copAsk);
+      else location.href=els[sel].href;
     }else if(e.key==='Escape'){ close(); }
   });
   form.addEventListener('submit',e=>{
     e.preventDefault();
-    const q=input.value.trim(), img=getImg(), ps=[];
+    const q=input.value.trim(), img=getImg();
+    if(q && !img && briefLike(q)){ triggerCopilotAsk(q); return; }
+    const ps=[];
     if(q) ps.push('q='+encodeURIComponent(q));
     if(img) ps.push('visual=1');
     location.href=P('category.html')+(ps.length?'?'+ps.join('&'):'');
+  });
+  pop.addEventListener('click',e=>{
+    const r=e.target.closest('[data-cop-ask]');
+    if(r){ e.preventDefault(); triggerCopilotAsk(r.dataset.copAsk); }
   });
   if(cam) cam.addEventListener('click',()=>{ input.focus(); getImg()? render() : camPanel(); });
   const file=document.createElement('input');
