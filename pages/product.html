@@ -26,14 +26,16 @@
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
-  const DEAL=Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
   const leadMap={fabrics:'7–14 days',accessories:'7–12 days',trims:'7–12 days',yarns:'10–15 days',oem:'—'};
 
+  // Discount pricing only exists on the 11.11 sale page (campaign.html) — the PDP
+  // always shows the real unit price, whichever surface the shopper arrived from.
   let id=new URLSearchParams(location.search).get('id'); if(!M[id]) id='CTW-001';
-  const p=M[id]; const d=DEAL[p.id]; const now=d?p.price*(1-d.disc/100):p.price;
+  const p=M[id];
   const isOEM=p.badge==='oem'||p.badge==='recycle';
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
   const catUrl='category.html?cat='+p.cat;
@@ -77,7 +79,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${specs.map(s=>`<div class="spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="${s[2]}"/></svg><div><span>${s[0]}</span><b>${s[1]}</b></div></div>`).join('')}
         </div>
         <div class="price-box">
-          <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?money(now)+` <small>/${TR(p.unit)}</small>`:T('Contact for quote')}${d?`<span class="twas" style="font-size:15px;margin-left:8px">${money(p.price)}</span>`:''}</div></div>
+          <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?money(p.price)+` <small>/${TR(p.unit)}</small>`:T('Contact for quote')}</div></div>
         </div>
         <div class="buy-row"><div class="buy-qty"><span class="buy-qty-lbl">${T('Quantity')}</span>
           <div class="qty" data-qty id="pdpQty"><button data-dec aria-label="Decrease">−</button><input value="1" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
@@ -86,9 +88,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${p.price>0
             ? `<button class="btn btn-gold" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" id="buyBtn">${T('Buy Now')}</button>
                <button class="btn btn-out" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
-               <button class="btn btn-out" data-toast="${T('Sample request sent to supplier')}">${T('Request Sample')}</button>`
+               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`
             : `<button class="btn btn-gold" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
-               <button class="btn btn-out" data-toast="${T('Sample request sent to supplier')}">${T('Request Sample')}</button>`}
+               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`}
         </div>
         <div class="pdp-mini">
           <button class="fav pdp-save" data-fav-id="${p.id}">${IC.bookmark} <span>${T('Save to List')}</span></button>
@@ -118,13 +120,29 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
     if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));location.href='checkout.html';});
+    // Product details shared by the email-based contact CTAs below.
+    const productLines=extra=>[
+      `Product: ${nm} (SKU: ${p.id})`,
+      `Quantity requested: ${qi.value} ${TR(p.unit)}`,
+      `Composition: ${comp}`,
+      `Specification: ${spec}`,
+      `MOQ: ${TR(p.moq)}`,
+      `Supplier: ${seller}, ${loc}`,
+      ...(extra||[]),
+    ];
     const chatBtn=document.getElementById('chatBtn');
-    if(chatBtn) chatBtn.addEventListener('click', async ()=>{
-      const profile=await window.ARCANA_API.getSessionProfile();
-      if(!profile){ location.href=`login.html?next=${encodeURIComponent('brand-owner.html#chat')}`; return; }
-      const { id, error }=await window.ARCANA_API.getOrCreateConversation(facId);
-      if(error){ toast(error.message||'Could not start conversation'); return; }
-      location.href=`brand-owner.html?convo=${id}#chat`;
+    if(chatBtn) chatBtn.addEventListener('click', ()=>{
+      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines()});
+    });
+    const sampleBtn=document.getElementById('sampleBtn');
+    if(sampleBtn) sampleBtn.addEventListener('click', ()=>{
+      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines(['Request: sample'])});
+    });
+    const oemBtn=document.getElementById('oemContactBtn');
+    if(oemBtn) oemBtn.addEventListener('click', ()=>{
+      const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
+      const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
+      window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines([`OEM service selected: ${pkgName}`])});
     });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
     sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'));});
@@ -134,24 +152,26 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.querySelectorAll('[data-pkg-group] [data-pkg]').forEach(pk=>pk.addEventListener('click',()=>{
       document.querySelectorAll('[data-pkg]').forEach(x=>x.classList.remove('sel'));pk.classList.add('sel');}));
 
-    // Copilot: "why this matches your brief" (only when a brief is active)
-    const Cop=window.ARCANA_Copilot, brief=Cop&&Cop.getBrief();
-    if(brief&&brief.text){
-      const intent=Cop.parse(brief.text), r=Cop.scoreProduct(p,intent);
-      if(r){
-        const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
-        const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
-        const hits=r.hits.map(h=>`<span class="cop-hit">${CHK}${h}</span>`).join('');
-        const miss=r.miss.map(m=>`<span class="cop-missc">${DSH}${m}</span>`).join('');
-        const panel=document.createElement('div'); panel.className='cop-match';
-        panel.innerHTML=`
-          <div class="cm-head">
-            <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
-            <div class="cm-title">Matches your Copilot brief · ${r.score}%<span>“${brief.text}”</span></div>
-          </div>
-          <div class="cop-chips">${hits}${miss}</div>`;
-        const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);
-      }
+    // Copilot: "why this matched" — only for a product that was ACTUALLY in the
+    // most recent Copilot result set (scoped to this tab, see components.js's
+    // ARCANA_getCopilotMatchFor). Never a live re-score against a lingering
+    // brief: that's what let this panel resurface on unrelated PDPs.
+    const brief=window.ARCANA_Copilot&&window.ARCANA_Copilot.getBrief();
+    const r=window.ARCANA_getCopilotMatchFor&&window.ARCANA_getCopilotMatchFor(p.id);
+    if(r&&brief&&brief.text){
+      const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
+      const DSH='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M5 12h14"/></svg>';
+      const hits=r.hits.map(h=>`<span class="cop-hit">${CHK}${h}</span>`).join('');
+      const miss=r.miss.map(m=>`<span class="cop-missc">${DSH}${m}</span>`).join('');
+      const panel=document.createElement('div'); panel.className='cop-match cop-reveal';
+      panel.innerHTML=`
+        <div class="cm-head">
+          <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
+          <div class="cm-title">Matches your Copilot search · ${r.score}%<span>“${brief.text}”</span></div>
+        </div>
+        <div class="cop-chips">${hits}${miss}</div>`;
+      const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);
+      requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('in')));
     }
   }
 
@@ -160,7 +180,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     return `
     <section class="oem-section section" data-pkg-group>
       <div class="oem-intro"><h2>${T('OEM Services')}</h2><span class="badge b-oem-soft" style="margin-top:14px">${T('Built for Your Brand')}</span>
-        <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p></div>
+        <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p>
+        <button class="btn btn-gold" id="oemContactBtn" style="margin-top:18px">${IC.msg||''} ${T('Contact us')}</button></div>
       ${pk(1,T('Sampling Package'),T('Validate quality & design'),[T('Up to 3 samples'),T('Swatch & color cards'),T('Lab testing support'),`5–7 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(45)}</b>`)}
       ${pk(2,T('Private Label'),T('Build your brand identity'),[T('Custom labels & tags'),T('Branded packaging'),T('Care label customization'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(180)}</b>`)}
       ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(120)}</b>`)}

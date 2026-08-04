@@ -242,6 +242,7 @@
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE=async function({toast}){
   const api=window.ARCANA_API;
@@ -270,7 +271,7 @@ window.ARCANA_PAGE=async function({toast}){
   const factory=await api.getMyFactory();
   if(!factory){
     showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact ARCANA to get set up.',
-      '<a class="link" href="mailto:hello@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact ARCANA</a>');
+      '<a class="link" href="mailto:info@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact ARCANA</a>');
     return;
   }
   main.hidden=false;

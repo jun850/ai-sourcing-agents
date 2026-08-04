@@ -2,9 +2,12 @@
 
 /* ---- Homepage (Tokopedia structure) ---- */
 .banner-carousel{position:relative;border-radius:var(--radius);overflow:hidden;margin-top:24px;height:clamp(220px,26vw,340px);background:var(--green-d)}
-.bslide{position:absolute;inset:0;opacity:0;transition:opacity .6s ease;display:flex;align-items:center}
+.bslide{position:absolute;inset:0;opacity:0;transition:opacity .7s cubic-bezier(.25,1,.5,1);display:flex;align-items:center}
 .bslide.on{opacity:1}
-.bslide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.bslide img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  transform:scale(1);transition:transform 6.5s cubic-bezier(.25,1,.5,1)}
+.bslide.on img{transform:scale(1.06)}
+@media(prefers-reduced-motion:reduce){.bslide img{transition:none;transform:none}}
 .bslide .bov{position:relative;padding:0 clamp(28px,5vw,64px);max-width:52%;color:#fff}
 .bslide .bov .btag{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.03em;background:rgba(255,255,255,.16);padding:5px 13px;border-radius:var(--radius-pill);margin-bottom:14px}
 .bslide .bov h2{font-family:var(--serif);font-size:clamp(1.8rem,3.6vw,3rem);font-weight:600;line-height:1.08;color:#fff}
@@ -16,12 +19,22 @@
 .barrow{display:none}
 
 .home-2col{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;margin-top:20px;align-items:stretch}
-.pop-cat{background:var(--green);border-radius:var(--radius);padding:28px 30px;color:#fff;display:flex;align-items:center;gap:20px;overflow:hidden;position:relative}
-.pop-cat .pc-body{flex:1;z-index:1}
+.pop-cat{background:var(--green);border-radius:var(--radius);color:#fff;display:flex;align-items:stretch;overflow:hidden;position:relative;
+  opacity:0;transform:translateY(14px);transition:opacity .5s cubic-bezier(.2,.8,.2,1),transform .5s cubic-bezier(.2,.8,.2,1)}
+.pop-cat.in{opacity:1;transform:none}
+.pop-cat .pc-body{flex:1;z-index:1;padding:28px 30px;display:flex;flex-direction:column;justify-content:center;min-width:0}
 .pop-cat h3{font-family:var(--serif);font-size:24px;font-weight:600;color:#fff}
-.pop-cat p{color:#cfe0d3;font-size:13.5px;margin:8px 0 18px;max-width:300px}
-.pop-cat .btn{background:#fff;color:var(--green)}
-.pop-cat .pc-img{width:210px;height:150px;border-radius:12px;object-fit:cover;flex-shrink:0}
+.pop-cat p{color:#cfe0d3;font-size:13.5px;margin:8px 0 18px;max-width:280px}
+.pop-cat .btn{background:#fff;color:var(--green);align-self:flex-start;transition:transform .18s cubic-bezier(.2,.8,.2,1)}
+.pop-cat .btn:hover{transform:translateY(-1px)}
+.pop-cat .pc-media{width:42%;flex-shrink:0;overflow:hidden;position:relative;min-height:190px}
+.pop-cat .pc-img{width:100%;height:100%;object-fit:cover;transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.pop-cat:hover .pc-img{transform:scale(1.045)}
+@media(prefers-reduced-motion:reduce){
+  .pop-cat{opacity:1;transform:none;transition:none}
+  .pop-cat .btn,.pop-cat .pc-img{transition:none}
+  .pop-cat:hover .pc-img{transform:none}
+}
 .quick-panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px}
 .quick-panel .qp-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .quick-panel .qp-head b{font-size:16px}
@@ -524,6 +537,19 @@
 .tcard:hover{box-shadow:var(--shadow);border-color:var(--line-2);transform:translateY(-2px)}
 .tthumb{position:relative;aspect-ratio:1/1;flex:none;background:var(--line-2);overflow:hidden}
 .tthumb img{width:100%;height:100%;object-fit:cover;display:block}
+/* Opt-in fade for images caught still loading (see wireCards() in
+   components.js) — default is always opacity:1, so an image never gets
+   stuck invisible if load/error somehow doesn't fire. */
+.tthumb img.will-fade{opacity:0;transition:opacity .35s ease-out}
+.tthumb img.will-fade.loaded{opacity:1}
+
+/* Curated grid (homepage): staggered card entrance on first load and on
+   tab switches. Scoped to #curatedGrid only — the shared .tcard renderer
+   is used on plain listings elsewhere and should stay instant there. */
+#curatedGrid .tcard.card-in{opacity:0;transform:translateY(10px);
+  animation:curatedCardIn .36s cubic-bezier(.25,1,.5,1) forwards;
+  animation-delay:calc(var(--i,0) * 40ms)}
+@keyframes curatedCardIn{to{opacity:1;transform:none}}
 .tdisc{position:absolute;top:0;left:0;background:var(--danger);color:#fff;font-size:12px;font-weight:800;padding:4px 9px;border-bottom-right-radius:10px;z-index:1}
 .tbadge{position:absolute;top:8px;left:8px;background:var(--green);color:#fff;font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:var(--radius-pill);z-index:1}
 .tbody{padding:12px 13px 14px;display:flex;flex-direction:column;flex:1}
@@ -729,7 +755,8 @@
   .auth-aside{display:none}
   .home-2col,.listing{grid-template-columns:1fr}
   .bslide .bov{max-width:78%}
-  .pop-cat .pc-img{display:none}
+  .pop-cat{flex-direction:column}
+  .pop-cat .pc-media{width:100%;height:180px;order:-1}
   .filter-rail{position:static}
   .spec-grid,.metrics,.capabilities,.home-feats,.home-feat,.bo-badges,.dash-bottom{grid-template-columns:repeat(2,minmax(0,1fr))}
   .step-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -775,7 +802,7 @@
 /* Two-Signal Rule: the Copilot is a buyer/trust surface → green. Brass stays money-only. */
 
 /* -- Floating Copilot launcher: fleur icon at rest, expands to a centered ask-bar -- */
-.cop-fab{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:560}
+.cop-fab{position:fixed;right:22px;bottom:22px;z-index:560}
 .cop-fab-btn{width:56px;height:56px;border-radius:50%;background:var(--green);color:#fff;
   display:flex;align-items:center;justify-content:center;box-shadow:0 8px 28px rgba(28,28,26,.28);
   transition:.18s cubic-bezier(.2,.8,.2,1)}
@@ -882,6 +909,10 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .cop-match .cop-chips{margin-top:13px}
 .cop-match .cop-hit{background:#fff}
 .cop-match .cop-missc{background:#fff}
+.cop-match.cop-reveal{opacity:0;transform:translateY(10px);
+  transition:opacity .3s cubic-bezier(.25,1,.5,1),transform .3s cubic-bezier(.25,1,.5,1)}
+.cop-match.cop-reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.cop-match.cop-reveal{transition-duration:.01ms;transform:none}}
 
 /* -- Dashboard: demand copilot + listing drafter -- */
 .cop-seller{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
@@ -917,7 +948,61 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .draft-apply{display:flex;gap:10px;margin-top:14px}
 @media(max-width:1100px){.cop-seller{grid-template-columns:1fr}}
 
+/* -- Copilot auth gate: shared "sign in for this" tone (green, not the
+   neutral gray of a plain empty state) on both the modal and the inline
+   category.html panel, which both carry the .cop-invite class. -- */
+.cop-invite .ce-ic{background:var(--green-l)}
+.cop-invite .ce-ic svg{color:var(--green)}
+.cop-gate-art{width:168px;height:168px;margin:0 auto 18px;border-radius:var(--radius);
+  background:var(--green-l);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cop-gate-art img{width:100%;height:100%;object-fit:cover;display:block;
+  animation:copGateFloat 5s cubic-bezier(.45,0,.55,1) infinite}
+@keyframes copGateFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.cop-gate{position:relative;text-align:center;padding-top:36px}
+.cop-gate p{font-size:13.5px}
+.cop-gate-x{position:absolute;top:12px;right:12px;width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;color:var(--faint);
+  transition:background .15s,color .15s}
+.cop-gate-x:hover{background:var(--bg);color:var(--ink)}
+.cop-gate-later{display:block;margin:16px auto 0;font-size:12.5px;color:var(--muted);
+  text-decoration:underline;text-underline-offset:2px;transition:color .15s}
+.cop-gate-later:hover{color:var(--ink)}
+
+/* Entrance/exit: backdrop fade + box rise-and-settle. The .in class is added
+   one frame after `hidden` is cleared (see openCopilotGate) so the browser
+   has a paint to transition from; removing .in on close plays the same
+   motion in reverse before the 180ms JS timeout re-applies [hidden]. */
+.cop-gate-overlay{opacity:0;transition:opacity .22s cubic-bezier(.25,1,.5,1)}
+.cop-gate-overlay.in{opacity:1}
+.cop-gate-overlay .modal-box{opacity:0;transform:translateY(18px) scale(.97);
+  transition:opacity .26s cubic-bezier(.25,1,.5,1),transform .26s cubic-bezier(.25,1,.5,1)}
+.cop-gate-overlay.in .modal-box{opacity:1;transform:none}
+
+/* -- Search bar: "Ask Sourcing Copilot" row, distinct from plain keyword/
+   supplier/product rows so it reads as the AI path, not another result. -- */
+.s-row.s-copilot{background:var(--green-l);margin-bottom:4px;transition:background .15s,outline-color .15s}
+.s-row.s-copilot:hover,.s-row.s-copilot.sel{background:var(--green-l);outline:2px solid var(--green);outline-offset:-2px}
+.s-row.s-copilot>svg{color:var(--green)}
+.s-row.s-copilot .s-nm{color:var(--green)}
+.s-row.s-copilot .s-go{color:var(--green);transition:transform .15s}
+.s-row.s-copilot:hover .s-go{transform:translateX(2px)}
+
+/* -- Copilot results bar: daily usage + limit-reached states, revealed with
+   a small fade+rise rather than popping in via [hidden] toggle. -- */
+.cop-usage{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--bg);
+  border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 10px;white-space:nowrap;
+  opacity:0;transform:translateY(-4px);transition:opacity .25s cubic-bezier(.25,1,.5,1),transform .25s cubic-bezier(.25,1,.5,1)}
+.cop-usage.in{opacity:1;transform:none}
+.cop-limitnote{display:flex;align-items:flex-start;gap:8px;margin-top:14px;padding-top:14px;
+  border-top:1px solid var(--line-2);font-size:12.5px;color:var(--muted);
+  opacity:0;transform:translateY(-4px);transition:opacity .3s cubic-bezier(.25,1,.5,1) .05s,transform .3s cubic-bezier(.25,1,.5,1) .05s}
+.cop-limitnote.in{opacity:1;transform:none}
+.cop-limitnote svg{width:15px;height:15px;color:var(--faint);flex-shrink:0;margin-top:1px}
+
 @media(prefers-reduced-motion:reduce){
   .cop-summary .cop-cursor{animation:none}
   .cop-shimmer::after{animation:none;display:none}
+  .cop-gate-art img{animation:none}
+  .cop-gate-overlay,.cop-gate-overlay .modal-box{transition-duration:.01ms}
+  .cop-usage,.cop-limitnote{transition-duration:.01ms;transform:none}
 }
