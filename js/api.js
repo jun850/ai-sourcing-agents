@@ -30,6 +30,9 @@ if(!sb || !sb.auth){
     getCart(){ return Promise.resolve([]); },
     syncCartItem(){ return Promise.resolve({ error: err }); },
     replaceCart(){ return Promise.resolve({ error: err }); },
+    getWishlist(){ return Promise.resolve([]); },
+    syncWishlistItem(){ return Promise.resolve({ error: err }); },
+    replaceWishlist(){ return Promise.resolve({ error: err }); },
     getMyProfile(){ return Promise.resolve(null); },
     updateProfile(){ return Promise.resolve({ error: err }); },
     updateEmail(){ return Promise.resolve({ error: err }); },
@@ -71,22 +74,45 @@ async function ensureCart(uid){
   return { cart: ins.data };
 }
 
+/* Resolve a list of SKUs to {sku: product_id}. Unknown SKUs are simply absent
+   from the map, so callers can drop them. */
+async function skuIdMap(skus){
+  const { data: prods, error } = skus.length
+    ? await sb.from('products').select('id,sku').in('sku', skus)
+    : { data: [], error: null };
+  if(error) return { error };
+  return { map: Object.fromEntries((prods||[]).map(p=>[p.sku, p.id])) };
+}
+
 /* Replace a cart's contents with items:[{id:sku,qty}]. Unknown SKUs are dropped;
    returns { matched } = how many rows actually got written, so callers can tell
    "cart cleared" apart from "every SKU was invalid". */
 async function writeCartRows(cartId, items){
-  const skus = (items||[]).map(i=>i.id);
-  const { data: prods, error: pe } = skus.length
-    ? await sb.from('products').select('id,sku').in('sku', skus)
-    : { data: [], error: null };
-  if(pe) return { error: pe };
-  const idBySku = Object.fromEntries((prods||[]).map(p=>[p.sku, p.id]));
+  const { map: idBySku, error: me } = await skuIdMap((items||[]).map(i=>i.id));
+  if(me) return { error: me };
   const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
     .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty }));
   const del = await sb.from('cart_items').delete().eq('cart_id', cartId);
   if(del.error) return { error: del.error };
   if(rows.length){
     const ins = await sb.from('cart_items').insert(rows);
+    if(ins.error) return { error: ins.error };
+  }
+  return { matched: rows.length };
+}
+
+/* Replace the signed-in user's wishlist with items:[{id:sku,qty}]. Same shape
+   as writeCartRows but keyed straight off profile_id — a wishlist has no
+   parent "cart" row. */
+async function writeWishlistRows(profileId, items){
+  const { map: idBySku, error: me } = await skuIdMap((items||[]).map(i=>i.id));
+  if(me) return { error: me };
+  const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
+    .map(i=>({ profile_id: profileId, product_id: idBySku[i.id], qty: i.qty }));
+  const del = await sb.from('saved_items').delete().eq('profile_id', profileId);
+  if(del.error) return { error: del.error };
+  if(rows.length){
+    const ins = await sb.from('saved_items').insert(rows);
     if(ins.error) return { error: ins.error };
   }
   return { matched: rows.length };
@@ -318,6 +344,46 @@ const API = {
       const ec = await ensureCart(session.user.id);
       if(ec.error) return { error: ec.error };
       return await writeCartRows(ec.cart.id, items);
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Wishlist (real-time DB sync for signed-in users) ---- */
+  async getWishlist(){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const { data, error } = await sb.from('saved_items').select('qty, created_at, products(sku)')
+        .eq('profile_id', session.user.id).order('created_at', { ascending:true });
+      if(error || !data) return [];
+      return data.filter(i=>i.products).map(i=>({ id: i.products.sku, qty: Number(i.qty) }));
+    }catch(_){ return []; }
+  },
+
+  /* Upsert (or, at qty<=0, delete) one wishlist line for the signed-in user. */
+  async syncWishlistItem(sku, qty){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const { data: prod, error: pe } = await sb.from('products').select('id').eq('sku', sku).single();
+      if(pe) return { error: pe };
+      if(qty <= 0){
+        const del = await sb.from('saved_items').delete().eq('profile_id', session.user.id).eq('product_id', prod.id);
+        return { error: del.error || null };
+      }
+      const up = await sb.from('saved_items').upsert(
+        { profile_id: session.user.id, product_id: prod.id, qty },
+        { onConflict: 'profile_id,product_id' }
+      );
+      return { error: up.error || null };
+    }catch(error){ return { error }; }
+  },
+
+  /* Bulk-replace the signed-in user's DB wishlist (used for the anon->login merge). */
+  async replaceWishlist(items){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      return await writeWishlistRows(session.user.id, items);
     }catch(error){ return { error }; }
   },
 

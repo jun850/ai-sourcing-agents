@@ -37,9 +37,22 @@ const Store = {
   clearCart(){ localStorage.removeItem('arcana_cart'); localStorage.removeItem('arcana_addons'); syncBadges(); },
   addons(){ return LS.get('addons', {qc:false, ins:false}); },
   setAddon(k,v){ const a=Store.addons(); a[k]=!!v; LS.set('addons', a); },
-  saved(){ return LS.get('saved', []); },
-  isSaved(id){ return Store.saved().includes(id); },
-  toggleSaved(id){ const s=Store.saved(); const i=s.indexOf(id); if(i>-1)s.splice(i,1); else s.push(id); LS.set('saved',s); syncBadges(); return i<0; },
+  // legacy entries were plain SKU strings; normalize to {id, qty} on read.
+  saved(){ return LS.get('saved', []).map(x => typeof x === 'string' ? {id:x, qty:1} : x); },
+  isSaved(id){ return Store.saved().some(i=>i.id===id); },
+  toggleSaved(id, qty){
+    const s = Store.saved(); const i = s.findIndex(x=>x.id===id);
+    const on = i<0;
+    if(on) s.push({id, qty: qty||1}); else s.splice(i,1);
+    LS.set('saved', s); syncBadges();
+    pushWishlistItem(id, on ? (qty||1) : 0);
+    return on;
+  },
+  setSavedQty(id, qty){
+    const s=Store.saved(); const r=s.find(x=>x.id===id);
+    if(r){ r.qty=Math.max(1,qty); LS.set('saved',s); pushWishlistItem(id, r.qty); }
+  },
+  removeSaved(id){ LS.set('saved', Store.saved().filter(i=>i.id!==id)); syncBadges(); pushWishlistItem(id, 0); },
   orders(){ return LS.get('orders', []).slice().reverse(); },
   getOrder(no){ return LS.get('orders', []).find(o=>o.no===no) || null; },
   saveOrder(order){ const o=LS.get('orders', []); o.push(order); LS.set('orders', o); },
@@ -223,7 +236,7 @@ function accountMenu(s){
       <a role="menuitem" href="${dest}">${s.role==='seller'?'Supplier dashboard':'My profile'}</a>
       ${adminLink}
       <a role="menuitem" href="${P('cart.html')}">My cart</a>
-      <a role="menuitem" href="#" data-saved-link>Saved items</a>
+      <a role="menuitem" href="${P('wishlist.html')}">Wishlist</a>
       <button role="menuitem" data-logout>${IC.logout}<span>Log out</span></button>
     </div>
   </div>`;
@@ -321,6 +334,13 @@ function pushCartItem(sku, qty){
   const api = window.ARCANA_API;
   if(!api || api.unavailable || !Store.session()) return;
   api.syncCartItem(sku, qty).catch(()=>{});
+}
+
+/* Fire-and-forget DB write-through for a wishlist line, only when signed in. */
+function pushWishlistItem(sku, qty){
+  const api = window.ARCANA_API;
+  if(!api || api.unavailable || !Store.session()) return;
+  api.syncWishlistItem(sku, qty).catch(()=>{});
 }
 
 /* ---------- live badges ---------- */
@@ -810,7 +830,6 @@ function bindAuthUI(scope){
     e.preventDefault();
     Promise.resolve(Store.logout()).then(()=>{ location.href=HOME; });
   }));
-  scope.querySelectorAll('[data-saved-link]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault(); toast(`${Store.saved().length} item(s) saved. Wishlist view coming soon.`);}));
 }
 
 /* Re-render ONLY the header auth cluster (login/signup <-> account menu) in place,
@@ -842,6 +861,7 @@ function bootstrapSession(){
     if(profile){
       LS.set('session',{role:profile.role, name:profile.name, avatarUrl:profile.avatarUrl||null});
       mergeCartOnce(profile.id).catch(()=>{});
+      mergeSavedOnce(profile.id).catch(()=>{});
     } else{
       localStorage.removeItem('arcana_session');
     }
@@ -876,6 +896,29 @@ async function mergeCartOnce(uid){
   const merged = Array.from(map.values());
   if(merged.length) await api.replaceCart(merged);
   LS.set('cart', merged);
+  localStorage.setItem(flag, '1');
+  syncBadges();
+}
+
+/* Pull the signed-in user's DB wishlist into the LS mirror. The first time for
+   a given uid this session, also push up any pre-login (anon) local saves so
+   they merge into the account wishlist instead of being lost. Unlike the cart,
+   overlapping items keep the DB's qty rather than summing — a saved quantity
+   isn't additive the way cart units are. */
+async function mergeSavedOnce(uid){
+  const api=window.ARCANA_API;
+  if(!api || !api.getWishlist) return;
+  const flag = 'arcana_saved_merged_'+uid;
+  const dbItems = await api.getWishlist();
+  if(localStorage.getItem(flag)){
+    LS.set('saved', dbItems); syncBadges();
+    return;
+  }
+  const map = new Map(dbItems.map(i=>[i.id, {...i}]));
+  Store.saved().forEach(li=>{ if(!map.has(li.id)) map.set(li.id, {...li}); });
+  const merged = Array.from(map.values());
+  if(merged.length) await api.replaceWishlist(merged);
+  LS.set('saved', merged);
   localStorage.setItem(flag, '1');
   syncBadges();
 }

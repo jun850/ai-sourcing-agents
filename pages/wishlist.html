@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wishlist — ARCANA</title>
+<meta name="description" content="Your saved fabrics, trims and OEM packages on ARCANA — review quantities and move items to cart.">
+<meta name="robots" content="noindex, follow">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-catalog data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
+<div id="hdr"></div>
+
+<main class="wrap">
+  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Wishlist</span></nav>
+
+  <div id="wlRoot"></div>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/copilot.js"></script>
+<script src="../js/components.js"></script>
+<script defer src="../js/analytics.bundle.js"></script>
+<script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/copilot-llm.js"></script>
+<script>
+window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+  const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('wlRoot');
+  const money=n=>window.ARCANA_money(n);
+  const TR=window.ARCANA_TR, T=window.ARCANA_T;
+  const CAT_LABEL={fabrics:'Fabrics', accessories:'Accessories', trims:'Trims', yarns:'Yarns & Threads', oem:'OEM Services'};
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  let q='', cat='all', sort='recent';
+
+  function render(){
+    const saved=Store.saved().filter(i=>M[i.id]);
+    if(!saved.length){
+      root.innerHTML=`<div class="panel cart-empty">
+        <span class="ce-ic">${IC.heart}</span>
+        <h3>${T('Your wishlist is empty')}</h3>
+        <p>${T('Save fabrics, trims and OEM packages you like — they’ll show up here.')}</p>
+        <a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a>
+      </div>`;
+      return;
+    }
+
+    const cats=[...new Set(saved.map(i=>M[i.id].cat).filter(Boolean))];
+    if(cat!=='all' && !cats.includes(cat)) cat='all';
+
+    let list=saved.map(i=>({...i, p:M[i.id]}));
+    if(cat!=='all') list=list.filter(i=>i.p.cat===cat);
+    if(q.trim()){
+      const needle=q.trim().toLowerCase();
+      list=list.filter(i=>[i.p.name,i.p.seller,i.p.comp,i.p.loc].some(v=>TR(v||'').toLowerCase().includes(needle)));
+    }
+    if(sort==='recent') list=list.slice().reverse(); // saved() is oldest-first; newest saved shown first
+    else if(sort==='name') list=list.slice().sort((a,b)=>TR(a.p.name).localeCompare(TR(b.p.name)));
+    else if(sort==='priceAsc') list=list.slice().sort((a,b)=>a.p.price-b.p.price);
+    else if(sort==='priceDesc') list=list.slice().sort((a,b)=>b.p.price-a.p.price);
+
+    const rows=list.map(i=>{const p=i.p; const sub=p.price*i.qty; return `
+      <tr data-row="${p.id}">
+        <td><div class="wl-prod"><img src="${ASSET(p.img+'.webp')}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
+        <td>${money(p.price)}<small style="color:var(--muted);font-weight:500"> /${TR(p.unit)}</small></td>
+        <td><div class="qty" data-qty data-id="${p.id}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div></td>
+        <td class="wl-total">${money(sub)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn btn-gold" data-move="${p.id}" style="padding:8px 14px;font-size:12.5px">${T('Add to cart')}</button>
+          <a class="ci-remove" href="#" data-remove="${p.id}" style="margin-left:12px">${T('Remove')}</a>
+        </td>
+      </tr>`;}).join('');
+
+    const grand=list.reduce((s,i)=>s+i.p.price*i.qty,0);
+
+    root.innerHTML=`
+      <div class="acct-head">
+        <h1>${T('Wishlist')} <span class="muted" style="font-size:15px;font-family:var(--sans);font-weight:500">(${saved.length} ${T(saved.length===1?'item':'items')})</span></h1>
+      </div>
+
+      <div class="wl-toolbar">
+        <div class="wl-search">${IC.search}<input type="search" id="wlSearch" placeholder="${T('Search your wishlist…')}" value="${esc(q)}"></div>
+        <select class="wl-select" id="wlCat">
+          <option value="all">${T('All categories')}</option>
+          ${cats.map(c=>`<option value="${c}" ${c===cat?'selected':''}>${T(CAT_LABEL[c]||c)}</option>`).join('')}
+        </select>
+        <div class="sort-chips" id="wlSort">
+          <button class="sort-chip${sort==='recent'?' on':''}" data-sort="recent" type="button">${T('Recently added')}</button>
+          <button class="sort-chip${sort==='name'?' on':''}" data-sort="name" type="button">${T('Name A–Z')}</button>
+          <button class="sort-chip${sort==='priceAsc'?' on':''}" data-sort="priceAsc" type="button">${T('Price: Low to High')}</button>
+          <button class="sort-chip${sort==='priceDesc'?' on':''}" data-sort="priceDesc" type="button">${T('Price: High to Low')}</button>
+        </div>
+      </div>
+
+      <section class="panel" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="admin-tbl wl-tbl">
+            <thead><tr><th>${T('Product')}</th><th>${T('Unit price')}</th><th>${T('Quantity')}</th><th>${T('Total')}</th><th></th></tr></thead>
+            <tbody>${rows || `<tr><td colspan="5" class="muted" style="text-align:center;padding:36px">${T('No items match your search.')}</td></tr>`}</tbody>
+          </table>
+        </div>
+      </section>
+
+      <div class="wl-summary">
+        <span class="muted">${T('Showing')} ${list.length} ${T('of')} ${saved.length}</span>
+        <div style="display:flex;align-items:center;gap:18px">
+          <div><span class="muted" style="margin-right:8px">${T('Total')}</span><b style="font-size:17px">${money(grand)}</b></div>
+          <button class="btn btn-gold" id="wlAddAll" type="button">${T('Add all to cart')}</button>
+        </div>
+      </div>
+    `;
+
+    root.querySelectorAll('[data-qty]').forEach(qw=>{
+      const id=qw.dataset.id, inp=qw.querySelector('input');
+      const commit=v=>{Store.setSavedQty(id,v);render();};
+      qw.querySelector('[data-dec]').onclick=()=>commit(Math.max(1,(+inp.value||1)-1));
+      qw.querySelector('[data-inc]').onclick=()=>commit((+inp.value||1)+1);
+      inp.onchange=()=>commit(Math.max(1,parseInt(inp.value)||1));
+    });
+    root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{
+      e.preventDefault(); Store.removeSaved(a.dataset.remove); toast(T('Removed from wishlist')); render();
+    }));
+    root.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>{
+      const id=b.dataset.move, row=saved.find(i=>i.id===id);
+      Store.addToCart(id, row?row.qty:1); Store.removeSaved(id);
+      toast(T('Moved to cart'), {href:'cart.html', label:T('View cart')});
+      render();
+    }));
+    const addAllBtn=root.querySelector('#wlAddAll');
+    if(addAllBtn) addAllBtn.addEventListener('click',()=>{
+      saved.forEach(i=>Store.addToCart(i.id, i.qty));
+      saved.forEach(i=>Store.removeSaved(i.id));
+      toast(T('Added all to cart'), {href:'cart.html', label:T('View cart')});
+      render();
+    });
+    const searchEl=root.querySelector('#wlSearch');
+    if(searchEl) searchEl.addEventListener('input',e=>{
+      q=e.target.value; const pos=e.target.selectionStart;
+      render();
+      const el=root.querySelector('#wlSearch');
+      if(el){ el.focus(); el.setSelectionRange(pos,pos); }
+    });
+    const catEl=root.querySelector('#wlCat');
+    if(catEl) catEl.addEventListener('change',()=>{ cat=catEl.value; render(); });
+    root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{ sort=c.dataset.sort; render(); }));
+  }
+
+  render();
+  window.ARCANA_onLang(render);
+};
+</script>
+</body>
+</html>
