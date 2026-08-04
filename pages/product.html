@@ -52,7 +52,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       [T('Min. Order'),TR(p.moq),'M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8'],
       [T('Lead Time'),TR(leadMap[p.cat]),'M12 8v4l3 2'],
       [T('Category'),catLabel,'M4 4h16v16H4z'],
-      [T('Country of Origin'),TR(p.loc.split(',').pop().trim()),'M3 12h18'],
+      [T('Country of Origin'),TR(p.country||p.loc.split(',').pop().trim()),'M3 12h18'],
     ];
     document.getElementById('pdpRoot').innerHTML=`
     <nav class="crumbs"><a href="../index.html">Home</a>${IC.chevR}<a href="${catUrl}">${catLabel}</a>${IC.chevR}<span class="cur">${nm}</span></nav>
