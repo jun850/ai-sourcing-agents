@@ -41,6 +41,14 @@
         <h5 data-i18n="cat.price">Price (US$ / unit)</h5>
         <div class="frl-price"><input type="number" id="pmin" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" placeholder="Max" min="0"></div>
       </div>
+      <div class="frl-block" id="countryBlock">
+        <h5>Country of Origin</h5>
+        <div id="countryOpts"></div>
+      </div>
+      <div class="frl-block" id="regionBlock" style="display:none">
+        <h5>Region</h5>
+        <div id="regionOpts"></div>
+      </div>
       <div class="frl-block">
         <h5 data-i18n="cat.certs">Certifications</h5>
         <label class="frl-opt"><input type="checkbox" disabled> GRS <span class="cnt">128</span></label>
@@ -275,9 +283,39 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   }).join('');
   if(!items.some(p=>mats.some(m=>p.comp.toLowerCase().includes(m.toLowerCase())))) document.getElementById('matOpts').closest('.frl-block').style.display='none';
 
-  let avail='all', sort='rec', mat=[], pmin=null, pmax=null;
+  const countryOf=p=>p.country||p.loc.split(',').pop().trim();
+  const regionOf=p=>{const parts=p.loc.split(',').map(s=>s.trim().replace(/\s*\(.*?\)/g,''));return parts.length>=3?parts[parts.length-2]:parts[0];};
+
+  // Country facet — show only if >1 country in category
+  const allCountries=[...new Set(items.map(countryOf))].sort();
+  const countryBlock=document.getElementById('countryBlock');
+  if(allCountries.length<=1){countryBlock.style.display='none';}
+  else{
+    document.getElementById('countryOpts').innerHTML=
+      `<label class="frl-opt"><input type="radio" name="ctry" value="all" checked> <span>All</span></label>`+
+      allCountries.map(c=>`<label class="frl-opt"><input type="radio" name="ctry" value="${c}"> <span>${c}</span></label>`).join('');
+  }
+
+  let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[];
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount');
+
+  function populateRegions(){
+    const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country);
+    const regions=[...new Set(ctryItems.map(regionOf))].sort();
+    const rb=document.getElementById('regionBlock');
+    regionSel=[];
+    if(regions.length<=1){rb.style.display='none';return;}
+    rb.style.display='';
+    document.getElementById('regionOpts').innerHTML=regions.map(r=>{
+      const n=ctryItems.filter(p=>regionOf(p)===r).length;
+      return `<label class="frl-opt"><input type="checkbox" value="${r}"> <span>${r}</span> <span class="cnt">${n}</span></label>`;
+    }).join('');
+    document.getElementById('regionOpts').addEventListener('change',()=>{
+      regionSel=[...document.querySelectorAll('#regionOpts input:checked')].map(c=>c.value);render();
+    });
+  }
+  populateRegions();
 
   function render(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T;
@@ -296,6 +334,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       if(mat.length && !mat.some(m=>p.comp.toLowerCase().includes(m.toLowerCase()))) return false;
       if(pmin!=null && p.price<pmin) return false;
       if(pmax!=null && p.price>pmax) return false;
+      if(country!=='all' && countryOf(p)!==country) return false;
+      if(regionSel.length && !regionSel.includes(regionOf(p))) return false;
       return true;
     });
     if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
@@ -311,16 +351,21 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const r2=document.getElementById('reset2'); if(r2) r2.addEventListener('click',e=>{e.preventDefault();resetAll();});
   }
 
-  function resetAll(){ avail='all'; sort='rec'; mat=[]; pmin=pmax=null;
+  function resetAll(){ avail='all'; sort='rec'; mat=[]; pmin=pmax=null; country='all'; regionSel=[];
     document.querySelector('[name=avail][value=all]').checked=true;
     document.querySelectorAll('#matOpts input').forEach(c=>c.checked=false);
     document.getElementById('pmin').value=''; document.getElementById('pmax').value='';
     document.querySelectorAll('.sort-chip').forEach(c=>c.classList.toggle('on',c.dataset.sort==='rec'));
+    const allCtry=document.querySelector('[name=ctry][value=all]'); if(allCtry) allCtry.checked=true;
+    populateRegions();
     render();
   }
 
   document.querySelectorAll('[name=avail]').forEach(r=>r.addEventListener('change',()=>{avail=r.value;render();}));
   document.getElementById('matOpts').addEventListener('change',()=>{mat=[...document.querySelectorAll('#matOpts input:checked')].map(c=>c.value);render();});
+  document.getElementById('countryOpts').addEventListener('change',e=>{
+    const r=e.target; if(r.name==='ctry'){country=r.value;populateRegions();render();}
+  });
   document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;render();});
   document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;render();});
   document.querySelectorAll('.sort-chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');sort=c.dataset.sort;render();}));
