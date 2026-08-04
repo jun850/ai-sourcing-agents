@@ -1,0 +1,787 @@
+Loaded 80 targets (49 China, 31 Japan)
+
+============================================================
+  Luthai Textile Co. Ltd  (http://www.lttc.com.cn/en)
+  [ERR] Could not load http://www.lttc.com.cn/en: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "http://www.lttc.com.cn/en", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 1/80
+
+============================================================
+  Shenzhou International Group  (https://www.shenzhouintl.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 2/80
+
+============================================================
+  Texhong Textile Group  (http://www.texhong.com/en/home)
+  [ERR] Could not load http://www.texhong.com/en/home: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "http://www.texhong.com/en/home", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 3/80
+
+============================================================
+  Weiqiao Textile Company Limited  (http://www.weiqiaocy.com/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 4/80
+
+============================================================
+  Tongkun Group  (https://www.zjtkgf.com/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 5/80
+
+============================================================
+  Jiangsu Sunshine Co.  (https://www.china-sunshine.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 6/80
+
+============================================================
+  SBS Zipper (Fujian SBS Zipper Science & Technology)  (https://www.sbs-zipper.com)
+  [ERR] Could not load https://www.sbs-zipper.com: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.sbs-zipper.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 7/80
+
+============================================================
+  Guangzhou Garment Factory  (https://guangzhougarment.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 8/80
+
+============================================================
+  Hangzhou Garment  (https://hangzhou-garment.com)
+  [ERR] Could not load https://hangzhou-garment.com: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://hangzhou-garment.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 9/80
+
+============================================================
+  Jiamei Labels  (https://www.jiameilabels.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 10/80
+
+============================================================
+  Acctrims  (https://acctrims.com)
+  Found 42 product link(s)
+    + Project samples of custom hang tags
+    + Get Free Quote
+    + clothing accessories | Acctrims.com
+    + custom | Acctrims.com
+    + fabrics | Acctrims.com
+    + hang tags | Acctrims.com
+    + tags | Acctrims.com
+    + Custom Fabric Hang Tags For Clothing: Canvas|Lace|Satin|cotton
+    + Clothing name labels for business branding
+    + In-stock size courier bags
+    + Custom Logo Stickers to Elevate Your Brand Identity
+    + Facebook
+    + Pin Builder
+    + JavaScript is not available.
+    + Share on WhatsApp
+    + LinkedIn Login, Sign in | LinkedIn
+    + Custom paper bags for clothing line
+    + Customizing Leather Hang Tags for Unique Branding
+  => Saved 18 product row(s)
+  Progress: 11/80
+
+============================================================
+  ClothingLabels.cn  (https://www.clothinglabels.cn)
+  Found 2 product link(s)
+    + Wholesale custom hang tags with logos for fashion brands
+    + Product hang tags
+  => Saved 2 product row(s)
+  Progress: 12/80
+
+============================================================
+  YiLang Garment Accessories  (https://www.labelsmfg.com)
+  Found 8 product link(s)
+    + Custom Heat Transfer Printing 3D Rubber Label
+    + Customized Luxury Clothing Hang Paper Tags
+    + Wholesale Metal Tags In Various Colors
+    + Realistic Black Butterfly Shape Zipper Puller
+    + Custom Gradient Flower Shaped Zipper Puller
+    + Fast Custom Luxury Paper Hang Tags
+    + Clothing Leather Labels Factory Custom Shape
+    + Professional Manufacturer Custom Woven Labels
+  => Saved 8 product row(s)
+  Progress: 13/80
+
+============================================================
+  Esquel Group  (https://www.esquel.com)
+  Found 3 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 14/80
+
+============================================================
+  Zhejiang Jiaxin Silk Corp. Ltd  (https://www.chinesesilk.com)
+  Found 4 product link(s)
+    + Women's Clothing Manufacturer
+    + Silk Sleepwear
+    + Silk Pillowcase Manufacturer
+    + Silk Fabric
+  => Saved 4 product row(s)
+  Progress: 15/80
+
+============================================================
+  Shaoxing King Fabric Textile (KFtextile)  (https://www.kftextile.com)
+  Found 12 product link(s)
+    + Single Jersey Fabric
+    + Sustainable Fabric
+    + Ponte Fabric
+    + Scuba Fabric
+    + Loose Knit
+    + Fleece Fabric
+    + French Terry
+    + Mesh Fabric
+    + Burnout Fabric
+    + Jacquard Fabric
+    [ERR goto] https://www.kftextile.com/product-category/digital-printing-fabric/: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.kftextile.com/product-category/digital-printing-fabric/", waiting until "domcontentloaded"
+
+    + Camo Fabric
+  => Saved 11 product row(s)
+  Progress: 16/80
+
+============================================================
+  Shaoxing Suerte Textile Co. Ltd  (https://www.suertetextile.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 17/80
+
+============================================================
+  Guangzhou Selvedge Denim Vintage Ltd  (http://selvedge-denim-vintage.com)
+  [ERR] Could not load http://selvedge-denim-vintage.com: Page.goto: net::ERR_NAME_NOT_RESOLVED at http://selvedge-denim-vintage.com/
+Call log:
+  - navigating to "http://selvedge-denim-vintage.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 18/80
+
+============================================================
+  Shandong Shengrun Textile Co. Ltd  (https://www.shengrun-textile.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 19/80
+
+============================================================
+  Inner Mongolia Richman Cashmere Co. Ltd  (https://www.richmancashmere.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 20/80
+
+============================================================
+  Zhisheng Textile (Suzhou) Co. Ltd  (https://www.faux-suede.com)
+  Found 19 product link(s)
+    + Fabrics Manufacturers
+    + Corduroy Curtain Fabrics Manufacturers
+    + Linen Look Fabric Manufacturers
+    + Faux Suede Leather Fabric Manufacturers
+    + P4-0178 | Knitting suede fabric with bonding for lady's garment, shoes, bags, etc
+    + P4-0255 | Knitting suede fabric bonding with sherpa for garment, shoes, bags, etc
+    + P3-0100 | Woven suede fabric with foil printing for man's jacket, shoes, etc
+    + P3-0102 | Woven suede fabric with foil printing for man's jacket, shoes, etc
+    + P1-0009B | Cotton suede fabric with wax coating for man's jacket and cap, classic vintage look after cloth washing
+    + P1-0016 | Cotton suede fabric with wax coating for man's jacket and cap, classic vintage look after cloth washing
+    + P1-0030｜Cotton suede fabric with wax coating for man's jacket and cap, classic vintage look after cloth washing
+    + EN-174 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-178 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-190 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-191 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + S2038 | Corduroy fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-160 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-170 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+    + EN-173 | Linen look fabric with bonding for sofa, couch, cushion, curtain, decoration, etc
+  => Saved 19 product row(s)
+  Progress: 21/80
+
+============================================================
+  Suze Textile Co. Ltd  (https://www.szsuze.com)
+  Found 6 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 22/80
+
+============================================================
+  Suzhou Jingang Textile Co. Ltd  (https://www.breathableoutdoorfabric.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 23/80
+
+============================================================
+  Hangzhou Xinhe Textiles Co. Ltd  (https://www.hzsilkfabric.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 24/80
+
+============================================================
+  Buttons International Ltd  (https://www.bibuttons.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 25/80
+
+============================================================
+  YCC Zippers (YCC Zipper Co. Ltd)  (https://www.ycczippers.com)
+  Found 20 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 26/80
+
+============================================================
+  RHF Zipper (Shenzhen RHF Zipper Co. Ltd)  (https://www.rhfzipper.com)
+  [ERR] Could not load https://www.rhfzipper.com: Page.goto: net::ERR_CERT_COMMON_NAME_INVALID at https://www.rhfzipper.com/
+Call log:
+  - navigating to "https://www.rhfzipper.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 27/80
+
+============================================================
+  Inner Mongolia Field Textile Co. Ltd  (https://www.imfieldcashmere.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 28/80
+
+============================================================
+  Shanghai Manxuan Industry Co. Ltd (SWS)  (https://www.swszip.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 29/80
+
+============================================================
+  Taihu Snow Silk Co. Ltd  (https://taihusnow.com)
+  Found 5 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 30/80
+
+============================================================
+  Shantou MazhuCity Textile Co. Ltd (Linens China)  (https://www.linenschina.com)
+  Found 3 product link(s)
+    + Luxury 100% Linen Yarn-Dyed Twill Fabric – 135cm Width, 168g Weight, Perfect for Shirts, Jackets & Dresses #1265
+    + K18011# Japanese Polyester Rayon Spandex Check Fabric | 63% Polyester 33% Rayon 4% Spandex | 133cm | 326g/m² | Warm, Structured, Classic Check, Ideal for Coats & Skirts
+    + Elegant Floral Fabric with Rose Essence 25%Rose 75%Filament 190gsm Drapable Satin Jacquard Rose Fabric #D18008
+  => Saved 3 product row(s)
+  Progress: 31/80
+
+============================================================
+  GROOVECOLOR (Dongguan Groovecolor Clothing Co. Ltd)  (https://www.groovecolor.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 32/80
+
+============================================================
+  Sidi Fashion (Dongguan Sidi Clothing Co. Ltd)  (https://sidifashion.com)
+  Found 2 product link(s)
+    + Cookie Consent Solution for GDPR & CCPA Compliance
+    + Start your fashion brandingjourney here
+  => Saved 2 product row(s)
+  Progress: 33/80
+
+============================================================
+  XinYuan Fashion  (https://xinyuanfashion.com)
+  Found 19 product link(s)
+    + Black Letterman Varsity Jacket Men High Quality Towel Embroidery Designer Streetwear Baseball Team Jacket XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Men's Wear
+    + Custom Men's Coat
+    + Custom Men's Jackets
+    + Custom Appliques Patchwork Varsity Jacket Chenille Embroidery Badge High Quality Men's Colorful Street Jacket XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Breathable Mesh Sports T-Shirt - Colorful Floral Embroidery-2 XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Men's Shirts
+    + Custom Brown PU Sleeve Patchwork Maroon Letterman Jacket Men Simple Monogrammed Embroidered Varsity Jacket XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Rhinestone Joggers for Women in Mint Green | OEM/ODM
+    + Custom Women's Wear
+    + Custom Fashion Gradient Joggers Women's Casual Pants with OEM/ODM Support, Personalized Letter Embroidery XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom High-Quality Boucle PU Patchwork Bomber Racing Jacket Boxy Zipper Design Race Car Motorcycle Jacket for Men XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Logo Lightweight 100% Nylon Sportswear Windbreaker Jacket Zipper Street Wear Color Block Men's Outdoor Jacket XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Logo Printed Xinyuan Vintage Sunfaded Washed Rhinestone Men's Blank Streetwear Tracksuit Set Sweatpants Hoodie XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Men's Hoodies
+    + Custom Single Breasted College Track Jacket Baseball Letterman Boxy Jacket Men Cropped Vintage Embroidery Jacket XinYuan Fashion - Custom Clothing Manufacturer
+    + Customized Angel Number Pattern Sports T-Shirt- Breathable Comfortable Custom Clothing XinYuan Fashion - Custom Clothing Manufacturer
+    + Customized Children's Casual Pants - Comfortable Cotton OEM/ODM Children's Clothing Customization Service XinYuan Fashion - Custom Clothing Manufacturer
+    + Custom Kid's Wear
+  => Saved 19 product row(s)
+  Progress: 34/80
+
+============================================================
+  Zhejiang Jiahua Button Jewelry Co. Ltd  (https://en.jiahuac.com)
+  Found 8 product link(s)
+    + Zhejiang Jiahua Button Jewelry Co., Ltdwww.300.cnSEO
+    + Zhejiang Jiahua Button Jewelry Co., Ltdwww.300.cnSEO
+    + Zhejiang Jiahua Button Jewelry Co., Ltdwww.300.cnSEO
+    + Zhejiang Jiahua Button Jewelry Co., Ltdwww.300.cnSEO
+    + JH10
+    + JH09
+    + JH08
+    + JH07
+  => Saved 8 product row(s)
+  Progress: 35/80
+
+============================================================
+  Youngor Group Co. Ltd  (https://www.youngor.com/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 36/80
+
+============================================================
+  North Land Cashmere (Huhhot Harmony Industry and Trade)  (https://northlandcashmere.com)
+  Found 3 product link(s)
+    + WE HAVE ATTITUDES
+    + KNOWLEDGE BASE
+    + CULTURAL BRILLIANCE
+  => Saved 3 product row(s)
+  Progress: 37/80
+
+============================================================
+  Shaoxing Shanning Textile Co. Ltd  (https://www.shanningtex.com)
+  Found 11 product link(s)
+    + Lyocell Tencel Lycra Knitted Reactive Animal Print Jersey Fabric
+    + Knitted Jersey 55% Linen 45% Cotton 170GSM Blended Fabric For Summer Wear
+    + Knitted Jersey Fabric 51% Lyocell 28% Cotton 15% Linen 6% Elastane 190GSM
+    + 100% Linen Single Jersey Loose Knit For Luxury Clothes
+    + 49% Polyester 44% Tencel Lyocell 7% Elastane Sand-wash Scuba Fabric
+    + Good Stretchability Nylon Elastane Jersey Knit Fabric With Cool-finish
+    + 48 Modal 47 Polyester 5 Elastane High Quality Scuba With Sand-wash Finish
+    + 79% Polyester 15% Acrylic 6% Elastane Scuba double Knit Fabric
+    + Rayon Elastane 2X2 Rib Knit Fabric For Trims And Cuffs
+    + 50% Viscose 45% Polyester 5% Elastane Scuba double Knit Fabric Solid Dyed
+    + 100% Combed Siro-Compact Cotton Pique Fabric With Enzyme Wash.
+  => Saved 11 product row(s)
+  Progress: 38/80
+
+============================================================
+  Aisha Lace (Guangzhou Aisha Lace Textile Co. Ltd)  (https://aishalace.com)
+  Found 23 product link(s)
+    + Embroidery Lace Fabric Manufacturer & Wholesale Supplier
+    + Beaded Lace Fabric Manufacturer & Wholesale Supplier in China
+    + 3D Flower Lace Fabric Archives
+    + Sequin Lace Fabric Archives
+    + Crystal, Stone & Diamond Lace Archives
+    + French Lace Fabric Archives
+    + Motif Lace Fabric Archives
+    + Other Lace Fabrics Archives
+    + Colorful 3D Floral Beaded Tulle Lace with Sequins – Model ALCR1034
+    + Ribbon Bow Embroidered Tulle Lace Fabric with Sequins & Beading – Model ALB1218
+    + Art Deco Leaf Stripe Embroidered Tulle Lace Fabric with Sequins & Beads – Model ALB1216
+    + 3D Floral Vine Embroidered Tulle Lace Fabric with Sequins – Model ALB1215
+    + 3D Flower French Lace Fabric with Beaded Vine Embroidery & Sequins – Model ALB1214
+    + Black Large Floral Beaded Embroidered Tulle Lace Fabric with Sequins – Model ALB1213
+    + Large Floral Beaded Embroidered Tulle Lace Fabric with Sequins – Model ALB1213
+    + Cascading Floral Beaded Tulle Lace Fabric with Sequins – Model ALB1212
+    + Floral Vine Embroidered Tulle Lace Fabric with 3D Flowers, Sequins & Beading – Model ALB1211
+    + Abstract Geometric Beaded Tulle Lace Fabric with Sequins & Bugle Beads – Model ALB1151
+    + Beaded Tulle Lace with Pearls & Sequins – Model ALB1132
+    + French Floral Beaded Sequin Tulle Lace Fabric – Model ALB1129
+    + Scallop Pattern Beaded Sequin Tulle Lace Fabric – Model ALB1083
+    + Baroque Motif Beaded Sequin Tulle Lace Fabric – Model ALB1035
+    + Geometric Arch Embroidered Tulle Lace Fabric with 3D Flowers – Model AL3D1034
+  => Saved 23 product row(s)
+  Progress: 39/80
+
+============================================================
+  ChangXing B.H Interlining Co. Ltd  (https://www.bhinterlining.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 40/80
+
+============================================================
+  Paiho Group (Taiwan Paiho Limited)  (https://www.paiho.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 41/80
+
+============================================================
+  KUNSHUO (Guangzhou Kunshuo International Trade)  (https://www.jfbutton.com)
+  Found 6 product link(s)
+    + Metal Logo for Clothing
+    + Jeans Buttons and Rivets
+    + Press Button for Clothes
+    + Gold Buttons for Coat
+    + Metal Grommets For Clothing
+    + Leather Tags For Jeans
+  => Saved 6 product row(s)
+  Progress: 42/80
+
+============================================================
+  Hongcheng (Guangzhou Hongcheng Textile Co. Ltd)  (https://www.hongcheng-label.com)
+  Found 12 product link(s)
+    + Garment Metal Cord Ends
+    + Trousers Hook And Bar For Garment
+    + Plastic Cord Stoppers For Garments
+    + Metal Cord Stoppers For Garment
+    + 3D Silicone Heat Transfer Logo For Clothing
+    + Custom Heat Press TPU Labels
+    + Reflective Hologram Heat Transfer
+    + 3D Puff Foam Printing Heat Transfer
+    + Tiny Snap Fasteners
+    + Metal Snap Buttons For Clothing
+    + Plastic Pearl Buttons For Clothing
+    + Plastic Toggle Buttons
+  => Saved 12 product row(s)
+  Progress: 43/80
+
+============================================================
+  Foshan Mattella Textile Co. Ltd  (https://www.selvedgejean.com)
+  [ERR] Could not load https://www.selvedgejean.com: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.selvedgejean.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 44/80
+
+============================================================
+  Nantong Hongyang Woolen Products Co. Ltd  (https://www.hongyangwoolen.com)
+  Found 6 product link(s)
+    + Product Detail
+    + Product Detail
+    + Product Detail
+    + Product Detail
+    + Product Detail
+    + Product Detail
+  => Saved 6 product row(s)
+  Progress: 45/80
+
+============================================================
+  Shaoxing Keqiao Real Textile Co. Ltd  (https://www.essetex.com)
+  Found 18 product link(s)
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Be honest in your character and practical in your actions.
+    + Bali yarn DYS7-949
+    + Bali yarn YSZ-80305 I
+    + Ribbed KRPF026
+    + Ribbed KRPF027
+  => Saved 18 product row(s)
+  Progress: 46/80
+
+============================================================
+  Jiangyin Hongmao Textile Factory  (http://www.hongmaocorp.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 47/80
+
+============================================================
+  Yongjia Yibei Button Co. Ltd  (http://eibei.com/en/index.asp)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 48/80
+
+============================================================
+  Delantex (Shaoxing Delantex Co. Ltd)  (https://www.delantex.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 49/80
+
+============================================================
+  YKK Corporation  (https://www.ykk.com/english)
+  Found 8 product link(s)
+    + Completion of the Share Transfer Agreement for Panasonic Housing Solutions
+  => Saved 1 product row(s)
+  Progress: 50/80
+
+============================================================
+  TOMOI  (https://www.shellbuttons-tomoi.com)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 51/80
+
+============================================================
+  IRIS Co. Ltd.  (https://www.iris.co.jp/english)
+  Found 50 product link(s)
+    [ERR goto] https://www.iris.co.jp/product/about_product_pb33.pdf: Page.goto: Download is starting
+Call log:
+  - navigating to "https://www.iris.co.jp/product/about_product_pb33.pdf", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 52/80
+
+============================================================
+  Kanase Inc.  (https://www.kanase.co.jp/english)
+  [ERR] Could not load https://www.kanase.co.jp/english: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.kanase.co.jp/english", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 53/80
+
+============================================================
+  Morito Co. Ltd.  (https://apparel.morito.co.jp/en)
+  Found 1 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 54/80
+
+============================================================
+  Shimada Shoji Co. Ltd.  (https://shimada1887.com/en)
+  Found 1 product link(s)
+    + Shimada Shoji
+  => Saved 1 product row(s)
+  Progress: 55/80
+
+============================================================
+  SHINDO Co. Ltd.  (https://www.shindo.com/en)
+  Found 26 product link(s)
+    + Contact Us
+    + NCF(Non Crimp Fabric)
+    + Functional Materials
+    + Thin Ply Thermoplastic Prepreg
+    + A modern doll that attracts attention from the fashion industry
+    + Christmas display in Matsuya Ginza, Tokyo
+    + IDÉE and Akira MinagawaThe POOL Project - Manufacturing by Pooling and Converting
+  => Saved 7 product row(s)
+  Progress: 56/80
+
+============================================================
+  Sankei Co. Ltd.  (https://www.sankeicoltd.co.jp/en.html)
+  Found 14 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 57/80
+
+============================================================
+  Nittobo (Nitto Boseki Co. Ltd.)  (https://www.nittobo.co.jp/eng)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 58/80
+
+============================================================
+  Nippon Thread Works  (https://nipponthread.com)
+  [ERR] Could not load https://nipponthread.com: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://nipponthread.com/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 59/80
+
+============================================================
+  Ogura Meriyasu Manufacturing Co. Ltd.  (https://ogura-m.com/rtj_en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 60/80
+
+============================================================
+  MARUCHO Inc.  (https://www.marucho.net/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 61/80
+
+============================================================
+  Wakoh Co. Ltd.  (https://www.wakoh.tokyo)
+  [ERR] Could not load https://www.wakoh.tokyo: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.wakoh.tokyo/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 62/80
+
+============================================================
+  Andoh and Co. Ltd.  (https://www.apparel-ando.co.jp/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 63/80
+
+============================================================
+  Fukuoka Knit  (https://fukuokaknit.com/index_en.html)
+  Found 6 product link(s)
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html", waiting until "domcontentloaded"
+
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html#product_01_e: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html#product_01_e
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html#product_01_e", waiting until "domcontentloaded"
+
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html#product_02_e: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html#product_02_e
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html#product_02_e", waiting until "domcontentloaded"
+
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html#product_03_e: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html#product_03_e
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html#product_03_e", waiting until "domcontentloaded"
+
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html#product_04_e: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html#product_04_e
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html#product_04_e", waiting until "domcontentloaded"
+
+    [ERR goto] https://fukuokaknit.comenglish/product/product_01.html#product_05_e: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://fukuokaknit.comenglish/product/product_01.html#product_05_e
+Call log:
+  - navigating to "https://fukuokaknit.comenglish/product/product_01.html#product_05_e", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 64/80
+
+============================================================
+  Yonetomi Seni Co. Ltd.  (https://www.yonetomi.co.jp/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 65/80
+
+============================================================
+  KANEMASA Knitting Co. Ltd.  (https://kanemasa-inc.jp/en)
+  Found 9 product link(s)
+    + News
+    + News
+    + News
+    + News
+    + Collection
+    [ERR goto] https://kanemasa-inc.jptel:+81-73-423-1295: Page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+  - navigating to "https://kanemasa-inc.jptel:+81-73-423-1295", waiting until "domcontentloaded"
+
+    [ERR goto] https://kanemasa-inc.jptel:+81-3-5784-1602: Page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL
+Call log:
+  - navigating to "https://kanemasa-inc.jptel:+81-3-5784-1602", waiting until "domcontentloaded"
+
+  => Saved 5 product row(s)
+  Progress: 66/80
+
+============================================================
+  Marusho Knit Factory Co. Ltd.  (https://marusho-factory.co.jp)
+  [ERR] Could not load https://marusho-factory.co.jp: Page.goto: net::ERR_NAME_NOT_RESOLVED at https://marusho-factory.co.jp/
+Call log:
+  - navigating to "https://marusho-factory.co.jp/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 67/80
+
+============================================================
+  Tatsumura Textile Co. Ltd.  (https://www.tatsumura.co.jp/en)
+  Found 2 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 68/80
+
+============================================================
+  Takisada-Nagoya Co. Ltd.  (https://www.takisada-nagoya.jp/en)
+  Found 1 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 69/80
+
+============================================================
+  Nikke Textile Co. Ltd. (Japan Wool Textile Co.)  (https://nikke-textile.jp/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 70/80
+
+============================================================
+  Oharayaseni Co. Ltd.  (https://www.apparel-x.com/search.php?maker=166)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 71/80
+
+============================================================
+  Fujisaki Textile Co. Ltd.  (https://fujisaki-tex.co.jp/en)
+  [ERR] Could not load https://fujisaki-tex.co.jp/en: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://fujisaki-tex.co.jp/en", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 72/80
+
+============================================================
+  Ueyama Textile Co. Ltd.  (https://www.ueyama.net)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 73/80
+
+============================================================
+  KOWA Company Ltd.  (https://www.kowa.co.jp/eng)
+  [ERR] Could not load https://www.kowa.co.jp/eng: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.kowa.co.jp/eng", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 74/80
+
+============================================================
+  Koyama Co. Ltd.  (https://www.koyamatex.co.jp)
+  [ERR] Could not load https://www.koyamatex.co.jp: Page.goto: Timeout 20000ms exceeded.
+Call log:
+  - navigating to "https://www.koyamatex.co.jp/", waiting until "domcontentloaded"
+
+  => Saved company-level fallback row
+  Progress: 75/80
+
+============================================================
+  Nitta Textile Co. Ltd.  (https://nitta-yonezawa.com/en)
+  Found 1 product link(s)
+    + 新田-米沢織 | 絹織物と紅花染の伝統工房
+  => Saved 1 product row(s)
+  Progress: 76/80
+
+============================================================
+  Abekichi Co. Ltd.  (https://ab-tex.jp/en/yonezawaori)
+  Found 1 product link(s)
+  => Saved company-level fallback row
+  => Saved 0 product row(s)
+  Progress: 77/80
+
+============================================================
+  Maruyasu Corporation  (https://www.maruyasu-fil.com)
+  Found 12 product link(s)
+    + 丸安毛糸株式会社
+    + MONTELUCE
+    + MONTELUCEYARN COLLECTION
+    + MONTELUCEHAND KNITTING YARN COLLECTION
+    + MONTELUCEKNITTING INSPIRATION
+    + MONTELUCESEASONAL COLLECTIONS
+    + 2027 SSCollectionFeatured Yarn Stories
+    + 2026-27 AWCollectionFeatured Yarn Stories
+    + Monteluce Craft Futures
+    + curefilo®
+    + OEM Products
+    + OEM Products
+  => Saved 12 product row(s)
+  Progress: 78/80
+
+============================================================
+  IKEUCHI ORGANIC Inc.  (https://www.ikeuchi.org/en)
+  Found 6 product link(s)
+    + Product Introduction
+    + Product Introduction
+    + Product Introduction
+    + Product Introduction
+    + Product Introduction
+    + Product Introduction
+  => Saved 6 product row(s)
+  Progress: 79/80
+
+============================================================
+  Senshu Towel (industry association site)  (https://www.senshutowel.jp/en)
+  Found 0 product link(s)
+  => Saved company-level fallback row
+  Progress: 80/80
+
+Done. Output: /Users/jun/marketplace/.claude/worktrees/textile-suppliers-scraping-11292a/research/textile-suppliers/output/arcana_products.csv
+       JSONL: /Users/jun/marketplace/.claude/worktrees/textile-suppliers-scraping-11292a/research/textile-suppliers/output/arcana_products.jsonl
+       Log:   /Users/jun/marketplace/.claude/worktrees/textile-suppliers-scraping-11292a/research/textile-suppliers/output/run_log.txt
+/textile-suppliers/output/arcana_products.csv
+       JSONL: /Users/jun/marketplace/.claude/worktrees/textile-suppliers-scraping-11292a/research/textile-suppliers/output/arcana_products.jsonl
+       Log:   /Users/jun/marketplace/.claude/worktrees/textile-suppliers-scraping-11292a/research/textile-suppliers/output/run_log.txt

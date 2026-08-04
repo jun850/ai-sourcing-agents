@@ -205,7 +205,7 @@ const API = {
       sb.from('products')
         .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name)')
         .eq('listing_status','active'),
-      sb.from('factories').select('*')
+      sb.from('factories').select('*').eq('verify_state','verified')
     ]);
     if(prodRes.error) throw prodRes.error;
     if(facRes.error)  throw facRes.error;
