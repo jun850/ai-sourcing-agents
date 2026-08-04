@@ -203,7 +203,7 @@ const API = {
     const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier' };
     const [prodRes, facRes] = await Promise.all([
       sb.from('products')
-        .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name)')
+        .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name,region)')
         .eq('listing_status','active'),
       sb.from('factories').select('*').eq('verify_state','verified')
     ]);
@@ -225,6 +225,7 @@ const API = {
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', loc: p.loc,
+      country: p.factories ? p.factories.region : '',
       badge: p.badge || '', cat: p.category
     }));
     return { products, factories };
