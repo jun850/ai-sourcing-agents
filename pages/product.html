@@ -78,7 +78,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         </div>
         <div class="price-box">
           <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?money(now)+` <small>/${TR(p.unit)}</small>`:T('Contact for quote')}${d?`<span class="twas" style="font-size:15px;margin-left:8px">${money(p.price)}</span>`:''}</div></div>
-          <div style="text-align:right"><div class="muted" style="font-size:12.5px">${T('Price varies by quantity')}</div><a class="link" href="#" data-toast="${T('Volume pricing shared on quote')}">${T('View price breaks')}</a></div>
         </div>
         <div class="buy-row"><div class="buy-qty"><span class="buy-qty-lbl">${T('Quantity')}</span>
           <div class="qty" data-qty id="pdpQty"><button data-dec aria-label="Decrease">−</button><input value="1" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>

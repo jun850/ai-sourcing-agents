@@ -255,7 +255,7 @@ window.ARCANA_PAGE=async function({toast}){
     gate.hidden=false;
   }
 
-  // ---- Gate: signed in, role=seller, and linked to a factory (admin-assigned) ----
+  // ---- Gate: signed in, role=seller, and linked to a factory (auto-provisioned at signup) ----
   const profile=await api.getSessionProfile();
   if(!profile){
     showGate('Log in to continue','Sign in to your ARCANA seller account to access the dashboard.',
@@ -269,13 +269,20 @@ window.ARCANA_PAGE=async function({toast}){
   }
   const factory=await api.getMyFactory();
   if(!factory){
-    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact ARCANA to get set up — this is a short manual step while we’re in early access.',
+    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact ARCANA to get set up.',
       '<a class="link" href="mailto:hello@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact ARCANA</a>');
     return;
   }
   main.hidden=false;
   document.getElementById('welcomeName').textContent=`Welcome, ${factory.name}`;
   document.getElementById('welcomeSub').textContent=`Manage ${factory.loc||factory.region||'your factory'}'s SKUs and profile.`;
+  if(factory.verify_state!=='verified'){
+    const banner=document.createElement('div');
+    banner.className='panel';
+    banner.style.cssText='margin-bottom:20px;padding:14px 18px;background:var(--panel);border:1px solid var(--gold-d);border-radius:var(--radius);font-size:13.5px;color:var(--ink)';
+    banner.innerHTML=`<b>Verification pending</b> — your factory profile is under review by ARCANA. You can set up SKUs and your profile now; your listings go live once verified.`;
+    main.querySelector('.dash').prepend(banner);
+  }
 
   // ---- SKU CRUD ----
   let products=[];

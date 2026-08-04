@@ -31,6 +31,7 @@
       <button type="button" class="role-opt" data-role="seller"><span class="ro-ic"></span><b>I'm a Factory / Mill</b><span>Sell &amp; showcase products</span></button>
     </div>
     <div class="field-lg" data-field><label for="company" id="companyLabel">Company name</label><input id="company" placeholder="Luxe Apparel Co."><span class="err">Company name is required.</span></div>
+    <div class="field-lg" data-field id="categoryField" hidden><label for="category">Supplier category</label><select id="category"><option value="">Select…</option><option value="fabric_mill">Fabrics</option><option value="accessories_supplier">Accessories</option><option value="trim_supplier">Trims</option><option value="yarn_supplier">Yarns &amp; Threads</option><option value="garment_manufacturer">OEM / Cut &amp; Sew (Garment Manufacturing)</option></select><span class="err">Select what you supply.</span></div>
     <div class="field-lg" data-field><label for="email">Work email</label><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><span class="err">Enter a valid email address.</span></div>
     <div class="co-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select…</option><option>United States</option><option>China</option><option>India</option><option>Vietnam</option><option>Turkey</option><option>Other</option></select><span class="err">Select a country.</span></div>
@@ -70,11 +71,14 @@ window.ARCANA_PAGE = function({IC,toast}){
   clearForm();
 
   let role = new URLSearchParams(location.search).get('role')==='seller' ? 'seller':'buyer';
+  const categoryField=document.getElementById('categoryField');
   const setRole=r=>{role=r;
     document.querySelectorAll('[data-role]').forEach(b=>{const on=b.dataset.role===r;b.classList.toggle('sel',on);b.classList.toggle('seller-sel',on&&r==='seller');});
     btn.className = r==='seller' ? 'btn btn-gold btn-block' : 'btn btn-green btn-block';
     btn.textContent = r==='seller' ? 'Create Factory account' : 'Create Brand Owner account';
     cl.textContent = r==='seller' ? 'Factory / mill name' : 'Company name';
+    categoryField.hidden = r!=='seller';
+    if(r!=='seller') categoryField.classList.remove('invalid');
   };
   setRole(role);
   document.querySelectorAll('[data-role]').forEach(b=>b.addEventListener('click',()=>setRole(b.dataset.role)));
@@ -86,6 +90,7 @@ window.ARCANA_PAGE = function({IC,toast}){
     let ok=true;
     const mark=(el,valid)=>{el.closest('[data-field]').classList.toggle('invalid',!valid);if(!valid)ok=false;};
     mark(form.company, form.company.value.trim().length>1);
+    if(role==='seller') mark(form.category, !!form.category.value);
     mark(form.email, /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value.trim()));
     mark(form.country, !!form.country.value);
     mark(form.pw, form.pw.value.length>=6);
@@ -98,7 +103,8 @@ window.ARCANA_PAGE = function({IC,toast}){
     try{
       const { error } = await window.ARCANA_API.signUp({
         email, password:form.pw.value, role,
-        companyName:company, country:form.country.value, fullName:company
+        companyName:company, country:form.country.value, fullName:company,
+        factoryType: role==='seller' ? form.category.value : undefined
       });
       if(error){
         const m=(error.message||'').toLowerCase();

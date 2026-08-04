@@ -93,15 +93,18 @@ async function writeCartRows(cartId, items){
 }
 
 const API = {
-  /* role: 'buyer' | 'seller'. Signup metadata is consumed by the
-     handle_new_user trigger to create the profiles row. */
-  async signUp({ email, password, role, companyName, country, fullName }){
+  /* role: 'buyer' | 'seller'. factoryType (sellers only): 'fabric_mill' |
+     'accessories_supplier' | 'trim_supplier' | 'yarn_supplier' |
+     'garment_manufacturer'. Signup metadata is consumed by the
+     handle_new_user trigger to create the profiles row, and — for sellers
+     with a factoryType — a pending factories row (self-service onboarding). */
+  async signUp({ email, password, role, companyName, country, fullName, factoryType }){
     try{
       return await sb.auth.signUp({
         email, password,
         options: {
           emailRedirectTo: REDIRECT_LOGIN,
-          data: { role, company_name: companyName, country, full_name: fullName }
+          data: { role, company_name: companyName, country, full_name: fullName, factory_type: factoryType }
         }
       });
     }catch(error){ return { data:null, error }; }
@@ -171,7 +174,7 @@ const API = {
      existing render code keeps working. Throws on error (caller falls back). */
   async fetchCatalog(){
     const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
-    const TYPE_LABEL = { fabric_mill:'Fabric Mill', oem_factory:'OEM Factory', trim_supplier:'Trim Supplier' };
+    const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier' };
     const [prodRes, facRes] = await Promise.all([
       sb.from('products')
         .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name)')
