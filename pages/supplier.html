@@ -31,7 +31,6 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const FMAP=window.ARCANA_FACTORY_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
-  const DEAL=Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
   const money=n=>'US$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const rnd=(id,a,b)=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return a+(h%(Math.round((b-a)*10)+1))/10;};
   const soldOf=id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];

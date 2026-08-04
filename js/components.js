@@ -110,26 +110,27 @@ const IC = {
 window.ARCANA_IC = IC;
 
 /* ---------- shared product card (single source, used on every surface) ---------- */
-const DEALMAP = () => Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
+// Discount pricing is exclusive to the 11.11 sale landing page (pages/campaign.html),
+// which renders its own deal cards straight off window.ARCANA_DEALS. This shared card
+// is used on the homepage, category page, search results (SRP), Copilot search results,
+// product-detail "more in category", and supplier profiles — none of those surfaces are
+// "inside the 11.11 sale", so this card never looks up ARCANA_DEALS or shows a discount.
 const rndRating = id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return (4.4+(h%7)/10).toFixed(1);};
 const soldOf = id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];
 /* opts: {href, shop=true, fabricSpec=false} — language + currency aware */
 function cardHTML(p, opts){
   opts = opts||{};
   const tr = window.ARCANA_TR||(s=>s), t = window.ARCANA_T||(s=>s), money = window.ARCANA_money||(n=>'US$'+n.toFixed(2));
-  const d = DEALMAP()[p.id];
-  const now = d ? p.price*(1-d.disc/100) : p.price;
   const href = opts.href || (P('product.html')+'?id='+p.id);
   const isService = p.cat==='oem';
-  const disc = d ? `<span class="tdisc">-${d.disc}%</span>` : '';
-  const badge = d ? '' :
+  const badge =
     isService ? `<span class="tbadge">${t('OEM SERVICE')}</span>` :
     p.badge==='recycle' ? `<span class="tbadge" style="background:var(--green)">${t('RECYCLED')}</span>` :
     p.badge==='oem' ? '<span class="tbadge">OEM</span>' : '';
   const nm = tr(p.name), comp = tr(p.comp), spec = tr(p.spec);
   const title = (opts.fabricSpec && p.cat==='fabrics') ? `${nm} — ${comp}, ${spec}` : `${nm} — ${comp}`;
   const priceLine = p.price>0
-    ? `${isService?t('From')+' ':''}${money(now)}<small>/${tr(p.unit)}</small>${d?`<span class="twas">${money(p.price)}</span>`:''}`
+    ? `${isService?t('From')+' ':''}${money(p.price)}<small>/${tr(p.unit)}</small>`
     : `<span class="tquote">${t('Contact for quote')}</span>`;
   const meta = isService
     ? `<div class="tmeta">${IC.truck} ${spec} ${t('lead')} <span class="dot">·</span> ${t('MOQ')} ${tr(p.moq)}</div>`
@@ -137,7 +138,7 @@ function cardHTML(p, opts){
   const shopRow = (opts.shop===false) ? '' :
     `<div class="tshop"><span class="tnm">${tr(p.seller)}</span><span class="tvf">${IC.check}</span></div>`;
   return `<a class="tcard" href="${href}">
-    <div class="tthumb">${disc}${badge}<img src="${ASSET(p.img+'.webp')}" alt="${nm}" loading="lazy"></div>
+    <div class="tthumb">${badge}<img src="${ASSET(p.img+'.webp')}" alt="${nm}" loading="lazy"></div>
     <div class="tbody">
       <h4>${title}</h4>
       <div class="tprice">${priceLine}</div>
