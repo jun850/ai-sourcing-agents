@@ -35,6 +35,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let q='', cat='all', sort='recent';
+  const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
 
   function render(){
     const saved=Store.saved().filter(i=>M[i.id]);
@@ -43,8 +44,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <span class="ce-ic">${IC.heart}</span>
         <h3>${T('Your wishlist is empty')}</h3>
         <p>${T('Save fabrics, trims and OEM packages you like — they’ll show up here.')}</p>
-        <a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a>
-      </div>`;
+        <a class="btn btn-green" href="../index.html">${T('Start shopping')}</a>
+      </div>
+      <section class="section" style="margin-top:32px">
+        <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
+        <div class="prod-grid" id="wlRecoGrid">${reco.map(p=>window.ARCANA_card(p)).join('')}</div>
+      </section>`;
+      window.ARCANA_wireCards(document.getElementById('wlRecoGrid'));
       return;
     }
 

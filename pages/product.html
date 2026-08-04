@@ -93,7 +93,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
                <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`}
         </div>
         <div class="pdp-mini">
-          <button class="fav pdp-save" data-fav-id="${p.id}">${IC.bookmark} <span>${T('Save to List')}</span></button>
+          <button class="fav pdp-save" data-fav-id="${p.id}">${IC.bookmark} <span>${T('Wishlist')}</span></button>
           <button class="pdp-share" data-share>${IC.share} ${T('Share')}</button>
         </div>
         <a class="pdp-supplier" href="${facId?`supplier.html?id=${facId}`:catUrl}">
@@ -145,7 +145,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines([`OEM service selected: ${pkgName}`])});
     });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
-    sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'));});
+    sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'), on?{href:'wishlist.html',label:T('View wishlist')}:undefined);});
     document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('Product link copied'));});
     document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();toast(b.dataset.toast);}));
     window.ARCANA_wireCards(document.querySelector('.prod-grid'));

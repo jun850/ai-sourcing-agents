@@ -184,6 +184,23 @@ function wireCards(container){
 window.ARCANA_card = cardHTML;
 window.ARCANA_wireCards = wireCards;
 
+/* ---------- "Recommended for you" — used by empty cart/wishlist states ----------
+   One pick per category first (so the shelf isn't all-fabrics), then filled
+   randomly up to n. Non-deterministic by design (matches how a real reco
+   shelf would vary); callers should compute it once per page load, not per render. */
+function pickRecommended(n){
+  n = n||8;
+  const pool = (window.ARCANA_PRODUCTS||[]).filter(p=>p.cat!=='oem');
+  const shuffle = arr=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const byCat = {};
+  pool.forEach(p=>{ (byCat[p.cat]=byCat[p.cat]||[]).push(p); });
+  const picks = [];
+  shuffle(Object.keys(byCat)).forEach(c=>{ if(picks.length<n) picks.push(shuffle(byCat[c])[0]); });
+  shuffle(pool.filter(p=>!picks.includes(p))).forEach(p=>{ if(picks.length<n) picks.push(p); });
+  return picks.slice(0,n);
+}
+window.ARCANA_recommended = pickRecommended;
+
 function markSVG(color){return `<svg class="mark" viewBox="0 0 2000 2000" fill="${color||'currentColor'}" aria-hidden="true">
 <path d="M672.85,1077.33c-89.31,71.09-24.4,192-22.2,196.07-5.25-1.36-179.8-48.89-165.65-217.59,2.94-35.09,21.1-70.47,49.87-99.24,162.43-162.43,469.66,21.34,393.78,208.71h0c-42.2-97.19-153.7-169.12-255.8-87.95Z"/>
 <path d="M1349.35,1273.4c2.2-4.07,67.11-124.98-22.2-196.07-121.59-96.68-256.4,23.72-271.9,145.31-15.42,121.59,79.56,198.95,79.56,198.95-81.77,58.55-134.81,153.62-134.81,153.62,0,0-53.04-95.07-134.81-153.62,113.28-92.12,69.22-261.95,239.57-432.3,190.62-190.62,399.61-60.17,410.23,66.51,14.15,168.7-160.4,216.23-165.65,217.59Z"/>
@@ -771,7 +788,7 @@ function wire(){
     const id=f.dataset.favId;
     if(id && Store.isSaved(id)) f.classList.add('on');
     f.addEventListener('click',e=>{ e.preventDefault(); e.stopPropagation();
-      if(id){ const on=Store.toggleSaved(id); f.classList.toggle('on',on); toast(on?'Saved to your list':'Removed from list'); }
+      if(id){ const on=Store.toggleSaved(id); f.classList.toggle('on',on); toast(on?'Saved to your list':'Removed from list', on?{href:P('wishlist.html'), label:'View wishlist'}:undefined); }
       else f.classList.toggle('on');
     });
   });

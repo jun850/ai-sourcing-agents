@@ -31,6 +31,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('cartRoot');
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
+  const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
 
   function render(){
     const cart=Store.cart().filter(i=>M[i.id]);
@@ -39,8 +40,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <span class="ce-ic">${IC.cart}</span>
         <h3>${T('Your cart is empty')}</h3>
         <p>${T('Browse verified fabrics and OEM services to start your next collection.')}</p>
-        <a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a>
-      </div>`;
+        <a class="btn btn-green" href="../index.html">${T('Start shopping')}</a>
+      </div>
+      <section class="section" style="margin-top:32px">
+        <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
+        <div class="prod-grid" id="cartRecoGrid">${reco.map(p=>window.ARCANA_card(p)).join('')}</div>
+      </section>`;
+      window.ARCANA_wireCards(document.getElementById('cartRecoGrid'));
       return;
     }
     const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;return `
