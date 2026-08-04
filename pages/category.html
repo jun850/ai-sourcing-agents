@@ -81,8 +81,17 @@
 <script src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
-  // ---- Sourcing Copilot results mode ----
-  if(new URLSearchParams(location.search).get('copilot')==='1'){ return runCopilot(); }
+  // This one file renders three distinct page identities off one URL pattern —
+  // keep them straight when touching filters, sort, badges or pricing below:
+  //   · Category page — category.html?cat=<slug>            (default browse/listing)
+  //   · SRP           — category.html?cat=<slug>&q=<term>   (keyword search results)
+  //   · Copilot SRP   — category.html?copilot=1              (Sourcing Copilot results)
+  const qsAll=new URLSearchParams(location.search);
+  const pageMode = qsAll.get('copilot')==='1' ? 'copilot-srp' : (qsAll.get('q') ? 'srp' : 'category');
+  document.body.dataset.pageMode = pageMode;
+
+  // ---- Copilot SRP ----
+  if(pageMode==='copilot-srp'){ return runCopilot(); }
 
   function runCopilot(){
     const Cop=window.ARCANA_Copilot;
@@ -233,8 +242,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     }
   }
 
+  // ---- Category page + SRP (keyword search shares the category layout/filters;
+  // `q` is what makes this render as an SRP instead of a plain category browse) ----
   const M=window.ARCANA_PRODUCT_MAP;
-  const DEAL=Object.fromEntries((window.ARCANA_DEALS||[]).map(d=>[d.id,d]));
   const META={
     fabrics:{title:'Fabrics',sub:['1,246+','520+'],noun:'fabric options'},
     accessories:{title:'Accessories',sub:['680+','210+'],noun:'accessory options'},
@@ -242,9 +252,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     yarns:{title:'Yarns & Threads',sub:['390+','140+'],noun:'yarn & thread options'},
     oem:{title:'OEM Services',sub:['320+','260+'],noun:'service packages'},
   };
-  const qs=new URLSearchParams(location.search);
-  let cat=qs.get('cat'); if(!META[cat])cat='fabrics';
-  const q=(qs.get('q')||'').trim().toLowerCase();
+  let cat=qsAll.get('cat'); if(!META[cat])cat='fabrics';
+  const q=(qsAll.get('q')||'').trim().toLowerCase();
   const meta=META[cat];
   const heading = q ? q.replace(/\b\w/g,c=>c.toUpperCase()) : meta.title;
   document.getElementById('crumbCat').textContent=heading;
