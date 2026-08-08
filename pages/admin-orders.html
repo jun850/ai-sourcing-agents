@@ -124,7 +124,9 @@ window.ARCANA_PAGE=async function({toast}){
     document.getElementById('usersEmpty').hidden=!!users.length;
     body.innerHTML=users.map(u=>`
       <tr data-user-row="${u.id}" style="cursor:pointer">
-        <td><b>${esc(u.full_name||'—')}</b></td>
+        <td>${u.role==='seller' && u.factory_id
+          ? `<a href="admin-supplier.html?id=${encodeURIComponent(u.factory_id)}" style="color:var(--green);font-weight:600" title="Manage supplier">${esc(u.full_name||'—')} <span aria-hidden="true">↗</span></a>`
+          : `<b>${esc(u.full_name||'—')}</b>`}</td>
         <td>${esc(u.company_name||'—')}</td>
         <td>${esc(u.email)}</td>
         <td><span class="badge b-std">${ROLE_LABEL[u.role]||u.role}</span></td>

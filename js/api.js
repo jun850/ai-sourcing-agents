@@ -38,6 +38,7 @@ if(!sb || !sb.auth){
     updateEmail(){ return Promise.resolve({ error: err }); },
     uploadImage(){ return Promise.resolve({ error: err }); },
     getMyFactory(){ return Promise.resolve(null); },
+    getFactoryById(){ return Promise.resolve(null); },
     updateFactory(){ return Promise.resolve({ error: err }); },
     getMyProducts(){ return Promise.resolve({ error: err }); },
     createProduct(){ return Promise.resolve({ error: err }); },
@@ -56,7 +57,9 @@ if(!sb || !sb.auth){
     sendMessage(){ return Promise.resolve({ error: err }); },
     adminListOrders(){ return Promise.resolve([]); },
     adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
-    adminListUsers(){ return Promise.resolve([]); }
+    adminListUsers(){ return Promise.resolve([]); },
+    adminSetFactoryVerification(){ return Promise.resolve({ error: err }); },
+    adminListAudit(){ return Promise.resolve([]); }
   };
   return;
 }
@@ -441,6 +444,16 @@ const API = {
     }catch(_){ return null; }
   },
 
+  /* Admin/public factory lookup by primary key. Admin pages use this to edit
+     a supplier without impersonating the supplier account. */
+  async getFactoryById(id){
+    try{
+      const { data, error } = await sb.from('factories').select('*').eq('id', id).maybeSingle();
+      if(error) return null;
+      return data || null;
+    }catch(_){ return null; }
+  },
+
   async updateFactory(id, patch){
     try{ const { error } = await sb.from('factories').update(patch).eq('id', id); return { error: error||null }; }
     catch(error){ return { error }; }
@@ -634,6 +647,27 @@ const API = {
   async adminListUsers(){
     try{ const { data, error } = await sb.rpc('admin_list_users'); if(error) return []; return data || []; }
     catch(_){ return []; }
+  },
+
+  /* Verification changes are intentionally RPC-only so the database writes
+     the audit row in the same transaction as the factory update. */
+  async adminSetFactoryVerification(factoryId, verifyState){
+    try{
+      const { data, error } = await sb.rpc('admin_set_factory_verification', {
+        p_factory_id: factoryId,
+        p_verify_state: verifyState
+      });
+      if(error) return { error };
+      return { factory: Array.isArray(data) ? data[0] : data };
+    }catch(error){ return { error }; }
+  },
+
+  async adminListAudit(targetId){
+    try{
+      const { data, error } = await sb.rpc('admin_list_audit', { p_target_id: targetId });
+      if(error) return [];
+      return data || [];
+    }catch(_){ return []; }
   }
 };
 

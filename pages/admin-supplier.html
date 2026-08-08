@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manage Supplier — ARCANA Admin</title>
+<meta name="description" content="Admin: manage a supplier factory profile and product catalog on ARCANA.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-root="..">
+<div id="hdr"></div>
+
+<div id="adminGate" class="wrap" hidden style="padding:80px 0;text-align:center;max-width:520px"></div>
+
+<main class="wrap" id="adminMain" style="padding-top:24px;padding-bottom:40px" hidden>
+  <a class="supplier-back" href="admin-orders.html">← Back to Users</a>
+
+  <header class="supplier-head">
+    <div>
+      <h1>Manage Supplier</h1>
+      <p class="sub" id="supplierMeta">Loading supplier details…</p>
+    </div>
+    <div class="supplier-head-meta" id="supplierStatus"></div>
+  </header>
+
+  <section class="panel supplier-panel" aria-labelledby="profileTitle">
+    <div class="supplier-panel-head">
+      <div><h2 id="profileTitle">Factory Profile</h2><p>Update the storefront information buyers see.</p></div>
+    </div>
+    <form id="factoryForm">
+      <div class="supplier-profile-grid">
+        <div>
+          <div class="field-lg"><label>Factory name</label><input name="name" required></div>
+          <div class="field-lg"><label>Region</label><input name="region" placeholder="e.g. Zhejiang, China"></div>
+          <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, Zhejiang"></div>
+          <div class="field-lg"><label>About</label><input name="bio" placeholder="A short factory overview"></div>
+          <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
+        </div>
+        <div class="supplier-photo" id="factoryPhoto" aria-live="polite"></div>
+        <div class="full supplier-verification">
+          <label for="verifyState">Verification</label>
+          <select id="verifyState" name="verify_state">
+            <option value="unverified">Unverified</option>
+            <option value="pending">Pending review</option>
+            <option value="verified">Verified</option>
+          </select>
+          <span class="muted" style="font-size:12px">Changing this status requires confirmation.</span>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:18px">
+        <button class="btn btn-green" type="submit">Save Profile</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel supplier-panel" aria-labelledby="productsTitle">
+    <div class="supplier-panel-head">
+      <div><h2 id="productsTitle">Products <span id="productCount">(0)</span></h2><p>Manage this supplier’s live, draft and archived SKUs.</p></div>
+      <button class="btn btn-green" type="button" id="btnAddSku">+ Add SKU</button>
+    </div>
+    <div id="skuTable" class="supplier-table"></div>
+
+    <form id="skuForm" hidden style="margin-top:20px;border-top:1px solid var(--line);padding-top:18px">
+      <h3 id="skuFormTitle" style="font-family:var(--serif);font-size:19px;font-weight:600;margin-bottom:12px">Add SKU</h3>
+      <input type="hidden" name="id">
+      <div class="supplier-form-grid">
+        <div class="field-lg"><label>SKU</label><input name="sku" required></div>
+        <div class="field-lg"><label>Name</label><input name="name" required></div>
+        <div class="field-lg"><label>Category</label><select name="category">
+          <option value="fabrics">Fabrics</option><option value="accessories">Accessories</option>
+          <option value="trims">Trims</option><option value="yarns">Yarns</option><option value="oem">OEM</option>
+        </select></div>
+        <div class="field-lg"><label>Unit</label><select name="unit_type">
+          <option value="m">Meter (m)</option><option value="kg">Kilogram (kg)</option><option value="pc">Piece (pc)</option>
+          <option value="package">Package</option><option value="style">Style</option><option value="order">Order</option><option value="color">Color</option>
+        </select></div>
+        <div class="field-lg"><label>Pricing mode</label><select name="pricing_mode"><option value="fixed">Fixed price</option><option value="quote">Quote only</option></select></div>
+        <div class="field-lg"><label>Price (US$)</label><input name="price" type="number" step="0.01" min="0"></div>
+        <div class="field-lg"><label>MOQ</label><input name="moq" type="number" step="1" min="0"></div>
+        <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, China"></div>
+        <div class="field-lg full"><label>Composition</label><input name="comp" placeholder="e.g. 55% Linen 45% Viscose"></div>
+        <div class="field-lg full"><label>Spec</label><input name="spec" placeholder="e.g. 180 GSM, 150cm width"></div>
+        <div class="field-lg"><label>Status</label><select name="listing_status"><option value="active">Active</option><option value="draft">Draft</option></select></div>
+        <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="muted" style="font-size:12px;font-weight:600;margin-bottom:6px">Volume price breaks (optional)</div>
+        <div id="priceBreakRows"></div>
+        <button class="btn btn-out" type="button" id="btnAddBreak" style="padding:7px 12px;font-size:12.5px;margin-top:6px">+ Add tier</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn btn-green" type="submit" style="padding:10px 20px">Save SKU</button>
+        <button class="btn btn-out" type="button" id="btnCancelSku" style="padding:10px 20px">Cancel</button>
+      </div>
+    </form>
+  </section>
+
+  <details class="panel supplier-panel supplier-audit">
+    <summary>Recent admin activity</summary>
+    <div id="auditList" class="audit-list"><p class="supplier-empty">Loading activity…</p></div>
+  </details>
+</main>
+
+<div class="modal-overlay" id="supplierModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="supplierModalTitle">
+    <h3 id="supplierModalTitle">Confirm change</h3>
+    <p id="supplierModalDesc" class="supplier-modal-copy"></p>
+    <div class="modal-actions">
+      <button class="btn btn-out" type="button" id="supplierModalCancel">Cancel</button>
+      <button class="btn btn-green" type="button" id="supplierModalConfirm">Confirm change</button>
+    </div>
+  </div>
+</div>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script defer src="../js/analytics.bundle.js"></script>
+<script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
+<script>
+window.ARCANA_PAGE=async function({toast}){
+  const api=window.ARCANA_API;
+  const gate=document.getElementById('adminGate');
+  const main=document.getElementById('adminMain');
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money=n=>window.ARCANA_money(n);
+  const factoryId=new URLSearchParams(location.search).get('id');
+  const stateLabel={unverified:'Unverified',pending:'Pending review',verified:'Verified'};
+
+  function showGate(title,body,cta){
+    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${esc(title)}</h2><p class="muted">${esc(body)}</p>${cta||''}`;
+    gate.hidden=false;
+  }
+
+  const profile=await api.getSessionProfile();
+  if(!profile){
+    showGate('Log in to continue','Sign in to your ARCANA admin account.',
+      `<a class="btn btn-green" href="login.html?next=${encodeURIComponent('admin-supplier.html'+location.search)}" style="margin-top:14px;display:inline-block">Log in</a>`);
+    return;
+  }
+  if(profile.role!=='admin'){
+    showGate('Admin access only','This page is restricted to ARCANA admins.');
+    return;
+  }
+  if(!factoryId){
+    showGate('Supplier not found','This factory may have been removed.','<a class="btn btn-out" href="admin-orders.html" style="margin-top:14px;display:inline-block">Back to Users</a>');
+    return;
+  }
+  const factory=await api.getFactoryById(factoryId);
+  if(!factory){
+    showGate('Supplier not found','This factory may have been removed.','<a class="btn btn-out" href="admin-orders.html" style="margin-top:14px;display:inline-block">Back to Users</a>');
+    return;
+  }
+  main.hidden=false;
+
+  function verificationBadge(s){
+    const cls=s==='verified'?'b-ok':s==='pending'?'b-prem':'b-nonoem';
+    return `<span class="badge ${cls}">${stateLabel[s]||'Unverified'}</span>`;
+  }
+  function renderFactory(){
+    document.getElementById('supplierMeta').textContent=`Supplier since ${new Date(factory.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} · ${factory.loc||factory.region||'Location not set'}`;
+    document.getElementById('supplierStatus').innerHTML=verificationBadge(factory.verify_state);
+    const f=document.getElementById('factoryForm');
+    f.elements.name.value=factory.name||'';
+    f.elements.region.value=factory.region||'';
+    f.elements.loc.value=factory.loc||'';
+    f.elements.bio.value=factory.bio||'';
+    f.elements.verify_state.value=factory.verify_state||'unverified';
+    const photo=document.getElementById('factoryPhoto');
+    photo.innerHTML=factory.img
+      ? `<img src="${esc(factory.img)}" alt="${esc(factory.name)} factory photo">`
+      : '<div class="photo-empty">No factory photo yet.<br>Choose a file to add one.</div>';
+  }
+  renderFactory();
+
+  const fform=document.getElementById('factoryForm');
+  fform.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const f=fform.elements;
+    const nextVerify=f.verify_state.value;
+    const patch={name:f.name.value.trim(),region:f.region.value.trim(),loc:f.loc.value.trim(),bio:f.bio.value.trim()};
+    const file=f.imgFile.files[0];
+    if(nextVerify!==factory.verify_state){
+      openVerificationModal(nextVerify,patch,file);
+      return;
+    }
+    await saveProfile(patch,file);
+  });
+  async function saveProfile(patch,file){
+    if(file){
+      const up=await api.uploadImage(file,'factories');
+      if(up.error){toast(up.error.message||'Image upload failed');return;}
+      patch.img=up.url;
+    }
+    const {error}=await api.updateFactory(factory.id,patch);
+    if(error){toast(error.message||'Could not save profile');return;}
+    Object.assign(factory,patch);
+    renderFactory();
+    toast('Factory profile updated');
+    return true;
+  }
+
+  let products=[];
+  function statusBadge(s){
+    return s==='active'?'<span class="badge b-ok">Active</span>':s==='draft'?'<span class="badge b-std">Draft</span>':'<span class="badge b-nonoem">Archived</span>';
+  }
+  function renderProducts(){
+    document.getElementById('productCount').textContent=`(${products.length})`;
+    const table=document.getElementById('skuTable');
+    if(!products.length){table.innerHTML='<div class="supplier-empty">No SKUs yet — add your first product.</div>';return;}
+    table.innerHTML=products.map(p=>`<div class="supplier-product-row">
+      <img src="${esc(p.img||'../assets/linen.webp')}" alt="">
+      <div class="supplier-product-name"><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)} · ${esc(p.category)} · ${p.pricing_mode==='quote'?'Quote only':esc(money(p.price)+'/'+p.unit_type)}</span></div>
+      ${statusBadge(p.listing_status)}
+      <button class="btn btn-out" type="button" data-edit="${esc(p.id)}" style="padding:6px 12px;font-size:12px">Edit</button>
+      ${p.listing_status!=='archived'?`<button class="btn btn-out" type="button" data-archive="${esc(p.id)}" style="padding:6px 12px;font-size:12px">Archive</button>`:''}
+    </div>`).join('');
+    table.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openSkuForm(products.find(p=>p.id===b.dataset.edit))));
+    table.querySelectorAll('[data-archive]').forEach(b=>b.addEventListener('click',()=>openArchiveModal(b.dataset.archive)));
+  }
+  async function loadProducts(){
+    const r=await api.getMyProducts(factory.id);
+    if(r.error){toast(r.error.message||'Could not load products');products=[];}else products=r.products||[];
+    renderProducts();
+  }
+
+  const skuForm=document.getElementById('skuForm');
+  const priceBreakRows=document.getElementById('priceBreakRows');
+  function addBreakRow(minQty,unitPrice){
+    const row=document.createElement('div');row.className='supplier-break-row';
+    row.innerHTML=`<input type="number" min="1" step="1" placeholder="Min qty" value="${minQty!=null?esc(minQty):''}" data-bmin><input type="number" min="0" step="0.01" placeholder="Unit price (US$)" value="${unitPrice!=null?esc(unitPrice):''}" data-bprice><button type="button" class="btn btn-out" style="padding:5px 10px;font-size:12px" data-brm>Remove</button>`;
+    row.querySelector('[data-brm]').addEventListener('click',()=>row.remove());priceBreakRows.appendChild(row);
+  }
+  async function openSkuForm(product){
+    skuForm.hidden=false;skuForm.reset();priceBreakRows.innerHTML='';
+    skuForm.elements.id.value=product?product.id:'';
+    document.getElementById('skuFormTitle').textContent=product?`Edit ${product.sku}`:'Add SKU';
+    if(product){
+      ['sku','name','category','unit_type','pricing_mode','loc','comp','spec'].forEach(k=>skuForm.elements[k].value=product[k]||'');
+      skuForm.elements.price.value=product.price||0;skuForm.elements.moq.value=product.moq!=null?product.moq:'';
+      skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
+      (await api.getPriceBreaks(product.id)).forEach(b=>addBreakRow(b.minQty,b.unitPrice));
+    }
+    skuForm.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+  document.getElementById('btnAddSku').addEventListener('click',()=>openSkuForm(null));
+  document.getElementById('btnCancelSku').addEventListener('click',()=>{skuForm.hidden=true;});
+  document.getElementById('btnAddBreak').addEventListener('click',()=>addBreakRow());
+  skuForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const f=skuForm.elements,id=f.id.value;
+    const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),spec:f.spec.value.trim(),listing_status:f.listing_status.value};
+    if(!payload.sku||!payload.name){toast('SKU and name are required');return;}
+    const file=f.imgFile.files[0];
+    if(file){const up=await api.uploadImage(file,'products');if(up.error){toast(up.error.message||'Image upload failed');return;}payload.img=up.url;}
+    let productId=id;
+    if(id){const r=await api.updateProduct(id,payload);if(r.error){toast(r.error.message||'Could not save SKU');return;}}
+    else{payload.factory_id=factory.id;const r=await api.createProduct(payload);if(r.error){toast(r.error.message||'Could not create SKU');return;}productId=r.product.id;}
+    const breaks=[...priceBreakRows.children].map(row=>({minQty:Number(row.querySelector('[data-bmin]').value)||0,unitPrice:Number(row.querySelector('[data-bprice]').value)||0})).filter(b=>b.minQty>0);
+    const br=await api.setPriceBreaks(productId,breaks);if(br.error){toast(br.error.message||'Could not save price breaks');return;}
+    skuForm.hidden=true;toast(id?'SKU updated':'SKU added');loadProducts();
+  });
+
+  const modal=document.getElementById('supplierModal'),modalDesc=document.getElementById('supplierModalDesc'),modalConfirm=document.getElementById('supplierModalConfirm');
+  let pending=null;
+  function openVerificationModal(next,profilePatch,profileFile){
+    pending={kind:'verification',next,profilePatch,profileFile};
+    modalDesc.textContent=next==='verified'?`Approve ${factory.name} for verification? This makes their factory badge and listings visible as verified to buyers immediately.`:`Change verification status to ${stateLabel[next]}? This is a support/moderation action and won’t notify the supplier automatically.`;
+    document.getElementById('supplierModalTitle').textContent='Change verification status';modalConfirm.textContent='Confirm change';modal.hidden=false;modalConfirm.focus();
+  }
+  function openArchiveModal(id){pending={kind:'archive',id};document.getElementById('supplierModalTitle').textContent='Archive SKU';modalDesc.textContent='Archive this SKU? It will be removed from the public catalog.';modalConfirm.textContent='Archive SKU';modal.hidden=false;modalConfirm.focus();}
+  function closeModal(){
+    if(pending&&pending.kind==='verification')document.getElementById('verifyState').value=factory.verify_state;
+    modal.hidden=true;pending=null;
+  }
+  document.getElementById('supplierModalCancel').addEventListener('click',closeModal);
+  modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.hidden)closeModal();});
+  modalConfirm.addEventListener('click',async()=>{
+    if(!pending)return;modalConfirm.disabled=true;
+    if(pending.kind==='verification'){
+      const saved=await saveProfile(pending.profilePatch,pending.profileFile);
+      if(!saved){modalConfirm.disabled=false;return;}
+      const r=await api.adminSetFactoryVerification(factory.id,pending.next);
+      if(r.error){toast(r.error.message||'Could not change verification');modalConfirm.disabled=false;return;}
+      factory.verify_state=pending.next;renderFactory();await loadAudit();toast('Verification status updated');
+    }else{
+      const r=await api.archiveProduct(pending.id);
+      if(r.error){toast(r.error.message||'Could not archive SKU');modalConfirm.disabled=false;return;}
+      await loadProducts();toast('SKU archived');
+    }
+    modalConfirm.disabled=false;closeModal();
+  });
+
+  async function loadAudit(){
+    const rows=await api.adminListAudit(factory.id),list=document.getElementById('auditList');
+    list.innerHTML=rows.length?rows.map(r=>`<div class="audit-row"><span class="audit-dot" aria-hidden="true"></span><div><b>${esc(r.admin_name||'Admin')}</b> ${esc(r.summary||r.action)}<time>${new Date(r.created_at).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}</time></div></div>`).join(''):'<p class="supplier-empty">No admin activity yet for this supplier.</p>';
+  }
+  await Promise.all([loadProducts(),loadAudit()]);
+};
+</script>
+</body>
+</html>
