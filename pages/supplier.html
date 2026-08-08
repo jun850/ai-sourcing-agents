@@ -31,6 +31,7 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const FMAP=window.ARCANA_FACTORY_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
+  const api=window.ARCANA_API;
   const money=n=>'US$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
   const rnd=(id,a,b)=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return a+(h%(Math.round((b-a)*10)+1))/10;};
   const soldOf=id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];
@@ -74,6 +75,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <button class="btn btn-green" data-contact-factory>${IC.msg||''} Contact Supplier</button>
         <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} Save Supplier</button>
         <button class="btn btn-out" data-share>Share</button>
+        <a class="btn btn-out admin-supplier-entry" id="adminSupplierEntry" href="#" hidden>Manage supplier</a>
       </div>
     </section>
     <section class="panel map-panel">
@@ -111,6 +113,21 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>Contact this factory</button>
     </aside>
   </div>`;
+
+  // Public supplier pages are buyer-facing, but admins need a direct path into
+  // the existing support workspace. Keep the control hidden unless both the
+  // session role and database factory lookup confirm admin access.
+  async function wireAdminEntry(){
+    const entry=document.getElementById('adminSupplierEntry');
+    if(!entry || !api || !api.getSessionProfile || !api.getFactoryForAdminEntry) return;
+    const profile=await api.getSessionProfile().catch(()=>null);
+    if(!profile || profile.role!=='admin') return;
+    const dbFactory=await api.getFactoryForAdminEntry(f.id,f.name).catch(()=>null);
+    if(!dbFactory || !dbFactory.id) return;
+    entry.href=`admin-supplier.html?id=${encodeURIComponent(dbFactory.id)}`;
+    entry.hidden=false;
+  }
+  wireAdminEntry();
 
   // interactions
   const facFav=document.querySelector('[data-fac-fav]'); facFav.classList.toggle('on',Store.isSaved(f.id));

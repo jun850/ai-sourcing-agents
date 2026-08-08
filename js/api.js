@@ -39,6 +39,8 @@ if(!sb || !sb.auth){
     uploadImage(){ return Promise.resolve({ error: err }); },
     getMyFactory(){ return Promise.resolve(null); },
     getFactoryById(){ return Promise.resolve(null); },
+    getFactoryBySlug(){ return Promise.resolve(null); },
+    getFactoryForAdminEntry(){ return Promise.resolve(null); },
     updateFactory(){ return Promise.resolve({ error: err }); },
     getMyProducts(){ return Promise.resolve({ error: err }); },
     createProduct(){ return Promise.resolve({ error: err }); },
@@ -449,6 +451,29 @@ const API = {
   async getFactoryById(id){
     try{
       const { data, error } = await sb.from('factories').select('*').eq('id', id).maybeSingle();
+      if(error) return null;
+      return data || null;
+    }catch(_){ return null; }
+  },
+
+  /* Resolve the public catalog slug to the database factory id used by the
+     admin supplier workspace. */
+  async getFactoryBySlug(slug){
+    try{
+      const { data, error } = await sb.from('factories').select('id').eq('slug', slug).maybeSingle();
+      if(error) return null;
+      return data || null;
+    }catch(_){ return null; }
+  },
+
+  /* Legacy bundled catalog entries may use an internal key instead of the
+     database slug. Match the public name as a safe fallback for admin links. */
+  async getFactoryForAdminEntry(slug, name){
+    const bySlug = await this.getFactoryBySlug(slug);
+    if(bySlug) return bySlug;
+    if(!name) return null;
+    try{
+      const { data, error } = await sb.from('factories').select('id').eq('name', name).limit(1).maybeSingle();
       if(error) return null;
       return data || null;
     }catch(_){ return null; }

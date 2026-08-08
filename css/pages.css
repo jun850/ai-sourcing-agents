@@ -209,7 +209,8 @@
 .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);margin-top:22px;padding-top:20px}
 .metric{padding-right:16px}
 .metric span{font-size:12px;color:var(--muted)}.metric b{display:block;font-size:19px;margin-top:3px}
-.sup-actions{display:flex;gap:12px;margin-top:22px}
+.sup-actions{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap}
+.admin-supplier-entry{color:var(--green);border-color:var(--green);font-weight:600}
 .sup-actions .fav.on{border-color:var(--gold);color:var(--gold-d)}
 .sup-actions .fav.on svg{fill:var(--gold);color:var(--gold)}
 .map-panel{padding:22px 24px}

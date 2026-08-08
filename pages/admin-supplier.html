@@ -121,12 +121,18 @@
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
 <script>
-window.ARCANA_PAGE=async function({toast}){
+window.ARCANA_PAGE=async function({toast,ASSET}){
   const api=window.ARCANA_API;
   const gate=document.getElementById('adminGate');
   const main=document.getElementById('adminMain');
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money=n=>window.ARCANA_money(n);
+  const assetImage=(value,fallback)=>{
+    if(!value) return ASSET(`${fallback}.webp`);
+    const raw=String(value);
+    if(/^(https?:|data:|\/|\.\.?\/)/i.test(raw)) return raw;
+    return ASSET(raw.endsWith('.webp')?raw:`${raw}.webp`);
+  };
   const factoryId=new URLSearchParams(location.search).get('id');
   const stateLabel={unverified:'Unverified',pending:'Pending review',verified:'Verified'};
 
@@ -171,7 +177,7 @@ window.ARCANA_PAGE=async function({toast}){
     f.elements.verify_state.value=factory.verify_state||'unverified';
     const photo=document.getElementById('factoryPhoto');
     photo.innerHTML=factory.img
-      ? `<img src="${esc(factory.img)}" alt="${esc(factory.name)} factory photo">`
+      ? `<img src="${esc(assetImage(factory.img,'factory-interior'))}" alt="${esc(factory.name)} factory photo">`
       : '<div class="photo-empty">No factory photo yet.<br>Choose a file to add one.</div>';
   }
   renderFactory();
@@ -212,7 +218,7 @@ window.ARCANA_PAGE=async function({toast}){
     const table=document.getElementById('skuTable');
     if(!products.length){table.innerHTML='<div class="supplier-empty">No SKUs yet — add your first product.</div>';return;}
     table.innerHTML=products.map(p=>`<div class="supplier-product-row">
-      <img src="${esc(p.img||'../assets/linen.webp')}" alt="">
+      <img src="${esc(assetImage(p.img,'linen'))}" alt="">
       <div class="supplier-product-name"><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)} · ${esc(p.category)} · ${p.pricing_mode==='quote'?'Quote only':esc(money(p.price)+'/'+p.unit_type)}</span></div>
       ${statusBadge(p.listing_status)}
       <button class="btn btn-out" type="button" data-edit="${esc(p.id)}" style="padding:6px 12px;font-size:12px">Edit</button>
