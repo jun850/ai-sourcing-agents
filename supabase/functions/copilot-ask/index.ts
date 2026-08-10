@@ -14,7 +14,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MAX_CALLS = 30;
 const MAX_TOKENS = 128000;
-const MODEL = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
+// Keep the server-side model explicit so an old environment fallback cannot
+// silently downgrade the analysis path. GEMINI_API_KEY remains an Edge secret.
+const MODEL = "gemini-3.6-flash";
 
 const SYSTEM_PROMPT = `You are ARCANA's Sourcing Copilot, a calm procurement assistant inside a B2B fashion-sourcing marketplace. A brand-owner buyer described what they're sourcing; a deterministic engine already ranked verified catalog matches against that brief.
 
@@ -107,14 +109,14 @@ Deno.serve(async (req) => {
   let geminiJson: any;
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
           contents: [{ role: "user", parts: [{ text: userContent }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 220 },
+          generationConfig: { maxOutputTokens: 220, thinkingConfig: { thinkingLevel: "minimal" } },
         }),
       },
     );

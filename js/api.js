@@ -38,6 +38,8 @@ if(!sb || !sb.auth){
     updateProfile(){ return Promise.resolve({ error: err }); },
     updateEmail(){ return Promise.resolve({ error: err }); },
     uploadImage(){ return Promise.resolve({ error: err }); },
+    analyzeDesign(){ return Promise.resolve({ data:null, error: err }); },
+    rematchDesign(){ return Promise.resolve({ data:null, error: err }); },
     getMyFactory(){ return Promise.resolve(null); },
     getFactoryById(){ return Promise.resolve(null); },
     getFactoryBySlug(){ return Promise.resolve(null); },
@@ -443,6 +445,30 @@ const API = {
       const { data } = sb.storage.from('uploads').getPublicUrl(path);
       return { url: data.publicUrl };
     }catch(error){ return { error }; }
+  },
+
+  /* Design Match uploads are sent directly to the authenticated Edge Function.
+     They are intentionally NOT put in the public uploads bucket: the function
+     reads them in-memory, forwards them to Gemini for analysis, and returns
+     only the structured brief + catalog matches. */
+  async analyzeDesign(files){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { data:null, error:{ message:'not authenticated', code:'unauthorized' } };
+      const body=new FormData();
+      (files||[]).forEach(file=>body.append('files',file));
+      const { data, error }=await sb.functions.invoke('design-match',{body});
+      return { data:data||null, error:error||null };
+    }catch(error){ return { data:null, error }; }
+  },
+
+  async rematchDesign(brief){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { data:null, error:{ message:'not authenticated', code:'unauthorized' } };
+      const { data, error }=await sb.functions.invoke('design-match',{body:{brief}});
+      return { data:data||null, error:error||null };
+    }catch(error){ return { data:null, error }; }
   },
 
   /* ---- Seller: factory + SKU CRUD (RLS scopes writes to the caller's factory) ---- */

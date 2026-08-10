@@ -63,11 +63,12 @@ window.ARCANA_FACTORIES = [
 window.ARCANA_FACTORY_MAP = Object.fromEntries(window.ARCANA_FACTORIES.map(f=>[f.id,f]));
 window.ARCANA_FACTORY_BY_NAME = Object.fromEntries(window.ARCANA_FACTORIES.map(f=>[f.name,f.id]));
 window.ARCANA_FACTORIES.forEach(f=>{
-  f.sales=f.sales||'Sales Team'; f.phone=f.phone||'+86 138 0000 0000';
-  f.web=f.web||('www.'+f.id.toLowerCase().replace(/[^a-z]/g,'')+'.com');
-  f.founded=f.founded||(2026-f.years); f.employees=f.employees||'200+';
-  f.area=f.area||'20,000 m²'; f.port=f.port||'Ningbo Port 150 km';
-  f.bio=f.bio||`A verified ${f.type.toLowerCase()} in ${f.loc} with ${f.years} years of experience supplying global apparel brands. Specialties: ${f.tags.join(', ')}.`;
+  // Never invent supplier facts for storefront profiles. Missing information is
+  // shown as "Ask supplier" at the buyer decision point.
+  f.sales=f.sales||null; f.phone=f.phone||null; f.web=f.web||null;
+  f.founded=f.founded||null; f.employees=f.employees||null;
+  f.area=f.area||null; f.port=f.port||null; f.bio=f.bio||null;
+  f.tags=Array.isArray(f.tags)?f.tags:[]; f.certs=Array.isArray(f.certs)?f.certs:[];
 });
 
 /* ============ i18n — term dictionaries + translator (EN · JA · ZH) ============ */

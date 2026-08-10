@@ -118,6 +118,7 @@ const IC = {
   box:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg>',
   bookmark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"/></svg>',
   camera:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 8h3.2L9 5.4A1 1 0 0 1 9.8 5h4.4a1 1 0 0 1 .8.4L16.8 8H20a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.4"/></svg>',
+  document:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h8l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5M8 13h8M8 17h6"/></svg>',
   spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg>',
 };
 window.ARCANA_IC = IC;
@@ -211,6 +212,7 @@ const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <span class="s-chip" data-img-chip hidden></span>
   <input id="site-search" name="q" placeholder="${ph}" data-i18n-ph="search.ph" autocomplete="off" spellcheck="false"
     role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-pop">
+  <button type="button" class="s-design" data-design-match aria-label="Match a design reference" title="Match a tech pack or design reference">${IC.document}</button>
   <button type="button" class="s-cam" data-cam aria-label="Search by image" title="Search by image">${IC.camera}</button>
   <div class="s-pop" id="search-pop" role="listbox" aria-label="Search suggestions" data-search-pop hidden></div>
 </form>`;
@@ -508,6 +510,77 @@ window.ARCANA_requireCopilotAuth = function(){
   return false;
 };
 
+/* ---------- Design Match: private, session-only tech-pack analysis ---------- */
+const DESIGN_MATCH_KEY='arcana_design_match';
+function setDesignMatch(value){
+  try{ if(value) sessionStorage.setItem(DESIGN_MATCH_KEY,JSON.stringify(value)); else sessionStorage.removeItem(DESIGN_MATCH_KEY); }catch(_){}
+}
+window.ARCANA_getDesignMatch=function(){ try{return JSON.parse(sessionStorage.getItem(DESIGN_MATCH_KEY)||'null');}catch(_){return null;} };
+window.ARCANA_clearDesignMatch=function(){ setDesignMatch(null); };
+
+let designMatchModal;
+function ensureDesignMatchModal(){
+  if(designMatchModal) return designMatchModal;
+  const wrap=document.createElement('div');
+  wrap.className='modal-overlay design-match-overlay'; wrap.hidden=true;
+  wrap.innerHTML=`<section class="design-match-modal" role="dialog" aria-modal="true" aria-labelledby="dmTitle" aria-describedby="dmDesc">
+    <button type="button" class="dm-close" data-dm-close aria-label="Close">&times;</button>
+    <div class="dm-mark">${IC.document}</div>
+    <h2 id="dmTitle">Match a design to verified suppliers</h2>
+    <p id="dmDesc">Upload a tech pack, reference image, PDF, or PDF-compatible Illustrator file. ARCANA reads it into a sourcing brief, then matches OEM, fabric, and trim suppliers.</p>
+    <form data-dm-form>
+      <input type="file" data-dm-files accept=".pdf,.ai,image/jpeg,image/png,image/webp" multiple hidden>
+      <button type="button" class="dm-drop" data-dm-browse>
+        ${IC.document}<span><b>Drop files here or browse</b><small>JPG, PNG, WebP, PDF, or Illustrator · up to 8 files</small></span>
+      </button>
+      <ul class="dm-files" data-dm-list aria-live="polite"></ul>
+      <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your ARCANA profile.</p>
+      <div class="dm-actions"><button type="button" class="btn btn-out" data-dm-close>Cancel</button><button type="submit" class="btn btn-green" data-dm-submit disabled>Analyze design</button></div>
+    </form>
+  </section>`;
+  document.body.appendChild(wrap); designMatchModal=wrap;
+  const input=wrap.querySelector('[data-dm-files]'), list=wrap.querySelector('[data-dm-list]'), submit=wrap.querySelector('[data-dm-submit]');
+  let files=[];
+  const close=()=>{ wrap.classList.remove('in'); wrap.hidden=true; };
+  const renderFiles=()=>{
+    list.innerHTML=files.map((file,index)=>`<li><span>${IC.document}<b>${String(file.name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</b><small>${(file.size/1024/1024).toFixed(file.size>1024*1024?1:0)} MB</small></span><button type="button" data-dm-remove="${index}" aria-label="Remove ${String(file.name).replace(/"/g,'')}">&times;</button></li>`).join('');
+    submit.disabled=!files.length;
+  };
+  const accept=added=>{
+    const allowed=file=>/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type)||/\.ai$/i.test(file.name);
+    const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, PDF, or Illustrator files.');return;}
+    files=[...files,...added].slice(0,8); renderFiles();
+  };
+  input.addEventListener('change',()=>{accept([...input.files]);input.value='';});
+  wrap.querySelector('[data-dm-browse]').addEventListener('click',()=>input.click());
+  wrap.querySelector('[data-dm-browse]').addEventListener('dragover',event=>{event.preventDefault();wrap.querySelector('[data-dm-browse]').classList.add('drag');});
+  wrap.querySelector('[data-dm-browse]').addEventListener('dragleave',()=>wrap.querySelector('[data-dm-browse]').classList.remove('drag'));
+  wrap.querySelector('[data-dm-browse]').addEventListener('drop',event=>{event.preventDefault();wrap.querySelector('[data-dm-browse]').classList.remove('drag');accept([...(event.dataTransfer&&event.dataTransfer.files||[])]);});
+  list.addEventListener('click',event=>{const button=event.target.closest('[data-dm-remove]');if(button){files.splice(+button.dataset.dmRemove,1);renderFiles();}});
+  wrap.querySelectorAll('[data-dm-close]').forEach(button=>button.addEventListener('click',close));
+  wrap.addEventListener('pointerdown',event=>{if(event.target===wrap)close();});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!wrap.hidden)close();});
+  wrap.querySelector('[data-dm-form]').addEventListener('submit',async event=>{
+    event.preventDefault(); if(!files.length) return;
+    const api=window.ARCANA_API; if(!api||!api.analyzeDesign){toast('Design analysis is unavailable.');return;}
+    submit.disabled=true; submit.textContent='Reading design…';
+    const {data,error}=await api.analyzeDesign(files);
+    submit.disabled=false; submit.textContent='Analyze design';
+    if(error || !data || !data.ok){
+      const reason=(data&&data.reason)||(error&&error.message)||'analysis_failed';
+      const message={ai_pdf_export_required:'This Illustrator file needs a PDF export before ARCANA can read it.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'ARCANA could not read those files. Try a clearer PDF or image.';
+      toast(message); return;
+    }
+    setDesignMatch(data); files=[]; renderFiles(); close();
+    location.href=P('category.html')+'?design-match=1';
+  });
+  return wrap;
+}
+window.ARCANA_openDesignMatch=function(){
+  if(!Store.session()){ toast('Sign in to upload a private design reference.'); location.href=P('login.html')+'?next='+encodeURIComponent('category.html?design-match=1'); return; }
+  const modal=ensureDesignMatchModal(); modal.hidden=false; requestAnimationFrame(()=>modal.classList.add('in')); modal.querySelector('[data-dm-browse]').focus();
+};
+
 /* ---------- smart search: intent autocomplete + image (visual) search ---------- */
 /* Image cache contract: sessionStorage only (dies with the tab). A hard refresh is
    detected via Navigation Timing and clears it too, so the photo survives page-to-page
@@ -749,6 +822,8 @@ function wireSearch(){
     if(r){ e.preventDefault(); triggerCopilotAsk(r.dataset.copAsk); }
   });
   if(cam) cam.addEventListener('click',()=>{ input.focus(); getImg()? render() : camPanel(); });
+  const design=form.querySelector('[data-design-match]');
+  if(design) design.addEventListener('click',()=>{ if(window.ARCANA_openDesignMatch) window.ARCANA_openDesignMatch(); });
   const file=document.createElement('input');
   file.type='file'; file.accept='image/*'; file.hidden=true; form.appendChild(file);
   file.addEventListener('change',()=>{ if(file.files[0]) process(file.files[0]); file.value=''; });
