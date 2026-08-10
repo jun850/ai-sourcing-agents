@@ -204,7 +204,7 @@ function markSVG(color){return `<svg class="mark" viewBox="0 0 2000 2000" fill="
 </svg>`;}
 
 function brand(){
-  return `<a class="brand" href="${HOME}" aria-label="Fashpedia by ARCANA">${markSVG()}<span class="brand-name"><span class="word">Fashpedia</span><small>by ARCANA</small></span></a>`;
+  return `<a class="brand" href="${HOME}" aria-label="Fashpedia">${markSVG()}<span class="brand-name"><span class="word">Fashpedia</span></span></a>`;
 }
 const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <label class="visually-hidden" for="site-search">Search</label>${IC.search}

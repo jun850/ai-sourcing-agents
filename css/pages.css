@@ -652,6 +652,9 @@
 .field-lg.invalid .err{display:block}
 .auth-divider{display:flex;align-items:center;gap:12px;margin:18px 0;color:var(--muted);font-size:12px}
 .auth-divider::before,.auth-divider::after{content:"";height:1px;flex:1;background:var(--line)}
+.auth-switch{display:block;margin:14px auto 0;color:var(--green);font-size:13px;font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.auth-switch:hover{color:var(--green-d)}
+.auth-switch:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:var(--radius-sm)}
 .tip{position:relative;display:inline-flex;align-items:center;vertical-align:middle;margin-left:5px;color:var(--muted);cursor:help}
 .tip:hover,.tip:focus{color:var(--green)}
 .tip:hover .tip-box,.tip:focus .tip-box,.tip:focus-within .tip-box{opacity:1;visibility:visible;transform:translateY(0)}
