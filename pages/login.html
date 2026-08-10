@@ -14,7 +14,7 @@
 
 <main class="auth-wrap">
   <div class="auth-aside">
-    <h1>Source your next collection with confidence.</h1>
+    <h1>Source your next collection with <span class="auth-type" data-typewriter="clarity.|confidence.|the right mill.">clarity.</span></h1>
     <p>Log in to access verified fabric mills and OEM factories, track quotes and orders, and pay securely — all in one place.</p>
     <div class="auth-points">
       <div class="auth-point"><span class="ap-ic"></span><div><b>Verified suppliers only</b><p>Every factory is identity, license &amp; capability checked.</p></div></div>
@@ -64,6 +64,22 @@
 window.ARCANA_PAGE = function({IC,toast}){
   // fill aside icons
   const aps=document.querySelectorAll('.ap-ic');[IC.shield,IC.medal,IC.lock].forEach((s,i)=>{if(aps[i])aps[i].innerHTML=s;});
+  const typewriter=el=>{
+    const words=(el.dataset.typewriter||'').split('|').filter(Boolean);
+    if(!words.length||matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let wordIndex=0, characters=words[0].length, deleting=false;
+    const tick=()=>{
+      const word=words[wordIndex];
+      if(!deleting&&characters<word.length) characters++;
+      else if(!deleting){ deleting=true; setTimeout(tick,1350); return; }
+      else if(characters>0) characters--;
+      else { deleting=false; wordIndex=(wordIndex+1)%words.length; }
+      el.textContent=words[wordIndex].slice(0,characters);
+      setTimeout(tick,deleting?45:78);
+    };
+    setTimeout(tick,1350);
+  };
+  document.querySelectorAll('[data-typewriter]').forEach(typewriter);
   document.querySelector('[data-role="buyer"] .ro-ic').innerHTML=IC.user;
   document.querySelector('[data-role="seller"] .ro-ic').innerHTML=IC.seller;
   // role toggle is a visual affordance only — login role comes from the profile

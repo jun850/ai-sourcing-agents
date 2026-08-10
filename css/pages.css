@@ -620,6 +620,9 @@
 /* ---- Auth (login / signup) ---- */
 .auth-wrap{max-width:var(--maxw);margin:0 auto;padding:48px 32px;display:grid;grid-template-columns:1.1fr .9fr;gap:56px;align-items:center;min-height:70vh}
 .auth-aside h1{font-family:var(--serif);font-size:40px;font-weight:600;line-height:1.12}
+.auth-aside .auth-type{display:block;min-height:1.12em;color:var(--gold-d);font-style:italic;font-weight:500}
+.auth-aside .auth-type::after{content:"_";display:inline-block;margin-left:2px;animation:authCursor .9s steps(1,end) infinite}
+@keyframes authCursor{50%{opacity:0}}
 .auth-aside p{color:var(--muted);margin-top:16px;max-width:420px}
 .auth-points{margin-top:28px;display:none;flex-direction:column;gap:16px}
 .auth-point{display:flex;gap:13px;align-items:flex-start}
