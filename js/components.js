@@ -332,7 +332,7 @@ function buildFooter(){
     </div>
   </div>
   <div class="sf-bottom">
-    <span>© 2009 – 2026, Atelix <small>by ARCANA</small>. <span data-i18n="ft.rights">All rights reserved.</span></span>
+    <span>© 2026 Atelix <small>by ARCANA</small>. <span data-i18n="ft.rights">All rights reserved.</span></span>
     <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
       <button data-lang="en">English</button>
       <button data-lang="ja">日本語</button>
