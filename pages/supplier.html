@@ -32,88 +32,96 @@
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const FMAP=window.ARCANA_FACTORY_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
   const api=window.ARCANA_API;
-  const money=n=>'US$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const rnd=(id,a,b)=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return a+(h%(Math.round((b-a)*10)+1))/10;};
-  const soldOf=id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];
-  const ask='Ask supplier';
-  const value=v=>Array.isArray(v)?(v.length?v.join(', '):ask):(v!=null&&String(v).trim()!==''?String(v):ask);
+  const T=window.ARCANA_T||(x=>x), TR=window.ARCANA_TR||(x=>x);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   let id=new URLSearchParams(location.search).get('id'); if(!FMAP[id]) id=Object.keys(FMAP)[0];
   const f=FMAP[id];
-  document.title = (f ? f.name : 'Supplier') + ' — Atelix';
-  const initials=f.name.replace(/[^A-Za-z ]/g,'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
-
+  const displayLoc=window.ATELIX_factoryLocation(f);
   const own=PRODUCTS.filter(p=>p.seller===f.name);
   const feat=(own.length?own:PRODUCTS.filter(p=>p.cat==='fabrics')).slice(0,5);
-
   const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
-
   const capIcons=['M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M14 4v16','M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z','M4 7h16v4a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z','M11 4a7 7 0 1 0 0 14'];
-  const weavingTags=(f.tags||[]).filter(tag=>/knit|woven|weav|jacquard|shirting/i.test(tag));
-  const caps=[['Weaving',value(weavingTags),value(weavingTags.length?f.capacity:null)],['Dyeing',ask,ask],['Finishing',ask,ask],['Inspection',value(f.certs),value(f.certs)]];
+  const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
 
-  document.getElementById('supRoot').innerHTML=`
-  <nav class="crumbs"><a href="../index.html">Home</a>${IC.chevR}<a href="factories.html">Factories</a>${IC.chevR}<span class="cur">${f.name}</span></nav>
+  function render(){
+    const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
+    const ask=T('sp.askSupplier');
+    const has=v=>Array.isArray(v)?v.length>0:v!=null&&String(v).trim()!=='';
+    const value=v=>has(v)?(Array.isArray(v)?v.join(', '):String(v)):ask;
+    const certs=Array.isArray(f.certs)?f.certs:[];
+    const tags=Array.isArray(f.tags)?f.tags:[];
+    const weavingTags=tags.filter(tag=>/knit|woven|weav|jacquard|shirting/i.test(tag));
+    const caps=[
+      ['sp.weaving',value(weavingTags),value(weavingTags.length?f.capacity:null)],
+      ['sp.dyeing',ask,ask],
+      ['sp.finishing',ask,ask],
+      ['sp.inspection',value(certs),value(certs)]
+    ];
+    const location=value(displayLoc), bio=value(f.bio);
+    document.title = `${TR(f.name)} — Atelix`;
+    document.getElementById('supRoot').innerHTML=`
+  <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(TR(f.name))}</span></nav>
   <div class="sup-hero">
     <section class="panel sup-main">
       <div class="sup-top">
         <div class="sup-name">
-          <h1>${f.name}${f.verified?`<span class="verified-mark" title="Verified Factory" aria-label="Verified Factory">${IC.check}</span>`:''}</h1>
-          <div class="role">${value(f.type)} · ${value(f.loc)}</div>
-          <p class="bio">${value(f.bio)}</p>
-          <div class="sup-tags">${f.tags.map(t=>`<span class="pill-tag">${t}</span>`).join('')}${f.certs.map(c=>`<span class="pill-tag">${c}</span>`).join('')}</div>
+          <h1>${esc(TR(f.name))}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
+          <div class="role">${esc(TR(value(f.type)))} · ${esc(TR(location))}</div>
+          <p class="bio">${esc(TR(bio))}</p>
+          <div class="sup-tags">${tags.map(tag=>`<span class="pill-tag">${esc(TR(tag))}</span>`).join('')}${certs.map(c=>`<span class="pill-tag">${esc(TR(c))}</span>`).join('')}</div>
         </div>
         <div class="sup-contact" style="min-width:230px">
-          <div class="sc-row"><span class="ci">${IC.user}</span><div><span>Sales Contact</span><b>${value(f.sales)}</b><div class="muted" style="font-size:12px">${value(f.phone)}</div></div></div>
-          <div class="sc-row"><span class="ci">${IC.globe}</span><div><span>Website</span><b>${value(f.web)}</b></div></div>
-          <div class="sc-row"><span class="ci">${IC.factory}</span><div><span>Business Type</span><b>${value(f.type)}</b></div></div>
+          <div class="sc-row"><span class="ci">${IC.user}</span><div><span>${T('sp.salesContact')}</span><b>${esc(value(f.sales))}</b><div class="muted" style="font-size:12px">${esc(value(f.phone))}</div></div></div>
+          <div class="sc-row"><span class="ci">${IC.globe}</span><div><span>${T('sp.website')}</span><b>${esc(value(f.web))}</b></div></div>
+          <div class="sc-row"><span class="ci">${IC.factory}</span><div><span>${T('sp.businessType')}</span><b>${esc(TR(value(f.type)))}</b></div></div>
         </div>
       </div>
       <div class="metrics">
-        <div class="metric"><span>MOQ</span><b>${value(f.moq)}</b></div>
-        <div class="metric"><span>Lead Time</span><b>${value(f.lead)}</b></div>
-        <div class="metric"><span>In Business</span><b>${f.years?`${f.years} yrs`:ask}</b></div>
+        <div class="metric"><span>${T('MOQ')}</span><b>${esc(TR(value(f.moq)))}</b></div>
+        <div class="metric"><span>${T('Lead Time')}</span><b>${esc(TR(value(f.lead)))}</b></div>
+        <div class="metric"><span>${T('sp.inBusiness')}</span><b>${has(f.years)?`${esc(f.years)} ${T('sp.years')}`:esc(ask)}</b></div>
       </div>
       <div class="sup-actions">
-        <button class="btn btn-green" data-contact-factory>${IC.msg||''} Contact Supplier</button>
-        <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} Save Supplier</button>
-        <button class="btn btn-out" data-share>Share</button>
-        <a class="btn btn-out admin-supplier-entry" id="adminSupplierEntry" href="#" hidden>Manage supplier</a>
+        <button class="btn btn-green" data-contact-factory>${IC.msg||''} ${T('Contact Supplier')}</button>
+        <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} ${T('Save Supplier')}</button>
+        <button class="btn btn-out" data-share>${T('Share')}</button>
+        <a class="btn btn-out admin-supplier-entry" id="adminSupplierEntry" href="#" hidden>${T('sp.manage')}</a>
       </div>
     </section>
     <section class="panel map-panel">
-      <h3>Factory Location</h3>
+      <h3>${T('sp.location')}</h3>
       <div class="map-box">
         <svg class="map-svg" viewBox="0 0 400 210" preserveAspectRatio="xMidYMid slice"><rect width="400" height="210" fill="#eef1ec"/><path d="M250 0 L285 40 L300 90 L285 140 L320 210 L400 210 L400 0 Z" fill="#cfe0ec"/><path d="M0 60 Q90 55 150 90 T280 120" stroke="#dcdcd2" stroke-width="2" fill="none"/><path d="M120 20 L200 100 L160 200" stroke="#e2c9a0" stroke-width="2" fill="none"/></svg>
-        <div class="pin" style="left:56%;top:52%"><div style="background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;display:flex;gap:8px;align-items:center"><span style="color:var(--green)"><svg viewBox="0 0 24 24" fill="var(--green)" width="18" height="18"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg></span><span style="font-size:12px"><b>${f.name}</b><br><span class="muted">${value(f.loc)}</span></span></div></div>
+        <div class="pin" style="left:56%;top:52%"><div style="background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;display:flex;gap:8px;align-items:center"><span style="color:var(--green)"><svg viewBox="0 0 24 24" fill="var(--green)" width="18" height="18"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg></span><span style="font-size:12px"><b>${esc(TR(f.name))}</b><br><span class="muted">${esc(TR(location))}</span></span></div></div>
       </div>
       <div class="map-facts">
-        <div class="map-fact">${IC.pin}<span>Region</span><b>${value(f.region)}</b></div>
-        <div class="map-fact">${IC.factory}<span>Factory Area</span><b>${value(f.area)}</b></div>
-        <div class="map-fact">${IC.user}<span>Employees</span><b>${value(f.employees)}</b></div>
+        <div class="map-fact">${IC.pin}<span>${T('sp.region')}</span><b>${esc(TR(value(f.region)))}</b></div>
+        <div class="map-fact">${IC.factory}<span>${T('sp.factoryArea')}</span><b>${esc(value(f.area))}</b></div>
+        <div class="map-fact">${IC.user}<span>${T('sp.employees')}</span><b>${esc(value(f.employees))}</b></div>
       </div>
     </section>
   </div>
 
   <section class="panel capabilities">
-    ${caps.map((c,i)=>`<div class="cap"><span class="cap-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${capIcons[i]}"/></svg></span><h4>${c[0]}</h4><p>${c[1]}</p><div class="cap-cap">Capacity<b>${c[2]}</b></div></div>`).join('')}
+    ${caps.map((c,i)=>`<div class="cap"><span class="cap-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${capIcons[i]}"/></svg></span><h4>${T(c[0])}</h4><p>${esc(c[1])}</p><div class="cap-cap">${T('sp.capacity')}<b>${esc(c[2])}</b></div></div>`).join('')}
   </section>
 
   <div class="feat-fabrics">
     <section class="panel" style="padding:26px 28px">
-      <div class="sec-head" style="margin-bottom:20px"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">Products from this factory</h2><a class="link-arrow" href="category.html?cat=${feat[0]?feat[0].cat:'fabrics'}">View all ${IC.chevR}</a></div>
+      <div class="sec-head" style="margin-bottom:20px"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('sp.productsFrom')}</h2><a class="link-arrow" href="category.html?cat=${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${feat.map(card).join('')}</div>
     </section>
     <aside class="panel overview">
-      <h3>Company Overview</h3>
-      <p>${value(f.bio)}</p>
+      <h3>${T('sp.overview')}</h3>
+      <p>${esc(TR(bio))}</p>
       <div style="margin-top:16px">
-        <div class="ov-row" style="border:0">${IC.factory}<span class="k">Factory Area</span><span class="v">${value(f.area)}</span></div>
-        <div class="ov-row">${IC.user}<span class="k">Employees</span><span class="v">${value(f.employees)}</span></div>
-        <div class="ov-row">${IC.medal}<span class="k">Established</span><span class="v">${value(f.founded)}</span></div>
-        <div class="ov-row">${IC.globe}<span class="k">Main Region</span><span class="v">${value(f.region)}</span></div>
+        <div class="ov-row" style="border:0">${IC.factory}<span class="k">${T('sp.factoryArea')}</span><span class="v">${esc(value(f.area))}</span></div>
+        <div class="ov-row">${IC.user}<span class="k">${T('sp.employees')}</span><span class="v">${esc(value(f.employees))}</span></div>
+        <div class="ov-row">${IC.medal}<span class="k">${T('sp.established')}</span><span class="v">${esc(value(f.founded))}</span></div>
+        <div class="ov-row">${IC.globe}<span class="k">${T('sp.mainRegion')}</span><span class="v">${esc(TR(value(f.region)))}</span></div>
       </div>
-      <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>Contact this factory</button>
+      <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>${T('sp.contactFactory')}</button>
     </aside>
   </div>`;
 
@@ -130,22 +138,24 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     entry.href=`admin-supplier.html?id=${encodeURIComponent(dbFactory.id)}`;
     entry.hidden=false;
   }
-  wireAdminEntry();
+    wireAdminEntry();
 
   // interactions
-  const facFav=document.querySelector('[data-fac-fav]'); facFav.classList.toggle('on',Store.isSaved(f.id));
-  facFav.addEventListener('click',()=>{const on=Store.toggleSaved(f.id);facFav.classList.toggle('on',on);toast(on?'Supplier saved':'Removed');});
-  document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast('Factory link copied');});
-  document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',()=>toast(b.dataset.toast)));
-  document.querySelectorAll('[data-contact-factory]').forEach(b=>b.addEventListener('click',()=>{
-    window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
-      `Supplier: ${f.name}`,
-      `Location: ${value(f.loc)}`,
-      `MOQ: ${value(f.moq)}`,
-      `Lead time: ${value(f.lead)}`,
-    ]});
-  }));
-  window.ARCANA_wireCards(document.querySelector('.prod-grid'));
+    const facFav=document.querySelector('[data-fac-fav]'); facFav.classList.toggle('on',Store.isSaved(f.id));
+    facFav.addEventListener('click',()=>{const on=Store.toggleSaved(f.id);facFav.classList.toggle('on',on);toast(on?T('sp.saved'):T('sp.removed'));});
+    document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('sp.linkCopied'));});
+    document.querySelectorAll('[data-contact-factory]').forEach(b=>b.addEventListener('click',()=>{
+      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
+        `${T('sp.emailSupplier')}: ${f.name}`,
+        `${T('sp.emailLocation')}: ${location}`,
+        `${T('MOQ')}: ${value(f.moq)}`,
+        `${T('sp.emailLead')}: ${value(f.lead)}`,
+      ]});
+    }));
+    window.ARCANA_wireCards(document.querySelector('.prod-grid'));
+  }
+  render();
+  window.ARCANA_onLang(render);
 };
 </script>
 </body>
