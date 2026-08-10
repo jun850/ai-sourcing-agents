@@ -204,7 +204,7 @@ function markSVG(color){return `<svg class="mark" viewBox="0 0 2000 2000" fill="
 </svg>`;}
 
 function brand(){
-  return `<a class="brand" href="${HOME}" aria-label="Fashpedia">${markSVG()}<span class="brand-name"><span class="word">Fashpedia</span></span></a>`;
+  return `<a class="brand" href="${HOME}" aria-label="Atelix">${markSVG()}<span class="brand-name"><span class="word">Atelix</span></span></a>`;
 }
 const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <label class="visually-hidden" for="site-search">Search</label>${IC.search}
@@ -298,12 +298,12 @@ function buildFooter(){
   el.innerHTML=`
   <footer class="site-footer"><div class="sf-in">
     <div class="sf-brand">
-      <div class="sf-word">Fashpedia <small>by ARCANA</small></div>
+      <div class="sf-word">Atelix <small>by ARCANA</small></div>
       <p data-i18n="ft.tagline">The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.</p>
     </div>
     <div class="sf-col">
-      <h5 data-i18n="ft.company">Fashpedia</h5>
-      <a href="${building}" data-i18n="ft.about">About Fashpedia</a>
+      <h5 data-i18n="ft.company">Atelix</h5>
+      <a href="${building}" data-i18n="ft.about">About Atelix</a>
       <a href="${building}" data-i18n="ft.careers">Careers</a>
       <a href="${building}" data-i18n="ft.blog">Blog</a>
       <a href="${building}" data-i18n="ft.b2b">B2B sourcing</a>
@@ -316,7 +316,7 @@ function buildFooter(){
       <a href="${building}" data-i18n="ft.shipping">Shipping</a>
       <a href="${building}" data-i18n="ft.protection">Buyer protection</a>
       <h5 style="margin-top:24px" data-i18n="ft.sell">Sell</h5>
-      <a href="${building}" data-i18n="ft.sellon">Sell on Fashpedia</a>
+      <a href="${building}" data-i18n="ft.sellon">Sell on Atelix</a>
       <a href="${building}" data-i18n="ft.dashboard">Supplier dashboard</a>
     </div>
     <div class="sf-col">
@@ -332,7 +332,7 @@ function buildFooter(){
     </div>
   </div>
   <div class="sf-bottom">
-    <span>© 2009 – 2026, Fashpedia <small>by ARCANA</small>. <span data-i18n="ft.rights">All rights reserved.</span></span>
+    <span>© 2009 – 2026, Atelix <small>by ARCANA</small>. <span data-i18n="ft.rights">All rights reserved.</span></span>
     <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
       <button data-lang="en">English</button>
       <button data-lang="ja">日本語</button>
@@ -939,11 +939,11 @@ async function mergeSavedOnce(uid){
 const I18N={
   en:{
     'nav.categories':'Categories','search.ph':'Search fabrics, trims, accessories, factories…','search.refine':'Add keywords to refine your photo search…','auth.login':'Log in','auth.signup':'Sign up',
-    'tb.sell':'Sell on Fashpedia — reach 50,000+ verified buyers','tb.about':'About','tb.help':'Help','tb.saved':'Saved',
+    'tb.sell':'Sell on Atelix — reach 50,000+ verified buyers','tb.about':'About','tb.help':'Help','tb.saved':'Saved',
     'ft.tagline':'The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.',
-    'ft.company':'Fashpedia','ft.about':'About Fashpedia','ft.careers':'Careers','ft.blog':'Blog','ft.b2b':'B2B sourcing','ft.trustsafety':'Trust & safety',
+    'ft.company':'Atelix','ft.about':'About Atelix','ft.careers':'Careers','ft.blog':'Blog','ft.b2b':'B2B sourcing','ft.trustsafety':'Trust & safety',
     'ft.buy':'Buy','ft.sourcing':'Sourcing guide','ft.payments':'Payments','ft.shipping':'Shipping','ft.protection':'Buyer protection',
-    'ft.sell':'Sell','ft.sellon':'Sell on Fashpedia','ft.dashboard':'Supplier dashboard',
+    'ft.sell':'Sell','ft.sellon':'Sell on Atelix','ft.dashboard':'Supplier dashboard',
     'ft.help':'Help & Guides','ft.helpcenter':'Help center','ft.terms':'Terms & conditions','ft.privacy':'Privacy policy','ft.contact':'Contact us',
     'ft.follow':'Follow us','ft.rights':'All rights reserved.',
     'home.curated':'Curated for you','home.viewall':'View all products','home.tab.all':'All','home.tab.fabrics':'Fabrics','home.tab.accessories':'Accessories','home.tab.trims':'Trims',
@@ -960,17 +960,17 @@ const I18N={
     'sort.rec':'Recommended','sort.new':'Newest','sort.moq':'MOQ: Low','sort.price':'Price: Low',
     'noun.fabrics':'fabric options','noun.accessories':'accessory options','noun.trims':'trim options','noun.yarns':'yarn & thread options','noun.oem':'service packages',
     'seo.h1':'Wholesale Fabric & Garment Sourcing for Fashion Brands',
-    'seo.p1':'Fashpedia by ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.',
+    'seo.p1':'Atelix by ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.',
     'seo.h2':'Source from verified factories across Asia and beyond',
-    'seo.p2':'Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, Fashpedia’s OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.'
+    'seo.p2':'Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, Atelix’s OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.'
   },
   ja:{
     'nav.categories':'カテゴリー','search.ph':'生地・付属品・工場を検索…','search.refine':'キーワードで写真検索を絞り込む…','auth.login':'ログイン','auth.signup':'新規登録',
-    'tb.sell':'Fashpediaで販売 — 5万社以上の認証バイヤーへ','tb.about':'会社概要','tb.help':'ヘルプ','tb.saved':'保存済み',
+    'tb.sell':'Atelixで販売 — 5万社以上の認証バイヤーへ','tb.about':'会社概要','tb.help':'ヘルプ','tb.saved':'保存済み',
     'ft.tagline':'ブランドオーナーと認証済みの生地工場・OEM工場をつなぐ卸売マーケットプレイス。',
-    'ft.company':'Fashpedia','ft.about':'Fashpediaについて','ft.careers':'採用情報','ft.blog':'ブログ','ft.b2b':'B2B調達','ft.trustsafety':'安全性と信頼',
+    'ft.company':'Atelix','ft.about':'Atelixについて','ft.careers':'採用情報','ft.blog':'ブログ','ft.b2b':'B2B調達','ft.trustsafety':'安全性と信頼',
     'ft.buy':'購入','ft.sourcing':'調達ガイド','ft.payments':'お支払い','ft.shipping':'配送','ft.protection':'バイヤー保護',
-    'ft.sell':'販売','ft.sellon':'Fashpediaで販売','ft.dashboard':'サプライヤー管理画面',
+    'ft.sell':'販売','ft.sellon':'Atelixで販売','ft.dashboard':'サプライヤー管理画面',
     'ft.help':'ヘルプ・ガイド','ft.helpcenter':'ヘルプセンター','ft.terms':'利用規約','ft.privacy':'プライバシーポリシー','ft.contact':'お問い合わせ',
     'ft.follow':'フォローする','ft.rights':'無断転載を禁じます。',
     'home.curated':'あなたへのおすすめ','home.viewall':'すべての商品を見る','home.tab.all':'すべて','home.tab.fabrics':'生地','home.tab.accessories':'付属品','home.tab.trims':'トリム',
@@ -987,17 +987,17 @@ const I18N={
     'sort.rec':'おすすめ','sort.new':'新着','sort.moq':'最小ロット: 少','sort.price':'価格: 安い',
     'noun.fabrics':'生地','noun.accessories':'付属品','noun.trims':'トリム','noun.yarns':'糸・スレッド','noun.oem':'サービスパッケージ',
     'seo.h1':'ファッションブランドのための生地・縫製の卸売調達',
-    'seo.p1':'Fashpedia by ARCANAは、アパレルブランドが認証済みの工場から高品質な生地・付属品・OEMサービスを直接調達できるB2Bマーケットプレイスです。組成・目付(GSM)・最小ロット・納期で比較し、見積依頼またはカートに追加して安全に決済できます。すべてのサプライヤーは本人・ライセンス・生産能力が認証済みです。',
+    'seo.p1':'Atelix by ARCANAは、アパレルブランドが認証済みの工場から高品質な生地・付属品・OEMサービスを直接調達できるB2Bマーケットプレイスです。組成・目付(GSM)・最小ロット・納期で比較し、見積依頼またはカートに追加して安全に決済できます。すべてのサプライヤーは本人・ライセンス・生産能力が認証済みです。',
     'seo.h2':'アジアを中心とした認証工場から調達',
-    'seo.p2':'中国の浙江・広東・江蘇・山東をはじめ、日本・インド・ベトナム・トルコの工場と直接つながります。小ロットのサンプリングからプライベートラベル、カラーマッチング、量産まで、FashpediaのOEMパッケージが糸から完成品まで対応。T/T・PayPalによる安全な決済と120カ国以上への配送で、調達をシンプルに。'
+    'seo.p2':'中国の浙江・広東・江蘇・山東をはじめ、日本・インド・ベトナム・トルコの工場と直接つながります。小ロットのサンプリングからプライベートラベル、カラーマッチング、量産まで、AtelixのOEMパッケージが糸から完成品まで対応。T/T・PayPalによる安全な決済と120カ国以上への配送で、調達をシンプルに。'
   },
   zh:{
     'nav.categories':'分类','search.ph':'搜索面料、辅料、工厂…','search.refine':'输入关键词细化图片搜索…','auth.login':'登录','auth.signup':'注册',
-    'tb.sell':'在 Fashpedia 上销售 — 触达 5 万+ 认证买家','tb.about':'关于','tb.help':'帮助','tb.saved':'收藏',
+    'tb.sell':'在 Atelix 上销售 — 触达 5 万+ 认证买家','tb.about':'关于','tb.help':'帮助','tb.saved':'收藏',
     'ft.tagline':'连接品牌方与认证面料厂及 OEM 工厂的批发采购平台。',
-    'ft.company':'Fashpedia','ft.about':'关于 Fashpedia','ft.careers':'招聘','ft.blog':'博客','ft.b2b':'B2B 采购','ft.trustsafety':'信任与安全',
+    'ft.company':'Atelix','ft.about':'关于 Atelix','ft.careers':'招聘','ft.blog':'博客','ft.b2b':'B2B 采购','ft.trustsafety':'信任与安全',
     'ft.buy':'采购','ft.sourcing':'采购指南','ft.payments':'支付','ft.shipping':'物流','ft.protection':'买家保障',
-    'ft.sell':'销售','ft.sellon':'在 Fashpedia 上销售','ft.dashboard':'供应商后台',
+    'ft.sell':'销售','ft.sellon':'在 Atelix 上销售','ft.dashboard':'供应商后台',
     'ft.help':'帮助与指南','ft.helpcenter':'帮助中心','ft.terms':'服务条款','ft.privacy':'隐私政策','ft.contact':'联系我们',
     'ft.follow':'关注我们','ft.rights':'版权所有。',
     'home.curated':'为你精选','home.viewall':'查看全部商品','home.tab.all':'全部','home.tab.fabrics':'面料','home.tab.accessories':'辅料','home.tab.trims':'织带',
@@ -1014,9 +1014,9 @@ const I18N={
     'sort.rec':'推荐','sort.new':'最新','sort.moq':'起订量: 低','sort.price':'价格: 低',
     'noun.fabrics':'面料','noun.accessories':'辅料','noun.trims':'织带','noun.yarns':'纱线与缝纫线','noun.oem':'服务套餐',
     'seo.h1':'面向时尚品牌的面料与成衣批发采购',
-    'seo.p1':'Fashpedia by ARCANA 是一个 B2B 采购平台，品牌方可直接向认证工厂采购优质面料、辅料及全包 OEM 服务。按成分、克重(GSM)、起订量与交期进行比较，然后索取报价或加入购物车并安全支付。每家供应商均通过身份、资质与产能认证，让你放心下单。',
+    'seo.p1':'Atelix by ARCANA 是一个 B2B 采购平台，品牌方可直接向认证工厂采购优质面料、辅料及全包 OEM 服务。按成分、克重(GSM)、起订量与交期进行比较，然后索取报价或加入购物车并安全支付。每家供应商均通过身份、资质与产能认证，让你放心下单。',
     'seo.h2':'从亚洲及全球认证工厂采购',
-    'seo.p2':'连接中国浙江、广东、江苏、山东等制造重镇，以及日本、印度、越南和土耳其的合作工厂。无论是小起订量打样、贴牌生产、定制配色，还是带在线质检的批量生产，Fashpedia 的 OEM 套餐都能让你的系列从纱线到成衣一站完成。T/T 与 PayPal 安全支付、透明贸易条款、覆盖 120+ 国家的物流，让采购井然有序。'
+    'seo.p2':'连接中国浙江、广东、江苏、山东等制造重镇，以及日本、印度、越南和土耳其的合作工厂。无论是小起订量打样、贴牌生产、定制配色，还是带在线质检的批量生产，Atelix 的 OEM 套餐都能让你的系列从纱线到成衣一站完成。T/T 与 PayPal 安全支付、透明贸易条款、覆盖 120+ 国家的物流，让采购井然有序。'
   }
 };
 function applyLang(lang){
