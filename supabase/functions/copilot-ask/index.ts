@@ -1,11 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Sourcing Copilot's LLM layer. The deterministic match engine (js/copilot.js)
+// Athelia's LLM layer. The deterministic match engine (js/copilot.js)
 // always runs client-side for free; this function only adds a natural-language
 // summary on top of matches it is GIVEN — it never invents products, prices,
 // certs, or suppliers, and it never returns matches of its own. That keeps the
-// trust-critical catalog facts entirely in ARCANA's own data, per DESIGN.md's
+// trust-critical catalog facts entirely in Atelix's own data, per DESIGN.md's
 // "specs before persuasion" rule.
 //
 // Auth + a per-user daily cap (30 calls or 128,000 tokens, whichever first)
@@ -18,7 +18,7 @@ const MAX_TOKENS = 128000;
 // silently downgrade the analysis path. GEMINI_API_KEY remains an Edge secret.
 const MODEL = "gemini-3.6-flash";
 
-const SYSTEM_PROMPT = `You are ARCANA's Sourcing Copilot, a calm procurement assistant inside a B2B fashion-sourcing marketplace. A brand-owner buyer described what they're sourcing; a deterministic engine already ranked verified catalog matches against that brief.
+const SYSTEM_PROMPT = `You are Atelix's Athelia, a calm procurement assistant inside a B2B fashion-sourcing marketplace. A brand-owner buyer described what they're sourcing; a deterministic engine already ranked verified catalog matches against that brief.
 
 Write ONE short paragraph (max 55 words, plain text, no markdown, no bullet points) summarizing the results for the buyer. Rules:
 - Reference ONLY the brief and matches given to you. Never invent materials, prices, GSM, MOQ, certifications, suppliers, or lead times beyond what is listed.

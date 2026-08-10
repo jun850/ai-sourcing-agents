@@ -1,4 +1,4 @@
-/* ARCANA async data seam — thin wrapper over window.supabaseClient.
+/* Atelix async data seam — thin wrapper over window.supabaseClient.
    Loaded via <script src> AFTER supabase-client.bundle.js on every page.
    Exposes window.ARCANA_API. All methods return Promises and resolve
    {data, error} shapes (mirroring supabase-js) so callers can check `error`. */

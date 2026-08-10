@@ -994,10 +994,10 @@
   .bo-head h1{font-size:24px}
 }
 
-/* ============ Sourcing Copilot ============ */
-/* Two-Signal Rule: the Copilot is a buyer/trust surface → green. Brass stays money-only. */
+/* ============ Athelia ============ */
+/* Two-Signal Rule: Athelia is a buyer/trust surface → green. Brass stays money-only. */
 
-/* -- Floating Copilot launcher: fleur icon at rest, expands to a centered ask-bar -- */
+/* -- Floating Athelia launcher: fleur icon at rest, expands to a centered ask-bar -- */
 .cop-fab{position:fixed;right:22px;bottom:22px;z-index:560}
 .cop-fab-btn{width:56px;height:56px;border-radius:50%;background:var(--green);color:#fff;
   display:flex;align-items:center;justify-content:center;box-shadow:0 8px 28px rgba(28,28,26,.28);
@@ -1118,7 +1118,7 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .cop-match.cop-reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.cop-match.cop-reveal{transition-duration:.01ms;transform:none}}
 
-/* -- Dashboard: demand copilot + listing drafter -- */
+/* -- Dashboard: Athelia demand + listing drafter -- */
 .cop-seller{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px}
 .cop-panel{border:1px solid var(--line);border-radius:14px;padding:20px 22px;background:#fff}
 .cop-panel .cph{display:flex;align-items:center;gap:11px;margin-bottom:4px}
@@ -1152,7 +1152,7 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .draft-apply{display:flex;gap:10px;margin-top:14px}
 @media(max-width:1100px){.cop-seller{grid-template-columns:1fr}}
 
-/* -- Copilot auth gate: shared "sign in for this" tone (green, not the
+/* -- Athelia auth gate: shared "sign in for this" tone (green, not the
    neutral gray of a plain empty state) on both the modal and the inline
    category.html panel, which both carry the .cop-invite class. -- */
 .cop-invite .ce-ic{background:var(--green-l)}
@@ -1182,7 +1182,7 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
   transition:opacity .26s cubic-bezier(.25,1,.5,1),transform .26s cubic-bezier(.25,1,.5,1)}
 .cop-gate-overlay.in .modal-box{opacity:1;transform:none}
 
-/* -- Search bar: "Ask Sourcing Copilot" row, distinct from plain keyword/
+/* -- Search bar: "Ask Athelia" row, distinct from plain keyword/
    supplier/product rows so it reads as the AI path, not another result. -- */
 .s-row.s-copilot{background:var(--green-l);margin-bottom:4px;transition:background .15s,outline-color .15s}
 .s-row.s-copilot:hover,.s-row.s-copilot.sel{background:var(--green-l);outline:2px solid var(--green);outline-offset:-2px}
@@ -1191,7 +1191,7 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .s-row.s-copilot .s-go{color:var(--green);transition:transform .15s}
 .s-row.s-copilot:hover .s-go{transform:translateX(2px)}
 
-/* -- Copilot results bar: daily usage + limit-reached states, revealed with
+/* -- Athelia results bar: daily usage + limit-reached states, revealed with
    a small fade+rise rather than popping in via [hidden] toggle. -- */
 .cop-usage{font-size:11.5px;font-weight:600;color:var(--muted);background:var(--bg);
   border:1px solid var(--line);border-radius:var(--radius-pill);padding:4px 10px;white-space:nowrap;

@@ -10,15 +10,15 @@ web
 
 ## Users
 
-ARCANA is a two-sided B2B marketplace serving two audiences roughly equally, with the buyer driving the money flow. The primary buyer is the apparel brand owner sourcing fabrics, trims, accessories, and OEM services from verified factories — working in a procurement/sourcing mindset, comparing materials on specs (composition, GSM, MOQ, lead time), price, and factory trust before committing budget. The supply side is fabric mills and OEM factories who list SKUs, run ads, upload verification/tax documents, and manage a storefront through the supplier dashboard. When a surface must choose, it optimizes for the brand-owner buyer: discovery, trust, and a seamless add-to-cart-to-payment path.
+Atelix is a two-sided B2B marketplace serving two audiences roughly equally, with the buyer driving the money flow. The primary buyer is the apparel brand owner sourcing fabrics, trims, accessories, and OEM services from verified factories — working in a procurement/sourcing mindset, comparing materials on specs (composition, GSM, MOQ, lead time), price, and factory trust before committing budget. The supply side is fabric mills and OEM factories who list SKUs, run ads, upload verification/tax documents, and manage a storefront through the supplier dashboard. When a surface must choose, it optimizes for the brand-owner buyer: discovery, trust, and a seamless add-to-cart-to-payment path.
 
 ## Product Purpose
 
-ARCANA is Tokopedia for fashion sourcing — fabrics, trims, accessories, and OEM service packages in one marketplace, targeted at brand owners as buyers. It exists to let a brand owner discover verified materials and factories, trust them through visible verification and clear specs, and buy directly: add fabrics or OEM packages straight to cart and pay, without the friction of traditional back-and-forth wholesale sourcing. Success is a completed sourcing-to-order journey — discovery → trust → cart → payment — with the supply side kept active enough (verified SKUs, complete profiles) that buyers always find trustworthy depth.
+Atelix is Tokopedia for fashion sourcing — fabrics, trims, accessories, and OEM service packages in one marketplace, targeted at brand owners as buyers. It exists to let a brand owner discover verified materials and factories, trust them through visible verification and clear specs, and buy directly: add fabrics or OEM packages straight to cart and pay, without the friction of traditional back-and-forth wholesale sourcing. Success is a completed sourcing-to-order journey — discovery → trust → cart → payment — with the supply side kept active enough (verified SKUs, complete profiles) that buyers always find trustworthy depth.
 
 ## Brand Personality
 
-Modern, minimal, precise. The voice is calm and exact, never loud or salesy. Every screen should make a complex, high-stakes procurement decision feel organized and under control — the dominant emotion is calm control: sourcing is inherently complex, and ARCANA's job is to make it feel seamless, clear, and manageable. Warmth and craft come through material photography and typographic care, not through decoration or marketing energy.
+Modern, minimal, precise. The voice is calm and exact, never loud or salesy. Every screen should make a complex, high-stakes procurement decision feel organized and under control — the dominant emotion is calm control: sourcing is inherently complex, and Atelix's job is to make it feel seamless, clear, and manageable. Warmth and craft come through material photography and typographic care, not through decoration or marketing energy.
 
 ## Anti-references
 

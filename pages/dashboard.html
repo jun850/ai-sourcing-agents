@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supplier Dashboard — ARCANA</title>
-<meta name="description" content="Manage your ARCANA factory storefront, SKUs, orders and verification.">
+<title>Supplier Dashboard — Atelix</title>
+<meta name="description" content="Manage your Atelix factory storefront, SKUs, orders and verification.">
 <meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -32,16 +32,16 @@
         </div>
       </section>
 
-      <!-- SELLER COPILOT: demand signals + AI listing drafter -->
-      <section class="cop-seller" aria-label="Seller Copilot">
+      <!-- Athelia: demand signals + AI listing drafter -->
+      <section class="cop-seller" aria-label="Athelia for suppliers">
         <div class="cop-panel">
-          <div class="cph"><span class="cop-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Demand Copilot</h3></div>
+          <div class="cph"><span class="cop-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Athelia Demand</h3></div>
           <p class="cpdesc">Recent buyer briefs from the marketplace, matched against your catalog so you can see what to list next.</p>
           <div id="demandList"></div>
         </div>
         <div class="cop-panel drafter">
           <div class="cph"><span class="cop-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg></span><h3>AI Listing Drafter</h3></div>
-          <p class="cpdesc">Describe a product in plain words. The Copilot drafts a structured SKU you can review and publish.</p>
+          <p class="cpdesc">Describe a product in plain words. Athelia drafts a structured SKU you can review and publish.</p>
           <form data-draft-form>
             <label class="visually-hidden" for="draftInput">Describe the product to list</label>
             <textarea id="draftInput" rows="3" placeholder="e.g. Recycled polyester twill, 180 gsm, OEM-ready, $3.60/m, MOQ 500"></textarea>
@@ -241,19 +241,19 @@ window.ARCANA_PAGE=async function({toast}){
   // ---- Gate: signed in, role=seller, and linked to a factory (auto-provisioned at signup) ----
   const profile=await api.getSessionProfile();
   if(!profile){
-    showGate('Log in to continue','Sign in to your ARCANA seller account to access the dashboard.',
+    showGate('Log in to continue','Sign in to your Atelix seller account to access the dashboard.',
       '<a class="btn btn-green" href="login.html?next=dashboard.html" style="margin-top:14px;display:inline-block">Log in</a>');
     return;
   }
   if(profile.role!=='seller'){
-    showGate('Seller access only','This dashboard is for verified ARCANA suppliers. Sign up as a factory or mill to get set up.',
+    showGate('Seller access only','This dashboard is for verified Atelix suppliers. Sign up as a factory or mill to get set up.',
       '<a class="btn btn-green" href="sell.html" style="margin-top:14px;display:inline-block">Learn about selling</a>');
     return;
   }
   const factory=await api.getMyFactory();
   if(!factory){
-    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact ARCANA to get set up.',
-      '<a class="link" href="mailto:info@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact ARCANA</a>');
+    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact Atelix to get set up.',
+      '<a class="link" href="mailto:info@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact Atelix</a>');
     return;
   }
   main.hidden=false;
@@ -263,7 +263,7 @@ window.ARCANA_PAGE=async function({toast}){
     const banner=document.createElement('div');
     banner.className='panel';
     banner.style.cssText='margin-bottom:20px;padding:14px 18px;background:var(--panel);border:1px solid var(--gold-d);border-radius:var(--radius);font-size:13.5px;color:var(--ink)';
-    banner.innerHTML=`<b>Verification pending</b> — your factory profile is under review by ARCANA. You can set up SKUs and your profile now; your listings go live once verified.`;
+    banner.innerHTML=`<b>Verification pending</b> — your factory profile is under review by Atelix. You can set up SKUs and your profile now; your listings go live once verified.`;
     main.querySelector('.dash').prepend(banner);
   }
 
@@ -427,11 +427,11 @@ window.ARCANA_PAGE=async function({toast}){
 
   const Cop=window.ARCANA_Copilot;
   const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
-  // Demand Copilot matches buyer briefs against this seller's real catalog (SELLER
+  // Athelia Demand matches buyer briefs against this seller's real catalog (SELLER
   // used to be a hardcoded /greenknit/i regex — now derived from the linked factory).
   const SELLER=new RegExp(String(factory.name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i');
 
-  // ---- Demand Copilot: buyer briefs matched to this catalog ----
+  // ---- Athelia Demand: buyer briefs matched to this catalog ----
   const dl=document.getElementById('demandList');
   if(dl && Cop){
     const label={fulfil:'You can fulfil',partial:'Partial fit',gap:'Catalog gap'};

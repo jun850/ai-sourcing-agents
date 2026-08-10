@@ -1,4 +1,4 @@
-/* ARCANA catalog — updated with real verified suppliers from CSV */
+/* Atelix catalog — updated with real verified suppliers from CSV */
 window.ARCANA_PRODUCTS = [
   {id:'FAB-100',name:'Lyocell Tencel Lycra Knitted Reactive Animal Print Jersey Fabric',img:'tencel-knit',comp:'93.5% Lyocell Tencel 6.5% Lycra',spec:'210/220 gsm',price:8.80,unit:'m',moq:'300 m',seller:'Shaoxing Shanning Textile',loc:'Keqiao, Shaoxing, Zhejiang',badge:'oem',cat:'fabrics',lt:'30 days',certs:[],country:'China'},
   {id:'FAB-101',name:'Knitted Jersey 55% Linen 45% Cotton 170GSM Blended Fabric For Summer Wear',img:'linen-plain',comp:'55% Linen 45% Cotton',spec:'170/180gsm',price:6.20,unit:'m',moq:'300 m',seller:'Shaoxing Shanning Textile',loc:'Keqiao, Shaoxing, Zhejiang',badge:'oem',cat:'fabrics',lt:'30 days',certs:[],country:'China'},
@@ -136,10 +136,10 @@ window.ARCANA_TERMS = {
       'Start shopping':'買い物を始める','Recommended for you':'あなたへのおすすめ','Your wishlist is empty':'お気に入りリストは空です','Wishlist':'お気に入りリスト',
       'Save fabrics, trims and OEM packages you like — they’ll show up here.':'気になる生地・トリム・OEMパッケージを保存すると、ここに表示されます。','View wishlist':'お気に入りリストを見る',
       'Nothing to check out':'決済する商品がありません','Browse verified fabrics and OEM services to start your next collection.':'認証生地やOEMサービスを見て、次のコレクションを始めましょう。','Your cart is empty.':'カートは空です。',
-      'Add-on services':'追加サービス','ARCANA QC Inspection':'ARCANA 品質検査','Independent quality check by ARCANA before dispatch':'出荷前にARCANAが独立して品質検査','Shipment Insurance':'貨物保険',
+      'Add-on services':'追加サービス','Atelix QC Inspection':'Atelix 品質検査','Independent quality check by Atelix before dispatch':'出荷前にAtelixが独立して品質検査','Shipment Insurance':'貨物保険',
       'Covers loss or damage in transit':'輸送中の紛失・破損を補償','QC Inspection (5%)':'QC検査 (5%)','Insurance (1%)':'保険 (1%)','of order total':'注文合計の','recommended':'推奨',
       'Hello! Thanks for your interest — how can we help with your order?':'こんにちは！お問い合わせありがとうございます。ご注文についてお手伝いできることはありますか？','Message sent':'メッセージを送信しました',
-      'Suppliers':'サプライヤー','Products':'商品','Popular on ARCANA':'ARCANAで人気','Verified suppliers':'認証サプライヤー',
+      'Suppliers':'サプライヤー','Products':'商品','Popular on Atelix':'Atelixで人気','Verified suppliers':'認証サプライヤー',
       'See all results for':'検索結果をすべて見る:','Visual matches':'画像マッチ','demo':'デモ','See all visual matches':'画像マッチをすべて見る',
       'Search by fabric photo':'生地写真で検索','Drop an image here, paste it, or':'画像をドロップ、貼り付け、または','browse':'ファイルを選択',
       'Kept only for this tab — cleared on refresh or close':'このタブ内のみ保存 — 更新または閉じると消去されます',
@@ -147,7 +147,7 @@ window.ARCANA_TERMS = {
       'Photo':'写真','Remove photo':'写真を削除','Quote':'見積り',
       'No matches in the catalog yet':'一致する結果がありません','Try a material, product or factory name':'素材名・商品名・工場名でお試しください',
       'That file is not an image':'画像ファイルではありません','Could not read that image':'画像を読み込めませんでした',
-      'Sourcing Copilot':'調達コパイロット','Recent brief':'最近のブリーフ','Try asking':'こう聞いてみる','Ask Copilot':'コパイロットに聞く',
+      'Athelia':'Athelia','Recent brief':'最近のブリーフ','Try asking':'こう聞いてみる','Ask Athelia':'Atheliaに聞く',
       "Describe what you're sourcing…":'調達したいものを言葉で説明…',
       'noun.fabrics':'生地','noun.accessories':'付属品','noun.trims':'トリム','noun.yarns':'糸・スレッド','noun.oem':'サービスパッケージ',
       'cat.verified':'認証サプライヤー'
@@ -204,10 +204,10 @@ window.ARCANA_TERMS = {
       'Start shopping':'开始购物','Recommended for you':'为你推荐','Your wishlist is empty':'心愿单是空的','Wishlist':'心愿单',
       'Save fabrics, trims and OEM packages you like — they’ll show up here.':'收藏喜欢的面料、辅料和OEM套餐，它们会显示在这里。','View wishlist':'查看心愿单',
       'Nothing to check out':'没有可结算的商品','Browse verified fabrics and OEM services to start your next collection.':'浏览认证面料与OEM服务，开启你的下一个系列。','Your cart is empty.':'购物车是空的。',
-      'Add-on services':'增值服务','ARCANA QC Inspection':'ARCANA 质检','Independent quality check by ARCANA before dispatch':'发货前由ARCANA独立质检','Shipment Insurance':'运输保险',
+      'Add-on services':'增值服务','Atelix QC Inspection':'Atelix 质检','Independent quality check by Atelix before dispatch':'发货前由Atelix独立质检','Shipment Insurance':'运输保险',
       'Covers loss or damage in transit':'承保运输中的丢失或损坏','QC Inspection (5%)':'质检 (5%)','Insurance (1%)':'保险 (1%)','of order total':'占订单总额','recommended':'推荐',
       'Hello! Thanks for your interest — how can we help with your order?':'您好！感谢您的关注。请问有什么可以帮您？','Message sent':'消息已发送',
-      'Suppliers':'供应商','Products':'商品','Popular on ARCANA':'ARCANA 热门','Verified suppliers':'认证供应商',
+      'Suppliers':'供应商','Products':'商品','Popular on Atelix':'Atelix 热门','Verified suppliers':'认证供应商',
       'See all results for':'查看全部结果：','Visual matches':'图像匹配','demo':'演示','See all visual matches':'查看全部图像匹配',
       'Search by fabric photo':'按面料照片搜索','Drop an image here, paste it, or':'拖入图片、粘贴，或','browse':'浏览文件',
       'Kept only for this tab — cleared on refresh or close':'仅保存在当前标签页 — 刷新或关闭后清除',
@@ -215,7 +215,7 @@ window.ARCANA_TERMS = {
       'Photo':'照片','Remove photo':'移除照片','Quote':'询价',
       'No matches in the catalog yet':'暂无匹配结果','Try a material, product or factory name':'试试材料、商品或工厂名称',
       'That file is not an image':'该文件不是图片','Could not read that image':'无法读取该图片',
-      'Sourcing Copilot':'采购副驾','Recent brief':'最近的需求','Try asking':'试试这样问','Ask Copilot':'询问副驾',
+      'Athelia':'Athelia','Recent brief':'最近的需求','Try asking':'试试这样问','Ask Athelia':'询问 Athelia',
       "Describe what you're sourcing…":'用一句话描述你要采购什么…',
       'noun.fabrics':'面料','noun.accessories':'辅料','noun.trims':'织带','noun.yarns':'纱线与缝纫线','noun.oem':'服务套餐',
       'cat.verified':'认证供应商'

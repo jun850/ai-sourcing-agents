@@ -62,11 +62,11 @@ Deno.serve(async (req) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: Deno.env.get("RESEND_FROM") || "ARCANA Orders <onboarding@resend.dev>",
+      from: Deno.env.get("RESEND_FROM") || "Atelix Orders <onboarding@resend.dev>",
       to: [buyerEmail],
       subject: `Order ${orderNo} — ${label}`,
       html: `<p>Hi ${buyerName || "there"},</p>` +
-        `<p>Your ARCANA order <b>${orderNo}</b> status has been updated to <b>${label}</b>.</p>` +
+        `<p>Your Atelix order <b>${orderNo}</b> status has been updated to <b>${label}</b>.</p>` +
         (note ? `<p>Note: ${note}</p>` : "") +
         `<p>Total: US$${Number(total || 0).toFixed(2)}</p>` +
         `<p><a href="${siteUrl}/pages/order.html?no=${orderNo}">View your order</a></p>`,

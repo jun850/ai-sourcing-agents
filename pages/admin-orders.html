@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Users &amp; Orders — ARCANA Admin</title>
-<meta name="description" content="Admin: browse every account on ARCANA and manage order status.">
+<title>Users &amp; Orders — Atelix Admin</title>
+<meta name="description" content="Admin: browse every account on Atelix and manage order status.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -17,7 +17,7 @@
 <main class="wrap" id="adminMain" style="padding-top:24px;padding-bottom:40px" hidden>
   <div class="acct-head">
     <h1>Users &amp; Orders</h1>
-    <p class="sub">Every account on ARCANA. Click a user to see their orders and update status — every change emails the buyer.</p>
+    <p class="sub">Every account on Atelix. Click a user to see their orders and update status — every change emails the buyer.</p>
   </div>
 
   <section class="panel" style="padding:0;overflow:hidden;margin-bottom:20px">
@@ -37,7 +37,7 @@
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:20px 24px 0">
       <div>
         <h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Orders</h2>
-        <p class="muted" id="ordersFilterLabel" style="font-size:12.5px;margin-top:4px">Every order on ARCANA.</p>
+        <p class="muted" id="ordersFilterLabel" style="font-size:12.5px;margin-top:4px">Every order on Atelix.</p>
       </div>
       <button class="btn btn-out" type="button" id="clearUserFilter" style="padding:8px 14px;font-size:12.5px" hidden>Show all orders</button>
     </div>
@@ -103,12 +103,12 @@ window.ARCANA_PAGE=async function({toast}){
 
   const profile=await api.getSessionProfile();
   if(!profile){
-    showGate('Log in to continue','Sign in to your ARCANA admin account.',
+    showGate('Log in to continue','Sign in to your Atelix admin account.',
       '<a class="btn btn-green" href="login.html?next=admin-orders.html" style="margin-top:14px;display:inline-block">Log in</a>');
     return;
   }
   if(profile.role!=='admin'){
-    showGate('Admin access only','This page is restricted to ARCANA admins.', '');
+    showGate('Admin access only','This page is restricted to Atelix admins.', '');
     return;
   }
   main.hidden=false;
@@ -158,7 +158,7 @@ window.ARCANA_PAGE=async function({toast}){
   }
   document.getElementById('clearUserFilter').addEventListener('click',()=>{
     activeUserId=null;
-    document.getElementById('ordersFilterLabel').textContent='Every order on ARCANA.';
+    document.getElementById('ordersFilterLabel').textContent='Every order on Atelix.';
     document.getElementById('clearUserFilter').hidden=true;
     applyOrderFilter();
   });

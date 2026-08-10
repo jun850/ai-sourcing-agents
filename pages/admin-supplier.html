@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Manage Supplier — ARCANA Admin</title>
-<meta name="description" content="Admin: manage a supplier factory profile and product catalog on ARCANA.">
+<title>Manage Supplier — Atelix Admin</title>
+<meta name="description" content="Admin: manage a supplier factory profile and product catalog on Atelix.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -143,12 +143,12 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
 
   const profile=await api.getSessionProfile();
   if(!profile){
-    showGate('Log in to continue','Sign in to your ARCANA admin account.',
+    showGate('Log in to continue','Sign in to your Atelix admin account.',
       `<a class="btn btn-green" href="login.html?next=${encodeURIComponent('admin-supplier.html'+location.search)}" style="margin-top:14px;display:inline-block">Log in</a>`);
     return;
   }
   if(profile.role!=='admin'){
-    showGate('Admin access only','This page is restricted to ARCANA admins.');
+    showGate('Admin access only','This page is restricted to Atelix admins.');
     return;
   }
   if(!factoryId){

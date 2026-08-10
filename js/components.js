@@ -1,4 +1,4 @@
-/* ARCANA shared layer: stores, header/footer, toast, full interaction wiring */
+/* Atelix shared layer: stores, header/footer, toast, full interaction wiring */
 (function(){
 'use strict';
 
@@ -257,7 +257,7 @@ function accountMenu(s){
   const initials = s.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
   const av = s.avatarUrl ? `<img src="${s.avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : initials;
   const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
-  const roleLabel = s.role==='seller' ? 'Factory · Seller' : s.role==='admin' ? 'ARCANA · Admin' : 'Brand Owner · Buyer';
+  const roleLabel = s.role==='seller' ? 'Factory · Seller' : s.role==='admin' ? 'Atelix · Admin' : 'Brand Owner · Buyer';
   const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Users &amp; orders</a>` : '';
   return `<div class="acct" data-acct>
     <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${av}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
@@ -407,7 +407,7 @@ async function contactEmail({subjectPrefix, bodyLines}){
 }
 window.ARCANA_contactEmail = contactEmail;
 
-/* ---------- floating Sourcing Copilot launcher (buyer surfaces) ---------- */
+/* ---------- floating Athelia launcher (buyer surfaces) ---------- */
 function buildCopilotFab(){
   if(!window.ARCANA_Copilot) return;
   const s=Store.session();
@@ -422,14 +422,14 @@ function buildCopilotFab(){
             'Warm brushed wool for a winter flannel shirt'];
   const wrap=document.createElement('div'); wrap.className='cop-fab';
   wrap.innerHTML=`
-    <button type="button" class="cop-fab-btn" aria-expanded="false" aria-haspopup="dialog" aria-label="${esc(t('Sourcing Copilot'))}">${markSVG()}</button>
-    <div class="cop-fab-panel" role="dialog" aria-label="${esc(t('Sourcing Copilot'))}" hidden>
+    <button type="button" class="cop-fab-btn" aria-expanded="false" aria-haspopup="dialog" aria-label="${esc(t('Athelia'))}">${markSVG()}</button>
+    <div class="cop-fab-panel" role="dialog" aria-label="${esc(t('Athelia'))}" hidden>
       <div class="cop-fab-pop" data-cop-pop></div>
       <form class="cop-fab-bar" data-cop-form>
         <span class="cfb-mark" aria-hidden="true">${markSVG()}</span>
         <label class="visually-hidden" for="copFabInput">${esc(t("Describe what you're sourcing…"))}</label>
         <input id="copFabInput" autocomplete="off" placeholder="${esc(t("Describe what you're sourcing…"))}">
-        <button class="cfb-go" type="submit" aria-label="${esc(t('Ask Copilot'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button class="cfb-go" type="submit" aria-label="${esc(t('Ask Athelia'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
     </div>`;
   document.body.appendChild(wrap);
@@ -465,9 +465,9 @@ function buildCopilotFab(){
   window.ARCANA_onLang(()=>{ input.placeholder=t("Describe what you're sourcing…"); if(!panel.hidden) renderPop(); });
 }
 
-/* ---------- Copilot auth gate: public users get a login/signup modal
+/* ---------- Athelia auth gate: public users get a login/signup modal
    instead of AI-matched results. Basic catalog search stays open to
-   everyone — only the Sourcing Copilot surface (parsed brief, ranked
+   everyone — only the Athelia surface (parsed brief, ranked
    verified matches, LLM summary) is a signed-in perk. The brief is always
    saved to localStorage BEFORE the gate opens, so login.html's ?next=
    round-trip lands the user straight back on their results. */
@@ -483,13 +483,13 @@ function ensureCopilotGate(){
     <div class="modal-box cop-gate cop-invite" role="dialog" aria-modal="true" aria-labelledby="cgTitle" aria-describedby="cgDesc">
       <button type="button" class="cop-gate-x" data-cg-close aria-label="${esc(t('Close'))}">&times;</button>
       <div class="cop-gate-art"><img src="${ASSET('copilot-gate.webp')}" alt="" width="168" height="168" loading="lazy"></div>
-      <h3 id="cgTitle">${esc(t('Sign in to use Sourcing Copilot'))}</h3>
-      <p id="cgDesc" class="muted">${esc(t("Copilot matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results."))}</p>
+      <h3 id="cgTitle">${esc(t('Sign in to use Athelia'))}</h3>
+      <p id="cgDesc" class="muted">${esc(t("Athelia matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results."))}</p>
       <div class="modal-actions" style="justify-content:center">
         <a class="btn btn-out" href="${P('login.html')}?next=${next}">${esc(t('Log in'))}</a>
         <a class="btn btn-green" href="${P('signup.html')}">${esc(t('Sign up free'))}</a>
       </div>
-      <button type="button" class="cop-gate-later" data-cg-close>${esc(t('Continue browsing without Copilot'))}</button>
+      <button type="button" class="cop-gate-later" data-cg-close>${esc(t('Continue browsing without Athelia'))}</button>
     </div>`;
   document.body.appendChild(wrap);
   let closeT = null;
@@ -543,14 +543,14 @@ function ensureDesignMatchModal(){
     <button type="button" class="dm-close" data-dm-close aria-label="Close">&times;</button>
     <div class="dm-mark">${IC.document}</div>
     <h2 id="dmTitle">Match a design to verified suppliers</h2>
-    <p id="dmDesc">Upload a tech pack, reference image, PDF, or PDF-compatible Illustrator file. ARCANA reads it into a sourcing brief, then matches OEM, fabric, and trim suppliers.</p>
+    <p id="dmDesc">Upload a tech pack, reference image, PDF, or PDF-compatible Illustrator file. Athelia reads it into a sourcing brief, then Atelix matches OEM, fabric, and trim suppliers.</p>
     <form data-dm-form>
       <input type="file" data-dm-files accept=".pdf,.ai,image/jpeg,image/png,image/webp" multiple hidden>
       <button type="button" class="dm-drop" data-dm-browse>
         ${IC.document}<span><b>Drop files here or browse</b><small>JPG, PNG, WebP, PDF, or Illustrator · up to 8 files</small></span>
       </button>
       <ul class="dm-files" data-dm-list aria-live="polite"></ul>
-      <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your ARCANA profile.</p>
+      <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your Atelix profile.</p>
       <div class="dm-actions"><button type="button" class="btn btn-out" data-dm-close>Cancel</button><button type="submit" class="btn btn-green" data-dm-submit disabled>Analyze design</button></div>
     </form>
   </section>`;
@@ -584,7 +584,7 @@ function ensureDesignMatchModal(){
     submit.disabled=false; submit.textContent='Analyze design';
     if(error || !data || !data.ok){
       const reason=(data&&data.reason)||(error&&error.message)||'analysis_failed';
-      const message={ai_pdf_export_required:'This Illustrator file needs a PDF export before ARCANA can read it.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'ARCANA could not read those files. Try a clearer PDF or image.';
+      const message={ai_pdf_export_required:'This Illustrator file needs a PDF export before Athelia can read it.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
       toast(message); return;
     }
     setDesignMatch(data); files=[]; renderFiles(); close();
@@ -671,7 +671,7 @@ function wireSearch(){
       <span class="s-pr">${price}</span></a>`; }
   function footRow(q,i){ opts.push(1); return `<a class="s-row s-foot" role="option" id="${optId(i)}" href="${kwHref(q)}">${IC.search}<span>${esc(t('See all results for'))} “${esc(q)}”</span>${IC.chevR}</a>`; }
 
-  /* --- Sourcing Copilot integration: a natural-language brief typed into the
+  /* --- Athelia integration: a natural-language brief typed into the
      same search box routes to the AI-matched Copilot flow instead of a plain
      keyword listing. Single/short keyword search stays open to everyone;
      only this Copilot path is auth-gated (window.ARCANA_requireCopilotAuth). --- */
@@ -690,7 +690,7 @@ function wireSearch(){
   function copilotRow(qv,i){
     opts.push(1);
     return `<a class="s-row s-copilot" role="option" id="${optId(i)}" href="${P('category.html')}?copilot=1" data-cop-ask="${esc(qv)}">
-      ${IC.spark}<span class="s-main"><span class="s-nm">${esc(t('Ask Sourcing Copilot'))}</span>
+      ${IC.spark}<span class="s-main"><span class="s-nm">${esc(t('Ask Athelia'))}</span>
       <span class="s-meta">${esc(t('AI-matched picks for'))} “${esc(qv)}”</span></span>${IC.chevR}</a>`;
   }
 
@@ -779,7 +779,7 @@ function wireSearch(){
     let html=''; opts=[]; let i=0;
     if(!q){
       if(img) html+=visualHTML(img), i=opts.length;
-      html+=`<div class="s-hd" role="presentation">${esc(t('Popular on ARCANA'))}</div>`;
+      html+=`<div class="s-hd" role="presentation">${esc(t('Popular on Atelix'))}</div>`;
       for(const k of POPULAR) html+=kwRow(k,'',i++);
       html+=`<div class="s-hd" role="presentation">${esc(t('Verified suppliers'))}</div>`;
       for(const f of FACT.slice(0,2)) html+=supRow(f,i++);
@@ -1051,7 +1051,7 @@ const I18N={
     'sort.rec':'Recommended','sort.new':'Newest','sort.moq':'MOQ: Low','sort.price':'Price: Low',
     'noun.fabrics':'fabric options','noun.accessories':'accessory options','noun.trims':'trim options','noun.yarns':'yarn & thread options','noun.oem':'service packages',
     'seo.h1':'Wholesale Fabric & Garment Sourcing for Fashion Brands',
-    'seo.p1':'Atelix by ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.',
+    'seo.p1':'Atelix is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics — cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester — on composition, GSM, minimum order quantity and lead time, then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.',
     'seo.h2':'Source from verified factories across Asia and beyond',
     'seo.p2':'Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, Atelix’s OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.'
   },
@@ -1078,7 +1078,7 @@ const I18N={
     'sort.rec':'おすすめ','sort.new':'新着','sort.moq':'最小ロット: 少','sort.price':'価格: 安い',
     'noun.fabrics':'生地','noun.accessories':'付属品','noun.trims':'トリム','noun.yarns':'糸・スレッド','noun.oem':'サービスパッケージ',
     'seo.h1':'ファッションブランドのための生地・縫製の卸売調達',
-    'seo.p1':'Atelix by ARCANAは、アパレルブランドが認証済みの工場から高品質な生地・付属品・OEMサービスを直接調達できるB2Bマーケットプレイスです。組成・目付(GSM)・最小ロット・納期で比較し、見積依頼またはカートに追加して安全に決済できます。すべてのサプライヤーは本人・ライセンス・生産能力が認証済みです。',
+    'seo.p1':'Atelixは、アパレルブランドが認証済みの工場から高品質な生地・付属品・OEMサービスを直接調達できるB2Bマーケットプレイスです。組成・目付(GSM)・最小ロット・納期で比較し、見積依頼またはカートに追加して安全に決済できます。すべてのサプライヤーは本人・ライセンス・生産能力が認証済みです。',
     'seo.h2':'アジアを中心とした認証工場から調達',
     'seo.p2':'中国の浙江・広東・江蘇・山東をはじめ、日本・インド・ベトナム・トルコの工場と直接つながります。小ロットのサンプリングからプライベートラベル、カラーマッチング、量産まで、AtelixのOEMパッケージが糸から完成品まで対応。T/T・PayPalによる安全な決済と120カ国以上への配送で、調達をシンプルに。'
   },
@@ -1105,7 +1105,7 @@ const I18N={
     'sort.rec':'推荐','sort.new':'最新','sort.moq':'起订量: 低','sort.price':'价格: 低',
     'noun.fabrics':'面料','noun.accessories':'辅料','noun.trims':'织带','noun.yarns':'纱线与缝纫线','noun.oem':'服务套餐',
     'seo.h1':'面向时尚品牌的面料与成衣批发采购',
-    'seo.p1':'Atelix by ARCANA 是一个 B2B 采购平台，品牌方可直接向认证工厂采购优质面料、辅料及全包 OEM 服务。按成分、克重(GSM)、起订量与交期进行比较，然后索取报价或加入购物车并安全支付。每家供应商均通过身份、资质与产能认证，让你放心下单。',
+    'seo.p1':'Atelix 是一个 B2B 采购平台，品牌方可直接向认证工厂采购优质面料、辅料及全包 OEM 服务。按成分、克重(GSM)、起订量与交期进行比较，然后索取报价或加入购物车并安全支付。每家供应商均通过身份、资质与产能认证，让你放心下单。',
     'seo.h2':'从亚洲及全球认证工厂采购',
     'seo.p2':'连接中国浙江、广东、江苏、山东等制造重镇，以及日本、印度、越南和土耳其的合作工厂。无论是小起订量打样、贴牌生产、定制配色，还是带在线质检的批量生产，Atelix 的 OEM 套餐都能让你的系列从纱线到成衣一站完成。T/T 与 PayPal 安全支付、透明贸易条款、覆盖 120+ 国家的物流，让采购井然有序。'
   }
@@ -1163,7 +1163,7 @@ async function hydrateCatalog(){
       window.ARCANA_FACTORY_BY_NAME = Object.fromEntries(factories.map(f=>[f.name,f.id]));
     }
   }catch(err){
-    console.warn('[ARCANA] live catalog unavailable — using bundled data.js', err && err.message);
+    console.warn('[Atelix] live catalog unavailable — using bundled data.js', err && err.message);
   }finally{ catalogLoadBar(false); }
 }
 

@@ -1,4 +1,4 @@
-/* ARCANA Sourcing Copilot — deterministic intelligence over the live catalog.
+/* Atelix Athelia — deterministic intelligence over the live catalog.
    LLM-ready: define window.ARCANA_LLM = async ({text,intent,matches}) => ({summary, matches})
    and ask() will await it, falling back to the mock engine on error/omission.
    Depends on window.ARCANA_PRODUCTS / _FACTORY_BY_NAME / _FACTORY_MAP (data.js). */

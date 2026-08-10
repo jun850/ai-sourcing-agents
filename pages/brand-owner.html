@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account — ARCANA</title>
-<meta name="description" content="Manage your ARCANA brand-owner profile, orders and saved suppliers.">
+<title>My Account — Atelix</title>
+<meta name="description" content="Manage your Atelix brand-owner profile, orders and saved suppliers.">
 <meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -17,7 +17,7 @@
 <main class="wrap" id="boMain" style="padding-top:24px;padding-bottom:40px" hidden>
   <div class="acct-head">
     <h1>My Account</h1>
-    <p class="sub">Manage your ARCANA profile and view your order history.</p>
+    <p class="sub">Manage your Atelix profile and view your order history.</p>
   </div>
 
   <div class="acct-grid">
@@ -107,7 +107,7 @@ window.ARCANA_PAGE=async function({toast}){
   const profile=await api.getMyProfile();
   if(!profile){
     gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">Log in to view your account</h2>
-      <p class="muted">Sign in to manage your ARCANA profile and see your order history.</p>
+      <p class="muted">Sign in to manage your Atelix profile and see your order history.</p>
       <a class="btn btn-green" href="login.html?next=brand-owner.html" style="margin-top:14px;display:inline-block">Log in</a>`;
     gate.hidden=false;
     return;

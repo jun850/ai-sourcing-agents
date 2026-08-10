@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Product Details — ARCANA</title>
-<meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, and order or request samples on ARCANA.">
+<title>Product Details — Atelix</title>
+<meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, and order or request samples on Atelix.">
 <link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/product.html">
 <meta property="og:type" content="product">
-<meta property="og:site_name" content="ARCANA">
-<meta property="og:title" content="Product Details — ARCANA">
-<meta property="og:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on ARCANA.">
+<meta property="og:site_name" content="Atelix">
+<meta property="og:title" content="Product Details — Atelix">
+<meta property="og:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on Atelix.">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Product Details — ARCANA">
-<meta name="twitter:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on ARCANA.">
+<meta name="twitter:title" content="Product Details — Atelix">
+<meta name="twitter:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on Atelix.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
@@ -46,7 +46,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const nm=TR(p.name), comp=TR(p.comp), spec=TR(p.spec), seller=TR(p.seller), loc=TR(p.loc);
     const certs=(p.certs||[]).map(TR).join(' · ');
     const supplierHighlight=factory&&factory.highlight ? TR(factory.highlight) : '';
-    document.title = `${nm} — ${seller} — ARCANA`;
+    document.title = `${nm} — ${seller} — Atelix`;
     const catLabel=TR({fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'}[p.cat]);
     const specs=[
       [T('Composition'),comp,'M20 7 12 3 4 7v10l8 4 8-4z'],
@@ -168,7 +168,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       panel.innerHTML=`
         <div class="cm-head">
           <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
-          <div class="cm-title">Matches your Copilot search · ${r.score}%<span>“${brief.text}”</span></div>
+          <div class="cm-title">Matches your Athelia search · ${r.score}%<span>“${brief.text}”</span></div>
         </div>
         <div class="cop-chips">${hits}${miss}</div>`;
       const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);

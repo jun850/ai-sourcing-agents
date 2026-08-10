@@ -70,12 +70,12 @@ Deno.serve(async (req) => {
     method: "POST",
     headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: Deno.env.get("RESEND_FROM") || "ARCANA Messages <onboarding@resend.dev>",
+      from: Deno.env.get("RESEND_FROM") || "Atelix Messages <onboarding@resend.dev>",
       to: [recipientEmail],
-      subject: `New message from ${senderName} on ARCANA`,
-      html: `<p>You have a new message from <b>${senderName}</b> on ARCANA.</p>` +
+      subject: `New message from ${senderName} on Atelix`,
+      html: `<p>You have a new message from <b>${senderName}</b> on Atelix.</p>` +
         (preview ? `<p style="color:#54534e">“${String(preview).slice(0, 200)}”</p>` : "") +
-        `<p><a href="${siteUrl}/${linkPath}">Reply on ARCANA</a></p>` +
+        `<p><a href="${siteUrl}/${linkPath}">Reply on Atelix</a></p>` +
         `<p style="color:#8a8a85;font-size:12px">Replying to this email won’t reach them — reply from the link above.</p>`,
     }),
   });

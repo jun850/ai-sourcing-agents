@@ -1,8 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Design Match is intentionally separate from Sourcing Copilot. Gemini reads
-// source material into a structured brief; ARCANA's own catalog data supplies
+// Design Match is intentionally separate from Athelia. Gemini reads
+// source material into a structured brief; Atelix's own catalog data supplies
 // every supplier, certification, MOQ, lead-time, and price shown to a buyer.
 const MODEL = "gemini-3.6-flash";
 const MAX_FILES = 8;
@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
   try { parts = await Promise.all(files.map(toGeminiPart)); }
   catch (error) { return json({ ok: false, reason: error instanceof Error ? error.message : "invalid_upload" }, 422); }
 
-  const prompt = `Read these fashion design references and return only structured JSON. Extract facts that are explicitly shown or strongly implied; use empty strings or an unsupportedOrUnclear item when unknown. Do not invent supplier facts, costs, certifications, quantities, or manufacturing capabilities. Keep shell and lining as separate fabric requirements. Put zippers, labels, elastic, hanger loops, and similar components in trims. Capture measurements, size ranges, construction changes, and component-level colors/Pantone codes when shown. This brief will be matched only against ARCANA's verified catalog.`;
+  const prompt = `Read these fashion design references and return only structured JSON. Extract facts that are explicitly shown or strongly implied; use empty strings or an unsupportedOrUnclear item when unknown. Do not invent supplier facts, costs, certifications, quantities, or manufacturing capabilities. Keep shell and lining as separate fabric requirements. Put zippers, labels, elastic, hanger loops, and similar components in trims. Capture measurements, size ranges, construction changes, and component-level colors/Pantone codes when shown. This brief will be matched only against Atelix's verified catalog.`;
   let gemini: any;
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {

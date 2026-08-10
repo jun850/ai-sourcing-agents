@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Browse Fabrics, Trims, Accessories & OEM — ARCANA</title>
+<title>Browse Fabrics, Trims, Accessories & OEM — Atelix</title>
 <meta name="description" content="Explore verified fabrics, accessories, trims, yarns and OEM services. Filter by material, price, MOQ and certifications, and source from audited factories.">
 <link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/category.html">
 <meta property="og:type" content="website">
-<meta property="og:site_name" content="ARCANA">
-<meta property="og:title" content="Browse Fabrics, Trims, Accessories & OEM — ARCANA">
+<meta property="og:site_name" content="Atelix">
+<meta property="og:title" content="Browse Fabrics, Trims, Accessories & OEM — Atelix">
 <meta property="og:description" content="Explore verified fabrics, accessories, trims, yarns and OEM services. Filter by material, price, MOQ and certifications.">
 <meta property="og:url" content="https://marketplace-three-peach.vercel.app/pages/category.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Browse Fabrics, Trims, Accessories & OEM — ARCANA">
+<meta name="twitter:title" content="Browse Fabrics, Trims, Accessories & OEM — Atelix">
 <meta name="twitter:description" content="Verified fabrics, trims, accessories, yarns and OEM services — filter by material, price, MOQ and certifications.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -93,7 +93,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // keep them straight when touching filters, sort, badges or pricing below:
   //   · Category page — category.html?cat=<slug>            (default browse/listing)
   //   · SRP           — category.html?cat=<slug>&q=<term>   (keyword search results)
-  //   · Copilot SRP   — category.html?copilot=1              (Sourcing Copilot results)
+  //   · Copilot SRP   — category.html?copilot=1              (Athelia results)
   //   · Design Match  — category.html?design-match=1         (tech-pack / reference results)
   const qsAll=new URLSearchParams(location.search);
   const pageMode = qsAll.get('design-match')==='1' ? 'design-match' : (qsAll.get('copilot')==='1' ? 'copilot-srp' : (qsAll.get('q') ? 'srp' : 'category'));
@@ -122,7 +122,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     function renderBar(){
       bar.innerHTML=`<div class="dm-result-title"><span class="dm-mark">${IC.document}</span><div><p>Design Match <span>Gemini 3.6 Flash analysis</span></p><h1>${esc(brief.garmentType)}</h1><small>Source files are private to this browser session.</small></div><button class="btn btn-out" data-dm-new>New match</button></div>
         <div class="dm-file-strip">${files}</div>
-        <form class="dm-brief-form" data-dm-brief><div class="dm-brief-copy"><h2>What ARCANA read</h2><p>Adjust the sourcing brief and update supplier matches without uploading again.</p></div>
+        <form class="dm-brief-form" data-dm-brief><div class="dm-brief-copy"><h2>What Athelia read</h2><p>Adjust the sourcing brief and update supplier matches without uploading again.</p></div>
           <label>Garment<input name="garmentType" value="${esc(brief.garmentType)}"></label><label>Quantity / MOQ<input name="quantities" value="${esc(brief.quantities||'')}"></label><label>Size range<input name="sizes" value="${esc(brief.sizes||'')}"></label><label>Target region<input name="targetRegion" value="${esc(brief.targetRegion||'')}"></label><label class="dm-wide">Design notes<textarea name="description">${esc(brief.description||'')}</textarea></label>
           ${brief.colorways&&brief.colorways.length?`<div class="dm-colors"><b>Color references</b>${brief.colorways.map(color=>`<span>${esc(color.component)}: ${esc(color.color)}${color.code?` · ${esc(color.code)}`:''}</span>`).join('')}</div>`:''}
           <div class="dm-brief-requirements"><div><b>Fabric requirements</b>${requirements(brief.fabrics,'fabric')}</div><div><b>Trim requirements</b>${requirements(brief.trims,'trim')}</div></div>
@@ -143,7 +143,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       });
     }
     const supplierCard=f=>`<a class="dm-supplier" href="supplier.html?id=${encodeURIComponent(f.id)}"><div class="dm-supplier-top"><span>${IC.factory}</span><div><b>${esc(f.name)}</b><small>${esc(f.type||'Verified supplier')} · ${esc(f.loc||f.region||'')}</small></div><em>${f.coverage||0}/${f.requirementCount||0} needs</em></div><p>${esc(f.bio||'Verified supplier matched against your design requirements.')}</p><div class="dm-supplier-meta"><span>${IC.shield} Verified</span><span>MOQ <b>${esc(f.moq||'On request')}</b></span><span>Lead <b>${esc(f.lead||'On request')}</b></span></div></a>`;
-    const requirementSection=(title,groups)=>`<section class="dm-result-section"><div class="dm-section-head"><h2>${title}</h2><p>Matched to the requirements ARCANA extracted from your design.</p></div>${groups.length?groups.map(group=>`<div class="dm-product-group"><h3>${esc(group.requirement.name)}${group.requirement.specification?` <span>${esc(group.requirement.specification)}</span>`:''}</h3><div class="prod-grid">${group.matches.length?group.matches.map(product=>window.ARCANA_card(product,{href:'product.html?id='+encodeURIComponent(product.id),fabricSpec:product.cat==='fabrics'})).join(''):`<p class="dm-no-match">No verified catalog match yet.</p>`}</div></div>`).join(''):`<p class="dm-no-match">No requirements identified.</p>`}</section>`;
+    const requirementSection=(title,groups)=>`<section class="dm-result-section"><div class="dm-section-head"><h2>${title}</h2><p>Matched to the requirements Athelia extracted from your design.</p></div>${groups.length?groups.map(group=>`<div class="dm-product-group"><h3>${esc(group.requirement.name)}${group.requirement.specification?` <span>${esc(group.requirement.specification)}</span>`:''}</h3><div class="prod-grid">${group.matches.length?group.matches.map(product=>window.ARCANA_card(product,{href:'product.html?id='+encodeURIComponent(product.id),fabricSpec:product.cat==='fabrics'})).join(''):`<p class="dm-no-match">No verified catalog match yet.</p>`}</div></div>`).join(''):`<p class="dm-no-match">No requirements identified.</p>`}</section>`;
     function renderResults(){
       grid.innerHTML=`<section class="dm-result-section dm-oem"><div class="dm-section-head"><div><h2>OEM factories for this design</h2><p>Ranked by verified capability and coverage of the sourcing brief.</p></div><span>${results.oems.length} verified matches</span></div><div class="dm-supplier-grid">${results.oems.length?results.oems.map(supplierCard).join(''):`<p class="dm-no-match">No OEM factory in the verified catalog currently matches this brief.</p>`}</div></section>${requirementSection('Fabric options',results.fabrics||[])}${requirementSection('Trim options',results.trims||[])}`;
       window.ARCANA_wireCards(grid);
@@ -165,12 +165,12 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       document.querySelector('.list-top').style.display='none';
       document.querySelector('.sortbar').style.display='none';
       document.querySelector('.listing').style.display='block';
-      document.getElementById('crumbCat').textContent='Sourcing Copilot';
+      document.getElementById('crumbCat').textContent='Athelia';
       const grid=document.getElementById('grid'); grid.className='';
       grid.innerHTML=`<div class="panel cart-empty cop-invite" style="max-width:520px;margin:40px auto">
         <div class="cop-gate-art" style="margin:0 auto 20px"><img src="${ASSET('copilot-gate.webp')}" alt="" width="168" height="168" loading="lazy"></div>
-        <h3>Sign in to use Sourcing Copilot</h3>
-        <p>Copilot matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results.</p>
+        <h3>Sign in to use Athelia</h3>
+        <p>Athelia matches your brief against every verified SKU in the catalog and explains why. It's free for brand owners — sign in or create an account to see your ranked results.</p>
         <div style="display:flex;gap:12px;justify-content:center">
           <a class="btn btn-out" href="login.html?next=${encodeURIComponent('category.html?copilot=1')}">Log in</a>
           <a class="btn btn-green" href="signup.html">Sign up free</a>
@@ -191,7 +191,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.querySelector('.list-top').style.display='none';
     document.querySelector('.sortbar').style.display='none';
     listing.style.display='block';
-    document.getElementById('crumbCat').textContent='Sourcing Copilot';
+    document.getElementById('crumbCat').textContent='Athelia';
     const grid=document.getElementById('grid'); grid.className='cop-grid';
 
     const bar=document.createElement('section'); bar.className='cop-bar';
@@ -226,7 +226,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     }
     function sourcingRequest(brief, compact){
       const subject=`Request for ${String(brief||'').trim()}`;
-      const body=`Hello ARCANA,\n\nPlease help me source the following item:\n${String(brief||'').trim()}\n\nThank you.`;
+      const body=`Hello Atelix,\n\nPlease help me source the following item:\n${String(brief||'').trim()}\n\nThank you.`;
       const href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
       return `<div class="cop-request${compact?' compact':''}">${IC.msg}<div><b>Need an exact match?</b><p>Send us your sourcing brief and our team will help find it.</p></div><a class="btn btn-green" href="${href}">Request sourcing help</a></div>`;
     }
@@ -238,7 +238,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <div class="cop-bar-top">
           <span class="cop-avatar">${SPARK}</span>
           <div style="flex:1;min-width:0">
-            <div class="cop-role">Sourcing Copilot</div>
+            <div class="cop-role">Athelia</div>
             <div class="cop-summary" data-cop-summary role="status" aria-live="polite"></div>
           </div>
           <div class="cop-actions">
@@ -279,7 +279,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     function paintLimitNote(show){
       const el=bar.querySelector('[data-cop-limitnote]'); if(!el) return;
       if(!show){ el.hidden=true; el.classList.remove('in'); el.innerHTML=''; return; }
-      el.innerHTML=`${IC.lock}<span>You've reached today's Copilot AI limit — showing catalog-matched results below, no AI summary. Resets tomorrow.</span>`;
+      el.innerHTML=`${IC.lock}<span>You've reached today's Athelia AI limit — showing catalog-matched results below, no AI summary. Resets tomorrow.</span>`;
       revealIn(el);
     }
 
@@ -381,7 +381,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   function render(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T;
     const heTitle = q ? heading : TR(meta.title);
-    document.title = `${heTitle} — ARCANA`;
+    document.title = `${heTitle} — Atelix`;
     document.getElementById('crumbCat').textContent = heTitle;
     document.getElementById('listTitle').textContent = heTitle;
     // subtitle + material facet labels (re-translate on language switch)

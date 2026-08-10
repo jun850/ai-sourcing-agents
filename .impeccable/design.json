@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-07-21T00:00:00.000Z",
-  "title": "Design System: ARCANA",
+  "title": "Design System: Atelix",
   "extensions": {
     "colorMeta": {
       "green": { "role": "primary", "displayName": "Forest Green", "canonical": "oklch(38% 0.05 155)", "tonalRamp": ["oklch(18% 0.04 155)","oklch(26% 0.05 155)","oklch(34% 0.05 155)","oklch(42% 0.05 155)","oklch(52% 0.05 155)","oklch(64% 0.04 155)","oklch(80% 0.03 155)","oklch(94% 0.02 155)"] },
@@ -92,7 +92,7 @@
   ],
   "narrative": {
     "northStar": "The Material Archive",
-    "overview": "ARCANA reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision. Serif display type carries titles with editorial weight; a neutral sans does all functional work. Surfaces are white panels separated by hairline borders rather than heavy shadow; space is generous, density earned only where comparison demands it.",
+    "overview": "Atelix reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision. Serif display type carries titles with editorial weight; a neutral sans does all functional work. Surfaces are white panels separated by hairline borders rather than heavy shadow; space is generous, density earned only where comparison demands it.",
     "keyCharacteristics": [
       "Macro material photography as the primary visual, framed in quiet chrome",
       "Serif display + neutral sans, split cleanly by role (editorial vs functional)",

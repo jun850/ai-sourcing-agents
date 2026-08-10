@@ -1,4 +1,4 @@
-/* ARCANA Copilot LLM bridge — wires window.ARCANA_LLM (the extension point
+/* Atelix Copilot LLM bridge — wires window.ARCANA_LLM (the extension point
    copilot.js's ask() already awaits) to the copilot-ask Supabase Edge
    Function, which holds the Gemini key server-side and enforces the 30
    call / 128k token daily cap. Only ever reached for a signed-in session —

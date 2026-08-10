@@ -1,5 +1,5 @@
 ---
-name: ARCANA
+name: Atelix
 description: The Material Archive — a calm, editorial B2B marketplace for fabrics and OEM sourcing.
 colors:
   green: "#2e4a3a"
@@ -102,17 +102,17 @@ components:
     padding: "9px 11px"
 ---
 
-# Design System: ARCANA
+# Design System: Atelix
 
 ## 1. Overview
 
 **Creative North Star: "The Material Archive"**
 
-ARCANA reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection — every fabric card, supplier profile, and spec table feels curated and auditable rather than sold. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision.
+Atelix reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection — every fabric card, supplier profile, and spec table feels curated and auditable rather than sold. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision.
 
 The system is deliberately restrained. Serif display type (Playfair) carries page and product titles with editorial weight; a neutral sans (Inter) does all the functional work. Surfaces are white panels on a soft ground, separated by hairline borders rather than heavy shadow. Space is generous; density is earned only where comparison demands it (spec grids, filter rows, cart tables). Color is used as signal — green for the brand-owner/buyer path and trust, brass for the primary money action and factory/seller accents — never as decoration.
 
-What this system explicitly rejects: the cluttered, red-bannered density of a cheap bulk-wholesale portal; the purple/blue gradients, glassmorphism, and identical stat-card grids of a generic SaaS dashboard; and the hype-drop, influencer energy of trend-chasing consumer fashion. ARCANA is a professional sourcing tool with editorial craft.
+What this system explicitly rejects: the cluttered, red-bannered density of a cheap bulk-wholesale portal; the purple/blue gradients, glassmorphism, and identical stat-card grids of a generic SaaS dashboard; and the hype-drop, influencer energy of trend-chasing consumer fashion. Atelix is a professional sourcing tool with editorial craft.
 
 **Key Characteristics:**
 - Macro material photography as the primary visual, framed in quiet chrome

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Checkout — ARCANA</title>
-<meta name="description" content="Complete your order securely through ARCANA's escrow checkout.">
+<title>Checkout — Atelix</title>
+<meta name="description" content="Complete your order securely through Atelix's escrow checkout.">
 <meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -49,9 +49,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
       <span class="ce-ic">${IC.lock}</span>
       <h3>Log in to check out</h3>
-      <p>Sign in to your ARCANA account to place this order securely. Your cart is saved.</p>
+      <p>Sign in to your Atelix account to place this order securely. Your cart is saved.</p>
       <a class="btn btn-green" href="login.html?next=checkout.html">Log in to continue</a>
-      <p style="margin-top:14px;font-size:13px;color:var(--muted)">New to ARCANA? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
+      <p style="margin-top:14px;font-size:13px;color:var(--muted)">New to Atelix? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
     </div>`;
     return;
   }
@@ -109,13 +109,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="rl">${terms.name||'—'}, ${terms.company||'—'}<br>${terms.addr||'—'}, ${terms.city||''} ${terms.country}<br>Incoterms: ${terms.incoterm}${terms.po?` · PO ${terms.po}`:''}</div></div>
       <div class="co-rev-block"><div class="rt"><b>Payment</b></div>
         <div class="pay-detail" style="margin-top:0">
-          <div class="bank-row"><span class="k">Method</span><span class="v">Bank Transfer via ARCANA</span></div>
-          <div class="bank-row"><span class="k">Beneficiary</span><span class="v">ARCANA Marketplace Ltd.</span></div>
+          <div class="bank-row"><span class="k">Method</span><span class="v">Bank Transfer via Atelix</span></div>
+          <div class="bank-row"><span class="k">Beneficiary</span><span class="v">Atelix Marketplace Ltd.</span></div>
           <div class="bank-row"><span class="k">Bank</span><span class="v">DBS Bank, Singapore</span></div>
           <div class="bank-row"><span class="k">Account</span><span class="v">0072-88-114529</span></div>
           <div class="bank-row"><span class="k">SWIFT</span><span class="v">DBSSSGSG</span></div>
         </div>
-        <div class="rl" style="margin-top:10px">ARCANA holds your payment and releases it to the supplier(s) once your order is fulfilled. You'll get a reference number and transfer instructions on the next page.</div></div>
+        <div class="rl" style="margin-top:10px">Atelix holds your payment and releases it to the supplier(s) once your order is fulfilled. You'll get a reference number and transfer instructions on the next page.</div></div>
     </div>
     <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${money(total)}</button></div>`;
 
