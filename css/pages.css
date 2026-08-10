@@ -5,7 +5,7 @@
 .home-banner>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .home-banner .bov{position:relative;padding:0 clamp(28px,5vw,64px);max-width:52%;color:#fff}
 .home-banner .btag{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.03em;background:rgba(255,255,255,.16);padding:5px 13px;border-radius:var(--radius-pill);margin-bottom:14px}
-.home-banner h2{font-family:var(--serif);font-size:clamp(1.8rem,3.6vw,3rem);font-weight:600;line-height:1.08;color:#fff;text-wrap:balance}
+.home-banner h1,.home-banner h2{font-family:var(--serif);font-size:clamp(1.8rem,3.6vw,3rem);font-weight:600;line-height:1.08;color:#fff;text-wrap:balance}
 .home-banner p{color:#dbe3dc;margin-top:12px;font-size:15px;max-width:360px}
 
 .home-2col{display:grid;grid-template-columns:1.35fr 1fr;gap:20px;margin-top:20px;align-items:stretch}
@@ -549,11 +549,23 @@
 .fcard .ffoot{margin-top:auto}
 .fcard .btn{margin-top:14px}
 
-/* ---- SEO content block ---- */
-.seo-block{padding:40px 0 8px;border-top:1px solid var(--line)}
-.seo-block h2{font-family:var(--serif);font-size:24px;font-weight:600;margin-bottom:14px}
-.seo-block h3{font-size:16px;font-weight:600;margin:24px 0 10px}
-.seo-block p{color:var(--muted);font-size:14px;line-height:1.7;max-width:78ch}
+/* ---- Sourcing answers: clear proof, held in the same cadence as the supplier directory ---- */
+.sourcing-answers{padding:52px 0 6px;border-top:1px solid var(--line)}
+.sourcing-answers-head{display:flex;align-items:end;justify-content:space-between;gap:28px;margin-bottom:20px}
+.sourcing-answers-kicker{margin:0 0 8px;color:var(--green);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.sourcing-answers h2{margin:0;font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.02em}
+.sourcing-answers-head p:not(.sourcing-answers-kicker){max-width:58ch;margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+.sourcing-answers-head .link-arrow{flex:none;margin-bottom:3px;white-space:nowrap}
+.sourcing-answer-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.sourcing-answer{padding:18px 18px 20px;border-bottom:1px solid var(--line)}
+.sourcing-answer+.sourcing-answer{border-left:1px solid var(--line)}
+.sourcing-answer h3,.sourcing-certifications h3{font-size:15px;font-weight:700;line-height:1.35;text-wrap:balance}
+.sourcing-answer p,.sourcing-certifications p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.62}
+.sourcing-certifications{display:grid;grid-template-columns:minmax(230px,.72fr) minmax(0,1.28fr);gap:32px;padding:22px 18px 24px;border-bottom:1px solid var(--line);background:var(--green-l)}
+.certification-list{display:flex;flex-wrap:wrap;gap:8px}
+.certification-pill{display:inline-flex;align-items:baseline;gap:7px;padding:7px 10px;border:1px solid #c9d7cb;border-radius:var(--radius-pill);background:#fff;color:var(--green)}
+.certification-pill b{font-size:12px;font-weight:700}
+.certification-pill small{color:var(--muted);font-size:11px}
 
 /* ---- Factory network: a quiet directory, not another product shelf ---- */
 .factory-network{padding:52px 0 6px;border-top:1px solid var(--line)}
@@ -856,6 +868,10 @@
   .camp-cats{grid-template-columns:repeat(3,1fr)}
   .auth-aside{display:none}
   .home-2col,.listing{grid-template-columns:1fr}
+  .sourcing-answer-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .sourcing-answer+.sourcing-answer{border-left:0}
+  .sourcing-answer:nth-child(2n){border-left:1px solid var(--line)}
+  .sourcing-certifications{grid-template-columns:1fr;gap:16px}
   .factory-network-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .factory-network-item:nth-child(3n+2),.factory-network-item:nth-child(3n+3){border-left:0}
   .factory-network-item:nth-child(2n){border-left:1px solid var(--line)}
@@ -890,6 +906,13 @@
   .sell-hero{padding:30px 22px}
   .sell-hero h1{font-size:31px}
   .sell-hero .btns{flex-wrap:wrap}
+  .sourcing-answers{padding-top:40px}
+  .sourcing-answers-head{align-items:flex-start;flex-direction:column;gap:14px}
+  .sourcing-answers h2{font-size:26px}
+  .sourcing-answers-head .link-arrow{margin-bottom:0}
+  .sourcing-answer-list{grid-template-columns:1fr}
+  .sourcing-answer:nth-child(2n){border-left:0}
+  .sourcing-certifications{padding:20px 14px}
   .factory-network{padding-top:40px}
   .factory-network-head{align-items:flex-start;flex-direction:column;gap:14px}
   .factory-network h2{font-size:26px}

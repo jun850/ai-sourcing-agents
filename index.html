@@ -5,15 +5,61 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Atelix | B2B Fashion Sourcing Marketplace</title>
 <meta name="description" content="Source fabrics, trims, accessories and full-package OEM from verified factories and mills. Compare specs, MOQ and lead time, and pay securely through Atelix.">
-<link rel="canonical" href="https://marketplace-three-peach.vercel.app/">
+<link rel="canonical" href="https://atelix.app/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Atelix">
 <meta property="og:title" content="Atelix | B2B Fashion Sourcing Marketplace">
 <meta property="og:description" content="Source fabrics, trims, accessories and full-package OEM from verified factories and mills. Compare specs, MOQ and lead time, and pay securely.">
-<meta property="og:url" content="https://marketplace-three-peach.vercel.app/">
+<meta property="og:url" content="https://atelix.app/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Atelix | B2B Fashion Sourcing Marketplace">
 <meta name="twitter:description" content="Source fabrics, trims, accessories and full-package OEM from verified factories and mills.">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@graph":[
+    {
+      "@type":"Organization",
+      "@id":"https://atelix.app/#organization",
+      "name":"Atelix",
+      "alternateName":"Atelix by ARCANA",
+      "url":"https://atelix.app/",
+      "logo":"https://atelix.app/assets/logo-mark.svg",
+      "email":"info@arcanawangsa.com",
+      "description":"A B2B fashion sourcing marketplace for fabrics, trims, accessories, yarns and full-package OEM services."
+    },
+    {
+      "@type":"WebSite",
+      "@id":"https://atelix.app/#website",
+      "url":"https://atelix.app/",
+      "name":"Atelix",
+      "publisher":{"@id":"https://atelix.app/#organization"},
+      "inLanguage":["en","ja","zh"]
+    },
+    {
+      "@type":"FAQPage",
+      "@id":"https://atelix.app/#sourcing-answers",
+      "mainEntity":[
+        {
+          "@type":"Question",
+          "name":"What can I source on Atelix?",
+          "acceptedAnswer":{"@type":"Answer","text":"Atelix lists fabrics, yarns, trims, accessories and full-package OEM services. Product pages surface composition, GSM, MOQ and indicative lead time so briefs start with operating details."}
+        },
+        {
+          "@type":"Question",
+          "name":"Where are Atelix suppliers based?",
+          "acceptedAnswer":{"@type":"Answer","text":"The current verified supplier roster is based in China and Japan, including Zhejiang, Guangdong, Fukui, Wakayama, Hyogo, Ehime, Osaka and Tokyo."}
+        },
+        {
+          "@type":"Question",
+          "name":"Which certifications appear on Atelix supplier profiles?",
+          "acceptedAnswer":{"@type":"Answer","text":"The current supplier roster lists GOTS, GRS, OEKO-TEX Standard 100, OCS and ISO 9001. Buyers should confirm certificate scope and validity directly with the supplier before placing an order."}
+        }
+      ]
+    }
+  ]
+}
+</script>
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/pages.css">
 </head>
@@ -24,7 +70,7 @@
   <!-- FIXED HERO BANNER -->
   <section class="home-banner" aria-labelledby="home-banner-title">
     <img src="assets/banner-source.webp" alt="Folded premium fabrics in navy, natural and olive tones">
-    <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h2 id="home-banner-title" data-i18n="hero.h1">The wholesale marketplace for your next collection</h2><p data-i18n="hero.p1">Quality materials from trusted, verified factories, built for brand owners.</p></div>
+    <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h1 id="home-banner-title" data-i18n="hero.h1">The wholesale marketplace for your next collection</h1><p data-i18n="hero.p1">Quality materials from trusted, verified factories, built for brand owners.</p></div>
   </section>
 
   <!-- POPULAR CATEGORIES + QUICK REQUEST -->
@@ -87,12 +133,40 @@
     </div>
   </section>
 
-  <!-- SEO CONTENT -->
-  <section class="seo-block">
-    <h2 data-i18n="seo.h1">Wholesale Fabric &amp; Garment Sourcing for Fashion Brands</h2>
-    <p data-i18n="seo.p1">Atelix by ARCANA is the B2B marketplace where apparel brand owners source premium fabrics, trims, accessories and full-package OEM services directly from verified mills and factories. Compare woven and knit fabrics, including cotton twill, linen blends, organic cotton jersey, denim, satin and recycled polyester, on composition, GSM, minimum order quantity and lead time. Then request quotes or add to cart and pay securely. Every supplier is identity, license and capability verified, so you can commit budget with confidence.</p>
-    <h3 data-i18n="seo.h2">Source from verified factories across Asia and beyond</h3>
-    <p data-i18n="seo.p2">Connect with fabric mills and OEM factories in key manufacturing regions: Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, Atelix's OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.</p>
+  <!-- SOURCING ANSWERS: clear, crawlable answers backed by the supplier directory -->
+  <section class="sourcing-answers" aria-labelledby="sourcing-answers-title">
+    <div class="sourcing-answers-head">
+      <div>
+        <p class="sourcing-answers-kicker">Sourcing, explained</p>
+        <h2 id="sourcing-answers-title">The essentials, before you request a quote</h2>
+        <p>Atelix helps fashion teams compare the supplier details that shape a viable brief.</p>
+      </div>
+      <a class="link-arrow" href="pages/factories.html">Browse verified suppliers <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <div class="sourcing-answer-list">
+      <article class="sourcing-answer">
+        <h3>What can I source on Atelix?</h3>
+        <p>Fabrics, yarns, trims, accessories and full-package OEM services. Product pages surface composition, GSM, MOQ and indicative lead time so briefs start with the operating details.</p>
+      </article>
+      <article class="sourcing-answer">
+        <h3>Where are Atelix suppliers based?</h3>
+        <p>The current verified supplier roster is based in China and Japan, including Zhejiang, Guangdong, Fukui, Wakayama, Hyogo, Ehime, Osaka and Tokyo.</p>
+      </article>
+      <article class="sourcing-answer">
+        <h3>How do I assess a supplier?</h3>
+        <p>Review the factory profile, product specifications, supplier-held certifications and production capabilities, then request a quote for your material, quantity and timing.</p>
+      </article>
+    </div>
+    <div class="sourcing-certifications" aria-labelledby="certifications-title">
+      <div>
+        <p class="sourcing-answers-kicker">Certification coverage</p>
+        <h3 id="certifications-title">Which certifications appear on supplier profiles?</h3>
+      </div>
+      <div>
+        <div class="certification-list" id="certificationList" aria-label="Supplier-held certifications"></div>
+        <p>These are certifications currently listed by suppliers in the Atelix directory. Confirm certificate scope and validity directly with the supplier before placing an order.</p>
+      </div>
+    </div>
   </section>
 
   <section class="factory-network" aria-labelledby="factory-network-title">
@@ -193,6 +267,26 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
         <span class="factory-network-copy"><strong>${escapeHTML(factory.name)}</strong><small>${escapeHTML(factory.loc)}</small></span>
         <svg class="factory-network-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>`;
+    }).join('');
+  }
+
+  const certificationList=document.getElementById('certificationList');
+  if(certificationList){
+    const certificationLabels={
+      'GOTS':'GOTS', 'GRS':'GRS', 'OEKO-TEX':'OEKO-TEX® Standard 100',
+      'Oeko-Tex':'OEKO-TEX® Standard 100', 'OCS':'OCS', 'ISO 9001':'ISO 9001'
+    };
+    const certificationOrder=['GOTS','GRS','OEKO-TEX® Standard 100','OCS','ISO 9001'];
+    const certificationSuppliers={};
+    (window.ARCANA_FACTORIES||[]).forEach(factory=>{
+      (factory.certs||[]).forEach(certification=>{
+        const label=certificationLabels[certification]||certification;
+        (certificationSuppliers[label]||=new Set()).add(factory.id);
+      });
+    });
+    certificationList.innerHTML=certificationOrder.filter(label=>certificationSuppliers[label]).map(label=>{
+      const count=certificationSuppliers[label].size;
+      return `<span class="certification-pill"><b>${escapeHTML(label)}</b><small>${count} supplier${count===1?'':'s'}</small></span>`;
     }).join('');
   }
 };
