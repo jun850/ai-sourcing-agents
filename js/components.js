@@ -7,6 +7,21 @@ const ROOT = document.body.dataset.root === '..'; // true inside /pages
 const P  = n => ROOT ? n : 'pages/' + n;          // link to a /pages file
 const HOME = ROOT ? '../index.html' : 'index.html';
 const ASSET = f => (ROOT ? '../assets/' : 'assets/') + f;
+const factoryAsset = factory => {
+  const image = factory && factory.img;
+  return ASSET(image && /\.(?:avif|jpe?g|png|webp)$/i.test(image) ? image : (image || 'factory-interior') + '.webp');
+};
+const factoryLocation = factory => {
+  const cityById={
+    'F-01':'Shaoxing','F-02':'Shaoxing','F-03':'Guangzhou','F-04':'Dongguan','F-05':'Huzhou',
+    'F-06':'Fukui','F-07':'Imabari','F-08':'Tokyo','F-09':'Guangzhou','F-10':'Guangzhou',
+    'F-11':'Osaka','F-12':'Wakayama','F-13':'Nishiwaki'
+  };
+  const city=cityById[factory&&factory.id] || String(factory&&factory.loc||'').split(',')[0].trim();
+  return [city,factory&&factory.region].filter(Boolean).join(', ');
+};
+window.ATELIX_factoryAsset=factoryAsset;
+window.ATELIX_factoryLocation=factoryLocation;
 
 /* ---------- stores (localStorage, mocked backend) ---------- */
 const LS = {
@@ -140,7 +155,7 @@ function cardHTML(p, opts){
   const nm = tr(p.name), comp = tr(p.comp), spec = tr(p.spec);
   const title = (opts.fabricSpec && p.cat==='fabrics') ? `${nm} — ${comp}, ${spec}` : `${nm} — ${comp}`;
   const priceLine = p.price>0
-    ? `${isService?t('From')+' ':''}${money(p.price)}<small>/${tr(p.unit)}</small>`
+    ? `${t('From')} ${money(p.price)}<small>/${tr(p.unit)}</small>`
     : `<span class="tquote">${t('Contact for quote')}</span>`;
   const meta = isService
     ? `<div class="tmeta">${IC.truck} ${spec} ${t('lead')} <span class="dot">·</span> ${t('MOQ')} ${tr(p.moq)}</div>`
@@ -291,6 +306,7 @@ function buildHeader(){
 function buildFooter(){
   const el=document.getElementById('ftr'); if(!el) return;
   const building=P('building.html');
+  const helpCenter=ROOT ? '../help-center' : 'help-center';
   const soc={
     x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-6-5 6H2l8-9L2 2h6l4 5z"/></svg>',
     li:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zM9 9h3v2a3.5 3.5 0 0 1 3-2c3 0 4 2 4 5v7h-3v-6c0-1.5-.5-2.5-2-2.5S12 14 12 15.5V21H9z"/></svg>',
@@ -300,7 +316,7 @@ function buildFooter(){
   el.innerHTML=`
   <footer class="site-footer"><div class="sf-in">
     <div class="sf-brand">
-      <div class="sf-word">Atelix <small>by ARCANA</small></div>
+      <div class="sf-word">Atelix</div>
       <p data-i18n="ft.tagline">The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.</p>
     </div>
     <div class="sf-col">
@@ -323,7 +339,7 @@ function buildFooter(){
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.help">Help &amp; Guides</h5>
-      <a href="${building}" data-i18n="ft.helpcenter">Help center</a>
+      <a href="${helpCenter}" data-i18n="ft.helpcenter">Help center</a>
       <a href="${building}" data-i18n="ft.terms">Terms &amp; conditions</a>
       <a href="${building}" data-i18n="ft.privacy">Privacy policy</a>
       <a href="${building}" data-i18n="ft.contact">Contact us</a>
@@ -334,7 +350,7 @@ function buildFooter(){
     </div>
   </div>
   <div class="sf-bottom">
-    <span>© 2026 Atelix <small>by ARCANA</small>. <span data-i18n="ft.rights">All rights reserved.</span></span>
+    <span>© 2026 Atelix. <span data-i18n="ft.rights">All rights reserved.</span></span>
     <div class="lang-switch" data-lang-switch role="group" aria-label="Language">
       <button data-lang="en">English</button>
       <button data-lang="ja">日本語</button>
@@ -377,7 +393,7 @@ function toast(msg, action){
 }
 window.ARCANA_toast = toast;
 
-/* ---------- contact-by-email: shared by the OEM CTA, "Chat with supplier",
+/* ---------- contact-by-email: shared by the OEM CTA, "Email supplier",
    "Request Sample" and "Contact Supplier" — all route to a pre-filled
    mailto instead of an in-app flow. subjectPrefix becomes
    "<subjectPrefix> - <userId>" (profile id when signed in, else "guest"). */
@@ -642,12 +658,12 @@ function wireSearch(){
   const kwHref=k=>P('category.html')+'?q='+encodeURIComponent(k);
   function kwRow(k,q,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${kwHref(k)}">${IC.search}<span class="s-kw">${mark(k,q)}</span></a>`; }
   function supRow(f,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${P('supplier.html')+'?id='+f.id}">
-      <img class="s-av" src="${ASSET(f.img+'.webp')}" alt="" loading="lazy">
+      <img class="s-av" src="${factoryAsset(f)}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(f.name))} ${IC.check}</span>
-      <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(f.loc))} · ★ ${f.rating}</span></span>
+      <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(factoryLocation(f)))} · ★ ${f.rating}</span></span>
       <span class="s-go">${IC.chevR}</span></a>`; }
   function prodRow(p,i){ opts.push(1);
-    const price=p.price>0? money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
+    const price=p.price>0? t('From')+' '+money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
     return `<a class="s-row" role="option" id="${optId(i)}" href="${P('product.html')+'?id='+p.id}">
       <img class="s-th" src="${ASSET(p.img+'.webp')}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(p.name))}</span>
@@ -718,7 +734,7 @@ function wireSearch(){
   function visualHTML(img){
     const seen={}, ms=visualMatches(img).filter(p=>!seen[p.img]&&(seen[p.img]=1)).slice(0,6);
     let h=`<div class="s-hd" role="presentation">${esc(t('Visual matches'))} <i class="s-demo">${esc(t('demo'))}</i></div><div class="s-vgrid" role="presentation">`;
-    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
+    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?t('From')+' '+money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
     h+=`</div><a class="s-row s-foot" role="option" id="${optId(opts.push(1)-1)}" href="${P('category.html')+'?cat=fabrics&visual=1'}">${IC.search}<span>${esc(t('See all visual matches'))}</span>${IC.chevR}</a>`;
     return h;
   }

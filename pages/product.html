@@ -82,7 +82,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${specs.map(s=>`<div class="spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="${s[2]}"/></svg><div><span>${s[0]}</span><b>${s[1]}</b></div></div>`).join('')}
         </div>
         <div class="price-box">
-          <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?money(p.price)+` <small>/${TR(p.unit)}</small>`:T('Contact for quote')}</div></div>
+          <div><span class="muted" style="font-size:13px">${p.price>0?`${T('From')} ${T('Unit Price')}`:T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${T('From')} ${money(p.price)} <small>/${TR(p.unit)}</small>`:T('Contact for quote')}</div></div>
+          ${p.price>0?`<p class="pdp-price-note">Price depends on order quantity and requirements. Contact the supplier to confirm the details.</p>`:''}
         </div>
         <div class="buy-row"><div class="buy-qty"><span class="buy-qty-lbl">${T('Quantity')}</span>
           <div class="qty" data-qty id="pdpQty"><button data-dec aria-label="Decrease">−</button><input value="1" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
@@ -90,9 +91,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <div class="pdp-cta">
           ${p.price>0
             ? `<button class="btn btn-gold" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" id="buyBtn">${T('Buy Now')}</button>
-               <button class="btn btn-out" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
+               <button class="btn btn-out" id="emailBtn">${IC.msg} Email supplier</button>
                <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`
-            : `<button class="btn btn-gold" id="chatBtn">${IC.msg} ${T('Chat with supplier')}</button>
+            : `<button class="btn btn-gold" id="emailBtn">${IC.msg} Email supplier</button>
                <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`}
         </div>
         <div class="pdp-mini">
@@ -130,8 +131,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       `Supplier: ${seller}, ${loc}`,
       ...(extra||[]),
     ];
-    const chatBtn=document.getElementById('chatBtn');
-    if(chatBtn) chatBtn.addEventListener('click', ()=>{
+    const emailBtn=document.getElementById('emailBtn');
+    if(emailBtn) emailBtn.addEventListener('click', ()=>{
       window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines()});
     });
     const sampleBtn=document.getElementById('sampleBtn');

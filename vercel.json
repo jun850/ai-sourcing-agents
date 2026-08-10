@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/help-center", "destination": "/pages/help-center.html" }
+  ]
+}

@@ -164,24 +164,6 @@
         </form>
       </section>
 
-      <!-- Buyer messages -->
-      <section class="panel" id="chatSection" style="margin-top:20px;padding:0;overflow:hidden">
-        <div class="acct-chat-wrap">
-          <div class="acct-chat-list">
-            <div class="acct-panel-head" style="padding:20px 20px 0"><h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Messages</h2></div>
-            <div id="chatConvos"></div>
-          </div>
-          <div class="acct-chat-thread">
-            <div id="chatThreadHead" class="acct-chat-thread-head">Select a conversation</div>
-            <div id="chatMessages" class="acct-chat-messages"></div>
-            <form id="chatForm" class="acct-chat-input-row" hidden>
-              <input name="body" placeholder="Write a message…" autocomplete="off">
-              <button class="btn btn-green" type="submit" style="padding:9px 18px">Send</button>
-            </form>
-          </div>
-        </div>
-      </section>
-
       <!-- bottom -->
       <div class="dash-bottom">
         <div class="panel" style="padding:20px 22px">
@@ -443,51 +425,6 @@ window.ARCANA_PAGE=async function({toast}){
 
   await loadProducts();
 
-  // ---- Buyer messages (same conversations/messages backend as My Account's Chat tab) ----
-  let conversations=[], activeConvo=null;
-  async function loadConversations(){
-    conversations=await api.getMyConversations();
-    renderConvoList();
-    const wanted=new URLSearchParams(location.search).get('convo');
-    const initial=(wanted && conversations.find(c=>c.id===wanted)) ? wanted : (conversations[0] && conversations[0].id);
-    if(initial) openConversation(initial);
-  }
-  function renderConvoList(){
-    const el=document.getElementById('chatConvos');
-    el.innerHTML=conversations.length ? conversations.map(c=>`
-      <div class="acct-chat-convo${activeConvo===c.id?' on':''}" data-convo="${c.id}">
-        <span class="cc-ic">${esc((c.withName||'?')[0])}</span>
-        <div><b>${esc(c.withName)}</b><span>${new Date(c.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span></div>
-      </div>
-    `).join('') : '<p class="muted" style="font-size:12.5px;padding:0 20px">No messages yet. Buyers can message you from any of your product pages.</p>';
-    el.querySelectorAll('[data-convo]').forEach(row=>row.addEventListener('click',()=>openConversation(row.dataset.convo)));
-  }
-  async function openConversation(id){
-    activeConvo=id;
-    renderConvoList();
-    const convo=conversations.find(c=>c.id===id);
-    document.getElementById('chatThreadHead').textContent=convo?convo.withName:'';
-    document.getElementById('chatForm').hidden=false;
-    const messages=await api.getMessages(id);
-    const box=document.getElementById('chatMessages');
-    box.innerHTML=messages.map(m=>`
-      <div class="acct-chat-msg ${m.sender_profile_id===profile.id?'mine':'theirs'}">${esc(m.body)}<span>${new Date(m.created_at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</span></div>
-    `).join('');
-    box.scrollTop=box.scrollHeight;
-  }
-  document.getElementById('chatForm').addEventListener('submit', async e=>{
-    e.preventDefault();
-    if(!activeConvo) return;
-    const input=e.target.elements.body;
-    const body=input.value.trim();
-    if(!body) return;
-    input.value='';
-    const { error }=await api.sendMessage(activeConvo, body);
-    if(error){ toast(error.message||'Could not send message'); return; }
-    openConversation(activeConvo);
-  });
-  loadConversations();
-
   const Cop=window.ARCANA_Copilot;
   const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
   // Demand Copilot matches buyer briefs against this seller's real catalog (SELLER
@@ -544,7 +481,7 @@ window.ARCANA_PAGE=async function({toast}){
 
   document.querySelectorAll('main button.btn, main .seg button').forEach(b=>{
     if(b.closest('.cop-seller')) return; // Copilot panels wire their own handlers
-    if(b.closest('#skuManager') || b.closest('#factoryForm') || b.closest('#chatSection')) return; // real CRUD wires its own handlers
+    if(b.closest('#skuManager') || b.closest('#factoryForm')) return; // real CRUD wires its own handlers
     b.addEventListener('click',()=>toast(b.textContent.trim().replace(/\s+/g,' ').slice(0,42)||'Updated'));
   });
   document.querySelectorAll('main a[href="#"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();toast('Coming soon');}));

@@ -140,6 +140,7 @@
 .price-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;display:flex;justify-content:space-between;align-items:flex-end}
 .price-box .big{font-size:32px;font-weight:700}.price-box .big small{font-size:14px;color:var(--muted);font-weight:500}
 .price-box .link{color:var(--gold-d);font-weight:600;text-decoration:underline}
+.pdp-price-note{max-width:30ch;margin:0 0 2px 24px;color:var(--muted);font-size:12.5px;line-height:1.55}
 .buy-row{margin-top:18px}
 .buy-qty{display:flex;align-items:center;gap:14px}
 .buy-qty-lbl{font-size:13px;font-weight:600}
@@ -567,6 +568,37 @@
 .certification-pill b{font-size:12px;font-weight:700}
 .certification-pill small{color:var(--muted);font-size:11px}
 
+/* ---- Help center: answers lead, terms stay visible ---- */
+.help-center{padding-bottom:18px}
+.help-hero{display:flex;align-items:end;justify-content:space-between;gap:28px;padding:20px 0 36px;border-bottom:1px solid var(--line)}
+.help-hero h1{font-family:var(--serif);font-size:42px;font-weight:600;letter-spacing:-.02em;line-height:1.1}
+.help-hero p{max-width:64ch;margin-top:12px;color:var(--muted);font-size:15px;line-height:1.65}
+.help-hero .btn{flex:none}
+.help-jump{display:flex;gap:8px;flex-wrap:wrap;padding:18px 0 34px}
+.help-jump a{padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius-pill);background:#fff;color:var(--ink);font-size:13px;font-weight:600;transition:.15s}
+.help-jump a:hover{border-color:var(--green);color:var(--green);background:var(--green-l)}
+.help-basics{display:grid;grid-template-columns:minmax(230px,.72fr) minmax(0,1.28fr);gap:40px;padding:25px 26px;border:1px solid var(--line);border-radius:var(--radius);background:var(--green-l)}
+.help-basics h2,.help-group h2,.help-contact h2{font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:-.015em}
+.help-basics p,.help-group-head p,.help-contact p{margin-top:8px;color:var(--muted);font-size:13.5px;line-height:1.6}
+.help-basics ol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;margin:0;padding:0;list-style:none;border-top:1px solid #cad6cb}
+.help-basics li{padding:15px 12px 13px;border-bottom:1px solid #cad6cb}
+.help-basics li:nth-child(odd){border-right:1px solid #cad6cb}
+.help-basics li b{display:block;font-size:14px}.help-basics li span{display:block;margin-top:4px;color:var(--muted);font-size:12px;line-height:1.5}
+.help-group{padding:42px 0 0;scroll-margin-top:96px}
+.help-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-bottom:16px}
+.help-group-head p{margin:0;max-width:45ch}
+.help-faqs{border-top:1px solid var(--line)}
+.help-faqs details{border-bottom:1px solid var(--line)}
+.help-faqs summary{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 2px;cursor:pointer;font-size:15px;font-weight:700;list-style:none}
+.help-faqs summary::-webkit-details-marker{display:none}
+.help-faqs summary span{flex:none;color:var(--green);font-size:23px;font-weight:400;line-height:1;transition:transform .18s ease-out}
+.help-faqs details[open] summary span{transform:rotate(45deg)}
+.help-faqs details>div{max-width:72ch;padding:0 2px 19px}
+.help-faqs p{color:var(--muted);font-size:14px;line-height:1.65}
+.help-contact{display:flex;align-items:center;justify-content:space-between;gap:28px;margin-top:42px;padding:27px 28px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.help-contact p{max-width:62ch}
+.help-contact .btn{flex:none}
+
 /* ---- Factory network: a quiet directory, not another product shelf ---- */
 .factory-network{padding:52px 0 6px;border-top:1px solid var(--line)}
 .factory-network-head{display:flex;align-items:end;justify-content:space-between;gap:28px;margin-bottom:20px}
@@ -876,6 +908,7 @@
   .factory-network-item:nth-child(3n+2),.factory-network-item:nth-child(3n+3){border-left:0}
   .factory-network-item:nth-child(2n){border-left:1px solid var(--line)}
   .home-banner .bov{max-width:78%}
+  .home-banner{height:320px}
   .pop-cat{flex-direction:column}
   .pop-cat .pc-media{width:100%;height:180px;order:-1}
   .filter-rail{position:static}
@@ -903,6 +936,12 @@
   .cap:first-child{padding-top:0}
   .cap:last-child{padding-bottom:0;border-bottom:0}
   .map-facts,.metrics{grid-template-columns:1fr}
+   .home-banner{height:min(110vw,430px);min-height:360px;margin-top:16px;align-items:flex-end}
+   .home-banner>img{object-position:62% center}
+   .home-banner .bov{max-width:none;width:100%;padding:22px 20px 24px;background:linear-gradient(0deg,rgba(12,25,18,.88) 0%,rgba(12,25,18,.52) 52%,rgba(12,25,18,0) 100%)}
+   .home-banner .btag{font-size:11px;padding:5px 10px;margin-bottom:10px}
+   .home-banner h1,.home-banner h2{max-width:11.5ch;font-size:clamp(1.9rem,9vw,2.35rem);line-height:1.04}
+   .home-banner p{max-width:31ch;margin-top:9px;font-size:13px;line-height:1.48}
   .step-cards,.dash-cols,.dash-bottom{grid-template-columns:1fr}
   .dash-tabs{gap:20px;overflow-x:auto;scrollbar-width:none}
   .dash-tabs [data-tab]{white-space:nowrap;flex-shrink:0}
@@ -920,6 +959,22 @@
   .sourcing-answer-list{grid-template-columns:1fr}
   .sourcing-answer:nth-child(2n){border-left:0}
   .sourcing-certifications{padding:20px 14px}
+  .help-hero{align-items:flex-start;flex-direction:column;padding:8px 0 28px;gap:18px}
+  .help-hero h1{font-size:34px}
+  .help-hero .btn{width:100%}
+  .help-jump{padding-bottom:26px;gap:7px}
+  .help-jump a{font-size:12px;padding:7px 10px}
+  .help-basics{grid-template-columns:1fr;gap:22px;padding:22px 18px}
+  .help-basics ol{grid-template-columns:1fr}
+  .help-basics li:nth-child(odd){border-right:0}
+  .help-group{padding-top:34px}
+  .help-group-head{align-items:flex-start;flex-direction:column;gap:6px}
+  .help-group-head p{margin:0}
+  .help-faqs summary{padding:16px 0;font-size:14px}
+  .help-contact{align-items:flex-start;flex-direction:column;margin-top:34px;padding:23px 0;gap:18px}
+  .help-contact .btn{width:100%}
+  .price-box{align-items:flex-start;flex-direction:column;gap:10px;padding:18px}
+  .pdp-price-note{max-width:44ch;margin:0}
   .factory-network{padding-top:40px}
   .factory-network-head{align-items:flex-start;flex-direction:column;gap:14px}
   .factory-network h2{font-size:26px}

@@ -22,7 +22,6 @@
       "@type":"Organization",
       "@id":"https://atelix.app/#organization",
       "name":"Atelix",
-      "alternateName":"Atelix by ARCANA",
       "url":"https://atelix.app/",
       "logo":"https://atelix.app/assets/logo-mark.svg",
       "email":"info@arcanawangsa.com",
@@ -257,14 +256,16 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   const escapeHTML=value=>String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const initials=name=>name.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
   if(factoryNetwork){
+    const factoryLocation=window.ATELIX_factoryLocation;
     factoryNetwork.innerHTML=(window.ARCANA_FACTORIES||[]).map(factory=>{
       const logo=factoryLogos[factory.id];
       const mark=logo
         ? `<img src="assets/${logo}" alt="" loading="lazy">`
         : `<span aria-hidden="true">${initials(factory.name)}</span>`;
-      return `<a class="factory-network-item" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(factory.name)}, ${escapeHTML(factory.loc)}">
+      const location=factoryLocation(factory);
+      return `<a class="factory-network-item" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(factory.name)}, ${escapeHTML(location)}">
         <span class="factory-network-mark${logo?' has-logo':''}">${mark}</span>
-        <span class="factory-network-copy"><strong>${escapeHTML(factory.name)}</strong><small>${escapeHTML(factory.loc)}</small></span>
+        <span class="factory-network-copy"><strong>${escapeHTML(factory.name)}</strong><small>${escapeHTML(location)}</small></span>
         <svg class="factory-network-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>`;
     }).join('');
