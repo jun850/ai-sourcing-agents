@@ -171,6 +171,12 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <div class="cop-chips">${hits}${miss}</div>
         </div></div>`;
     }
+    function sourcingRequest(brief, compact){
+      const subject=`Request for ${String(brief||'').trim()}`;
+      const body=`Hello ARCANA,\n\nPlease help me source the following item:\n${String(brief||'').trim()}\n\nThank you.`;
+      const href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      return `<div class="cop-request${compact?' compact':''}">${IC.msg}<div><b>Need an exact match?</b><p>Send us your sourcing brief and our team will help find it.</p></div><a class="btn btn-green" href="${href}">Request sourcing help</a></div>`;
+    }
 
     let editing=false;
     function paintBar(brief, summaryText, intent){
@@ -230,10 +236,12 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const {matches, summary, meta}=await Cop.ask(text);
       grid.className='cop-grid';
       const list=matches.slice(0,12);
+      const hasStrongMatch=list.some(r=>r.score>=72);
       window.ARCANA_setCopilotMatches(list);
       grid.innerHTML = list.length
         ? list.map(resultHTML).join('')
-        : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>Try relaxing one constraint — a higher price ceiling, a larger MOQ, or one fewer certification — then search again.</p></div>`;
+        : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>We don’t have an exact match in the catalog yet, but our sourcing team can look for it.</p>${sourcingRequest(text)}</div>`;
+      if(list.length&&!hasStrongMatch) grid.insertAdjacentHTML('beforeend',sourcingRequest(text,true));
       window.ARCANA_wireCards(grid);
       paintUsage(meta && meta.usage);
       paintLimitNote(!!(meta && meta.code==='limit_reached'));

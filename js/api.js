@@ -16,6 +16,7 @@ if(!sb || !sb.auth){
     unavailable: true,
     signUp(){ return Promise.resolve({ data:null, error: err }); },
     signIn(){ return Promise.resolve({ data:null, error: err }); },
+    signInWithMagicLink(){ return Promise.resolve({ data:null, error: err }); },
     signOut(){ return Promise.resolve({ error: null }); },
     resetRequest(){ return Promise.resolve({ data:null, error: err }); },
     resetConfirm(){ return Promise.resolve({ data:null, error: err }); },
@@ -144,6 +145,15 @@ const API = {
   async signIn({ email, password }){
     try{
       return await sb.auth.signInWithPassword({ email, password });
+    }catch(error){ return { data:null, error }; }
+  },
+
+  async signInWithMagicLink({ email, redirectTo }){
+    try{
+      return await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo || REDIRECT_LOGIN, shouldCreateUser: false }
+      });
     }catch(error){ return { data:null, error }; }
   },
 

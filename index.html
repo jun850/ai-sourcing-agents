@@ -21,19 +21,10 @@
 <div id="hdr"></div>
 
 <main class="wrap">
-  <!-- BANNER CAROUSEL -->
-  <section class="banner-carousel" id="banner" aria-label="Promotions" aria-roledescription="carousel">
-    <div class="bslide on" data-slide>
-      <img src="assets/banner-source.webp" alt="Folded premium fabrics on display">
-      <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h2 data-i18n="hero.h1">The wholesale marketplace for your next collection</h2><p data-i18n="hero.p1">Quality materials and trusted, verified factories — built for brand owners.</p></div>
-    </div>
-    <div class="bslide" data-slide>
-      <img src="assets/banner-sale.webp" alt="11.11 fabric sale">
-      <div class="bov"><span class="btag" data-i18n="hero.btag2">LIMITED · 11.11 SALE</span><h2 data-i18n="hero.h2">Up to 50% off verified fabrics &amp; OEM</h2><p data-i18n="hero.p2">Stock your next collection for less — from mills you can trust.</p><a class="btn btn-gold" href="pages/campaign.html" data-i18n="hero.cta2">Shop the sale</a></div>
-    </div>
-    <button class="barrow prev" data-prev aria-label="Previous slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg></button>
-    <button class="barrow next" data-next aria-label="Next slide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg></button>
-    <div class="bdots" data-dots></div>
+  <!-- FIXED HERO BANNER -->
+  <section class="home-banner" aria-labelledby="home-banner-title">
+    <img src="assets/banner-source.webp" alt="Folded premium fabrics in navy, natural and olive tones">
+    <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h2 id="home-banner-title" data-i18n="hero.h1">The wholesale marketplace for your next collection</h2><p data-i18n="hero.p1">Quality materials and trusted, verified factories — built for brand owners.</p></div>
   </section>
 
   <!-- POPULAR CATEGORIES + QUICK REQUEST -->
@@ -77,12 +68,6 @@
     <a class="cat-pill" href="pages/factories.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.factories">Factories</span></a>
   </nav>
 
-  <!-- PROMO STRIP -->
-  <a class="promo-strip" href="pages/campaign.html">
-    <div class="ps-l"><span class="ps-badge">11.11</span><b data-i18n="promo.title">Mega Sourcing Sale — up to 50% off verified fabrics &amp; OEM</b></div>
-    <span class="btn" data-i18n="promo.shopnow">Shop now</span>
-  </a>
-
   <!-- CURATED -->
   <section class="section">
     <div class="sec-head"><h2 data-i18n="home.curated">Curated for you</h2><a class="link-arrow" href="pages/category.html"><span data-i18n="home.viewall">View all products</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
@@ -121,20 +106,6 @@
 <script src="js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
-  // banner carousel
-  const banner=document.getElementById('banner');
-  if(banner){
-    const slides=[...banner.querySelectorAll('[data-slide]')], dots=banner.querySelector('[data-dots]');
-    let i=0, timer;
-    dots.innerHTML=slides.map((_,n)=>`<button aria-label="Slide ${n+1}"${n===0?' class="on"':''}></button>`).join('');
-    const dotEls=[...dots.children];
-    const go=n=>{i=(n+slides.length)%slides.length;slides.forEach((s,k)=>s.classList.toggle('on',k===i));dotEls.forEach((d,k)=>d.classList.toggle('on',k===i));};
-    const reset=()=>{clearInterval(timer);timer=setInterval(()=>go(i+1),6000);};
-    dotEls.forEach((d,n)=>d.addEventListener('click',()=>{go(n);reset();}));
-    banner.querySelector('[data-next]').addEventListener('click',()=>{go(i+1);reset();});
-    banner.querySelector('[data-prev]').addEventListener('click',()=>{go(i-1);reset();});
-    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches) reset();
-  }
   // reveal-on-scroll for the Popular Categories card (single, purposeful entrance)
   const reveal=document.querySelector('[data-reveal]');
   if(reveal){

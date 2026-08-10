@@ -32,9 +32,9 @@ window.ARCANA_PRODUCTS = [
   {id:'OEM-129',name:'Custom Breathable Mesh Sports T-Shirt - Colorful Floral Embroidery-2',img:'custom-breathable-mesh-s',comp:'100% Cotton Jersey',spec:'160–200 GSM · XS–3XL',price:8.50,unit:'pc',moq:'100 pc',seller:'XinYuan Fashion',loc:'China (Dongguan area)',badge:'oem',cat:'oem',lt:'3-4days',certs:[],country:'China'},
   {id:'OEM-130',name:'Custom Men\'s Shirts',img:'custom-men-s-shirts',comp:'100% Cotton / Linen blend',spec:'200 GSM, slim or relaxed fit',price:12.00,unit:'pc',moq:'200 pc',seller:'XinYuan Fashion',loc:'China (Dongguan area)',badge:'oem',cat:'oem',lt:'30 days',certs:[],country:'China'},
   {id:'TRI-131',name:'Jacquard Ribbon Trim — S.I.C. Series',img:'shindo-jacquard-ribbon',comp:'100% Polyester',spec:'30mm width · 42,000+ designs · 20 colorways',price:0,unit:'m',moq:'100 m',seller:'SHINDO Co. Ltd.',loc:'Fukui, Japan',badge:'',cat:'trims',country:'Japan'},
-  {id:'TRI-132',name:'Organic Cotton Twill Tape Trim',img:'shindo-organic-twill-tape',comp:'100% Organic Cotton',spec:'20mm · GOTS certified · 300+ colors',price:1.20,unit:'m',moq:'100 m',seller:'SHINDO Co. Ltd.',loc:'Fukui, Japan',badge:'',cat:'trims',country:'Japan'},
-  {id:'FAB-131',name:'100% Organic Cotton Wind-Powered Terry Fabric',img:'ikeuchi-organic-terry',comp:'100% Organic Cotton',spec:'400 GSM · GOTS · wind-power manufactured',price:8.50,unit:'m',moq:'200 m',seller:'IKEUCHI ORGANIC Inc.',loc:'Imabari, Ehime, Japan',badge:'',cat:'fabrics',country:'Japan'},
-  {id:'FAB-132',name:'Organic Cotton Double Gauze Fabric',img:'ikeuchi-double-gauze',comp:'100% Organic Cotton',spec:'120 GSM · GOTS · 2-ply gauze weave',price:6.20,unit:'m',moq:'200 m',seller:'IKEUCHI ORGANIC Inc.',loc:'Imabari, Ehime, Japan',badge:'',cat:'fabrics',country:'Japan'},
+  {id:'TRI-132',name:'Organic Cotton Twill Tape Trim',img:'shindo-organic-twill-tape',comp:'100% Organic Cotton',spec:'20mm · 300+ colors',price:1.20,unit:'m',moq:'100 m',seller:'SHINDO Co. Ltd.',loc:'Fukui, Japan',badge:'',cat:'trims',certs:['GOTS'],country:'Japan'},
+  {id:'FAB-131',name:'100% Organic Cotton Terry Fabric',img:'ikeuchi-organic-terry',comp:'100% Organic Cotton',spec:'400 GSM',price:8.50,unit:'m',moq:'200 m',seller:'IKEUCHI ORGANIC Inc.',loc:'Imabari, Ehime, Japan',badge:'',cat:'fabrics',certs:['GOTS'],country:'Japan'},
+  {id:'FAB-132',name:'Organic Cotton Double Gauze Fabric',img:'ikeuchi-double-gauze',comp:'100% Organic Cotton',spec:'120 GSM · 2-ply gauze weave',price:6.20,unit:'m',moq:'200 m',seller:'IKEUCHI ORGANIC Inc.',loc:'Imabari, Ehime, Japan',badge:'',cat:'fabrics',certs:['GOTS'],country:'Japan'},
   {id:'YAR-001',name:'Monteluce Superfine Merino Wool Yarn',img:'maruyasu-merino-yarn',comp:'100% Superfine Merino Wool',spec:'18.5 micron · fingering weight · Pitti Filati',price:45.00,unit:'kg',moq:'10 kg',seller:'Maruyasu Corporation',loc:'Tokyo, Japan',badge:'',cat:'yarns',country:'Japan'},
   {id:'YAR-002',name:'Premium Cashmere Silk Blend Worsted Yarn',img:'maruyasu-cashmere-yarn',comp:'85% Cashmere 15% Silk',spec:'28Nm · natural dyeable · fashion house grade',price:0,unit:'kg',moq:'5 kg',seller:'Maruyasu Corporation',loc:'Tokyo, Japan',badge:'',cat:'yarns',country:'Japan'},
   {id:'FAB-133',name:'High-Gauge 46G Jacquard Circular Knit Fabric',img:'kanemasa-46g-jacquard-knit',comp:'80% Cotton 20% Polyester',spec:'46G · 180 GSM · custom jacquard pattern',price:12.00,unit:'m',moq:'200 m',seller:'KANEMASA Knitting Co. Ltd.',loc:'Wakayama, Japan',badge:'',cat:'fabrics',country:'Japan'},
@@ -52,7 +52,7 @@ window.ARCANA_FACTORIES = [
   {id:'F-04',name:'XinYuan Fashion',type:'OEM Factory',region:'China',loc:'China (Dongguan area)',verified:true,years:25,moq:'300 pcs',lead:'14–21 days',rating:4.90,orders:'775+',capacity:'500K pcs/mo',certs:['ISO 9001'],tags:['Full Package','Cut & Sew'],img:'factory-xinyuan',web:'xinyuanfashion.com',founded:2000,employees:'200+',area:'20,000 m²',port:'Ningbo Port 150 km',bio:'25+ years garment manufacturing; one-stop OEM/ODM from design to bulk; hoodies, T-shirts, dresses, jackets, pants, sportswear, swimwear.'},
   {id:'F-05',name:'ChangXing B.H Interlining Co. Ltd',type:'Trim Supplier',region:'China',loc:'Changxing, Huzhou, Zhejiang',verified:true,years:12,moq:'100 pcs',lead:'14–21 days',rating:4.90,orders:'494+',capacity:'800K m/mo',certs:['ISO 9001','OEKO-TEX'],tags:['Interlining'],img:'factory-bhinterlining',web:'www.bhinterlining.com',founded:2013,employees:'200+',area:'20,000 m²',port:'Ningbo Port 150 km',bio:'Founded 2013; woven/nonwoven/knitted fusible interlining for suits, coats, shirts, dresses; ISO 9001, OEKO-TEX Standard 100 certified; exports 61-70% to Americas, Asia, Europe.'},
   {id:'F-06',name:'SHINDO Co. Ltd.',type:'Trim Supplier',region:'Japan',loc:'Fukui',verified:true,years:10,moq:'100 pcs',lead:'14–21 days',rating:4.80,orders:'826+',capacity:'800K m/mo',certs:['ISO 9001'],tags:['Lace','Ribbon'],img:'factory-shindo',web:'www.shindo.com/en',founded:2015,employees:'200+',area:'20,000 m²',port:'Tokyo Port 80 km',bio:'Textile accessories manufacturer with ~42,000 items in S.I.C. catalog; produces ribbon, knit, jacquard, reflective, stretch, cord, piping, braid, lace (Leavers, embroidered, Torcho.'},
-  {id:'F-07',name:'IKEUCHI ORGANIC Inc.',type:'Fabric Mill',region:'Japan',loc:'Imabari, Ehime',verified:true,years:10,moq:'200 m',lead:'14–21 days',rating:4.60,orders:'314+',capacity:'800K m/mo',certs:['GOTS','Oeko-Tex'],tags:['Organic','Cotton'],img:'factory-ikeuchi',web:'www.ikeuchi.org/en',founded:2015,employees:'200+',area:'20,000 m²',port:'Tokyo Port 80 km',bio:'Imabari towel manufacturer committed to 100% organic cotton and wind-power manufacturing; one of the most sustainability-focused textile companies in Japan.'},
+  {id:'F-07',name:'IKEUCHI ORGANIC Inc.',type:'Fabric Mill',region:'Japan',loc:'Imabari, Ehime',verified:true,years:10,moq:'200 m',lead:'14–21 days',rating:4.60,orders:'314+',capacity:'800K m/mo',certs:['GOTS','Oeko-Tex'],tags:['Organic','Cotton'],img:'factory-ikeuchi',web:'www.ikeuchi.org/en',founded:2015,employees:'200+',area:'20,000 m²',port:'Tokyo Port 80 km',highlight:'Wind-powered manufacturing',bio:'Imabari towel manufacturer committed to 100% organic cotton and wind-power manufacturing; one of the most sustainability-focused textile companies in Japan.'},
   {id:'F-08',name:'Maruyasu Corporation',type:'Yarn Supplier',region:'Japan',loc:'Tokyo',verified:true,years:70,moq:'200 m',lead:'14–21 days',rating:4.70,orders:'334+',capacity:'800K m/mo',certs:['ISO 9001'],tags:['Yarn'],img:'factory-maruyasu',web:'www.maruyasu-fil.com',founded:1955,employees:'200+',area:'20,000 m²',port:'Tokyo Port 80 km',bio:'Founded 1955; recognized as one of Japan\'s top 300 SMEs by METI; original yarn brand Monteluce adopted by international fashion houses; exhibited at Pitti Filati since 2017.'},
   {id:'F-09',name:'KUNSHUO',type:'Accessories Supplier',region:'China',loc:'Guangzhou, Guangdong',verified:true,years:17,moq:'500 pcs',lead:'15 days',rating:4.80,orders:'280+',capacity:'500K pcs/mo',certs:['ISO 9001'],tags:['Buttons','Metal Accessories'],img:'factory-bhinterlining',web:'www.kunshuo.com',founded:2009,employees:'200+',area:'10,000 m²',port:'Guangzhou Port 30 km',bio:'Guangzhou-based metal accessories manufacturer specializing in custom logo buttons, rivets, grommets, and leather tags for apparel brands worldwide.'},
   {id:'F-10',name:'YiLang Garment Accessories',type:'Trim Supplier',region:'China',loc:'Guangzhou, Guangdong',verified:true,years:12,moq:'100 pcs',lead:'15 days',rating:4.70,orders:'350+',capacity:'300K pcs/mo',certs:['ISO 9001'],tags:['Trims','Labels','Zippers'],img:'factory-aisha-lace',web:'www.yilang-accessories.com',founded:2014,employees:'150+',area:'8,000 m²',port:'Guangzhou Port 30 km',bio:'Full-service garment accessories supplier; custom zipper pullers, hang tags, woven labels, heat transfer labels, and leather labels for fashion brands.'},
@@ -69,18 +69,6 @@ window.ARCANA_FACTORIES.forEach(f=>{
   f.area=f.area||'20,000 m²'; f.port=f.port||'Ningbo Port 150 km';
   f.bio=f.bio||`A verified ${f.type.toLowerCase()} in ${f.loc} with ${f.years} years of experience supplying global apparel brands. Specialties: ${f.tags.join(', ')}.`;
 });
-
-/* 11.11 campaign deals — reference catalog + discount */
-window.ARCANA_DEALS = [
-  {id:'LNW-001', disc:40, sold:72},
-  {id:'OCJ-002', disc:35, sold:58},
-  {id:'DNM-003', disc:30, sold:81},
-  {id:'STN-009', disc:45, sold:44},
-  {id:'JSK-004', disc:25, sold:66},
-  {id:'RCP-008', disc:38, sold:53},
-  {id:'WLF-006', disc:50, sold:90},
-  {id:'CHB-011', disc:28, sold:37},
-];
 
 /* ============ i18n — term dictionaries + translator (EN · JA · ZH) ============ */
 /* Exact-match maps for proper nouns / product names; token maps for compositions,
@@ -112,7 +100,7 @@ window.ARCANA_TERMS = {
       // tags
       'Woven':'織物','Knit':'ニット','Yarn-dyed':'先染め','Linen':'リネン','Cotton':'綿','Yarn':'糸','Denim':'デニム','Chambray':'シャンブレー',
       'Cut & Sew':'縫製','Full Package':'フルパッケージ','Private Label':'プライベートラベル','Zippers':'ファスナー','Buttons':'ボタン','Labels':'ネーム',
-      'Polyester':'ポリエステル','Recycled':'リサイクル','Yarn to Finish':'糸から完成品','Knits':'ニット','Premium':'プレミアム','Technical':'テクニカル','Dyeing':'染色'
+      'Polyester':'ポリエステル','Recycled':'リサイクル','Yarn to Finish':'糸から完成品','Knits':'ニット','Premium':'プレミアム','Technical':'テクニカル','Dyeing':'染色','Wind-powered manufacturing':'風力発電による製造'
     },
     tokens: {
       'Organic Cotton':'オーガニックコットン','Recycled Polyester':'リサイクルポリエステル','Merino Wool':'メリノウール','Antique Brass':'アンティークブラス',
@@ -128,7 +116,7 @@ window.ARCANA_TERMS = {
       'Add to Cart':'カートに追加','Buy Now':'今すぐ購入','Request for Quote':'見積り依頼','Request Sample':'サンプル依頼','Save to List':'リストに保存',
       'Continue shopping':'買い物を続ける','Proceed to Checkout':'レジに進む','result':'件','results':'件','View cart':'カートを見る',
       'Saved to your list':'リストに保存しました','Removed from list':'リストから削除しました','Verified Factory':'認証工場','Contact Supplier':'工場に連絡','Save Supplier':'工場を保存',
-      'Composition':'組成','Specification':'仕様','Min. Order':'最小ロット','Lead Time':'納期','Category':'カテゴリー','Country of Origin':'原産国',
+      'Composition':'組成','Specification':'仕様','Certifications':'認証','Min. Order':'最小ロット','Lead Time':'納期','Category':'カテゴリー','Country of Origin':'原産国','Supplier highlight':'サプライヤーの特長',
       'Unit Price':'単価','Pricing':'価格','Price varies by quantity':'数量により価格が変動します','View price breaks':'数量別価格を見る','Quantity':'数量',
       'Volume pricing shared on quote':'数量割引は見積り時にご案内します','Quote request sent to supplier':'見積り依頼を送信しました','Sample request sent to supplier':'サンプル依頼を送信しました',
       'Product link copied':'商品リンクをコピーしました','View factory':'工場を見る','View supplier':'サプライヤーを見る','Verified supplier':'認証サプライヤー',
@@ -182,7 +170,7 @@ window.ARCANA_TERMS = {
       'Fabrics':'面料','Accessories':'辅料','Trims':'织带','Yarns & Threads':'纱线与缝纫线','OEM Services':'OEM服务','Factories':'工厂',
       'Woven':'梭织','Knit':'针织','Yarn-dyed':'色织','Linen':'亚麻','Cotton':'棉','Yarn':'纱线','Denim':'牛仔','Chambray':'青年布','Cut & Sew':'裁剪缝制',
       'Full Package':'全包','Private Label':'贴牌','Zippers':'拉链','Buttons':'纽扣','Labels':'织唛','Polyester':'涤纶','Recycled':'再生','Yarn to Finish':'从纱线到成衣',
-      'Knits':'针织','Premium':'高端','Technical':'功能性','Dyeing':'染色'
+      'Knits':'针织','Premium':'高端','Technical':'功能性','Dyeing':'染色','Wind-powered manufacturing':'风力发电制造'
     },
     tokens: {
       'Organic Cotton':'有机棉','Recycled Polyester':'再生涤纶','Merino Wool':'美利奴羊毛','Antique Brass':'仿古黄铜','Damask Weave':'提花织',

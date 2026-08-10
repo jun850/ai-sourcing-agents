@@ -33,10 +33,9 @@
     <div class="field-lg" data-field><label for="company" id="companyLabel">Company name</label><input id="company" placeholder="Luxe Apparel Co."><span class="err">Company name is required.</span></div>
     <div class="field-lg" data-field id="categoryField" hidden><label for="category">Supplier category</label><select id="category"><option value="">Select…</option><option value="fabric_mill">Fabrics</option><option value="accessories_supplier">Accessories</option><option value="trim_supplier">Trims</option><option value="yarn_supplier">Yarns &amp; Threads</option><option value="garment_manufacturer">OEM / Cut &amp; Sew (Garment Manufacturing)</option></select><span class="err">Select what you supply.</span></div>
     <div class="field-lg" data-field><label for="email">Work email</label><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><span class="err">Enter a valid email address.</span></div>
-    <div class="co-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select…</option><option>United States</option><option>China</option><option>India</option><option>Vietnam</option><option>Turkey</option><option>Other</option></select><span class="err">Select a country.</span></div>
-      <div class="field-lg" data-field><label for="pw">Password</label><input id="pw" type="password" placeholder="Min. 6 characters" autocomplete="new-password"><span class="err">At least 6 characters.</span></div>
-    </div>
+    <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select your country…</option><optgroup label="Southeast Asia"><option>Brunei</option><option>Cambodia</option><option>Indonesia</option><option>Laos</option><option>Malaysia</option><option>Myanmar</option><option>Philippines</option><option>Singapore</option><option>Thailand</option><option>Timor-Leste</option><option>Vietnam</option></optgroup><optgroup label="East Asia"><option>China</option><option>Hong Kong</option><option>Japan</option><option>Macau</option><option>Mongolia</option><option>South Korea</option><option>Taiwan</option></optgroup></select><span class="err">Select a country.</span></div>
+    <div class="field-lg" data-field><label for="pw">Password</label><div class="password-field"><input id="pw" type="password" placeholder="At least 6 characters" autocomplete="new-password"><button type="button" data-password-toggle="pw" aria-label="Show password"></button></div><span class="err">Use at least 6 characters.</span></div>
+    <div class="field-lg" data-field><label for="pwConfirm">Confirm password</label><div class="password-field"><input id="pwConfirm" type="password" placeholder="Re-enter your password" autocomplete="new-password"><button type="button" data-password-toggle="pwConfirm" aria-label="Show password"></button></div><span class="err">Passwords do not match.</span></div>
     <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-bottom:18px"><input type="checkbox" id="tos" style="width:auto;margin-top:2px"> <span>I agree to ARCANA's <a href="#" style="color:var(--muted);text-decoration:underline">Terms</a> and <a href="#" style="color:var(--muted);text-decoration:underline">Privacy Policy</a>.</span></label>
     <div class="field-lg" data-field style="margin:-8px 0 16px"><span class="err" id="tosErr">Please accept the terms to continue.</span></div>
     <div class="field-lg" data-field id="formErrWrap" style="margin:-4px 0 14px"><span class="err" id="formErr"></span></div>
@@ -69,6 +68,12 @@ window.ARCANA_PAGE = function({IC,toast}){
   const clearForm=()=>{ formErrWrap.classList.remove('invalid'); formErr.textContent=''; };
   const showForm=msg=>{ formErr.textContent=msg; formErrWrap.classList.add('invalid'); };
   clearForm();
+  const eye=(visible)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${visible?'<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>':'<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/>'}</svg>`;
+  document.querySelectorAll('[data-password-toggle]').forEach(toggle=>{
+    const input=document.getElementById(toggle.dataset.passwordToggle);
+    toggle.innerHTML=eye(false);
+    toggle.addEventListener('click',()=>{const visible=input.type==='text';input.type=visible?'password':'text';toggle.setAttribute('aria-label',visible?'Show password':'Hide password');toggle.innerHTML=eye(!visible);});
+  });
 
   let role = new URLSearchParams(location.search).get('role')==='seller' ? 'seller':'buyer';
   const categoryField=document.getElementById('categoryField');
@@ -94,6 +99,7 @@ window.ARCANA_PAGE = function({IC,toast}){
     mark(form.email, /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value.trim()));
     mark(form.country, !!form.country.value);
     mark(form.pw, form.pw.value.length>=6);
+    mark(form.pwConfirm, form.pwConfirm.value.length>0 && form.pwConfirm.value===form.pw.value);
     document.getElementById('tosErr').closest('[data-field]').classList.toggle('invalid', !form.tos.checked);
     if(!form.tos.checked) ok=false;
     if(!ok) return;
@@ -125,6 +131,11 @@ window.ARCANA_PAGE = function({IC,toast}){
       btn.disabled=false; btn.textContent=label;
     }
   });
+  const validateConfirmation=()=>{
+    if(form.pwConfirm.value) form.pwConfirm.closest('[data-field]').classList.toggle('invalid',form.pwConfirm.value!==form.pw.value);
+  };
+  form.pw.addEventListener('input',validateConfirmation);
+  form.pwConfirm.addEventListener('input',validateConfirmation);
 };
 </script>
 </body>

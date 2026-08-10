@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>11.11 Sourcing Sale — ARCANA</title>
-<meta name="description" content="Limited-time deals on verified fabrics and OEM packages. Stock your next collection for less from mills you can trust.">
+<title>Campaigns unavailable — ARCANA</title>
+<meta name="description" content="ARCANA campaigns are temporarily unavailable. Browse verified fabrics, trims, accessories and OEM services.">
 <link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/campaign.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="ARCANA">
-<meta property="og:title" content="11.11 Sourcing Sale — ARCANA">
-<meta property="og:description" content="Limited-time deals on verified fabrics and OEM packages. Stock your next collection for less.">
+<meta property="og:title" content="Campaigns unavailable — ARCANA">
+<meta property="og:description" content="Browse verified fabrics, trims, accessories and OEM services on ARCANA.">
 <meta property="og:url" content="https://marketplace-three-peach.vercel.app/pages/campaign.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="11.11 Sourcing Sale — ARCANA">
-<meta name="twitter:description" content="Limited-time deals on verified fabrics and OEM packages. Stock your next collection for less.">
+<meta name="twitter:title" content="Campaigns unavailable — ARCANA">
+<meta name="twitter:description" content="Browse verified fabrics, trims, accessories and OEM services on ARCANA.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
@@ -21,38 +21,10 @@
 <div id="hdr"></div>
 
 <main class="wrap">
-  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">11.11 Sale</span></nav>
-
-  <section class="camp-hero">
-    <span class="kicker">Limited time · Wholesale deals</span>
-    <h1>11.11 Mega Sourcing Sale</h1>
-    <p class="lead">Up to 50% off verified fabrics, trims and OEM packages. Stock your next collection for less — from mills you can trust.</p>
-    <div class="countdown" id="cd" aria-label="Sale ends in">
-      <div class="cd-box"><b data-d>00</b><span>Days</span></div>
-      <div class="cd-box"><b data-h>00</b><span>Hrs</span></div>
-      <div class="cd-box"><b data-m>00</b><span>Min</span></div>
-      <div class="cd-box"><b data-s>00</b><span>Sec</span></div>
-    </div>
-    <div class="camp-strip">
-      <span class="camp-chip">✔ Verified suppliers</span>
-      <span class="camp-chip">✔ MOQ-friendly deal lots</span>
-      <span class="camp-chip">✔ Free samples on select mills</span>
-    </div>
-  </section>
-
-  <section class="section" style="padding-bottom:8px">
-    <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">Shop the sale by category</h2></div>
-    <div class="camp-cats" id="campCats"></div>
-  </section>
-
-  <section class="deal-sec">
-    <div class="deal-head"><h2>Fabric Flash Deals <span class="flame">🔥 Selling fast</span></h2><a class="link-arrow" href="category.html?cat=fabrics">View all fabrics <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
-    <div class="deal-grid" id="dealGrid"></div>
-  </section>
-
-  <section class="deal-sec" style="padding-top:0">
-    <div class="deal-head"><h2>Trims &amp; Accessories Deals</h2></div>
-    <div class="deal-grid" id="trimGrid"></div>
+  <section class="panel cart-empty" style="max-width:520px;margin:48px auto">
+    <h1>Campaigns are temporarily unavailable</h1>
+    <p>Browse the regular catalog to source from verified suppliers.</p>
+    <a class="btn btn-green" href="category.html">Browse catalog</a>
   </section>
 </main>
 
@@ -64,54 +36,5 @@
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
 <script src="../js/copilot-llm.js"></script>
-<script>
-window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
-  // countdown to end of sale (48h from now, demo)
-  const end = Date.now() + 47*3600e3 + 22*60e3 + 11e3;
-  const cd=document.getElementById('cd');
-  const pad=n=>String(n).padStart(2,'0');
-  function tick(){
-    let t=Math.max(0,end-Date.now());
-    const d=Math.floor(t/864e5); t-=d*864e5;
-    const h=Math.floor(t/36e5); t-=h*36e5;
-    const m=Math.floor(t/6e4); t-=m*6e4;
-    const s=Math.floor(t/1e3);
-    cd.querySelector('[data-d]').textContent=pad(d);
-    cd.querySelector('[data-h]').textContent=pad(h);
-    cd.querySelector('[data-m]').textContent=pad(m);
-    cd.querySelector('[data-s]').textContent=pad(s);
-  }
-  tick(); setInterval(tick,1000);
-
-  // category shortcuts
-  const cats=[['Fabrics',IC.factory,'Up to 50%','fabrics'],['Knits',IC.factory,'Up to 35%','fabrics'],['Denim',IC.factory,'Up to 30%','fabrics'],['Trims',IC.tag,'Up to 40%','trims'],['Accessories',IC.tag,'Up to 25%','accessories'],['OEM',IC.box,'Deals live','oem']];
-  document.getElementById('campCats').innerHTML=cats.map(c=>`<a class="camp-cat" href="category.html?cat=${c[3]}"><span class="cc-ic">${c[1]}</span><b>${c[0]}</b><span>${c[2]}</span></a>`).join('');
-
-  const M=window.ARCANA_PRODUCT_MAP, TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money;
-  function dealCard(deal){
-    const p=M[deal.id]; if(!p) return '';
-    const now=(p.price*(1-deal.disc/100));
-    return `<div class="deal-card">
-      <a class="deal-thumb" href="product.html?id=${p.id}"><span class="deal-disc">-${deal.disc}%</span><img src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}"></a>
-      <div class="deal-body">
-        <h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4>
-        <div class="deal-price"><span class="now">${money(now)}</span><span class="was">${money(p.price)}</span><span class="deal-unit">/${TR(p.unit)}</span></div>
-        <div class="deal-bar"><i style="width:${deal.sold}%"></i></div>
-        <div class="deal-sold">${deal.sold}% claimed · ${T('MOQ')} ${TR(p.moq)}</div>
-        <button class="btn btn-gold btn-block" data-add="${p.id}">${T('Add to Cart')}</button>
-      </div></div>`;
-  }
-  document.getElementById('dealGrid').innerHTML=window.ARCANA_DEALS.map(dealCard).join('');
-  document.getElementById('trimGrid').innerHTML=[
-    {id:'ZIP-101',disc:20,sold:40},{id:'RBN-201',disc:30,sold:64}
-  ].map(dealCard).join('');
-
-  // wire the freshly-rendered add buttons
-  document.querySelectorAll('#dealGrid [data-add],#trimGrid [data-add]').forEach(b=>b.addEventListener('click',e=>{
-    e.preventDefault(); Store.addToCart(b.dataset.add,1);
-    const p=M[b.dataset.add]; toast(`Added ${p.name} to cart`, {href:'cart.html', label:'View cart'});
-  }));
-};
-</script>
 </body>
 </html>

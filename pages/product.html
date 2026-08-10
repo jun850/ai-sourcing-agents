@@ -38,17 +38,20 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const p=M[id];
   const isOEM=p.badge==='oem'||p.badge==='recycle';
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
+  const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
   const catUrl='category.html?cat='+p.cat;
-  const thumbs=[p, ...PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id)].slice(0,5);
 
   function build(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money;
     const nm=TR(p.name), comp=TR(p.comp), spec=TR(p.spec), seller=TR(p.seller), loc=TR(p.loc);
+    const certs=(p.certs||[]).map(TR).join(' · ');
+    const supplierHighlight=factory&&factory.highlight ? TR(factory.highlight) : '';
     document.title = `${nm} — ${seller} — ARCANA`;
     const catLabel=TR({fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'}[p.cat]);
     const specs=[
       [T('Composition'),comp,'M20 7 12 3 4 7v10l8 4 8-4z'],
       [T('Specification'),spec,'M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3'],
+      ...(certs ? [[T('Certifications'),certs,'M20 7 12 3 4 7v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10zM8.5 12l2.2 2.2 4.8-4.8']] : []),
       [T('Min. Order'),TR(p.moq),'M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8'],
       [T('Lead Time'),TR(leadMap[p.cat]),'M12 8v4l3 2'],
       [T('Category'),catLabel,'M4 4h16v16H4z'],
@@ -59,9 +62,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     <div class="pdp">
       <div class="gallery">
         <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img src="${ASSET(p.img+'.webp')}" alt="${nm}">
+          ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
           <div class="caption">${comp} · ${spec} <span class="circ" style="width:22px;height:22px;box-shadow:none;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span></div>
         </div>
-        <div class="thumbs">${thumbs.map((t,i)=>`<div class="t${i===0?' on':''}" data-thumb="${ASSET(t.img+'.webp')}"><img src="${ASSET(t.img+'.webp')}" alt=""></div>`).join('')}</div>
       </div>
       <div class="pdp-info">
         <div class="titlebar">
@@ -110,9 +113,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </section>`;
 
     // wiring (re-attached on every build)
-    document.querySelectorAll('.thumbs .t').forEach(t=>t.addEventListener('click',()=>{
-      document.querySelectorAll('.thumbs .t').forEach(x=>x.classList.remove('on'));t.classList.add('on');
-      document.querySelector('.gallery .main img').src=t.dataset.thumb;}));
     const qi=document.querySelector('#pdpQty input');
     document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(1,(+qi.value||1)-1);
     document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||1)+1;

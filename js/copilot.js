@@ -190,9 +190,12 @@ function describe(intent){
 
 function mockSummary(intent, matches){
   if(!matches.length){
-    return `No verified matches for that brief yet. Try relaxing one constraint — widen the price ceiling, raise the MOQ, or drop a certification — and I'll re-search.`;
+    return `No verified matches for that brief yet. Our sourcing team can look beyond the current catalog for you.`;
   }
   const top = matches[0];
+  if(top.score<72){
+    return `I found only close options for that brief. Review them, or send the request to our sourcing team for an exact match.`;
+  }
   const crit = describe(intent).slice(0,3);
   const critTxt = crit.length ? ` matching ${crit.join(', ')}` : '';
   const n = matches.length;

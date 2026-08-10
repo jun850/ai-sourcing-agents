@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Building in progress — ARCANA</title>
+<meta name="description" content="This ARCANA page is currently being prepared. Contact the ARCANA team for help.">
+<meta name="robots" content="noindex, follow">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-hdr="a" data-root=".." data-allcat="0">
+<div id="hdr"></div>
+
+<main class="wrap">
+  <section class="panel cart-empty" style="max-width:560px;margin:48px auto">
+    <span class="ce-ic" id="buildingIcon" aria-hidden="true"></span>
+    <h1>Building in progress</h1>
+    <p>This part of ARCANA is being prepared. If you need help with sourcing or have a question, please reach out to our team.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=ARCANA%20enquiry">Contact ARCANA</a>
+      <a class="btn btn-out" href="../index.html">Back to marketplace</a>
+    </div>
+  </section>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script defer src="../js/analytics.bundle.js"></script>
+<script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
+<script>
+window.ARCANA_PAGE = function({IC}){
+  document.getElementById('buildingIcon').innerHTML=IC.factory;
+};
+</script>
+</body>
+</html>
