@@ -327,9 +327,7 @@ function buildFooter(){
       <a href="${building}" data-i18n="ft.contact">Contact us</a>
     </div>
     <div class="sf-col">
-      <h5 data-i18n="ft.security">Security &amp; Compliance</h5>
-      <div class="sf-badges"><span>ISO 9001</span><span>Oeko-Tex® 100</span><span>GRS Certified</span></div>
-      <h5 style="margin-top:24px" data-i18n="ft.follow">Follow us</h5>
+      <h5 data-i18n="ft.follow">Follow us</h5>
       <div class="sf-social"><a href="${building}" aria-label="X">${soc.x}</a><a href="${building}" aria-label="LinkedIn">${soc.li}</a><a href="${building}" aria-label="Instagram">${soc.ig}</a><a href="${building}" aria-label="Facebook">${soc.fb}</a></div>
     </div>
   </div>
@@ -947,7 +945,7 @@ const I18N={
     'ft.buy':'Buy','ft.sourcing':'Sourcing guide','ft.payments':'Payments','ft.shipping':'Shipping','ft.protection':'Buyer protection',
     'ft.sell':'Sell','ft.sellon':'Sell on Fashpedia','ft.dashboard':'Supplier dashboard',
     'ft.help':'Help & Guides','ft.helpcenter':'Help center','ft.terms':'Terms & conditions','ft.privacy':'Privacy policy','ft.contact':'Contact us',
-    'ft.security':'Security & Compliance','ft.follow':'Follow us','ft.rights':'All rights reserved.',
+    'ft.follow':'Follow us','ft.rights':'All rights reserved.',
     'home.curated':'Curated for you','home.viewall':'View all products','home.tab.all':'All','home.tab.fabrics':'Fabrics','home.tab.accessories':'Accessories','home.tab.trims':'Trims',
     'hero.btag1':'NEW SEASON SOURCING','hero.h1':'The wholesale marketplace for your next collection','hero.p1':'Quality materials and trusted, verified factories — built for brand owners.','hero.cta1':'Start sourcing',
     'hero.btag2':'LIMITED · 11.11 SALE','hero.h2':'Up to 50% off verified fabrics & OEM','hero.p2':'Stock your next collection for less — from mills you can trust.','hero.cta2':'Shop the sale',
@@ -974,7 +972,7 @@ const I18N={
     'ft.buy':'購入','ft.sourcing':'調達ガイド','ft.payments':'お支払い','ft.shipping':'配送','ft.protection':'バイヤー保護',
     'ft.sell':'販売','ft.sellon':'Fashpediaで販売','ft.dashboard':'サプライヤー管理画面',
     'ft.help':'ヘルプ・ガイド','ft.helpcenter':'ヘルプセンター','ft.terms':'利用規約','ft.privacy':'プライバシーポリシー','ft.contact':'お問い合わせ',
-    'ft.security':'セキュリティとコンプライアンス','ft.follow':'フォローする','ft.rights':'無断転載を禁じます。',
+    'ft.follow':'フォローする','ft.rights':'無断転載を禁じます。',
     'home.curated':'あなたへのおすすめ','home.viewall':'すべての商品を見る','home.tab.all':'すべて','home.tab.fabrics':'生地','home.tab.accessories':'付属品','home.tab.trims':'トリム',
     'hero.btag1':'新シーズン調達','hero.h1':'次のコレクションのための卸売マーケットプレイス','hero.p1':'高品質な素材と信頼できる認証工場 — ブランドオーナーのために。','hero.cta1':'調達を始める',
     'hero.btag2':'期間限定 · 11.11セール','hero.h2':'認証生地・OEMが最大50%オフ','hero.p2':'次のコレクションをお得に — 信頼できる工場から。','hero.cta2':'セールを見る',
@@ -1001,7 +999,7 @@ const I18N={
     'ft.buy':'采购','ft.sourcing':'采购指南','ft.payments':'支付','ft.shipping':'物流','ft.protection':'买家保障',
     'ft.sell':'销售','ft.sellon':'在 Fashpedia 上销售','ft.dashboard':'供应商后台',
     'ft.help':'帮助与指南','ft.helpcenter':'帮助中心','ft.terms':'服务条款','ft.privacy':'隐私政策','ft.contact':'联系我们',
-    'ft.security':'安全与合规','ft.follow':'关注我们','ft.rights':'版权所有。',
+    'ft.follow':'关注我们','ft.rights':'版权所有。',
     'home.curated':'为你精选','home.viewall':'查看全部商品','home.tab.all':'全部','home.tab.fabrics':'面料','home.tab.accessories':'辅料','home.tab.trims':'织带',
     'hero.btag1':'新季采购','hero.h1':'为你的下一个系列而生的批发采购平台','hero.p1':'优质材料与可信认证工厂 — 为品牌方打造。','hero.cta1':'开始采购',
     'hero.btag2':'限时 · 11.11 大促','hero.h2':'认证面料与OEM低至5折','hero.p2':'以更低成本备货下一季 — 来自可信工厂。','hero.cta2':'抢购大促',

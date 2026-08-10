@@ -555,6 +555,26 @@
 .seo-block h3{font-size:16px;font-weight:600;margin:24px 0 10px}
 .seo-block p{color:var(--muted);font-size:14px;line-height:1.7;max-width:78ch}
 
+/* ---- Factory network: a quiet directory, not another product shelf ---- */
+.factory-network{padding:52px 0 6px;border-top:1px solid var(--line)}
+.factory-network-head{display:flex;align-items:end;justify-content:space-between;gap:28px;margin-bottom:20px}
+.factory-network-kicker{margin:0 0 8px;color:var(--green);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.factory-network h2{margin:0;font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.02em}
+.factory-network-head p:not(.factory-network-kicker){max-width:58ch;margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+.factory-network-head .link-arrow{flex:none;margin-bottom:3px;white-space:nowrap}
+.factory-network-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
+.factory-network-item{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;transition:background-color .18s ease,color .18s ease}
+.factory-network-item:nth-child(3n+2),.factory-network-item:nth-child(3n+3){border-left:1px solid var(--line)}
+.factory-network-item:hover{background:var(--green-l);color:var(--green)}
+.factory-network-mark{display:grid;place-items:center;flex:0 0 38px;width:38px;height:38px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--green);font-size:11px;font-weight:700;letter-spacing:.04em}
+.factory-network-mark.has-logo{padding:5px}
+.factory-network-mark img{display:block;width:100%;height:100%;object-fit:contain}
+.factory-network-copy{display:grid;gap:3px;min-width:0}
+.factory-network-copy strong{overflow:hidden;font-size:13px;font-weight:650;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.factory-network-copy small{overflow:hidden;color:var(--muted);font-size:12px;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.factory-network-arrow{flex:0 0 16px;width:16px;height:16px;margin-left:auto;opacity:0;transform:translateX(-4px);transition:opacity .18s ease,transform .18s ease}
+.factory-network-item:hover .factory-network-arrow{opacity:1;transform:translateX(0)}
+
 /* ---- Tokopedia-style listing ---- */
 .listing{display:grid;grid-template-columns:236px 1fr;gap:26px;padding-top:8px;align-items:start}
 .filter-rail{position:sticky;top:150px}
@@ -836,6 +856,9 @@
   .camp-cats{grid-template-columns:repeat(3,1fr)}
   .auth-aside{display:none}
   .home-2col,.listing{grid-template-columns:1fr}
+  .factory-network-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .factory-network-item:nth-child(3n+2),.factory-network-item:nth-child(3n+3){border-left:0}
+  .factory-network-item:nth-child(2n){border-left:1px solid var(--line)}
   .home-banner .bov{max-width:78%}
   .pop-cat{flex-direction:column}
   .pop-cat .pc-media{width:100%;height:180px;order:-1}
@@ -867,6 +890,12 @@
   .sell-hero{padding:30px 22px}
   .sell-hero h1{font-size:31px}
   .sell-hero .btns{flex-wrap:wrap}
+  .factory-network{padding-top:40px}
+  .factory-network-head{align-items:flex-start;flex-direction:column;gap:14px}
+  .factory-network h2{font-size:26px}
+  .factory-network-head .link-arrow{margin-bottom:0}
+  .factory-network-list{grid-template-columns:1fr}
+  .factory-network-item:nth-child(2n){border-left:0}
   .sell-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .sell-stat b{font-size:21px}
   .cart-tbl-head{display:none}
