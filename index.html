@@ -113,11 +113,6 @@
     <a class="cat-pill" href="pages/factories.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.factories">Factories</span></a>
   </nav>
 
-  <section class="section" aria-labelledby="new-sources-title">
-    <div class="sec-head"><div><h2 id="new-sources-title">New material sources</h2><p class="muted" id="newSourcesDescription" style="margin-top:5px">Fresh swatch-backed fabrics and components from newly listed Japanese suppliers.</p></div><a class="link-arrow" href="pages/category.html?cat=fabrics">Browse fabrics <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
-    <div class="prod-grid" id="newSourceGrid" style="margin-top:16px"></div>
-  </section>
-
   <!-- CURATED -->
   <section class="section">
     <div class="sec-head"><h2 data-i18n="home.curated">Curated for you</h2><a class="link-arrow" href="pages/category.html"><span data-i18n="home.viewall">View all products</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
@@ -235,25 +230,10 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   // Curated grid uses standardized product cards with a staggered entrance
   // on both first load (skeleton -> real data) and tab switches.
   const grid=document.getElementById('curatedGrid');
-  const newSourceGrid=document.getElementById('newSourceGrid');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
   const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
   const catalogStats=window.ATELIX_catalogStats;
-  const newSourceProducts=window.ARCANA_PRODUCTS.filter(isNewSource);
-  const newSourceSuppliers=new Set(newSourceProducts.map(product=>product.seller)).size;
-  const newSourcesDescription=document.getElementById('newSourcesDescription');
-  if(newSourcesDescription) newSourcesDescription.textContent=`${newSourceProducts.length} newly listed fabrics and components from ${newSourceSuppliers} Japanese material partners.`;
-  function renderNewSources(){
-    if(!newSourceGrid) return;
-    const seen=new Set();
-    const list=window.ARCANA_PRODUCTS.filter(isNewSource).filter(p=>{
-      if(seen.has(p.seller)) return false;
-      seen.add(p.seller); return true;
-    }).slice(0,8);
-    newSourceGrid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
-    window.ARCANA_wireCards(newSourceGrid);
-  }
   function renderCurated(cat){
     curCat=cat;
     const list=window.ARCANA_PRODUCTS
@@ -269,10 +249,9 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
       });
     }
   }
-  renderNewSources();
   renderCurated('all');
   document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>renderCurated(t.dataset.cat)));
-  window.ARCANA_onLang(()=>{renderNewSources();renderCurated(curCat);});
+  window.ARCANA_onLang(()=>renderCurated(curCat));
 
   // Supplier names and locations come from the maintained factory directory.
   // Where a public company mark is available, it is shown as a small visual cue;
