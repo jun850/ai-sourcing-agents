@@ -1,7 +1,7 @@
 /* Atelix Copilot LLM bridge — wires window.ARCANA_LLM (the extension point
    copilot.js's ask() already awaits) to the copilot-ask Supabase Edge
-   Function, which holds the Gemini key server-side and enforces the 30
-   call / 128k token daily cap. Only ever reached for a signed-in session —
+   Function, which holds the Gemini key server-side and enforces the shared
+   3-call / 128k token daily cap. Only ever reached for a signed-in session —
    Copilot's entry points are auth-gated in components.js — but the Edge
    Function independently re-checks the JWT and the cap, so this is UX, not
    the real gate. On any failure ask() falls back to the deterministic
@@ -27,13 +27,16 @@ window.ARCANA_LLM = async function({text, intent, matches}){
   const { data, error } = await sb.functions.invoke('copilot-ask', {
     body: { text: String(text||'').slice(0,400), intent, matches: trimMatches(matches) }
   });
-  if(error) throw error;
-  if(!data || !data.ok){
-    const err = new Error((data && data.reason) || 'copilot_unavailable');
-    err.code = data && data.reason;
-    err.usage = data && data.usage;
+  let payload=data;
+  if(error&&error.context&&typeof error.context.clone==='function'){
+    try{payload=await error.context.clone().json();}catch(_){}
+  }
+  if(error||!payload||!payload.ok){
+    const err = new Error((payload && payload.reason) || 'copilot_unavailable');
+    err.code = payload && payload.reason;
+    err.usage = payload && payload.usage;
     throw err;
   }
-  return { summary: data.summary, usage: data.usage };
+  return { summary: payload.summary, usage: payload.usage };
 };
 })();

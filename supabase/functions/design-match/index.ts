@@ -1,8 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Design Match is intentionally separate from Athelia. Gemini reads
-// source material into a structured brief; Atelix's own catalog data supplies
+// Athelia reads source material into a structured brief; Atelix's own catalog data supplies
 // every supplier, certification, MOQ, lead-time, and price shown to a buyer.
 const MODEL = "gemini-3.6-flash";
 const MAX_FILES = 8;
@@ -15,6 +14,8 @@ const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 const MAX_INLINE_TOTAL_BYTES = 12 * 1024 * 1024;
 const FILE_PROCESSING_TIMEOUT_MS = 60 * 1000;
 const MODEL_TIMEOUT_MS = 75 * 1000;
+const MAX_DAILY_CALLS = 3;
+const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PDF = "application/pdf";
 const CORS_HEADERS = {
@@ -37,7 +38,7 @@ const MATCH_DEFINITIONS: Record<string, { catalog: string[]; cues: string[] }> =
 const BRIEF_SCHEMA = {
   type: "object",
   properties: {
-    documentType: { type: "string", enum: ["tech_pack", "design_reference", "unsupported"] },
+    documentType: { type: "string", enum: ["tech_pack", "design_reference", "fabric_reference", "unsupported"] },
     documentConfidence: { type: "string", enum: ["high", "medium", "low"] },
     documentSummary: { type: "string" },
     unsupportedReason: { type: "string" },
@@ -96,7 +97,25 @@ function scoreText(haystack: string, wanted: string[]) {
   const source = haystack.toLowerCase();
   return wanted.reduce((score, term) => score + (source.includes(term) ? 1 : 0), 0);
 }
+function canonicalTerm(term: string) {
+  if (term === "zip" || term === "zipper" || term === "zippers") return "zipper";
+  if (term === "knitted") return "knit";
+  if (term === "labels") return "label";
+  if (term === "buttons") return "button";
+  return term;
+}
+function exactTermScore(haystack: string, wanted: string[]) {
+  const sourceTerms = new Set(terms(haystack).map(canonicalTerm));
+  return new Set(wanted.map(canonicalTerm)).size
+    ? [...new Set(wanted.map(canonicalTerm))].filter(term => sourceTerms.has(term)).length
+    : 0;
+}
 const MATERIAL_TERMS = ["cotton", "polyester", "linen", "wool", "silk", "nylon", "viscose", "rayon", "lyocell", "modal", "acrylic", "elastane", "spandex", "leather"];
+const MATCH_STOP_WORDS = new Set(["article", "supplier", "placement", "unit", "cost", "body", "main", "centre", "center", "front", "back", "custom", "request", "with", "from", "and", "the", "for"]);
+function gsm(value: unknown) {
+  const match = safeText(value, 500).match(/(\d{2,4})\s*(?:\/\s*\d{2,4}\s*)?gsm/i);
+  return match ? Number(match[1]) : null;
+}
 function materialMismatch(requirement: any, product: any) {
   const required = terms(requirement.composition).filter(term => MATERIAL_TERMS.includes(term));
   if (!required.length) return 0;
@@ -149,10 +168,10 @@ function normalizeBrief(raw: any) {
     name: item.name, specification: item.specification, composition: item.composition, confidence: item.confidence
   }));
   return {
-    documentType: ["tech_pack", "design_reference", "unsupported"].includes(raw?.documentType) ? raw.documentType : "unsupported",
+    documentType: ["tech_pack", "design_reference", "fabric_reference", "unsupported"].includes(raw?.documentType) ? raw.documentType : "unsupported",
     documentConfidence: ["high", "medium", "low"].includes(raw?.documentConfidence) ? raw.documentConfidence : "low",
     documentSummary: safeText(raw?.documentSummary, 500), unsupportedReason: safeText(raw?.unsupportedReason, 300), ocrEvidence,
-    garmentType: safeText(raw?.garmentType, 120) || "Garment design",
+    garmentType: safeText(raw?.garmentType, 120) || (raw?.documentType === "fabric_reference" ? "Fabric reference" : "Garment design"),
     description: safeText(raw?.description, 600), quantities: safeText(raw?.quantities, 100), sizes: safeText(raw?.sizes, 100),
     targetRegion: safeText(raw?.targetRegion, 100), targetPrice: safeText(raw?.targetPrice, 100), leadTime: safeText(raw?.leadTime, 100),
     certifications: list(raw?.certifications), construction: list(raw?.construction), colorways: colors,
@@ -166,29 +185,51 @@ function normalizeBrief(raw: any) {
 function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[], factories: any[]) {
   const briefWords = [brief.garmentType, brief.description, brief.construction.join(" "), brief.certifications.join(" "), brief.targetRegion, ...brief.bomItems.map((item: any) => `${item.name} ${item.specification} ${item.composition}`)].flatMap(terms);
   const activeProducts = products.filter(p => p.listing_status === "active");
-  const mapProduct = (product: any, score: number) => ({
+  const mapProduct = (product: any, score: number, matchQuality: "exact" | "partial") => ({
     id: product.sku, name: product.name, img: product.img, comp: product.comp,
     spec: product.spec, price: Number(product.price), unit: product.unit_type,
     moq: product.moq == null ? "" : `${product.moq} ${product.unit_type || ""}`.trim(),
-    seller: product.factory?.name || "", loc: product.loc, country: product.factory?.region || "",
-    badge: product.badge || "", cat: product.category, matchScore: score
+    seller: product.factory?.name || "", loc: product.loc,
+    country: product.country || product.factory?.country || product.factory?.region || "",
+    badge: product.badge || "", cat: product.category, matchScore: score, matchQuality
   });
   const requirementMatches = (requirements: any[], section: string) => requirements.map(requirement => {
     const definition = MATCH_DEFINITIONS[section] || MATCH_DEFINITIONS.accessories;
-    const identityTerms = [...terms(requirement.name), ...terms(requirement.specification), ...terms(requirement.color)];
+    const genericFabricTerms = new Set(["fabric", "material", "textile", "shell", "lining"]);
+    const identityTerms = [...new Set([...terms(requirement.name), ...terms(requirement.specification), ...terms(requirement.color)])]
+      .filter(term => !MATCH_STOP_WORDS.has(term));
+    const scoredIdentityTerms = section === "fabrics" ? identityTerms.filter(term => !genericFabricTerms.has(term)) : identityTerms;
     const compositionTerms = terms(requirement.composition);
     const certificationTerms = terms(brief.certifications.join(" "));
     const ranked = activeProducts.filter(p => definition.catalog.includes(p.category)).map(p => {
       const source = [p.name, p.comp, p.spec, p.badge, p.loc, p.factory?.name, ...(p.factory?.tags || []), ...(p.factory?.certs || [])].join(" ");
       const productMaterial = [p.name, p.comp, p.spec, ...(p.factory?.certs || [])].join(" ");
-      const requirementScore = scoreText(source, identityTerms);
+      const requirementScore = scoreText(source, scoredIdentityTerms);
+      const exactIdentityScore = exactTermScore(source, scoredIdentityTerms);
       const compositionScore = scoreText(productMaterial, compositionTerms);
       const certificationScore = scoreText(productMaterial, certificationTerms);
       const cueScore = scoreText(source, definition.cues);
       const score = requirementScore * 2 + compositionScore * 5 + certificationScore * 4 + cueScore - materialMismatch(requirement, p);
-      return { product: p, score };
-    }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 6);
-    return { requirement, matches: ranked.map(x => mapProduct(x.product, x.score)) };
+      const requiredComposition = compositionTerms.filter(term => /^[a-z]+$/.test(term) && term !== "gsm");
+      const requiredCertifications = certificationTerms.filter(term => !["certified", "certification", "standard"].includes(term));
+      const compositionExact = !requiredComposition.length || requiredComposition.every(term => productMaterial.toLowerCase().includes(term));
+      const certificationExact = !requiredCertifications.length || requiredCertifications.every(term => productMaterial.toLowerCase().includes(term));
+      const requestedGsm = gsm(`${requirement.composition} ${requirement.specification}`);
+      const productGsm = gsm(`${p.comp || ""} ${p.spec || ""}`);
+      const weightExact = !requestedGsm || (!!productGsm && Math.abs(productGsm - requestedGsm) <= Math.max(10, requestedGsm * .05));
+      const identityTarget = Math.max(1, Math.ceil(scoredIdentityTerms.length * .75));
+      const identityExact = scoredIdentityTerms.length > 0 && exactIdentityScore >= identityTarget;
+      const hasExplicitFabricSpec = requiredComposition.length > 0 || !!requestedGsm;
+      const exact = section === "fabrics"
+        ? (hasExplicitFabricSpec ? compositionExact && weightExact && certificationExact : identityExact)
+        : identityExact;
+      return { product: p, score, matchQuality: exact ? "exact" as const : "partial" as const };
+    }).filter(x => x.score >= (section === "fabrics" && compositionTerms.length ? 6 : 4))
+      .sort((a, b) => (a.matchQuality === b.matchQuality ? b.score - a.score : a.matchQuality === "exact" ? -1 : 1))
+      .slice(0, 6);
+    const exactCount = ranked.filter(item => item.matchQuality === "exact").length;
+    const visible = exactCount ? ranked : ranked.slice(0, 4);
+    return { requirement, exactCount, partialCount: visible.length - exactCount, matches: visible.map(x => mapProduct(x.product, x.score, x.matchQuality)) };
   });
   const categories = BOM_CATEGORIES.map(category => ({
     category,
@@ -205,7 +246,7 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
       verified: true, years: factory.years, moq: factory.moq, lead: factory.lead, rating: Number(factory.rating || 0),
       orders: factory.orders_label, capacity: factory.capacity, certs: factory.certs || [], tags: factory.tags || [], img: factory.img,
       bio: factory.bio, matchScore: score + coverage * 2, coverage, requirementCount: brief.bomItems.length };
-  }).filter(f => f.matchScore > 0).sort((a, b) => b.matchScore - a.matchScore).slice(0, 8);
+  }).filter(f => f.coverage > 0 || matchedSellerNames.has(f.name)).sort((a, b) => b.matchScore - a.matchScore).slice(0, 8);
   return {
     suppliers,
     oems: suppliers,
@@ -324,6 +365,26 @@ async function handleRequest(req: Request) {
   if (files.some(file => file.size > (file.type === PDF ? MAX_PDF_BYTES : MAX_IMAGE_BYTES)) || totalBytes > MAX_TOTAL_BYTES) return json({ ok: false, reason: "file_size" }, 413);
   if (files.some(file => !IMAGE_TYPES.has(file.type) && file.type !== PDF)) return json({ ok: false, reason: "unsupported_file" }, 415);
 
+  let reservedUsage: any = null;
+  const unlimited = (user.email || "").toLowerCase() === UNLIMITED_EMAIL;
+  if (!unlimited) {
+    const { data, error } = await admin
+      .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_DAILY_CALLS })
+      .single();
+    if (error || !data) {
+      console.error("[design-match] Usage reservation failed", error);
+      return json({ ok: false, reason: "usage_unavailable", stage: "usage" }, 503);
+    }
+    reservedUsage = data;
+    if (!reservedUsage.allowed) return json({
+      ok: false,
+      reason: "limit_reached",
+      stage: "usage",
+      contact: "info@arcanawangsa.com",
+      usage: { callCount: reservedUsage.call_count, maxCalls: MAX_DAILY_CALLS }
+    }, 429);
+  }
+
   const parts: any[] = [];
   const temporaryFiles: string[] = [];
   try {
@@ -349,10 +410,12 @@ async function handleRequest(req: Request) {
 2. Classify the upload as exactly one documentType:
    - tech_pack: a garment technical package containing technical drawings, measurements, construction notes, specifications, or a bill of materials.
    - design_reference: a garment photo, sketch, illustration, moodboard, or design image that lacks a usable technical specification but can still inform fabric sourcing.
+   - fabric_reference: a fabric close-up, swatch, textile sample, fabric label, or material photo that can inform fabric sourcing, even when no complete garment is visible.
    - unsupported: not a garment sourcing/design document, or too unreadable to identify a garment or material direction.
 3. Extract and analyze:
    - For tech_pack, extract explicit BOM rows, specifications, quantities, units, composition, colors, codes, construction, sizes, and certifications. Use source=explicit_text. Never invent missing facts.
    - For design_reference, infer only visible fabric/material requirements that would help source the shown design. Use category=fabrics, source=visual_inference, and medium or low confidence. Describe observable cues such as drape, sheen, weight, texture, knit/woven appearance, stretch, transparency, or structure. Do not invent composition, GSM, certification, quantity, price, or supplier facts.
+   - For fabric_reference, OCR any visible label or swatch text first, then create only fabric BOM requirements. Preserve printed composition, GSM, construction, certification, color, and codes as explicit_text. Otherwise use visual_inference with medium or low confidence and describe only visible weave/knit, texture, sheen, weight, stretch, transparency, structure, and color cues. Never invent composition, GSM, certification, quantity, price, or supplier facts.
    - For unsupported, explain why in unsupportedReason and return empty sourcing arrays.
 4. Normalize supported BOM items into these exact categories: shell and lining materials=fabrics; buttons, snaps, and rivets=buttons; zippers, sliders, and pullers=zippers; brand, care, size, and hang labels/tags=labels; sewing yarn and thread=yarns; tapes, elastic, cords, patches, rib, and interlining=trims; buckles, hooks, eyelets, grommets, and other hardware=accessories.
 Return only JSON matching the schema. The resulting supported brief will be matched deterministically against Atelix's verified catalog.`;
@@ -378,6 +441,12 @@ Return only JSON matching the schema. The resulting supported brief will be matc
     gemini = await response.json();
   } catch (error) { console.error("[design-match] Gemini request failed", error); return json({ ok: false, reason: "analysis_failed", stage: "model_request" }, 502); }
   finally { await Promise.all(temporaryFiles.map(name => deleteGeminiFile(name, apiKey))); }
+  const tokensUsed = gemini?.usageMetadata?.totalTokenCount
+    ?? ((gemini?.usageMetadata?.promptTokenCount || 0) + (gemini?.usageMetadata?.candidatesTokenCount || 0));
+  if (!unlimited && tokensUsed > 0) {
+    const { error } = await admin.rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed });
+    if (error) console.error("[design-match] Token accounting failed", error);
+  }
   const candidate = gemini?.candidates?.[0];
   const text = candidate?.content?.parts?.find((part: any) => part.text)?.text;
   if (!text) {
@@ -405,7 +474,9 @@ Return only JSON matching the schema. The resulting supported brief will be matc
   ]);
   if (productResult.error || factoryResult.error) return json({ ok: false, reason: "catalog_unavailable" }, 503);
   const results = matchCatalog(brief, productResult.data || [], factoryResult.data || []);
-  return json({ ok: true, brief, results, document: {
+  return json({ ok: true, brief, results, usage: unlimited ? { unlimited: true } : {
+    callCount: reservedUsage.call_count, maxCalls: MAX_DAILY_CALLS
+  }, document: {
     type: brief.documentType, confidence: brief.documentConfidence, summary: brief.documentSummary,
     ocrEvidence: brief.ocrEvidence
   }, files: files.map(file => ({ name: safeText(file.name, 160), size: file.size })) });

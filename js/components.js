@@ -229,11 +229,10 @@ function brand(){
 }
 const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <label class="visually-hidden" for="site-search">Search</label>${IC.search}
-  <span class="s-chip" data-img-chip hidden></span>
   <input id="site-search" name="q" placeholder="${ph}" data-i18n-ph="search.ph" autocomplete="off" spellcheck="false"
     role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-pop">
   <button type="button" class="s-design" data-design-match aria-label="Match a design reference" title="Match a tech pack or design reference">${IC.document}</button>
-  <button type="button" class="s-cam" data-cam aria-label="Search by image" title="Search by image">${IC.camera}</button>
+  <button type="button" class="s-cam" data-cam aria-label="Search fabrics by photo" title="Search fabrics by photo">${IC.camera}</button>
   <div class="s-pop" id="search-pop" role="listbox" aria-label="Search suggestions" data-search-pop hidden></div>
 </form>`;
 
@@ -415,7 +414,7 @@ function toast(msg, action){
   t.innerHTML=`${IC.check}<span>${msg}</span>${action?`<a href="${action.href}">${action.label}</a>`:''}`;
   toastEl.appendChild(t);
   requestAnimationFrame(()=>t.classList.add('in'));
-  setTimeout(()=>{ t.classList.remove('in'); setTimeout(()=>t.remove(),250); }, 3200);
+  setTimeout(()=>{ t.classList.remove('in'); setTimeout(()=>t.remove(),250); }, action?6000:3200);
 }
 window.ARCANA_toast = toast;
 
@@ -569,35 +568,78 @@ function ensureDesignMatchModal(){
   wrap.className='modal-overlay design-match-overlay'; wrap.hidden=true;
   wrap.innerHTML=`<section class="design-match-modal" role="dialog" aria-modal="true" aria-labelledby="dmTitle" aria-describedby="dmDesc">
     <button type="button" class="dm-close" data-dm-close aria-label="Close">&times;</button>
-    <div class="dm-mark">${IC.document}</div>
-    <h2 id="dmTitle">Match a design to verified suppliers</h2>
-    <p id="dmDesc">Upload a tech pack or reference as an image or PDF. Athelia reads its bill of materials into a sourcing brief, then Atelix matches products and verified suppliers.</p>
+    <div class="dm-intro"><div class="dm-mark">${IC.document}</div><div>
+      <h2 id="dmTitle">Turn your tech pack into product matches</h2>
+      <p id="dmDesc">Athelia turns your BOM into relevant product recommendations.</p>
+    </div></div>
     <form data-dm-form>
       <input type="file" data-dm-files accept="application/pdf,image/jpeg,image/png,image/webp" multiple hidden>
       <button type="button" class="dm-drop" data-dm-browse>
-        ${IC.document}<span><b>Drop files here or browse</b><small>PDF up to 30 MB · images up to 25 MB · up to 8 files</small></span>
+        ${IC.document}<span><b>Upload a tech pack or garment design</b><small>Drop files here or browse · PDF up to 30 MB · up to 8 files</small></span>
       </button>
       <ul class="dm-files" data-dm-list aria-live="polite"></ul>
       <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your Atelix profile.</p>
-      <div class="dm-actions"><button type="button" class="btn btn-out" data-dm-close>Cancel</button><button type="submit" class="btn btn-green" data-dm-submit disabled>Analyze design</button></div>
+      <div class="dm-actions"><button type="button" class="btn btn-out" data-dm-close>Cancel</button><button type="submit" class="btn btn-green" data-dm-submit disabled>Find product matches</button></div>
     </form>
+    <div class="dm-analysis" data-dm-analysis role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden>
+      <div class="dm-analysis-visual" aria-hidden="true"><span>${IC.document}</span><i></i></div>
+      <div class="dm-analysis-copy">
+        <h3 data-dm-status>Securing your upload</h3>
+        <p data-dm-status-detail>Keeping source files private while the transfer completes.</p>
+      </div>
+      <div class="dm-analysis-rail" aria-hidden="true"><span></span></div>
+      <small data-dm-wait>This can take a little longer for scanned or image-heavy PDFs.</small>
+      <button type="button" class="btn btn-out" data-dm-retry hidden>Back to upload</button>
+    </div>
   </section>`;
   document.body.appendChild(wrap); designMatchModal=wrap;
   const input=wrap.querySelector('[data-dm-files]'), list=wrap.querySelector('[data-dm-list]'), submit=wrap.querySelector('[data-dm-submit]');
-  let files=[];
-  const close=()=>{ wrap.classList.remove('in'); wrap.hidden=true; };
+  const form=wrap.querySelector('[data-dm-form]'), analysis=wrap.querySelector('[data-dm-analysis]');
+  const status=wrap.querySelector('[data-dm-status]'), statusDetail=wrap.querySelector('[data-dm-status-detail]');
+  const title=wrap.querySelector('#dmTitle'), description=wrap.querySelector('#dmDesc'), waitCopy=wrap.querySelector('[data-dm-wait]');
+  const retry=wrap.querySelector('[data-dm-retry]'), closeButtons=[...wrap.querySelectorAll('[data-dm-close]')];
+  let files=[], busy=false, statusTimers=[];
+  const clearStatusTimers=()=>{statusTimers.forEach(clearTimeout);statusTimers=[];};
+  const close=()=>{ if(busy)return; clearStatusTimers(); wrap.classList.remove('in'); wrap.hidden=true; };
+  const showUpload=()=>{
+    busy=false; clearStatusTimers(); wrap.setAttribute('aria-busy','false');
+    form.hidden=false; analysis.hidden=true; analysis.dataset.state=''; retry.hidden=true;
+    closeButtons.forEach(button=>button.disabled=false); submit.disabled=!files.length; submit.textContent='Find product matches';
+  };
+  const setStatus=(title,detail,state='working')=>{status.textContent=title;statusDetail.textContent=detail;analysis.dataset.state=state;};
+  const showAnalysis=()=>{
+    busy=true; form.hidden=true; analysis.hidden=false; retry.hidden=true; wrap.setAttribute('aria-busy','true');
+    closeButtons.forEach(button=>button.disabled=true); setStatus('Securing your upload','Keeping source files private while the transfer completes.'); analysis.focus();
+    const phases=[
+      [900,'Reading every page','Finding text, tables, material specifications, and annotations.'],
+      [2800,'Identifying the reference','Checking whether this is a tech pack, design, or fabric photo.'],
+      [5500,'Building the sourcing brief','Extracting the garment type, design notes, and bill of materials.'],
+      [9000,'Matching the verified catalog','Ranking products and suppliers against your requirements.'],
+      [14000,'Finishing your match','Checking the brief and preparing your search results.']
+    ];
+    statusTimers=phases.map(([delay,title,detail])=>setTimeout(()=>setStatus(title,detail),delay));
+  };
   const renderFiles=()=>{
     list.innerHTML=files.map((file,index)=>`<li><span>${IC.document}<b>${String(file.name).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</b><small>${(file.size/1024/1024).toFixed(file.size>1024*1024?1:0)} MB</small></span><button type="button" data-dm-remove="${index}" aria-label="Remove ${String(file.name).replace(/"/g,'')}">&times;</button></li>`).join('');
     submit.disabled=!files.length;
   };
   const accept=added=>{
     const allowed=file=>/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type);
-    const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, or PDF files.');return;}
-    if(files.length+added.length>8){toast('Upload up to 8 files at a time.');return;}
+    const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, or PDF files.');return false;}
+    if(files.length+added.length>8){toast('Upload up to 8 files at a time.');return false;}
     const oversized=added.find(file=>file.size>(file.type==='application/pdf'?30:25)*1024*1024);
-    if(oversized){toast(oversized.type==='application/pdf'?'Keep each PDF under 30 MB.':'Keep each image under 25 MB.');return;}
-    if([...files,...added].reduce((total,file)=>total+file.size,0)>30*1024*1024){toast('Keep the total upload under 30 MB.');return;}
-    files=[...files,...added]; renderFiles();
+    if(oversized){toast(oversized.type==='application/pdf'?'Keep each PDF under 30 MB.':'Keep each image under 25 MB.');return false;}
+    if([...files,...added].reduce((total,file)=>total+file.size,0)>30*1024*1024){toast('Keep the total upload under 30 MB.');return false;}
+    files=[...files,...added]; renderFiles(); return true;
+  };
+  wrap.__loadDesignFiles=added=>{ files=[]; renderFiles(); return accept(added); };
+  wrap.__startDesignAnalysis=()=>form.requestSubmit();
+  wrap.__showDesignUpload=showUpload;
+  wrap.__setDesignMode=mode=>{
+    const fabric=mode==='fabric';
+    title.textContent=fabric?'Find fabrics from a photo':'Turn your tech pack into product matches';
+    description.textContent=fabric?'Athelia reads your photo and recommends relevant fabrics.':'Athelia turns your BOM into relevant product recommendations.';
+    waitCopy.textContent=fabric?'Visual analysis may take a moment.':'This can take a little longer for scanned or image-heavy PDFs.';
   };
   input.addEventListener('change',()=>{accept([...input.files]);input.value='';});
   wrap.querySelector('[data-dm-browse]').addEventListener('click',()=>input.click());
@@ -605,55 +647,49 @@ function ensureDesignMatchModal(){
   wrap.querySelector('[data-dm-browse]').addEventListener('dragleave',()=>wrap.querySelector('[data-dm-browse]').classList.remove('drag'));
   wrap.querySelector('[data-dm-browse]').addEventListener('drop',event=>{event.preventDefault();wrap.querySelector('[data-dm-browse]').classList.remove('drag');accept([...(event.dataTransfer&&event.dataTransfer.files||[])]);});
   list.addEventListener('click',event=>{const button=event.target.closest('[data-dm-remove]');if(button){files.splice(+button.dataset.dmRemove,1);renderFiles();}});
-  wrap.querySelectorAll('[data-dm-close]').forEach(button=>button.addEventListener('click',close));
+  closeButtons.forEach(button=>button.addEventListener('click',close));
+  retry.addEventListener('click',showUpload);
   wrap.addEventListener('pointerdown',event=>{if(event.target===wrap)close();});
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!wrap.hidden)close();});
-  wrap.querySelector('[data-dm-form]').addEventListener('submit',async event=>{
+  form.addEventListener('submit',async event=>{
     event.preventDefault(); if(!files.length) return;
     const api=window.ARCANA_API; if(!api||!api.analyzeDesign){toast('Design analysis is unavailable.');return;}
-    submit.disabled=true; submit.textContent='Reading design…';
+    submit.disabled=true; submit.textContent='Analyzing…'; showAnalysis();
     const {data,error}=await api.analyzeDesign(files);
-    submit.disabled=false; submit.textContent='Analyze design';
+    clearStatusTimers();
     if(error || !data || !data.ok){
       const reason=(data&&data.reason)||(error&&error.message)||'analysis_failed';
       const stage=data&&data.stage, detail=data&&data.detail;
       console.error('[Design Match] Analysis failed',{reason,stage,detail,upstreamStatus:data&&data.upstreamStatus,error});
-      const stageMessage={file_upload:'Athelia could not finish processing this PDF. Please retry.',model:'Athelia could not analyze this document right now. Please retry.',model_request:'Athelia could not be reached. Check your connection and retry.',model_output:'Athelia could not produce a usable sourcing brief from this file.',structured_output:'Athelia read the file but could not format the sourcing brief. Please retry.',provider_capacity:'Athelia analysis is temporarily unavailable. Please try again later.'}[stage];
-      const message=stageMessage||{unsupported_file:'Use JPG, PNG, WebP, or PDF files.',file_count:'Upload between 1 and 8 files.',file_size:'Keep PDFs and the total upload under 30 MB; images under 25 MB each.',unsupported_document:(data&&data.document&&data.document.reason)||'Upload a tech pack, garment sketch, or design reference.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Athelia analysis is temporarily unavailable. Please try again later.',catalog_unavailable:'The supplier catalog is temporarily unavailable.',internal_error:'Athelia could not complete this match. Please retry.',analysis_failed:'Athelia could not read that document. Try a clearer PDF or image.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
-      toast(message); return;
+      const stageMessage={file_upload:'Athelia could not finish processing this PDF. Please retry.',model:'Athelia could not analyze this document right now. Please retry.',model_request:'Athelia could not be reached. Check your connection and retry.',model_output:'Athelia could not produce a usable sourcing brief from this file.',structured_output:'Athelia read the file but could not format the sourcing brief. Please retry.',provider_capacity:'Athelia analysis is temporarily unavailable. Please try again later.',usage:'Your daily Athelia allowance could not be checked. Please retry.'}[stage];
+      const message={limit_reached:"You've used today's 3 Athelia analyses. Contact info@arcanawangsa.com if you need more.",unsupported_file:'Use JPG, PNG, WebP, or PDF files.',file_count:'Upload between 1 and 8 files.',file_size:'Keep PDFs and the total upload under 30 MB; images under 25 MB each.',unsupported_document:(data&&data.document&&data.document.reason)||'Athelia could not identify a usable tech pack or garment design.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Athelia analysis is temporarily unavailable. Please try again later.',usage_unavailable:'Your daily Athelia allowance could not be checked. Please retry.',catalog_unavailable:'The supplier catalog is temporarily unavailable.',internal_error:'Athelia could not complete this match. Please retry.',analysis_failed:'Athelia could not read that document. Try a clearer PDF or image.'}[reason]||stageMessage||'Athelia could not read those files. Try a clearer PDF or image.';
+      busy=false; wrap.setAttribute('aria-busy','false'); closeButtons.forEach(button=>button.disabled=false);
+      setStatus('Analysis stopped',message,'error'); retry.hidden=false; retry.focus();
+      const contact=reason==='limit_reached'?{label:'Contact us',href:'mailto:info@arcanawangsa.com?subject='+encodeURIComponent('More Athelia analyses')}:null;
+      toast(message,contact); return;
     }
-    setDesignMatch(data); files=[]; renderFiles(); close();
-    location.href=P('category.html')+'?design-match=1';
+    setDesignMatch(data); setStatus('Match ready','Opening your supplier and material results…','success');
+    wrap.setAttribute('aria-busy','false');
+    setTimeout(()=>{location.href=P('category.html')+'?design-match=1';},450);
   });
   return wrap;
 }
-window.ARCANA_openDesignMatch=function(){
+window.ARCANA_openDesignMatch=function(initialFiles,options={}){
   if(!Store.session()){ toast('Sign in to upload a private design reference.'); location.href=P('login.html')+'?next='+encodeURIComponent('category.html?design-match=1'); return; }
-  const modal=ensureDesignMatchModal(); modal.hidden=false; requestAnimationFrame(()=>modal.classList.add('in')); modal.querySelector('[data-dm-browse]').focus();
+  const modal=ensureDesignMatchModal(); modal.__showDesignUpload(); modal.__setDesignMode(options.mode);
+  const loaded=Array.isArray(initialFiles)&&initialFiles.length?modal.__loadDesignFiles(initialFiles):true;
+  modal.hidden=false; requestAnimationFrame(()=>{
+    modal.classList.add('in');
+    if(loaded&&options.autoStart) modal.__startDesignAnalysis();
+    else modal.querySelector('[data-dm-browse]').focus();
+  });
 };
 
-/* ---------- smart search: intent autocomplete + image (visual) search ---------- */
-/* Image cache contract: sessionStorage only (dies with the tab). A hard refresh is
-   detected via Navigation Timing and clears it too, so the photo survives page-to-page
-   navigation but never a reload or a closed tab. */
-const IMG_KEY='arcana_imgsearch';
-try{
-  const nav=performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-  if(nav && nav.type==='reload') sessionStorage.removeItem(IMG_KEY);
-}catch(_){}
-
-/* mock swatch fingerprint per fabric asset: [hue, saturation, lightness] */
-const SWATCH={
-  'cotton-twill':[40,.35,.58],  linen:[45,.30,.72],       'cotton-jersey':[42,.08,.88],
-  denim:[221,.45,.38],          'jersey-knit':[210,.06,.80],'nylon-taslan':[204,.30,.55],
-  'wool-flannel':[220,.08,.45], 'poly-twill':[210,.12,.52], 'recycled-poly':[145,.25,.55],
-  satin:[330,.25,.72],          fleece:[24,.30,.66],        chambray:[214,.38,.66]
-};
-
+/* ---------- smart search: intent autocomplete + Athelia image search ---------- */
 function wireSearch(){
   const form=document.querySelector('[data-search-form]'); if(!form) return;
   const input=form.querySelector('input'), pop=form.querySelector('[data-search-pop]');
-  const cam=form.querySelector('[data-cam]'), chip=form.querySelector('[data-img-chip]');
+  const cam=form.querySelector('[data-cam]');
   if(!input||!pop) return;
   const t=window.ARCANA_T||(s=>s), tr=window.ARCANA_TR||(s=>s), money=window.ARCANA_money||(n=>'US$'+n.toFixed(2));
   const PROD=window.ARCANA_PRODUCTS||[], FACT=window.ARCANA_FACTORIES||[];
@@ -679,7 +715,7 @@ function wireSearch(){
   const factScore=(f,q,w)=>2*hit(f.name,q,w)+hit(f.tags.join(' '),q,w)+hit(f.type,q,w)+hit(f.loc+' '+f.region,q,w);
 
   /* --- open/close --- */
-  let opts=[], sel=-1, scanT=null;
+  let opts=[], sel=-1;
   const optId=i=>'s-opt-'+i;
   function open(){ if(pop.hidden){ pop.hidden=false; requestAnimationFrame(()=>pop.classList.add('in')); input.setAttribute('aria-expanded','true'); } }
   function close(){ pop.classList.remove('in'); pop.hidden=true; sel=-1; input.setAttribute('aria-expanded','false'); input.removeAttribute('aria-activedescendant'); }
@@ -730,90 +766,27 @@ function wireSearch(){
   }
 
   /* --- image search --- */
-  function getImg(){ try{ return JSON.parse(sessionStorage.getItem(IMG_KEY)); }catch(_){ return null; } }
-  function setImg(v){
-    try{ if(v) sessionStorage.setItem(IMG_KEY,JSON.stringify(v)); else sessionStorage.removeItem(IMG_KEY); }catch(_){}
-    syncChip();
-  }
-  function phFor(key){ const L=I18N[document.documentElement.lang]||I18N.en; return L[key]||I18N.en[key]||''; }
-  function syncChip(){
-    const img=getImg(); if(!chip) return;
-    if(img){
-      chip.innerHTML=`<img src="${img.img}" alt="${esc(t('Photo'))}"><span>${esc(t('Photo'))}</span><button type="button" data-img-x aria-label="${esc(t('Remove photo'))}">×</button>`;
-      chip.hidden=false; input.dataset.i18nPh='search.refine'; input.placeholder=phFor('search.refine');
-    }else{
-      chip.hidden=true; chip.innerHTML=''; input.dataset.i18nPh='search.ph'; input.placeholder=phFor('search.ph');
-    }
-  }
-  function avgHSL(ctx,w,h){
-    let r=0,g=0,b=0,n=0;
-    try{
-      const d=ctx.getImageData(0,0,w,h).data, px=w*h, stride=Math.max(1,Math.floor(px/1200));
-      for(let p=0;p<px;p+=stride){ const i=p*4; r+=d[i]; g+=d[i+1]; b+=d[i+2]; n++; }
-    }catch(_){ return [40,.2,.6]; }
-    r/=255*n; g/=255*n; b/=255*n;
-    const mx=Math.max(r,g,b), mn=Math.min(r,g,b), l=(mx+mn)/2; let s=0, hh=0;
-    if(mx!==mn){ const dd=mx-mn; s=l>.5? dd/(2-mx-mn) : dd/(mx+mn);
-      hh=(mx===r? (g-b)/dd+(g<b?6:0) : mx===g? (b-r)/dd+2 : (r-g)/dd+4)*60; }
-    return [hh,s,l];
-  }
-  function visualMatches(img){
-    const a=img.hsl||[40,.2,.6];
-    const dist=b=>{
-      let dh=Math.abs(a[0]-b[0]); dh=Math.min(dh,360-dh)/180;
-      const wH=(a[1]<.12||b[1]<.12)? .15 : 1;      // near-gray: hue is noise
-      return dh*wH*1.6 + Math.abs(a[1]-b[1])*.6 + Math.abs(a[2]-b[2])*1.2;
-    };
-    return PROD.filter(p=>SWATCH[p.img]).map(p=>[dist(SWATCH[p.img]),p]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
-  }
-  function visualHTML(img){
-    const seen={}, ms=visualMatches(img).filter(p=>!seen[p.img]&&(seen[p.img]=1)).slice(0,6);
-    let h=`<div class="s-hd" role="presentation">${esc(t('Visual matches'))} <i class="s-demo">${esc(t('demo'))}</i></div><div class="s-vgrid" role="presentation">`;
-    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${productAsset(p)}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?t('From')+' '+money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
-    h+=`</div><a class="s-row s-foot" role="option" id="${optId(opts.push(1)-1)}" href="${P('category.html')+'?cat=fabrics&visual=1'}">${IC.search}<span>${esc(t('See all visual matches'))}</span>${IC.chevR}</a>`;
-    return h;
-  }
   function camPanel(){
     pop.innerHTML=`<div class="s-drop">
       <span class="s-drop-ic">${IC.camera}</span>
       <b>${esc(t('Search by fabric photo'))}</b>
       <span class="s-drop-sub">${esc(t('Drop an image here, paste it, or'))} <button type="button" class="s-browse" data-browse>${esc(t('browse'))}</button></span>
-      <span class="s-drop-note">${esc(t('Kept only for this tab — cleared on refresh or close'))}</span>
+      <span class="s-drop-note">Source photos are analyzed in transit and are not saved</span>
     </div>`;
     opts=[]; sel=-1; open();
   }
-  function scanThenMatches(){
-    const img=getImg(); if(!img) return;
-    pop.innerHTML=`<div class="s-scan"><img src="${img.img}" alt=""><div><b>${esc(t('Matching your swatch…'))}</b><span>${esc(t('Comparing color and texture against verified fabrics'))}</span></div></div>`;
-    opts=[]; sel=-1; open();
-    clearTimeout(scanT); scanT=setTimeout(()=>{ input.focus(); render(); },750);
-  }
   function process(f){
-    if(!f||!/^image\//.test(f.type)){ toast(t('That file is not an image')); return; }
-    const url=URL.createObjectURL(f), im=new Image();
-    im.onload=()=>{
-      const s=Math.min(1,256/Math.max(im.width,im.height));
-      const c=document.createElement('canvas');
-      c.width=Math.max(1,Math.round(im.width*s)); c.height=Math.max(1,Math.round(im.height*s));
-      const x=c.getContext('2d'); x.drawImage(im,0,0,c.width,c.height);
-      URL.revokeObjectURL(url);
-      let data=null; try{ data=c.toDataURL('image/jpeg',.82); }catch(_){}
-      if(!data){ toast(t('Could not read that image')); return; }
-      setImg({img:data,hsl:avgHSL(x,c.width,c.height),name:f.name||'photo'});
-      scanThenMatches();
-    };
-    im.onerror=()=>{ URL.revokeObjectURL(url); toast(t('Could not read that image')); };
-    im.src=url;
+    if(!f||!/^image\/(jpeg|png|webp)$/.test(f.type)){ toast('Use a JPG, PNG, or WebP fabric photo.'); return; }
+    if(f.size>25*1024*1024){toast('Keep the fabric photo under 25 MB.');return;}
+    close();
+    window.ARCANA_openDesignMatch&&window.ARCANA_openDesignMatch([f],{autoStart:true,mode:'fabric'});
   }
 
   /* --- main render --- */
   function render(){
-    clearTimeout(scanT);
     const q=norm(input.value), words=q.split(/\s+/).filter(Boolean);
-    const img=getImg();
     let html=''; opts=[]; let i=0;
     if(!q){
-      if(img) html+=visualHTML(img), i=opts.length;
       html+=`<div class="s-hd" role="presentation">${esc(t('Popular on Atelix'))}</div>`;
       for(const k of POPULAR) html+=kwRow(k,'',i++);
       html+=`<div class="s-hd" role="presentation">${esc(t('Verified suppliers'))}</div>`;
@@ -861,26 +834,23 @@ function wireSearch(){
   });
   form.addEventListener('submit',e=>{
     e.preventDefault();
-    const q=input.value.trim(), img=getImg();
-    if(q && !img && briefLike(q)){ triggerCopilotAsk(q); return; }
+    const q=input.value.trim();
+    if(q && briefLike(q)){ triggerCopilotAsk(q); return; }
     const ps=[];
     if(q) ps.push('q='+encodeURIComponent(q));
-    if(img) ps.push('visual=1');
     location.href=P('category.html')+(ps.length?'?'+ps.join('&'):'');
   });
   pop.addEventListener('click',e=>{
     const r=e.target.closest('[data-cop-ask]');
     if(r){ e.preventDefault(); triggerCopilotAsk(r.dataset.copAsk); }
   });
-  if(cam) cam.addEventListener('click',()=>{ input.focus(); getImg()? render() : camPanel(); });
+  if(cam) cam.addEventListener('click',()=>{ input.focus(); camPanel(); });
   const design=form.querySelector('[data-design-match]');
   if(design) design.addEventListener('click',()=>{ if(window.ARCANA_openDesignMatch) window.ARCANA_openDesignMatch(); });
   const file=document.createElement('input');
   file.type='file'; file.accept='image/*'; file.hidden=true; form.appendChild(file);
   file.addEventListener('change',()=>{ if(file.files[0]) process(file.files[0]); file.value=''; });
   form.addEventListener('click',e=>{
-    const x=e.target.closest('[data-img-x]');
-    if(x){ e.preventDefault(); setImg(null); input.focus(); render(); return; }
     if(e.target.closest('[data-browse]')) file.click();
   });
   input.addEventListener('paste',e=>{
@@ -899,7 +869,6 @@ function wireSearch(){
   document.addEventListener('pointerdown',e=>{ if(!form.contains(e.target)) close(); });
   form.addEventListener('focusout',e=>{ if(!form.contains(e.relatedTarget)) close(); });
 
-  syncChip(); // restore photo chip after cross-page navigation
 }
 
 /* ---------- wiring ---------- */
