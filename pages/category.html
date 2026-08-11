@@ -25,8 +25,8 @@
 
   <div class="listing">
     <!-- filter rail -->
-    <aside class="filter-rail">
-      <div class="frl-head"><b data-i18n="cat.filters">Filters</b><a href="#" id="clearFilters" data-i18n="cat.reset">Reset</a></div>
+    <aside class="filter-rail" aria-label="Product filters">
+      <div class="frl-head"><b data-i18n="cat.filters">Filters</b><span><a href="#" id="clearFilters" data-i18n="cat.reset">Reset</a><button class="sheet-close" type="button" data-close-filters aria-label="Close filters">×</button></span></div>
       <div class="frl-block">
         <h5 data-i18n="cat.oemavail">OEM availability</h5>
         <label class="frl-opt"><input type="radio" name="avail" value="all" checked> <span data-i18n="cat.all">All</span></label>
@@ -63,6 +63,11 @@
         <h1 id="listTitle">Fabrics</h1>
         <div class="cnt" id="listSub"><b style="color:var(--ink)">1,246+</b> options from <b style="color:var(--ink)">520+</b> verified suppliers</div>
       </div>
+      <div class="mobile-list-tools" aria-label="Catalog controls">
+        <button type="button" id="openFilters">Filters</button>
+        <button type="button" id="openSort">Sort</button>
+        <span id="mobileResCount" aria-live="polite"></span>
+      </div>
       <div class="sortbar">
         <span class="lbl" data-i18n="cat.sort">Sort</span>
         <div class="sort-chips" id="sortChips">
@@ -72,6 +77,7 @@
           <button class="sort-chip" data-sort="price" data-i18n="sort.price">Price: Low</button>
         </div>
         <span class="count" id="resCount"></span>
+        <button class="sheet-close" type="button" data-close-sort aria-label="Close sort">×</button>
       </div>
       <div class="prod-grid" id="grid"></div>
     </div>
@@ -98,6 +104,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const qsAll=new URLSearchParams(location.search);
   const pageMode = qsAll.get('design-match')==='1' ? 'design-match' : (qsAll.get('copilot')==='1' ? 'copilot-srp' : (qsAll.get('q') ? 'srp' : 'category'));
   document.body.dataset.pageMode = pageMode;
+  const filterRail=document.querySelector('.filter-rail'), sortbar=document.querySelector('.sortbar');
+  document.getElementById('openFilters').addEventListener('click',()=>{filterRail.classList.add('sheet-open');document.body.classList.add('sheet-active');});
+  document.getElementById('openSort').addEventListener('click',()=>{sortbar.classList.add('sheet-open');document.body.classList.add('sheet-active');});
+  document.querySelector('[data-close-filters]').addEventListener('click',()=>{filterRail.classList.remove('sheet-open');document.body.classList.remove('sheet-active');});
+  document.querySelector('[data-close-sort]').addEventListener('click',()=>{sortbar.classList.remove('sheet-open');document.body.classList.remove('sheet-active');});
 
   // ---- Design Match ----
   if(pageMode==='design-match'){ return runDesignMatch(); }
@@ -359,7 +370,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[];
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
-  const grid=document.getElementById('grid'), resCount=document.getElementById('resCount');
+  const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount');
 
   function populateRegions(){
     const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country);
@@ -402,7 +413,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
     else if(sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
     else if(sort==='new') list=[...list].reverse();
-    resCount.textContent=`${list.length} ${T(list.length===1?'result':'results')}`;
+    const countText=`${list.length} ${T(list.length===1?'result':'results')}`;
+    resCount.textContent=countText;
+    mobileResCount.textContent=countText;
 
     grid.innerHTML = list.length
       ? list.map(p=>window.ARCANA_card(p,{href:'product.html?id='+p.id, fabricSpec:isFabric})).join('')
@@ -429,7 +442,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   });
   document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;render();});
   document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;render();});
-  document.querySelectorAll('.sort-chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');sort=c.dataset.sort;render();}));
+  document.querySelectorAll('.sort-chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');sort=c.dataset.sort;sortbar.classList.remove('sheet-open');document.body.classList.remove('sheet-active');render();}));
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
   render();
   window.ARCANA_onLang(render);

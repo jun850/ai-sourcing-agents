@@ -34,7 +34,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   // Discount pricing only exists on the 11.11 sale page (campaign.html) — the PDP
   // always shows the real unit price, whichever surface the shopper arrived from.
-  let id=new URLSearchParams(location.search).get('id'); if(!M[id]) id='CTW-001';
+  let id=new URLSearchParams(location.search).get('id');
+  // Keep direct links resilient when a seeded SKU is retired from the catalog.
+  if(!M[id]) id=(PRODUCTS[0]&&PRODUCTS[0].id)||Object.keys(M)[0];
   const p=M[id];
   const isOEM=p.badge==='oem'||p.badge==='recycle';
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];

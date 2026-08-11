@@ -290,9 +290,15 @@ function buildHeader(){
     : '';
   const cartIcon = seller ? '' :
     `<a class="ic-link cart-ic" href="${P('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge-count" data-cart-badge hidden></span></a><span class="hdr-div"></span>`;
+  const productContext=/\/product\.html$/.test(location.pathname);
+  const mobileBack=productContext
+    ? `<a class="mobile-back" href="${P('category.html')}" aria-label="Back to browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14 5-7 7 7 7M7 12h13"/></svg></a>`
+    : '';
+  if(productContext) root.dataset.context='product';
   root.innerHTML=`
   ${topbar}
   <div class="hdr-in">
+    ${mobileBack}
     ${brand()}
     <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
     ${searchBox(ph)}
@@ -300,6 +306,28 @@ function buildHeader(){
     ${authCluster()}
     ${katPanel()}
   </div>`;
+  syncBadges();
+}
+
+/* Phone navigation is deliberately a different information architecture from
+   the desktop header. Buyer browsing is a frequent, thumb-led loop; seller
+   and admin work remains contextual in the compact header and page tabs. */
+function buildMobileNav(){
+  const path=location.pathname;
+  const focused=/\/(?:login|signup|forgot-password|reset-password|checkout|order|building)\.html$/.test(path);
+  const workspace=document.body.dataset.surface==='seller'||/\/(?:dashboard|admin-orders|admin-supplier)\.html$/.test(path);
+  const transactional=/\/(?:cart|product)\.html$/.test(path);
+  if(focused||workspace||transactional||document.querySelector('.mobile-nav')) return;
+  const current=(name, routes)=>routes.some(route=>path.endsWith('/'+route)||(!ROOT&&path.endsWith(route)))?'on':'';
+  const nav=document.createElement('nav');
+  nav.className='mobile-nav'; nav.setAttribute('aria-label','Primary navigation');
+  nav.innerHTML=`
+    <a class="${current('home',['index.html'])}" href="${HOME}">${markSVG()}<span>Home</span></a>
+    <a class="${current('browse',['category.html','factories.html','supplier.html'])}" href="${P('category.html')}">${IC.search}<span>Browse</span></a>
+    <a class="${current('saved',['wishlist.html'])}" href="${P('wishlist.html')}">${IC.heart}<span>Saved</span></a>
+    <a class="mobile-nav-cart ${current('cart',['cart.html'])}" href="${P('cart.html')}">${IC.cart}<i data-cart-badge hidden></i><span>Cart</span></a>
+    <a class="${current('account',['brand-owner.html'])}" href="${P('brand-owner.html')}">${IC.user}<span>Account</span></a>`;
+  document.body.appendChild(nav);
   syncBadges();
 }
 
@@ -1133,7 +1161,7 @@ function wireLang(){
 }
 
 // demo seed: ?seed=cart pre-fills a couple items (for previews)
-if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('LNW-001',300); Store.addToCart('OCJ-002',150); Store.addToCart('DNM-003',500); }
+if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('FAB-100',300); Store.addToCart('FAB-101',150); Store.addToCart('FAB-102',500); }
 
 /* ---------- catalog hydration: replace bundled data.js globals with live
    Supabase data before the page renders. Falls back silently to data.js on
@@ -1167,7 +1195,11 @@ async function hydrateCatalog(){
   }finally{ catalogLoadBar(false); }
 }
 
-document.addEventListener('DOMContentLoaded',()=>{buildHeader();buildFooter();wire();wireSearch();buildCopilotFab();bootstrapSession();});
+document.addEventListener('DOMContentLoaded',()=>{
+  const viewport=document.querySelector('meta[name="viewport"]');
+  if(viewport&&!/viewport-fit/.test(viewport.content)) viewport.content+=', viewport-fit=cover';
+  buildHeader();buildFooter();buildMobileNav();wire();wireSearch();buildCopilotFab();bootstrapSession();
+});
 document.addEventListener('DOMContentLoaded', async ()=>{
   // Pages that render catalog data opt in with <body data-catalog> so the live
   // read completes before ARCANA_PAGE runs. Other pages render immediately.
