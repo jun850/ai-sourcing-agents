@@ -13,7 +13,7 @@
 <div id="hdr"></div>
 
 <main class="wrap" style="padding-bottom:40px">
-  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><a href="brand-owner.html#orders">My Orders</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur" id="ordCrumb">Order</span></nav>
+  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><a href="orders.html">My Orders</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur" id="ordCrumb">Order</span></nav>
   <div id="ordRoot"></div>
 </main>
 
@@ -150,7 +150,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
 
   function render(){
     if(!order){
-      root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.box}</span><h3>Order not found</h3><p>We couldn't find that order. Check the link or view your order history.</p><a class="btn btn-green" href="brand-owner.html#orders">View my orders</a></div>`;
+      root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.box}</span><h3>Order not found</h3><p>We couldn't find that order. Check the link or view your order history.</p><a class="btn btn-green" href="orders.html">View my orders</a></div>`;
       return;
     }
     document.getElementById('ordCrumb').textContent=order.no;

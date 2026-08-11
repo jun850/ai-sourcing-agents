@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orders — Atelix</title>
+<meta name="description" content="Review your Atelix order history, payment status and fulfillment progress.">
+<meta name="robots" content="noindex, follow">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/pages.css">
+</head>
+<body data-root=".." data-allcat="0">
+<div id="hdr"></div>
+
+<main class="wrap orders-page">
+  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Orders</span></nav>
+  <header class="orders-page-head">
+    <div><h1>Orders</h1><p>Review payment, production and delivery updates.</p></div>
+  </header>
+  <div class="orders-filters" aria-label="Filter orders">
+    <div class="order-filter-group" role="group" aria-label="Order status"><button class="order-filter-chip on" type="button" data-order-status="all">All</button><button class="order-filter-chip" type="button" data-order-status="open">In progress</button><button class="order-filter-chip" type="button" data-order-status="completed">Completed</button><button class="order-filter-chip" type="button" data-order-status="cancelled">Cancelled</button></div>
+    <div class="order-filter-group" role="group" aria-label="Order date"><button class="order-filter-chip on" type="button" data-order-date="all">All time</button><button class="order-filter-chip" type="button" data-order-date="30">Last 30 days</button><button class="order-filter-chip" type="button" data-order-date="90">Last 90 days</button></div>
+  </div>
+  <section id="ordersRoot" class="orders-list" aria-live="polite" aria-busy="true"></section>
+</main>
+
+<div id="ftr"></div>
+<script src="../js/data.js"></script>
+<script src="../js/components.js"></script>
+<script defer src="../js/analytics.bundle.js"></script>
+<script src="../js/supabase-client.bundle.js"></script>
+<script src="../js/api.js"></script>
+<script>
+window.ARCANA_PAGE=async function({IC}){
+  const root=document.getElementById('ordersRoot');
+  let statusFilter='all', dateFilter='all';
+  const API=window.ARCANA_API;
+  const money=n=>window.ARCANA_money(Number(n)||0);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const STATUS={
+    awaiting_payment:{label:'Pending payment',cls:'b-prem',group:'open'},
+    payment_declared:{label:'Payment declared',cls:'b-prem',group:'open'},
+    payment_verified:{label:'Payment verified',cls:'b-std',group:'open'},
+    fulfilling:{label:'In fulfillment',cls:'b-std',group:'open'},
+    completed:{label:'Completed',cls:'b-ok',group:'completed'},
+    cancelled:{label:'Cancelled',cls:'b-nonoem',group:'cancelled'},
+    disputed:{label:'Disputed',cls:'b-nonoem',group:'cancelled'},
+    refunded:{label:'Refunded',cls:'b-nonoem',group:'cancelled'}
+  };
+  const fmtDate=value=>new Intl.DateTimeFormat(document.documentElement.lang||'en',{month:'short',day:'numeric',year:'numeric'}).format(new Date(value));
+  const inDays=(value,days)=>Date.now()-new Date(value).getTime()<=days*86400000;
+
+  const profile=await API.getSessionProfile();
+  if(!profile){
+    root.setAttribute('aria-busy','false');
+    root.innerHTML=`<div class="panel cart-empty orders-empty"><span class="ce-ic">${IC.lock}</span><h2>Log in to see your orders</h2><p>Your purchases and fulfillment updates are private to your account.</p><a class="btn btn-green" href="login.html?next=orders.html">Log in</a></div>`;
+    return;
+  }
+
+  const orders=await API.getMyOrders();
+  function render(){
+    const status=statusFilter, days=Number(dateFilter);
+    const visible=orders.filter(order=>{
+      const meta=STATUS[order.status]||STATUS.awaiting_payment;
+      return (status==='all'||meta.group===status)&&(!days||inDays(order.placed_at,days));
+    });
+    root.setAttribute('aria-busy','false');
+    if(!visible.length){
+      root.innerHTML=`<div class="panel cart-empty orders-empty"><span class="ce-ic">${IC.document}</span><h2>No orders here yet</h2><p>Try a different filter, or browse materials to start your next sourcing order.</p><a class="btn btn-green" href="category.html">Browse materials</a></div>`;
+      return;
+    }
+    root.innerHTML=visible.map(order=>{
+      const meta=STATUS[order.status]||STATUS.awaiting_payment;
+      const items=order.order_items||[];
+      const primary=items[0]||{};
+      const additional=items.length>1?` +${items.length-1} more`:'';
+      const supplier=items.length>1?`${items.length} suppliers`:primary.seller_snapshot||'Verified supplier';
+      return `<a class="order-history-card" href="order.html?no=${encodeURIComponent(order.order_no)}">
+        <div class="order-history-top"><span class="order-history-kind">${IC.box}<span>Order</span></span><span class="badge ${meta.cls}">${meta.label}</span></div>
+        <div class="order-history-date">${fmtDate(order.placed_at)} · ${esc(order.order_no)}</div>
+        <div class="order-history-body"><span class="order-history-icon">${IC.document}</span><div><b>${esc(primary.name_snapshot||'Order details')}${additional}</b><span>${esc(supplier)}</span></div></div>
+        <div class="order-history-foot"><span><small>Total</small><b>${money(order.total)}</b></span><span class="order-history-open">View details ${IC.chevR}</span></div>
+      </a>`;
+    }).join('');
+  }
+  document.querySelectorAll('[data-order-status]').forEach(chip=>chip.addEventListener('click',()=>{
+    statusFilter=chip.dataset.orderStatus;
+    document.querySelectorAll('[data-order-status]').forEach(item=>item.classList.toggle('on',item===chip));
+    render();
+  }));
+  document.querySelectorAll('[data-order-date]').forEach(chip=>chip.addEventListener('click',()=>{
+    dateFilter=chip.dataset.orderDate;
+    document.querySelectorAll('[data-order-date]').forEach(item=>item.classList.toggle('on',item===chip));
+    render();
+  }));
+  render();
+};
+</script>
+</body>
+</html>

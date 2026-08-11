@@ -325,7 +325,7 @@ function buildMobileNav(){
   const transactional=/\/(?:cart|product)\.html$/.test(path);
   if(focused||workspace||transactional||document.querySelector('.mobile-nav')) return;
   const current=(name, routes)=>routes.some(route=>path.endsWith('/'+route)||(!ROOT&&path.endsWith(route)))?'on':'';
-  const onOrders=/\/brand-owner\.html$/.test(path) && location.hash==='#orders';
+  const onOrders=/\/orders\.html$/.test(path);
   const onAccount=/\/brand-owner\.html$/.test(path) && !onOrders;
   const nav=document.createElement('nav');
   nav.className='mobile-nav'; nav.setAttribute('aria-label','Primary navigation');
@@ -333,7 +333,7 @@ function buildMobileNav(){
     <a class="${current('home',['index.html'])}" href="${HOME}">${markSVG()}<span>Home</span></a>
     <a class="${current('browse',['category.html','factories.html','supplier.html'])}" href="${P('category.html')}">${IC.search}<span>Browse</span></a>
     <a class="${current('saved',['wishlist.html'])}" href="${P('wishlist.html')}">${IC.heart}<span>Saved</span></a>
-    <a class="${onOrders?'on':''}" href="${P('brand-owner.html')}#orders">${IC.document}<span>Orders</span></a>
+    <a class="${onOrders?'on':''}" href="${P('orders.html')}">${IC.document}<span>Orders</span></a>
     <a class="${onAccount?'on':''}" href="${P('brand-owner.html')}">${IC.user}<span>Account</span></a>`;
   document.body.appendChild(nav);
   syncBadges();

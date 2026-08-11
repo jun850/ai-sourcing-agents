@@ -64,8 +64,15 @@
         <div class="cnt" id="listSub">Catalog options from verified suppliers</div>
       </div>
       <div class="mobile-list-tools" aria-label="Catalog controls">
-        <button type="button" id="openFilters">Filters</button>
-        <button type="button" id="openSort">Sort</button>
+        <div class="mobile-filter-chips" role="group" aria-label="Quick filters">
+          <button class="mobile-filter-chip on" type="button" data-quick-avail="all">All</button>
+          <button class="mobile-filter-chip" type="button" data-quick-avail="oem">OEM available</button>
+          <button class="mobile-filter-chip" type="button" data-quick-avail="nonoem">Non-OEM</button>
+        </div>
+        <div class="mobile-list-actions">
+          <button class="mobile-tool-icon" type="button" id="openSort" aria-label="Sort products" title="Sort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 6h13M8 12h9M8 18h5M3 6h.01M3 12h.01M3 18h.01"/></svg></button>
+          <button class="mobile-tool-icon" type="button" id="openFilters" aria-label="Open all filters" title="All filters"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/><circle cx="8" cy="6" r="1.5" fill="var(--card)"/><circle cx="15" cy="12" r="1.5" fill="var(--card)"/><circle cx="12" cy="18" r="1.5" fill="var(--card)"/></svg></button>
+        </div>
         <span id="mobileResCount" aria-live="polite"></span>
       </div>
       <div class="sortbar">
@@ -451,6 +458,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   }
 
   document.querySelectorAll('[name=avail]').forEach(r=>r.addEventListener('change',()=>{avail=r.value;render();}));
+  document.querySelectorAll('[data-quick-avail]').forEach(chip=>chip.addEventListener('click',()=>{
+    avail=chip.dataset.quickAvail;
+    const radio=document.querySelector(`[name=avail][value="${avail}"]`);
+    if(radio) radio.checked=true;
+    document.querySelectorAll('[data-quick-avail]').forEach(item=>item.classList.toggle('on',item===chip));
+    render();
+  }));
   document.getElementById('matOpts').addEventListener('change',()=>{mat=[...document.querySelectorAll('#matOpts input:checked')].map(c=>c.value);render();});
   document.getElementById('countryOpts').addEventListener('change',e=>{
     const r=e.target; if(r.name==='ctry'){country=r.value;populateRegions();render();}
