@@ -243,7 +243,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
 
 /* ---------- Footer ---------- */
 .site-footer{background:#fff;border-top:1px solid var(--line);margin-top:40px}
-.sf-in{max-width:1440px;margin:0 auto;padding:44px 28px 32px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr 1.2fr;gap:32px}
+.sf-in{max-width:1440px;margin:0 auto;padding:44px 28px 32px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1.2fr;gap:32px}
 .sf-brand{max-width:280px}
 .sf-word{font-family:var(--serif);letter-spacing:.07em;font-size:22px;color:var(--ink);font-weight:700}
 .sf-brand p{margin-top:14px;color:var(--muted);font-size:13px;line-height:1.6}

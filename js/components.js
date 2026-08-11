@@ -366,16 +366,6 @@ function buildFooter(){
       <a href="${building}" data-i18n="ft.trustsafety">Trust &amp; safety</a>
     </div>
     <div class="sf-col">
-      <h5 data-i18n="ft.buy">Buy</h5>
-      <a href="${building}" data-i18n="ft.sourcing">Sourcing guide</a>
-      <a href="${building}" data-i18n="ft.payments">Payments</a>
-      <a href="${building}" data-i18n="ft.shipping">Shipping</a>
-      <a href="${building}" data-i18n="ft.protection">Buyer protection</a>
-      <h5 style="margin-top:24px" data-i18n="ft.sell">Sell</h5>
-      <a href="${building}" data-i18n="ft.sellon">Sell on Atelix</a>
-      <a href="${building}" data-i18n="ft.dashboard">Supplier dashboard</a>
-    </div>
-    <div class="sf-col">
       <h5 data-i18n="ft.help">Help &amp; Guides</h5>
       <a href="${helpCenter}" data-i18n="ft.helpcenter">Help center</a>
       <a href="${building}" data-i18n="ft.terms">Terms &amp; conditions</a>
