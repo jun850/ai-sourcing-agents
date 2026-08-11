@@ -282,12 +282,14 @@ function buildHeader(){
   if(!root) return;
   const s = Store.session();
   const productContext=/\/product\.html$/.test(location.pathname);
-  const marketplaceSearch=body.hasAttribute('data-marketplace-search');
+  const mobileMarketplaceSearch=body.hasAttribute('data-marketplace-search');
+  const accountOrOrders=/\/(?:brand-owner|orders|order)\.html$/.test(location.pathname);
+  const desktopMarketplaceSearch=!accountOrOrders;
   // seller surface = explicit data-surface, or a signed-in seller viewing their workspace
   const seller = body.dataset.surface==='seller' || (s && s.role==='seller' && body.dataset.surface!=='buyer');
   const ph = seller ? 'Search your SKUs, orders and buyers…'
                     : (body.dataset.search || 'Search fabrics, trims, accessories, factories…');
-  root.className='hdr'+(marketplaceSearch?'':' no-marketplace-search');
+  root.className='hdr'+(mobileMarketplaceSearch?'':' no-marketplace-search');
   // seller sees a workspace strip (no buyer "sell" pitch, no cart); buyer sees the sell pitch + cart
   const topbar = seller
     ? `<div class="topbar"><div class="topbar-in">
@@ -307,7 +309,7 @@ function buildHeader(){
     ${mobileBack}
     ${brand()}
     <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
-    ${marketplaceSearch ? searchBox(ph) : ''}
+    ${desktopMarketplaceSearch ? searchBox(ph) : ''}
     ${cartIcon}
     ${authCluster()}
     ${katPanel()}
