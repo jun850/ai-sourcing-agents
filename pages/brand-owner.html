@@ -113,6 +113,11 @@ window.ARCANA_PAGE=async function({toast}){
     return;
   }
   main.hidden=false;
+  // The Transactions tab links here from the mobile nav. The account content
+  // is revealed after the page loads, so restore the hash target explicitly.
+  if(location.hash==='#orders') requestAnimationFrame(()=>{
+    document.getElementById('orders')?.scrollIntoView({block:'start'});
+  });
 
   const ROLE_LABEL={admin:'Admin', seller:'Seller', buyer:'Brand Owner'};
   function renderProfile(p){

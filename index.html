@@ -62,7 +62,7 @@
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/pages.css">
 </head>
-<body data-catalog data-hdr="a" data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
+<body data-catalog data-marketplace-search data-hdr="a" data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
 <div id="hdr"></div>
 
 <main class="wrap">
@@ -112,6 +112,11 @@
     <a class="cat-pill" href="pages/category.html?cat=oem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16"/></svg><span data-i18n="pill.oem">OEM Services</span></a>
     <a class="cat-pill" href="pages/factories.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.factories">Factories</span></a>
   </nav>
+
+  <section class="section" aria-labelledby="new-sources-title">
+    <div class="sec-head"><div><h2 id="new-sources-title">New material sources</h2><p class="muted" style="margin-top:5px">Fresh swatch-backed fabrics and components from newly listed Japanese suppliers.</p></div><a class="link-arrow" href="pages/category.html?cat=fabrics">Browse fabrics <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    <div class="prod-grid" id="newSourceGrid" style="margin-top:16px"></div>
+  </section>
 
   <!-- CURATED -->
   <section class="section">
@@ -223,8 +228,20 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   // Curated grid uses standardized product cards with a staggered entrance
   // on both first load (skeleton -> real data) and tab switches.
   const grid=document.getElementById('curatedGrid');
+  const newSourceGrid=document.getElementById('newSourceGrid');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
+  const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
+  function renderNewSources(){
+    if(!newSourceGrid) return;
+    const seen=new Set();
+    const list=window.ARCANA_PRODUCTS.filter(isNewSource).filter(p=>{
+      if(seen.has(p.seller)) return false;
+      seen.add(p.seller); return true;
+    }).slice(0,8);
+    newSourceGrid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
+    window.ARCANA_wireCards(newSourceGrid);
+  }
   function renderCurated(cat){
     curCat=cat;
     const list=window.ARCANA_PRODUCTS.filter(p=>cat==='all'?true:p.cat===cat).slice(0,12);
@@ -237,9 +254,10 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
       });
     }
   }
+  renderNewSources();
   renderCurated('all');
   document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>renderCurated(t.dataset.cat)));
-  window.ARCANA_onLang(()=>renderCurated(curCat));
+  window.ARCANA_onLang(()=>{renderNewSources();renderCurated(curCat);});
 
   // Supplier names and locations come from the maintained factory directory.
   // Where a public company mark is available, it is shown as a small visual cue;
@@ -257,7 +275,11 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   const initials=name=>name.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
   if(factoryNetwork){
     const factoryLocation=window.ATELIX_factoryLocation;
-    factoryNetwork.innerHTML=(window.ARCANA_FACTORIES||[]).map(factory=>{
+    const factories=[...(window.ARCANA_FACTORIES||[])].sort((a,b)=>{
+      const aNew=Number(+String(a.id).split('-')[1]>=14), bNew=Number(+String(b.id).split('-')[1]>=14);
+      return bNew-aNew || a.name.localeCompare(b.name);
+    });
+    factoryNetwork.innerHTML=factories.map(factory=>{
       const logo=factoryLogos[factory.id];
       const mark=logo
         ? `<img src="assets/${logo}" alt="" loading="lazy">`

@@ -89,7 +89,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   function render(){
     const ty=sel('type'), rg=sel('region'), ct=sel('cert');
     let list=F.filter(f=>(!ty.length||ty.includes(f.type))&&(!rg.length||rg.includes(f.region))&&(!ct.length||ct.some(c=>f.certs.includes(c))));
-    if(sort==='rating') list=[...list].sort((a,b)=>b.rating-a.rating);
+    const isNewFactory=f=>+String(f.id).split('-')[1]>=14;
+    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewFactory(b))-Number(isNewFactory(a)) || b.rating-a.rating);
+    else if(sort==='rating') list=[...list].sort((a,b)=>b.rating-a.rating);
     else if(sort==='orders') list=[...list].sort((a,b)=>parseInt(b.orders)-parseInt(a.orders));
     else if(sort==='years') list=[...list].sort((a,b)=>b.years-a.years);
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;

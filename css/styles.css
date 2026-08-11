@@ -35,6 +35,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
 .btn-gold:focus-visible,.btn-cta:focus-visible,[data-pkg]:focus-visible{outline-color:var(--gold-d)}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:0 32px}
 .serif{font-family:var(--serif)}
+/* Mobile navigation is opt-in at the phone breakpoint below. */
+.mobile-nav{display:none}
 
 /* ---------- Header (clean, Tokopedia-style) ---------- */
 .hdr{background:#fff;position:sticky;top:0;z-index:50}
@@ -331,29 +333,29 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
   body.sheet-active{overflow:hidden}
   .wrap,.hdr-in{padding-left:16px;padding-right:16px}
   .hdr{top:0;padding-top:env(safe-area-inset-top)}
+  .hdr.no-marketplace-search{display:none}
+  body:has(.hdr.no-marketplace-search){padding-top:env(safe-area-inset-top)}
   .topbar{display:none}
   .hdr-actions .hide-sm{display:none}
-  /* search drops to its own full-width row; suggestion pop follows it */
-  .hdr-in{flex-wrap:wrap;row-gap:10px;gap:10px}
-  .search{order:10;flex-basis:100%}
-  .brand .word{font-size:15px}
-  .brand-name small{display:none}
-  .brand{gap:8px}
+  /* Phone browsing starts with search. Desktop identity and account chrome
+     move to the bottom nav, leaving one clear, thumb-friendly task row. */
+  .hdr-in{min-height:64px;flex-wrap:nowrap;gap:8px;padding-top:8px;padding-bottom:8px}
+  .brand,.kat-btn,.btn-login,.btn-daftar,.acct,.hdr-div{display:none}
+  .search{order:0;flex:1 1 0;min-width:0}
   .hdr-div{display:none}
-  .btn-daftar{padding:9px 14px;margin-left:auto}
-  .cart-ic .badge-count{right:-5px}
-  .hdr-in{padding-top:10px;padding-bottom:10px}
-  .search{min-height:48px;padding:11px 13px;border-radius:12px}
+  .cart-ic{width:44px;height:44px;display:flex;align-items:center;justify-content:center}
+  .cart-ic .badge-count{right:-3px;top:1px}
+  .search{min-height:48px;padding:11px 13px;border-radius:10px}
   .search input{font-size:16px}
   .s-design{display:none}
   .s-cam{padding-left:10px}
-  .btn-daftar{min-height:42px}
   .mobile-back{display:none}
-  .hdr[data-context="product"] .hdr-in{min-height:56px;flex-wrap:nowrap;padding-top:8px;padding-bottom:8px}
+  .hdr[data-context="product"] .hdr-in{min-height:64px;flex-wrap:nowrap;padding-top:8px;padding-bottom:8px}
   .hdr[data-context="product"] .mobile-back{width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin-left:-8px;color:var(--ink)}
   .hdr[data-context="product"] .mobile-back svg{width:22px;height:22px}
-  .hdr[data-context="product"] .brand,.hdr[data-context="product"] .kat-btn,.hdr[data-context="product"] .search,.hdr[data-context="product"] .btn-login,.hdr[data-context="product"] .btn-daftar,.hdr[data-context="product"] .hdr-div{display:none}
-  .hdr[data-context="product"] .cart-ic{margin-left:auto;width:44px;height:44px;display:flex!important;align-items:center;justify-content:center}
+  .hdr[data-context="product"] .brand,.hdr[data-context="product"] .kat-btn,.hdr[data-context="product"] .btn-login,.hdr[data-context="product"] .btn-daftar,.hdr[data-context="product"] .hdr-div{display:none}
+  .hdr[data-context="product"] .search{display:flex;flex:1 1 0;order:0}
+  .hdr[data-context="product"] .cart-ic{margin-left:0;width:44px;height:44px;display:flex!important;align-items:center;justify-content:center}
   .site-footer{display:none}
   .mobile-nav{position:fixed;z-index:500;left:0;width:100vw;bottom:0;height:calc(64px + env(safe-area-inset-bottom));padding:7px 10px max(7px,env(safe-area-inset-bottom));background:rgba(255,255,255,.98);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center}
   .mobile-nav a{position:relative;min-width:0;min-height:48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--muted);font-size:12px;font-weight:600}

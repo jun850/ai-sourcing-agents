@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-catalog data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body data-catalog data-marketplace-search data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
 
 <main class="wrap">
@@ -80,6 +80,7 @@
         <button class="sheet-close" type="button" data-close-sort aria-label="Close sort">×</button>
       </div>
       <div class="prod-grid" id="grid"></div>
+      <section class="oem-material-sources" id="oemMaterialSources" hidden aria-labelledby="oem-material-sources-title"></section>
     </div>
   </div>
   <div style="height:40px"></div>
@@ -344,6 +345,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${meta.noun} from <b style="color:var(--ink)">${meta.sub[1]}</b> verified suppliers`;
   const isFabric=cat==='fabrics';
   const items=window.ARCANA_PRODUCTS.filter(p=>p.cat===cat && (!q || (p.name+' '+p.comp+' '+p.spec).toLowerCase().includes(q)));
+  const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
   // deterministic mock rating/sold
   const rnd=(id,a,b)=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return a+(h%(Math.round((b-a)*10)+1))/10;};
   const soldOf=id=>[ '500+','1rb+','2rb+','5rb+','800+' ][id.charCodeAt(4)%5];
@@ -370,7 +372,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[];
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
-  const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount');
+  const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount'), oemMaterialSources=document.getElementById('oemMaterialSources');
 
   function populateRegions(){
     const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country);
@@ -401,8 +403,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${T('noun.'+cat)} · <b style="color:var(--ink)">${meta.sub[1]}</b> ${T('cat.verified')}`;
     document.querySelectorAll('#matOpts [data-mat]').forEach(el=>{ el.textContent = TR(el.dataset.mat); });
     let list=items.filter(p=>{
-      if(avail==='oem' && !(p.badge==='oem'||p.badge==='recycle')) return false;
-      if(avail==='nonoem' && p.badge!=='nonoem') return false;
+      const isOemAvailable=p.badge==='oem';
+      if(avail==='oem' && !isOemAvailable) return false;
+      if(avail==='nonoem' && isOemAvailable) return false;
       if(mat.length && !mat.some(m=>p.comp.toLowerCase().includes(m.toLowerCase()))) return false;
       if(pmin!=null && p.price<pmin) return false;
       if(pmax!=null && p.price>pmax) return false;
@@ -422,6 +425,15 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       : `<div style="grid-column:1/-1;padding:60px;text-align:center;color:var(--muted)">No ${meta.noun} match these filters. <a href="#" id="reset2" style="color:var(--green);font-weight:600">Reset filters</a></div>`;
 
     window.ARCANA_wireCards(grid);
+    if(oemMaterialSources){
+      const showMaterials=cat==='oem'&&!q;
+      oemMaterialSources.hidden=!showMaterials;
+      if(showMaterials){
+        const materialList=window.ARCANA_PRODUCTS.filter(isNewSource).slice(0,6);
+        oemMaterialSources.innerHTML=`<div class="sec-head"><div><h2 id="oem-material-sources-title">Material partners for OEM projects</h2><p class="muted" style="margin-top:5px">Source fabrics and components separately from your finished-goods manufacturer.</p></div><a class="link-arrow" href="category.html?cat=fabrics">Browse all materials ${IC.chevR}</a></div><div class="prod-grid">${materialList.map(p=>window.ARCANA_card(p,{href:'product.html?id='+p.id})).join('')}</div>`;
+        window.ARCANA_wireCards(oemMaterialSources);
+      }
+    }
     const r2=document.getElementById('reset2'); if(r2) r2.addEventListener('click',e=>{e.preventDefault();resetAll();});
   }
 

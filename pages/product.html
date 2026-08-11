@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-catalog data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body data-catalog data-marketplace-search data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
 <main class="wrap"><div id="pdpRoot"></div><div style="height:40px"></div></main>
 <div id="ftr"></div>
@@ -39,7 +39,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // Keep direct links resilient when a seeded SKU is retired from the catalog.
   if(!M[id]) id=(PRODUCTS[0]&&PRODUCTS[0].id)||Object.keys(M)[0];
   const p=M[id];
-  const isOEM=p.badge==='oem'||p.badge==='recycle';
+  const isOEM=p.badge==='oem';
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
   const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
   const catUrl='category.html?cat='+p.cat;

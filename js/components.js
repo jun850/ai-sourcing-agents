@@ -281,11 +281,13 @@ function buildHeader(){
   const body=document.body, root=document.getElementById('hdr');
   if(!root) return;
   const s = Store.session();
+  const productContext=/\/product\.html$/.test(location.pathname);
+  const marketplaceSearch=body.hasAttribute('data-marketplace-search');
   // seller surface = explicit data-surface, or a signed-in seller viewing their workspace
   const seller = body.dataset.surface==='seller' || (s && s.role==='seller' && body.dataset.surface!=='buyer');
   const ph = seller ? 'Search your SKUs, orders and buyers…'
                     : (body.dataset.search || 'Search fabrics, trims, accessories, factories…');
-  root.className='hdr';
+  root.className='hdr'+(marketplaceSearch?'':' no-marketplace-search');
   // seller sees a workspace strip (no buyer "sell" pitch, no cart); buyer sees the sell pitch + cart
   const topbar = seller
     ? `<div class="topbar"><div class="topbar-in">
@@ -295,7 +297,6 @@ function buildHeader(){
     : '';
   const cartIcon = seller ? '' :
     `<a class="ic-link cart-ic" href="${P('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge-count" data-cart-badge hidden></span></a><span class="hdr-div"></span>`;
-  const productContext=/\/product\.html$/.test(location.pathname);
   const mobileBack=productContext
     ? `<a class="mobile-back" href="${P('category.html')}" aria-label="Back to browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14 5-7 7 7 7M7 12h13"/></svg></a>`
     : '';
@@ -306,7 +307,7 @@ function buildHeader(){
     ${mobileBack}
     ${brand()}
     <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
-    ${searchBox(ph)}
+    ${marketplaceSearch ? searchBox(ph) : ''}
     ${cartIcon}
     ${authCluster()}
     ${katPanel()}
@@ -324,14 +325,16 @@ function buildMobileNav(){
   const transactional=/\/(?:cart|product)\.html$/.test(path);
   if(focused||workspace||transactional||document.querySelector('.mobile-nav')) return;
   const current=(name, routes)=>routes.some(route=>path.endsWith('/'+route)||(!ROOT&&path.endsWith(route)))?'on':'';
+  const onOrders=/\/brand-owner\.html$/.test(path) && location.hash==='#orders';
+  const onAccount=/\/brand-owner\.html$/.test(path) && !onOrders;
   const nav=document.createElement('nav');
   nav.className='mobile-nav'; nav.setAttribute('aria-label','Primary navigation');
   nav.innerHTML=`
     <a class="${current('home',['index.html'])}" href="${HOME}">${markSVG()}<span>Home</span></a>
     <a class="${current('browse',['category.html','factories.html','supplier.html'])}" href="${P('category.html')}">${IC.search}<span>Browse</span></a>
     <a class="${current('saved',['wishlist.html'])}" href="${P('wishlist.html')}">${IC.heart}<span>Saved</span></a>
-    <a class="mobile-nav-cart ${current('cart',['cart.html'])}" href="${P('cart.html')}">${IC.cart}<i data-cart-badge hidden></i><span>Cart</span></a>
-    <a class="${current('account',['brand-owner.html'])}" href="${P('brand-owner.html')}">${IC.user}<span>Account</span></a>`;
+    <a class="${onOrders?'on':''}" href="${P('brand-owner.html')}#orders">${IC.document}<span>Orders</span></a>
+    <a class="${onAccount?'on':''}" href="${P('brand-owner.html')}">${IC.user}<span>Account</span></a>`;
   document.body.appendChild(nav);
   syncBadges();
 }
