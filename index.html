@@ -114,7 +114,7 @@
   </nav>
 
   <section class="section" aria-labelledby="new-sources-title">
-    <div class="sec-head"><div><h2 id="new-sources-title">New material sources</h2><p class="muted" style="margin-top:5px">Fresh swatch-backed fabrics and components from newly listed Japanese suppliers.</p></div><a class="link-arrow" href="pages/category.html?cat=fabrics">Browse fabrics <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    <div class="sec-head"><div><h2 id="new-sources-title">New material sources</h2><p class="muted" id="newSourcesDescription" style="margin-top:5px">Fresh swatch-backed fabrics and components from newly listed Japanese suppliers.</p></div><a class="link-arrow" href="pages/category.html?cat=fabrics">Browse fabrics <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     <div class="prod-grid" id="newSourceGrid" style="margin-top:16px"></div>
   </section>
 
@@ -178,11 +178,18 @@
       <div>
         <p class="factory-network-kicker">Our supplier network</p>
         <h2 id="factory-network-title">Made with manufacturers you can identify</h2>
-        <p>Browse the companies behind the materials, trims and production services listed on Atelix.</p>
+        <p id="factoryNetworkDescription">Browse the companies behind the materials, trims and production services listed on Atelix.</p>
       </div>
       <a class="link-arrow" href="pages/factories.html">Explore factories <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </div>
-    <div class="factory-network-list" id="factoryNetwork"></div>
+    <section class="factory-network-group" aria-labelledby="new-factory-network-title">
+      <div class="factory-network-group-head"><h3 id="new-factory-network-title">Newly listed material partners</h3><span id="newFactoryCount"></span></div>
+      <div class="factory-network-list" id="newFactoryNetwork"></div>
+    </section>
+    <section class="factory-network-group" aria-labelledby="factory-network-all-title">
+      <div class="factory-network-group-head"><h3 id="factory-network-all-title">All verified sourcing partners</h3><span id="factoryTotal"></span></div>
+      <div class="factory-network-list" id="factoryNetwork"></div>
+    </section>
   </section>
 </main>
 
@@ -232,6 +239,11 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
   const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
+  const catalogStats=window.ATELIX_catalogStats;
+  const newSourceProducts=window.ARCANA_PRODUCTS.filter(isNewSource);
+  const newSourceSuppliers=new Set(newSourceProducts.map(product=>product.seller)).size;
+  const newSourcesDescription=document.getElementById('newSourcesDescription');
+  if(newSourcesDescription) newSourcesDescription.textContent=`${newSourceProducts.length} newly listed fabrics and components from ${newSourceSuppliers} Japanese material partners.`;
   function renderNewSources(){
     if(!newSourceGrid) return;
     const seen=new Set();
@@ -244,7 +256,10 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   }
   function renderCurated(cat){
     curCat=cat;
-    const list=window.ARCANA_PRODUCTS.filter(p=>cat==='all'?true:p.cat===cat).slice(0,12);
+    const list=window.ARCANA_PRODUCTS
+      .filter(p=>cat==='all'?true:p.cat===cat)
+      .sort((a,b)=>Number(isNewSource(b))-Number(isNewSource(a)))
+      .slice(0,12);
     grid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
     window.ARCANA_wireCards(grid);
     if(!reduceMotion){
@@ -264,6 +279,7 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   // otherwise the factory's initials keep the directory complete without
   // substituting another supplier's imagery.
   const factoryNetwork=document.getElementById('factoryNetwork');
+  const newFactoryNetwork=document.getElementById('newFactoryNetwork');
   const factoryLogos={
     'F-01':'factory-logos/kftextile.png', 'F-02':'factory-logos/shanning.jpg',
     'F-03':'factory-logos/aisha.webp', 'F-04':'factory-logos/xinyuan.png',
@@ -273,13 +289,10 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   };
   const escapeHTML=value=>String(value).replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
   const initials=name=>name.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
-  if(factoryNetwork){
+  if(factoryNetwork&&newFactoryNetwork){
     const factoryLocation=window.ATELIX_factoryLocation;
-    const factories=[...(window.ARCANA_FACTORIES||[])].sort((a,b)=>{
-      const aNew=Number(+String(a.id).split('-')[1]>=14), bNew=Number(+String(b.id).split('-')[1]>=14);
-      return bNew-aNew || a.name.localeCompare(b.name);
-    });
-    factoryNetwork.innerHTML=factories.map(factory=>{
+    const isNewFactory=factory=>+String(factory.id).split('-')[1]>=14;
+    const renderFactory=factory=>{
       const logo=factoryLogos[factory.id];
       const mark=logo
         ? `<img src="assets/${logo}" alt="" loading="lazy">`
@@ -290,7 +303,15 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
         <span class="factory-network-copy"><strong>${escapeHTML(factory.name)}</strong><small>${escapeHTML(location)}</small></span>
         <svg class="factory-network-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>`;
-    }).join('');
+    };
+    const factories=window.ARCANA_FACTORIES||[];
+    const recentlyAdded=factories.filter(isNewFactory).sort((a,b)=>a.name.localeCompare(b.name));
+    const established=factories.filter(factory=>!isNewFactory(factory)).sort((a,b)=>a.name.localeCompare(b.name));
+    newFactoryNetwork.innerHTML=recentlyAdded.map(renderFactory).join('');
+    factoryNetwork.innerHTML=established.map(renderFactory).join('');
+    document.getElementById('newFactoryCount').textContent=`${recentlyAdded.length} suppliers`;
+    document.getElementById('factoryTotal').textContent=`${catalogStats.factories} suppliers`;
+    document.getElementById('factoryNetworkDescription').textContent=`${catalogStats.factories} verified sourcing partners across ${catalogStats.countries} countries.`;
   }
 
   const certificationList=document.getElementById('certificationList');

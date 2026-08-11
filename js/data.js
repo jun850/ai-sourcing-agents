@@ -101,6 +101,27 @@ window.ARCANA_FACTORIES.forEach(f=>{
   f.tags=Array.isArray(f.tags)?f.tags:[]; f.certs=Array.isArray(f.certs)?f.certs:[];
 });
 
+/* Storefront totals are derived from the live catalog, never hand-maintained. */
+window.ATELIX_refreshCatalogStats=()=>{
+  const products=window.ARCANA_PRODUCTS, factories=window.ARCANA_FACTORIES;
+  const categories=[...new Set(products.map(product=>product.cat))];
+  const productCountByCategory=Object.fromEntries(categories.map(category=>[
+    category,products.filter(product=>product.cat===category).length
+  ]));
+  const supplierCountByCategory=Object.fromEntries(categories.map(category=>[
+    category,new Set(products.filter(product=>product.cat===category).map(product=>product.seller)).size
+  ]));
+  window.ATELIX_catalogStats=Object.freeze({
+    products:products.length,
+    factories:factories.length,
+    countries:new Set(factories.map(factory=>factory.region)).size,
+    productCountByCategory:Object.freeze(productCountByCategory),
+    supplierCountByCategory:Object.freeze(supplierCountByCategory)
+  });
+  return window.ATELIX_catalogStats;
+};
+window.ATELIX_refreshCatalogStats();
+
 /* ============ i18n — term dictionaries + translator (EN · JA · ZH) ============ */
 /* Exact-match maps for proper nouns / product names; token maps for compositions,
    specs and locations so every SKU scales without per-row translation. */

@@ -17,7 +17,7 @@
     <h1>Join the marketplace built for <span class="auth-type" data-typewriter="better sourcing.|your next collection.|the right partners.">better sourcing.</span></h1>
     <p>Create a free account to source verified materials as a brand owner, or list your mill and reach global buyers as a factory.</p>
     <div class="auth-points">
-      <div class="auth-point"><span class="ap-ic"></span><div><b>10,000+ verified factories</b><p>Fabrics, trims, accessories and full-package OEM.</p></div></div>
+      <div class="auth-point"><span class="ap-ic"></span><div><b id="signupFactoryCount">Verified factory directory</b><p>Fabrics, trims, accessories and full-package OEM.</p></div></div>
       <div class="auth-point"><span class="ap-ic"></span><div><b>Free to join</b><p>No listing fees to browse and request quotes.</p></div></div>
       <div class="auth-point"><span class="ap-ic"></span><div><b>Global logistics</b><p>Ship to 120+ countries with trusted partners.</p></div></div>
     </div>
@@ -60,6 +60,9 @@
 <script src="../js/api.js"></script>
 <script>
 window.ARCANA_PAGE = function({IC,toast}){
+  const catalogStats=window.ATELIX_catalogStats;
+  const signupFactoryCount=document.getElementById('signupFactoryCount');
+  if(signupFactoryCount) signupFactoryCount.textContent=`${catalogStats.factories} verified sourcing partners`;
   const aps=document.querySelectorAll('.ap-ic');[IC.factory,IC.medal,IC.truck].forEach((s,i)=>{if(aps[i])aps[i].innerHTML=s;});
   const typewriter=el=>{
     const words=(el.dataset.typewriter||'').split('|').filter(Boolean);

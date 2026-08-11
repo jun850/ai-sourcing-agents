@@ -217,7 +217,7 @@ const API = {
      existing render code keeps working. Throws on error (caller falls back). */
   async fetchCatalog(){
     const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
-    const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier' };
+    const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
     const [prodRes, facRes] = await Promise.all([
       sb.from('products')
         .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name,region)')

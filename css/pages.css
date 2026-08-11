@@ -532,6 +532,7 @@
 .fthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .fthumb .fveric{position:absolute;top:10px;left:10px;background:var(--gold-l);color:var(--gold-d);font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:var(--radius-pill);display:flex;align-items:center;gap:5px}
 .fthumb .fveric svg{width:13px;height:13px}
+.fthumb .fnew{position:absolute;right:10px;bottom:10px;background:var(--green);border-radius:var(--radius-pill);color:#fff;font-size:11px;font-weight:700;padding:5px 9px}
 .fbody{padding:16px 18px 18px;display:flex;flex-direction:column;flex:1}
 .fname{font-family:var(--serif);font-size:18px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:45px}
 .ftype{margin-top:8px;display:inline-flex;width:fit-content;background:var(--green-l);color:var(--green);font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:var(--radius-pill)}
@@ -606,6 +607,10 @@
 .factory-network h2{margin:0;font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.02em}
 .factory-network-head p:not(.factory-network-kicker){max-width:58ch;margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
 .factory-network-head .link-arrow{flex:none;margin-bottom:3px;white-space:nowrap}
+.factory-network-group+.factory-network-group{margin-top:30px}
+.factory-network-group-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:0 0 10px}
+.factory-network-group-head h3{margin:0;font-size:14px;font-weight:700}
+.factory-network-group-head span{color:var(--muted);font-size:12px;font-weight:600}
 .factory-network-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
 .factory-network-item{display:flex;align-items:center;gap:12px;min-width:0;padding:15px 12px;border-bottom:1px solid var(--line);color:var(--ink);text-decoration:none;transition:background-color .18s ease,color .18s ease}
 .factory-network-item:nth-child(3n+2),.factory-network-item:nth-child(3n+3){border-left:1px solid var(--line)}

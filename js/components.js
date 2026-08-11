@@ -1171,9 +1171,8 @@ function wireLang(){
 // demo seed: ?seed=cart pre-fills a couple items (for previews)
 if(location.search.indexOf('seed=cart')>-1 && !Store.cart().length){ Store.addToCart('FAB-100',300); Store.addToCart('FAB-101',150); Store.addToCart('FAB-102',500); }
 
-/* ---------- catalog hydration: replace bundled data.js globals with live
-   Supabase data before the page renders. Falls back silently to data.js on
-   any error, so the site always works offline / if the DB is unreachable. ---- */
+/* ---------- catalog hydration: Supabase is the production source of truth.
+   Bundled data.js remains an offline fallback only if the live read fails. ---- */
 function catalogLoadBar(show){
   let b=document.getElementById('arcanaLoadBar');
   if(show){
@@ -1189,15 +1188,16 @@ async function hydrateCatalog(){
   catalogLoadBar(true);
   try{
     const { products, factories } = await ARCANA_API.fetchCatalog();
-    if(products && products.length){
-      window.ARCANA_PRODUCTS = products;
-      window.ARCANA_PRODUCT_MAP = Object.fromEntries(products.map(p=>[p.id,p]));
+    if(products&&products.length){
+      window.ARCANA_PRODUCTS=products;
+      window.ARCANA_PRODUCT_MAP=Object.fromEntries(products.map(product=>[product.id,product]));
     }
-    if(factories && factories.length){
-      window.ARCANA_FACTORIES = factories;
-      window.ARCANA_FACTORY_MAP = Object.fromEntries(factories.map(f=>[f.id,f]));
-      window.ARCANA_FACTORY_BY_NAME = Object.fromEntries(factories.map(f=>[f.name,f.id]));
+    if(factories&&factories.length){
+      window.ARCANA_FACTORIES=factories;
+      window.ARCANA_FACTORY_MAP=Object.fromEntries(factories.map(factory=>[factory.id,factory]));
+      window.ARCANA_FACTORY_BY_NAME=Object.fromEntries(factories.map(factory=>[factory.name,factory.id]));
     }
+    if(window.ATELIX_refreshCatalogStats) window.ATELIX_refreshCatalogStats();
   }catch(err){
     console.warn('[Atelix] live catalog unavailable — using bundled data.js', err && err.message);
   }finally{ catalogLoadBar(false); }

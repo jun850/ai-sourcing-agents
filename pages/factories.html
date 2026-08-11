@@ -43,7 +43,7 @@
     <div class="listing-main">
       <div class="list-top">
         <h1>Factories</h1>
-        <div class="cnt"><b style="color:var(--ink)">520+</b> verified fabric mills and OEM factories, audited for identity, license &amp; capability</div>
+        <div class="cnt" id="factoryDirectorySummary">Verified material and production companies</div>
       </div>
       <div class="sortbar">
         <span class="lbl">Sort</span>
@@ -72,6 +72,7 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const F=window.ARCANA_FACTORIES;
+  const catalogStats=window.ATELIX_catalogStats;
   const factoryImage=window.ATELIX_factoryAsset;
   const factoryLocation=window.ATELIX_factoryLocation;
   const uniq=(k)=>[...new Set(F.map(f=>f[k]))];
@@ -85,6 +86,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   let sort='rec';
   const sel=name=>[...document.querySelectorAll(`[name=${name}]:checked`)].map(c=>c.value);
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount');
+  document.getElementById('factoryDirectorySummary').innerHTML=`<b style="color:var(--ink)">${catalogStats.factories}</b> verified material and production companies across <b style="color:var(--ink)">${catalogStats.countries}</b> countries`;
 
   function render(){
     const ty=sel('type'), rg=sel('region'), ct=sel('cert');
@@ -95,18 +97,23 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     else if(sort==='orders') list=[...list].sort((a,b)=>parseInt(b.orders)-parseInt(a.orders));
     else if(sort==='years') list=[...list].sort((a,b)=>b.years-a.years);
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;
-    grid.innerHTML=list.map(f=>`
+    grid.innerHTML=list.map(f=>{
+      const isNewFactory=+String(f.id).split('-')[1]>=14;
+      const orderDetail=f.orders==='New'?'Recently listed':`${f.orders} orders`;
+      const ageDetail=f.years?`${f.years} yrs`:(f.founded?`Est. ${f.founded}`:'Established supplier');
+      return `
       <a class="fcard" href="supplier.html?id=${f.id}">
-        <div class="fthumb"><img src="${factoryImage(f)}" alt="${f.name}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} Verified Factory</span>`:''}</div>
+        <div class="fthumb"><img src="${factoryImage(f)}" alt="${f.name}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} Verified Factory</span>`:''}${isNewFactory?'<span class="fnew">New source</span>':''}</div>
         <div class="fbody">
           <div class="fname">${f.name}</div>
           <span class="ftype">${f.type}</span>
-          <div class="fmeta"><span class="star">★</span> ${f.rating.toFixed(1)} <span class="dot">·</span> ${f.orders} orders <span class="dot">·</span> ${f.years} yrs</div>
+          <div class="fmeta"><span class="star">★</span> ${f.rating.toFixed(1)} <span class="dot">·</span> ${orderDetail} <span class="dot">·</span> ${ageDetail}</div>
           <div class="floc">${IC.pin}<span>${factoryLocation(f)}</span></div>
           <div class="ftags">${f.tags.map(t=>`<span>${t}</span>`).join('')}</div>
           <div class="ffoot"><div>MOQ<b>${f.moq}</b></div><div>Lead time<b>${f.lead}</b></div></div>
           <span class="btn btn-out btn-block">View factory</span>
-        </div></a>`).join('');
+        </div></a>`;
+    }).join('');
   }
   render();
   document.querySelectorAll('.filter-rail input').forEach(i=>i.addEventListener('change',render));

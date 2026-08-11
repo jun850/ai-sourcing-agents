@@ -61,7 +61,7 @@
     <div class="listing-main">
       <div class="list-top">
         <h1 id="listTitle">Fabrics</h1>
-        <div class="cnt" id="listSub"><b style="color:var(--ink)">1,246+</b> options from <b style="color:var(--ink)">520+</b> verified suppliers</div>
+        <div class="cnt" id="listSub">Catalog options from verified suppliers</div>
       </div>
       <div class="mobile-list-tools" aria-label="Catalog controls">
         <button type="button" id="openFilters">Filters</button>
@@ -327,11 +327,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // `q` is what makes this render as an SRP instead of a plain category browse) ----
   const M=window.ARCANA_PRODUCT_MAP;
   const META={
-    fabrics:{title:'Fabrics',sub:['1,246+','520+'],noun:'fabric options'},
-    accessories:{title:'Accessories',sub:['680+','210+'],noun:'accessory options'},
-    trims:{title:'Trims',sub:['540+','180+'],noun:'trim options'},
-    yarns:{title:'Yarns & Threads',sub:['390+','140+'],noun:'yarn & thread options'},
-    oem:{title:'OEM Services',sub:['320+','260+'],noun:'service packages'},
+    fabrics:{title:'Fabrics',noun:'fabric options'},
+    accessories:{title:'Accessories',noun:'accessory options'},
+    trims:{title:'Trims',noun:'trim options'},
+    yarns:{title:'Yarns & Threads',noun:'yarn & thread options'},
+    oem:{title:'OEM Services',noun:'service packages'},
   };
   let cat=qsAll.get('cat'); if(!META[cat])cat='fabrics';
   const q=(qsAll.get('q')||'').trim().toLowerCase();
@@ -342,7 +342,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   document.getElementById('listSub').innerHTML= q
     ? `${heading} in <a href="category.html?cat=${cat}" style="color:var(--green);font-weight:600">${meta.title}</a>`
-    : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${meta.noun} from <b style="color:var(--ink)">${meta.sub[1]}</b> verified suppliers`;
+    : '';
   const isFabric=cat==='fabrics';
   const items=window.ARCANA_PRODUCTS.filter(p=>p.cat===cat && (!q || (p.name+' '+p.comp+' '+p.spec).toLowerCase().includes(q)));
   const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
@@ -398,9 +398,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.getElementById('crumbCat').textContent = heTitle;
     document.getElementById('listTitle').textContent = heTitle;
     // subtitle + material facet labels (re-translate on language switch)
+    const categoryProducts=items.length;
+    const categorySuppliers=new Set(items.map(product=>product.seller)).size;
     document.getElementById('listSub').innerHTML = q
       ? `${heading} in <a href="category.html?cat=${cat}" style="color:var(--green);font-weight:600">${TR(meta.title)}</a>`
-      : `<b style="color:var(--ink)">${meta.sub[0]}</b> ${T('noun.'+cat)} · <b style="color:var(--ink)">${meta.sub[1]}</b> ${T('cat.verified')}`;
+      : `<b style="color:var(--ink)">${categoryProducts}</b> ${T('noun.'+cat)} · <b style="color:var(--ink)">${categorySuppliers}</b> ${T('cat.verified')}`;
     document.querySelectorAll('#matOpts [data-mat]').forEach(el=>{ el.textContent = TR(el.dataset.mat); });
     let list=items.filter(p=>{
       const isOemAvailable=p.badge==='oem';
@@ -413,7 +415,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       if(regionSel.length && !regionSel.includes(regionOf(p))) return false;
       return true;
     });
-    if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
+    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewSource(b))-Number(isNewSource(a)));
+    else if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
     else if(sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
     else if(sort==='new') list=[...list].reverse();
     const countText=`${list.length} ${T(list.length===1?'result':'results')}`;
