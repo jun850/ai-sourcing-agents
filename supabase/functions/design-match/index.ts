@@ -96,6 +96,15 @@ function scoreText(haystack: string, wanted: string[]) {
   const source = haystack.toLowerCase();
   return wanted.reduce((score, term) => score + (source.includes(term) ? 1 : 0), 0);
 }
+const MATERIAL_TERMS = ["cotton", "polyester", "linen", "wool", "silk", "nylon", "viscose", "rayon", "lyocell", "modal", "acrylic", "elastane", "spandex", "leather"];
+function materialMismatch(requirement: any, product: any) {
+  const required = terms(requirement.composition).filter(term => MATERIAL_TERMS.includes(term));
+  if (!required.length) return 0;
+  const productMaterial = `${product.comp || ""} ${product.spec || ""}`.toLowerCase();
+  const hasRequiredMaterial = required.some(term => productMaterial.includes(term));
+  const hasDifferentMaterial = MATERIAL_TERMS.some(term => !required.includes(term) && productMaterial.includes(term));
+  return !hasRequiredMaterial && hasDifferentMaterial ? 8 : 0;
+}
 function normalizeBrief(raw: any) {
   const list = (value: unknown, max = 8) => Array.isArray(value)
     ? value.slice(0, max).map(x => safeText(x, 120)).filter(Boolean) : [];
@@ -166,12 +175,18 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
   });
   const requirementMatches = (requirements: any[], section: string) => requirements.map(requirement => {
     const definition = MATCH_DEFINITIONS[section] || MATCH_DEFINITIONS.accessories;
-    const wanted = [...terms(requirement.name), ...terms(requirement.specification), ...terms(requirement.composition), ...terms(requirement.color), ...definition.cues];
+    const identityTerms = [...terms(requirement.name), ...terms(requirement.specification), ...terms(requirement.color)];
+    const compositionTerms = terms(requirement.composition);
+    const certificationTerms = terms(brief.certifications.join(" "));
     const ranked = activeProducts.filter(p => definition.catalog.includes(p.category)).map(p => {
       const source = [p.name, p.comp, p.spec, p.badge, p.loc, p.factory?.name, ...(p.factory?.tags || []), ...(p.factory?.certs || [])].join(" ");
-      const requirementScore = scoreText(source, wanted);
+      const productMaterial = [p.name, p.comp, p.spec, ...(p.factory?.certs || [])].join(" ");
+      const requirementScore = scoreText(source, identityTerms);
+      const compositionScore = scoreText(productMaterial, compositionTerms);
+      const certificationScore = scoreText(productMaterial, certificationTerms);
       const cueScore = scoreText(source, definition.cues);
-      return { product: p, score: requirementScore * 2 + cueScore + scoreText(source, terms(brief.certifications.join(" "))) };
+      const score = requirementScore * 2 + compositionScore * 5 + certificationScore * 4 + cueScore - materialMismatch(requirement, p);
+      return { product: p, score };
     }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 6);
     return { requirement, matches: ranked.map(x => mapProduct(x.product, x.score)) };
   });
@@ -180,7 +195,7 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
     groups: requirementMatches(brief.bomItems.filter((item: any) => item.category === category), category)
   })).filter(group => group.groups.length);
   const matchedSellerNames = new Set(categories.flatMap(category => category.groups.flatMap(group => group.matches.map((product: any) => product.seller))));
-  const suppliers = factories.filter(f => f.verify_state === "verified" && /oem|garment/i.test(factory.type || "")).map(factory => {
+  const suppliers = factories.filter(f => f.verify_state === "verified" && /oem|garment/i.test(f.type || "")).map(factory => {
     const source = [factory.name, factory.type, factory.region, factory.loc, factory.bio, ...(factory.tags || []), ...(factory.certs || [])].join(" ");
     const typeBoost = 4;
     const catalogBoost = matchedSellerNames.has(factory.name) ? 6 : 0;
@@ -272,7 +287,7 @@ async function deleteGeminiFile(name: string, apiKey: string) {
   } catch (_) {}
 }
 
-Deno.serve(async (req) => {
+async function handleRequest(req: Request) {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (req.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
   const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
@@ -394,4 +409,18 @@ Return only JSON matching the schema. The resulting supported brief will be matc
     type: brief.documentType, confidence: brief.documentConfidence, summary: brief.documentSummary,
     ocrEvidence: brief.ocrEvidence
   }, files: files.map(file => ({ name: safeText(file.name, 160), size: file.size })) });
+}
+
+Deno.serve(async req => {
+  try {
+    return await handleRequest(req);
+  } catch (error) {
+    console.error("[design-match] Unhandled request failure", error);
+    return json({
+      ok: false,
+      reason: "internal_error",
+      stage: "request",
+      detail: error instanceof Error ? error.message : "unknown_error"
+    }, 500);
+  }
 });
