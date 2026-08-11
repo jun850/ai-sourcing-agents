@@ -137,23 +137,39 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const brief=match.brief, results=match.results;
     const files=(match.files||[]).map(file=>`<span>${IC.document}${esc(file.name)}</span>`).join('');
     const bar=document.createElement('section'); bar.className='dm-result-bar'; main.insertBefore(bar,listing);
-    const requirements=(list,type)=>list.map((item,index)=>`<div class="dm-req"><input data-dm-${type}-name="${index}" value="${esc(item.name)}" aria-label="${type} requirement"><input data-dm-${type}-spec="${index}" value="${esc(item.specification||'')}" placeholder="Specification"></div>`).join('')||`<p class="muted">No ${type} identified.</p>`;
+    const categoryNames={fabrics:'Fabrics',buttons:'Buttons',zippers:'Zippers',labels:'Labels & tags',trims:'Trims',yarns:'Yarns & thread',accessories:'Other accessories'};
+    const categoryOptions=Object.entries(categoryNames).map(([value,label])=>`<option value="${value}">${label}</option>`).join('');
+    const bomRows=()=>brief.bomItems&&brief.bomItems.length?brief.bomItems.map((item,index)=>`<div class="dm-bom-row" data-dm-bom-row>
+      <select data-dm-bom-category aria-label="Category for BOM item ${index+1}">${categoryOptions.replace(`value="${esc(item.category)}"`,`value="${esc(item.category)}" selected`)}</select>
+      <input data-dm-bom-name value="${esc(item.name)}" aria-label="BOM item ${index+1}" placeholder="Component">
+      <input data-dm-bom-spec value="${esc([item.composition,item.specification,item.color,item.code].filter(Boolean).join(' · '))}" aria-label="Specification for ${esc(item.name)}" placeholder="Material, size, color or code">
+      <div class="dm-bom-qty"><input data-dm-bom-quantity value="${esc(item.quantity||'')}" aria-label="Quantity for ${esc(item.name)}" placeholder="Qty"><input data-dm-bom-unit value="${esc(item.unit||'')}" aria-label="Unit for ${esc(item.name)}" placeholder="Unit"></div>
+    </div>`).join(''):`<p class="dm-no-bom">No BOM rows were readable. Add clearer source pages in a new match.</p>`;
     function renderBar(){
-      bar.innerHTML=`<div class="dm-result-title"><span class="dm-mark">${IC.document}</span><div><p>Design Match <span>Gemini 3.6 Flash analysis</span></p><h1>${esc(brief.garmentType)}</h1><small>Source files are private to this browser session.</small></div><button class="btn btn-out" data-dm-new>New match</button></div>
+      const documentLabel=brief.documentType==='tech_pack'?'Tech pack':brief.documentType==='design_reference'?'Design reference':'Design document';
+      bar.innerHTML=`<div class="dm-result-title"><span class="dm-mark">${IC.document}</span><div><p>Athelia Design Match <span>${documentLabel} · ${esc(brief.documentConfidence||'')} confidence</span></p><h1>${esc(brief.garmentType)}</h1><small>Source files are private to this browser session.</small></div><button class="btn btn-out" data-dm-new>New match</button></div>
         <div class="dm-file-strip">${files}</div>
+        <details class="dm-brief-details" open><summary><span>Review extracted brief</span><small>${(brief.bomItems||[]).length} BOM items</small></summary>
         <form class="dm-brief-form" data-dm-brief><div class="dm-brief-copy"><h2>What Athelia read</h2><p>Adjust the sourcing brief and update supplier matches without uploading again.</p></div>
           <label>Garment<input name="garmentType" value="${esc(brief.garmentType)}"></label><label>Quantity / MOQ<input name="quantities" value="${esc(brief.quantities||'')}"></label><label>Size range<input name="sizes" value="${esc(brief.sizes||'')}"></label><label>Target region<input name="targetRegion" value="${esc(brief.targetRegion||'')}"></label><label class="dm-wide">Design notes<textarea name="description">${esc(brief.description||'')}</textarea></label>
           ${brief.colorways&&brief.colorways.length?`<div class="dm-colors"><b>Color references</b>${brief.colorways.map(color=>`<span>${esc(color.component)}: ${esc(color.color)}${color.code?` · ${esc(color.code)}`:''}</span>`).join('')}</div>`:''}
-          <div class="dm-brief-requirements"><div><b>Fabric requirements</b>${requirements(brief.fabrics,'fabric')}</div><div><b>Trim requirements</b>${requirements(brief.trims,'trim')}</div></div>
+          <div class="dm-bom-editor"><div class="dm-bom-head"><b>Bill of materials</b><span>Category</span><span>Component</span><span>Specification</span><span>Quantity</span></div>${bomRows()}</div>
           ${brief.unsupportedOrUnclear&&brief.unsupportedOrUnclear.length?`<p class="dm-unclear">Needs confirmation: ${brief.unsupportedOrUnclear.map(esc).join(' · ')}</p>`:''}
           <div class="dm-brief-actions"><button type="submit" class="btn btn-green">Update matches</button><a href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Sourcing help — '+brief.garmentType)}" class="btn btn-out">Request sourcing help</a></div>
-        </form>`;
+        </form></details>`;
+      if(matchMedia('(max-width:760px)').matches) bar.querySelector('.dm-brief-details').open=false;
       bar.querySelector('[data-dm-new]').addEventListener('click',()=>{window.ARCANA_clearDesignMatch&&window.ARCANA_clearDesignMatch();window.ARCANA_openDesignMatch&&window.ARCANA_openDesignMatch();});
       bar.querySelector('[data-dm-brief]').addEventListener('submit',async event=>{
         event.preventDefault(); const form=new FormData(event.currentTarget);
         ['garmentType','quantities','sizes','targetRegion','description'].forEach(key=>brief[key]=String(form.get(key)||'').trim());
-        brief.fabrics.forEach((item,index)=>{item.name=String(bar.querySelector(`[data-dm-fabric-name="${index}"]`).value||'').trim();item.specification=String(bar.querySelector(`[data-dm-fabric-spec="${index}"]`).value||'').trim();});
-        brief.trims.forEach((item,index)=>{item.name=String(bar.querySelector(`[data-dm-trim-name="${index}"]`).value||'').trim();item.specification=String(bar.querySelector(`[data-dm-trim-spec="${index}"]`).value||'').trim();});
+        brief.bomItems=[...bar.querySelectorAll('[data-dm-bom-row]')].map(row=>({
+          category:row.querySelector('[data-dm-bom-category]').value,
+          name:row.querySelector('[data-dm-bom-name]').value.trim(),
+          specification:row.querySelector('[data-dm-bom-spec]').value.trim(),
+          composition:'',color:'',code:'',
+          quantity:row.querySelector('[data-dm-bom-quantity]').value.trim(),
+          unit:row.querySelector('[data-dm-bom-unit]').value.trim(),confidence:'medium'
+        })).filter(item=>item.name);
         const button=bar.querySelector('[type=submit]');button.disabled=true;button.textContent='Updating…';
         const api=window.ARCANA_API; const response=api&&api.rematchDesign?await api.rematchDesign(brief):{error:{message:'unavailable'}};
         button.disabled=false;button.textContent='Update matches';
@@ -162,9 +178,14 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       });
     }
     const supplierCard=f=>`<a class="dm-supplier" href="supplier.html?id=${encodeURIComponent(f.id)}"><div class="dm-supplier-top"><span>${IC.factory}</span><div><b>${esc(f.name)}</b><small>${esc(f.type||'Verified supplier')} · ${esc(f.loc||f.region||'')}</small></div><em>${f.coverage||0}/${f.requirementCount||0} needs</em></div><p>${esc(f.bio||'Verified supplier matched against your design requirements.')}</p><div class="dm-supplier-meta"><span>${IC.shield} Verified</span><span>MOQ <b>${esc(f.moq||'On request')}</b></span><span>Lead <b>${esc(f.lead||'On request')}</b></span></div></a>`;
-    const requirementSection=(title,groups)=>`<section class="dm-result-section"><div class="dm-section-head"><h2>${title}</h2><p>Matched to the requirements Athelia extracted from your design.</p></div>${groups.length?groups.map(group=>`<div class="dm-product-group"><h3>${esc(group.requirement.name)}${group.requirement.specification?` <span>${esc(group.requirement.specification)}</span>`:''}</h3><div class="prod-grid">${group.matches.length?group.matches.map(product=>window.ARCANA_card(product,{href:'product.html?id='+encodeURIComponent(product.id),fabricSpec:product.cat==='fabrics'})).join(''):`<p class="dm-no-match">No verified catalog match yet.</p>`}</div></div>`).join(''):`<p class="dm-no-match">No requirements identified.</p>`}</section>`;
+    const requirementSection=(category,groups)=>`<section class="dm-result-section" data-dm-kind="${category}"><div class="dm-section-head"><div><h2>${categoryNames[category]||category}</h2><p>Catalog matches for the related BOM requirements.</p></div><span>${groups.reduce((total,group)=>total+group.matches.length,0)} matches</span></div>${groups.length?groups.map(group=>`<div class="dm-product-group"><h3>${esc(group.requirement.name)}${group.requirement.specification?` <span>${esc(group.requirement.specification)}</span>`:''}${group.requirement.quantity?` <small>${esc(group.requirement.quantity)}${group.requirement.unit?` ${esc(group.requirement.unit)}`:''}</small>`:''}</h3><div class="prod-grid">${group.matches.length?group.matches.map(product=>window.ARCANA_card(product,{href:'product.html?id='+encodeURIComponent(product.id),fabricSpec:product.cat==='fabrics'})).join(''):`<p class="dm-no-match">No verified catalog match yet.</p>`}</div></div>`).join(''):`<p class="dm-no-match">No requirements identified.</p>`}</section>`;
     function renderResults(){
-      grid.innerHTML=`<section class="dm-result-section dm-oem"><div class="dm-section-head"><div><h2>OEM factories for this design</h2><p>Ranked by verified capability and coverage of the sourcing brief.</p></div><span>${results.oems.length} verified matches</span></div><div class="dm-supplier-grid">${results.oems.length?results.oems.map(supplierCard).join(''):`<p class="dm-no-match">No OEM factory in the verified catalog currently matches this brief.</p>`}</div></section>${requirementSection('Fabric options',results.fabrics||[])}${requirementSection('Trim options',results.trims||[])}`;
+      const categories=results.categories||[{category:'fabrics',groups:results.fabrics||[]},{category:'trims',groups:results.trims||[]}].filter(item=>item.groups.length);
+      const suppliers=results.suppliers||results.oems||[];
+      const productCount=categories.reduce((total,item)=>total+item.groups.reduce((n,group)=>n+group.matches.length,0),0);
+      const chips=[{key:'all',label:'All',count:productCount+suppliers.length},...categories.map(item=>({key:item.category,label:categoryNames[item.category]||item.category,count:item.groups.reduce((total,group)=>total+group.matches.length,0)})),{key:'suppliers',label:'OEM suppliers',count:suppliers.length}];
+      grid.innerHTML=`<nav class="dm-result-filter" aria-label="Design match result types">${chips.map((chip,index)=>`<button type="button" class="${index===0?'active':''}" data-dm-filter="${chip.key}" aria-pressed="${index===0}">${esc(chip.label)} <span>${chip.count}</span></button>`).join('')}</nav>${categories.map(item=>requirementSection(item.category,item.groups)).join('')}<section class="dm-result-section dm-oem" data-dm-kind="suppliers"><div class="dm-section-head"><div><h2>OEM suppliers</h2><p>Verified garment manufacturers ranked against the complete design brief.</p></div><span>${suppliers.length} verified matches</span></div><div class="dm-supplier-grid">${suppliers.length?suppliers.map(supplierCard).join(''):`<p class="dm-no-match">No verified OEM supplier currently matches this brief.</p>`}</div></section>`;
+      grid.querySelector('.dm-result-filter').addEventListener('click',event=>{const button=event.target.closest('[data-dm-filter]');if(!button)return;const filter=button.dataset.dmFilter;grid.querySelectorAll('[data-dm-filter]').forEach(item=>{const active=item===button;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active));});grid.querySelectorAll('[data-dm-kind]').forEach(section=>section.hidden=filter!=='all'&&section.dataset.dmKind!==filter);});
       window.ARCANA_wireCards(grid);
     }
     renderBar();renderResults();

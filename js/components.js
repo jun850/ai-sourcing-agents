@@ -283,8 +283,6 @@ function buildHeader(){
   const s = Store.session();
   const productContext=/\/product\.html$/.test(location.pathname);
   const mobileMarketplaceSearch=body.hasAttribute('data-marketplace-search');
-  const accountOrOrders=/\/(?:brand-owner|orders|order)\.html$/.test(location.pathname);
-  const desktopMarketplaceSearch=!accountOrOrders;
   // seller surface = explicit data-surface, or a signed-in seller viewing their workspace
   const seller = body.dataset.surface==='seller' || (s && s.role==='seller' && body.dataset.surface!=='buyer');
   const ph = seller ? 'Search your SKUs, orders and buyers…'
@@ -309,7 +307,7 @@ function buildHeader(){
     ${mobileBack}
     ${brand()}
     <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
-    ${desktopMarketplaceSearch ? searchBox(ph) : ''}
+    ${searchBox(ph)}
     ${cartIcon}
     ${authCluster()}
     ${katPanel()}
@@ -457,6 +455,7 @@ function buildCopilotFab(){
         <span class="cfb-mark" aria-hidden="true">${markSVG()}</span>
         <label class="visually-hidden" for="copFabInput">${esc(t("Describe what you're sourcing…"))}</label>
         <input id="copFabInput" autocomplete="off" placeholder="${esc(t("Describe what you're sourcing…"))}">
+        <button class="cfb-close" type="button" aria-label="${esc(t('Close Athelia'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
         <button class="cfb-go" type="submit" aria-label="${esc(t('Ask Athelia'))}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
       </form>
     </div>`;
@@ -481,6 +480,7 @@ function buildCopilotFab(){
   function close(focusBtn){ panel.classList.remove('in'); panel.hidden=true; delete wrap.dataset.open;
     btn.setAttribute('aria-expanded','false'); if(focusBtn) btn.focus(); }
   btn.addEventListener('click',open);
+  form.querySelector('.cfb-close').addEventListener('click',()=>close(true));
   form.addEventListener('submit',e=>{ e.preventDefault();
     const v=input.value.trim(); if(!v){ input.focus(); return; }
     window.ARCANA_Copilot.setBrief(v);
@@ -571,11 +571,11 @@ function ensureDesignMatchModal(){
     <button type="button" class="dm-close" data-dm-close aria-label="Close">&times;</button>
     <div class="dm-mark">${IC.document}</div>
     <h2 id="dmTitle">Match a design to verified suppliers</h2>
-    <p id="dmDesc">Upload a tech pack or reference as an image or PDF. Athelia reads it into a sourcing brief, then Atelix matches OEM, fabric, and trim suppliers.</p>
+    <p id="dmDesc">Upload a tech pack or reference as an image or PDF. Athelia reads its bill of materials into a sourcing brief, then Atelix matches products and verified suppliers.</p>
     <form data-dm-form>
       <input type="file" data-dm-files accept="application/pdf,image/jpeg,image/png,image/webp" multiple hidden>
       <button type="button" class="dm-drop" data-dm-browse>
-        ${IC.document}<span><b>Drop files here or browse</b><small>JPG, PNG, WebP, or PDF · up to 8 files</small></span>
+        ${IC.document}<span><b>Drop files here or browse</b><small>PDF up to 30 MB · images up to 25 MB · up to 8 files</small></span>
       </button>
       <ul class="dm-files" data-dm-list aria-live="polite"></ul>
       <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your Atelix profile.</p>
@@ -593,7 +593,11 @@ function ensureDesignMatchModal(){
   const accept=added=>{
     const allowed=file=>/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type);
     const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, or PDF files.');return;}
-    files=[...files,...added].slice(0,8); renderFiles();
+    if(files.length+added.length>8){toast('Upload up to 8 files at a time.');return;}
+    const oversized=added.find(file=>file.size>(file.type==='application/pdf'?30:25)*1024*1024);
+    if(oversized){toast(oversized.type==='application/pdf'?'Keep each PDF under 30 MB.':'Keep each image under 25 MB.');return;}
+    if([...files,...added].reduce((total,file)=>total+file.size,0)>30*1024*1024){toast('Keep the total upload under 30 MB.');return;}
+    files=[...files,...added]; renderFiles();
   };
   input.addEventListener('change',()=>{accept([...input.files]);input.value='';});
   wrap.querySelector('[data-dm-browse]').addEventListener('click',()=>input.click());
@@ -612,7 +616,10 @@ function ensureDesignMatchModal(){
     submit.disabled=false; submit.textContent='Analyze design';
     if(error || !data || !data.ok){
       const reason=(data&&data.reason)||(error&&error.message)||'analysis_failed';
-      const message={unsupported_file:'Use JPG, PNG, WebP, or PDF files.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
+      const stage=data&&data.stage, detail=data&&data.detail;
+      console.error('[Design Match] Analysis failed',{reason,stage,detail,upstreamStatus:data&&data.upstreamStatus,error});
+      const stageMessage={file_upload:'Athelia could not finish processing this PDF. Please retry.',model:'Athelia could not analyze this document right now. Please retry.',model_request:'Athelia could not be reached. Check your connection and retry.',model_output:'Athelia could not produce a usable sourcing brief from this file.',structured_output:'Athelia read the file but could not format the sourcing brief. Please retry.',provider_capacity:'Athelia analysis is temporarily unavailable. Please try again later.'}[stage];
+      const message=stageMessage||{unsupported_file:'Use JPG, PNG, WebP, or PDF files.',file_count:'Upload between 1 and 8 files.',file_size:'Keep PDFs and the total upload under 30 MB; images under 25 MB each.',unsupported_document:(data&&data.document&&data.document.reason)||'Upload a tech pack, garment sketch, or design reference.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Athelia analysis is temporarily unavailable. Please try again later.',catalog_unavailable:'The supplier catalog is temporarily unavailable.',analysis_failed:'Athelia could not read that document. Try a clearer PDF or image.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
       toast(message); return;
     }
     setDesignMatch(data); files=[]; renderFiles(); close();

@@ -72,6 +72,21 @@ if(!sb || !sb.auth){
 const REDIRECT_LOGIN = location.origin + '/pages/login.html';
 const REDIRECT_RESET = location.origin + '/pages/reset-password.html';
 
+/* functions-js keeps non-2xx response bodies on error.context instead of data.
+   Recover the function's structured reason so the upload UI can distinguish
+   authentication, file-size, catalog, and model failures. */
+async function edgeResult(data, error){
+  if(!error) return { data:data||null, error:null };
+  const response=error.context;
+  if(response && typeof response.clone==='function'){
+    try{
+      const payload=await response.clone().json();
+      if(payload && typeof payload==='object') return { data:payload, error };
+    }catch(_){}
+  }
+  return { data:data||null, error };
+}
+
 /* ---- Shared cart helpers (used by placeOrder + the cart-sync methods) ---- */
 async function ensureCart(uid){
   const { data: cart, error } = await sb.from('carts').select('id').eq('profile_id', uid).maybeSingle();
@@ -449,8 +464,7 @@ const API = {
 
   /* Design Match uploads are sent directly to the authenticated Edge Function.
      They are intentionally NOT put in the public uploads bucket: the function
-     reads them in-memory, forwards them to Gemini for analysis, and returns
-     only the structured brief + catalog matches. */
+     reads them in-memory and returns only Athelia's structured brief + catalog matches. */
   async analyzeDesign(files){
     try{
       const { data:{ session } } = await sb.auth.getSession();
@@ -458,7 +472,7 @@ const API = {
       const body=new FormData();
       (files||[]).forEach(file=>body.append('files',file));
       const { data, error }=await sb.functions.invoke('design-match',{body});
-      return { data:data||null, error:error||null };
+      return await edgeResult(data,error);
     }catch(error){ return { data:null, error }; }
   },
 
@@ -467,7 +481,7 @@ const API = {
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { data:null, error:{ message:'not authenticated', code:'unauthorized' } };
       const { data, error }=await sb.functions.invoke('design-match',{body:{brief}});
-      return { data:data||null, error:error||null };
+      return await edgeResult(data,error);
     }catch(error){ return { data:null, error }; }
   },
 
