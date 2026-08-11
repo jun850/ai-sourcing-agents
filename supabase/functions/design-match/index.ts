@@ -107,12 +107,7 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
 
 async function toGeminiPart(file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  let mimeType = file.type;
-  if (file.name.toLowerCase().endsWith(".ai")) {
-    const signature = new TextDecoder().decode(bytes.slice(0, 8));
-    if (!signature.startsWith("%PDF-")) throw new Error("ai_pdf_export_required");
-    mimeType = PDF;
-  }
+  const mimeType = file.type;
   // Avoid spreading a multi-megabyte Uint8Array into String.fromCharCode —
   // that exceeds the argument limit on large, valid tech-pack PDFs.
   let binary = "";
@@ -154,7 +149,7 @@ Deno.serve(async (req) => {
   const files = form.getAll("files").filter((item): item is File => item instanceof File);
   if (!files.length || files.length > MAX_FILES) return json({ ok: false, reason: "file_count" }, 400);
   if (files.some(file => file.size > MAX_FILE_BYTES) || files.reduce((n, file) => n + file.size, 0) > MAX_TOTAL_BYTES) return json({ ok: false, reason: "file_size" }, 413);
-  if (files.some(file => !IMAGE_TYPES.has(file.type) && file.type !== PDF && !file.name.toLowerCase().endsWith(".ai"))) return json({ ok: false, reason: "unsupported_file" }, 415);
+  if (files.some(file => !IMAGE_TYPES.has(file.type) && file.type !== PDF)) return json({ ok: false, reason: "unsupported_file" }, 415);
 
   let parts: any[];
   try { parts = await Promise.all(files.map(toGeminiPart)); }

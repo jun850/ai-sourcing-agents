@@ -581,11 +581,11 @@ function ensureDesignMatchModal(){
     <button type="button" class="dm-close" data-dm-close aria-label="Close">&times;</button>
     <div class="dm-mark">${IC.document}</div>
     <h2 id="dmTitle">Match a design to verified suppliers</h2>
-    <p id="dmDesc">Upload a tech pack, reference image, PDF, or PDF-compatible Illustrator file. Athelia reads it into a sourcing brief, then Atelix matches OEM, fabric, and trim suppliers.</p>
+    <p id="dmDesc">Upload a tech pack or reference as an image or PDF. Athelia reads it into a sourcing brief, then Atelix matches OEM, fabric, and trim suppliers.</p>
     <form data-dm-form>
-      <input type="file" data-dm-files accept=".pdf,.ai,image/jpeg,image/png,image/webp" multiple hidden>
+      <input type="file" data-dm-files accept="application/pdf,image/jpeg,image/png,image/webp" multiple hidden>
       <button type="button" class="dm-drop" data-dm-browse>
-        ${IC.document}<span><b>Drop files here or browse</b><small>JPG, PNG, WebP, PDF, or Illustrator · up to 8 files</small></span>
+        ${IC.document}<span><b>Drop files here or browse</b><small>JPG, PNG, WebP, or PDF · up to 8 files</small></span>
       </button>
       <ul class="dm-files" data-dm-list aria-live="polite"></ul>
       <p class="dm-note">Private to this browser session. Source files are analyzed in transit and are not saved to your Atelix profile.</p>
@@ -601,8 +601,8 @@ function ensureDesignMatchModal(){
     submit.disabled=!files.length;
   };
   const accept=added=>{
-    const allowed=file=>/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type)||/\.ai$/i.test(file.name);
-    const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, PDF, or Illustrator files.');return;}
+    const allowed=file=>/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(file.type);
+    const invalid=added.find(file=>!allowed(file)); if(invalid){toast('Use JPG, PNG, WebP, or PDF files.');return;}
     files=[...files,...added].slice(0,8); renderFiles();
   };
   input.addEventListener('change',()=>{accept([...input.files]);input.value='';});
@@ -622,7 +622,7 @@ function ensureDesignMatchModal(){
     submit.disabled=false; submit.textContent='Analyze design';
     if(error || !data || !data.ok){
       const reason=(data&&data.reason)||(error&&error.message)||'analysis_failed';
-      const message={ai_pdf_export_required:'This Illustrator file needs a PDF export before Athelia can read it.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
+      const message={unsupported_file:'Use JPG, PNG, WebP, or PDF files.',file_size:'Keep each file under 25 MB and the upload under 75 MB.',unauthorized:'Please sign in before uploading a design.',analysis_unavailable:'Design analysis is temporarily unavailable.'}[reason]||'Athelia could not read those files. Try a clearer PDF or image.';
       toast(message); return;
     }
     setDesignMatch(data); files=[]; renderFiles(); close();
