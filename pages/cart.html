@@ -29,6 +29,7 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('cartRoot');
+  const productAsset=window.ATELIX_productAsset;
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
@@ -51,7 +52,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     }
     const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;return `
       <div class="cart-line" data-row="${p.id}">
-        <img src="${ASSET(p.img+'.webp')}" alt="${TR(p.name)}">
+        <img src="${productAsset(p)}" alt="${TR(p.name)}">
         <div class="cl-info">
           <h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4>
           <div class="m">${TR(p.comp)} · ${TR(p.spec)}</div>

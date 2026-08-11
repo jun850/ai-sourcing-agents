@@ -29,6 +29,7 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('wlRoot');
+  const productAsset=window.ATELIX_productAsset;
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const CAT_LABEL={fabrics:'Fabrics', accessories:'Accessories', trims:'Trims', yarns:'Yarns & Threads', oem:'OEM Services'};
@@ -70,7 +71,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
     const rows=list.map(i=>{const p=i.p; const sub=p.price*i.qty; return `
       <tr data-row="${p.id}">
-        <td><div class="wl-prod"><img src="${ASSET(p.img+'.webp')}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
+        <td><div class="wl-prod"><img src="${productAsset(p)}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
         <td>${money(p.price)}<small style="color:var(--muted);font-weight:500"> /${TR(p.unit)}</small></td>
         <td><div class="qty" data-qty data-id="${p.id}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div></td>
         <td class="wl-total">${money(sub)}</td>

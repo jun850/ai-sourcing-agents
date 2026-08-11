@@ -7,6 +7,10 @@ const ROOT = document.body.dataset.root === '..'; // true inside /pages
 const P  = n => ROOT ? n : 'pages/' + n;          // link to a /pages file
 const HOME = ROOT ? '../index.html' : 'index.html';
 const ASSET = f => (ROOT ? '../assets/' : 'assets/') + f;
+const productAsset = product => {
+  const image = product && product.img;
+  return ASSET(image && /\.(?:avif|jpe?g|png|webp)$/i.test(image) ? image : (image || 'fabric-stack') + '.webp');
+};
 const factoryAsset = factory => {
   const image = factory && factory.img;
   return ASSET(image && /\.(?:avif|jpe?g|png|webp)$/i.test(image) ? image : (image || 'factory-interior') + '.webp');
@@ -22,6 +26,7 @@ const factoryLocation = factory => {
 };
 window.ATELIX_factoryAsset=factoryAsset;
 window.ATELIX_factoryLocation=factoryLocation;
+window.ATELIX_productAsset=productAsset;
 
 /* ---------- stores (localStorage, mocked backend) ---------- */
 const LS = {
@@ -163,7 +168,7 @@ function cardHTML(p, opts){
   const shopRow = (opts.shop===false) ? '' :
     `<div class="tshop"><span class="tnm">${tr(p.seller)}</span><span class="tvf">${IC.check}</span></div>`;
   return `<a class="tcard" href="${href}">
-    <div class="tthumb">${badge}<img src="${ASSET(p.img+'.webp')}" alt="${nm}" loading="lazy"></div>
+    <div class="tthumb">${badge}<img src="${productAsset(p)}" alt="${nm}" loading="lazy"></div>
     <div class="tbody">
       <h4>${title}</h4>
       <div class="tprice">${priceLine}</div>
@@ -693,7 +698,7 @@ function wireSearch(){
   function prodRow(p,i){ opts.push(1);
     const price=p.price>0? t('From')+' '+money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
     return `<a class="s-row" role="option" id="${optId(i)}" href="${P('product.html')+'?id='+p.id}">
-      <img class="s-th" src="${ASSET(p.img+'.webp')}" alt="" loading="lazy">
+      <img class="s-th" src="${productAsset(p)}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(p.name))}</span>
       <span class="s-meta">${esc(tr(p.comp))} · ${esc(tr(p.seller))}</span></span>
       <span class="s-pr">${price}</span></a>`; }
@@ -762,7 +767,7 @@ function wireSearch(){
   function visualHTML(img){
     const seen={}, ms=visualMatches(img).filter(p=>!seen[p.img]&&(seen[p.img]=1)).slice(0,6);
     let h=`<div class="s-hd" role="presentation">${esc(t('Visual matches'))} <i class="s-demo">${esc(t('demo'))}</i></div><div class="s-vgrid" role="presentation">`;
-    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${ASSET(p.img+'.webp')}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?t('From')+' '+money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
+    for(const p of ms) h+=`<a class="s-vcard" href="${P('product.html')+'?id='+p.id}"><img src="${productAsset(p)}" alt="${esc(tr(p.name))}"><span class="s-vnm">${esc(tr(p.name))}</span><span class="s-vpr">${p.price>0?t('From')+' '+money(p.price)+'/'+esc(tr(p.unit)):esc(t('Quote'))}</span></a>`;
     h+=`</div><a class="s-row s-foot" role="option" id="${optId(opts.push(1)-1)}" href="${P('category.html')+'?cat=fabrics&visual=1'}">${IC.search}<span>${esc(t('See all visual matches'))}</span>${IC.chevR}</a>`;
     return h;
   }

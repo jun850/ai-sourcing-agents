@@ -30,6 +30,7 @@
 <script>
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
+  const productAsset=window.ATELIX_productAsset;
   const leadMap={fabrics:'7–14 days',accessories:'7–12 days',trims:'7–12 days',yarns:'10–15 days',oem:'—'};
 
   // Discount pricing only exists on the 11.11 sale page (campaign.html) — the PDP
@@ -63,7 +64,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     <nav class="crumbs"><a href="../index.html">Home</a>${IC.chevR}<a href="${catUrl}">${catLabel}</a>${IC.chevR}<span class="cur">${nm}</span></nav>
     <div class="pdp">
       <div class="gallery">
-        <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img src="${ASSET(p.img+'.webp')}" alt="${nm}">
+        <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img src="${productAsset(p)}" alt="${nm}">
           ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
           <div class="caption">${comp} · ${spec} <span class="circ" style="width:22px;height:22px;box-shadow:none;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span></div>
         </div>
