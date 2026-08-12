@@ -954,7 +954,7 @@
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.follow">Follow us</h5>
-      <div class="sf-social"><a href="https://x.com/junarcana263" target="_blank" rel="noopener noreferrer" aria-label="X">${soc.x}</a><a href="https://linkedin.com/junarcana" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">${soc.li}</a></div>
+      <div class="sf-social"><a href="https://x.com/junarcana263" target="_blank" rel="noopener noreferrer" aria-label="X">${soc.x}</a><a href="https://linkedin.com/in/junarcana" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">${soc.li}</a></div>
     </div>
   </div>
   <div class="sf-bottom">
