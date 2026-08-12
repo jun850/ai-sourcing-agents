@@ -666,9 +666,14 @@
 .about-trust h2{max-width:15ch;margin-bottom:22px}
 .about-team{display:grid;grid-template-columns:minmax(260px,.72fr) minmax(0,1.28fr);gap:clamp(40px,8vw,120px);padding:clamp(58px,8vw,94px) 0;border-top:1px solid var(--line)}
 .about-team-intro p{max-width:55ch;margin-top:18px}
+.about-team-intro a{color:var(--green);font-weight:700;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.about-team-intro a:hover{color:var(--green-d)}
 .about-team-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(20px,3vw,34px)}
 .about-team-list article{min-width:0}
-.about-team-list img{width:100%;aspect-ratio:4/5;object-fit:cover;object-position:center 30%;border-radius:var(--radius-sm);background:var(--panel)}
+.about-team-photo{aspect-ratio:1;margin:0;overflow:hidden;border-radius:var(--radius-sm);background:var(--panel)}
+.about-team-photo img{width:100%;height:100%;object-fit:cover}
+.about-team-photo--jun img{object-position:center 62%;transform:scale(1.55)}
+.about-team-photo--celina img{object-position:center 22%;transform:scale(1.08)}
 .about-team-list article>div{padding-top:16px}
 .about-team-list h3{font-size:1.25rem;font-weight:700;line-height:1.25}
 .about-team-list p{margin-top:9px;color:var(--muted);font-size:.9375rem;line-height:1.65}
@@ -682,7 +687,7 @@
   .about-page{padding-bottom:72px}.about-hero{gap:28px;padding-bottom:58px}.about-hero-copy>p{font-size:.9375rem}.about-actions{align-items:stretch;flex-direction:column}.about-actions .btn{text-align:center}
   .about-hero-media figcaption{position:static;border-radius:0;background:var(--green);font-size:.75rem}
   .about-section-head{align-items:flex-start;flex-direction:column;gap:12px}.about-steps{grid-template-columns:1fr}.about-steps li+li{border-left:0}
-  .about-team-list{grid-template-columns:1fr;gap:34px}.about-team-list img{aspect-ratio:4/5}
+  .about-team-list{grid-template-columns:1fr;gap:34px}.about-team-photo{aspect-ratio:1}
 }
 @media(prefers-reduced-motion:reduce){.about-hero-media img{transition:none}.about-hero-media:hover img{transform:none}}
 
