@@ -34,6 +34,8 @@ if(!sb || !sb.auth){
     getWishlist(){ return Promise.resolve([]); },
     syncWishlistItem(){ return Promise.resolve({ error: err }); },
     replaceWishlist(){ return Promise.resolve({ error: err }); },
+    getRecentSearches(){ return Promise.resolve([]); },
+    recordRecentSearch(){ return Promise.resolve({ error: err }); },
     getAlgoliaSearchToken(){ return Promise.resolve({ data:null, error: err }); },
     searchPrivateAlgolia(){ return Promise.resolve({ hits:[], error: err }); },
     getMyProfile(){ return Promise.resolve(null); },
@@ -454,6 +456,32 @@ const API = {
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated' } };
       return await writeWishlistRows(session.user.id, items);
+    }catch(error){ return { error }; }
+  },
+
+  /* ---- Search history (account-level, keyword searches only) ---- */
+  async getRecentSearches(limit=6){
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return [];
+      const { data, error } = await sb.from('search_history').select('query,last_searched_at')
+        .eq('profile_id', session.user.id).order('last_searched_at',{ascending:false}).limit(Math.min(Math.max(Number(limit)||6,1),20));
+      if(error || !data) return [];
+      return data.map(row=>row.query).filter(Boolean);
+    }catch(_){ return []; }
+  },
+
+  async recordRecentSearch(query){
+    const normalized=String(query||'').trim().replace(/\s+/g,' ').toLowerCase();
+    if(!normalized) return { error:null };
+    try{
+      const { data:{ session } } = await sb.auth.getSession();
+      if(!session || !session.user) return { error:{ message:'not authenticated' } };
+      const { error }=await sb.from('search_history').upsert(
+        { profile_id:session.user.id, query:normalized, last_searched_at:new Date().toISOString() },
+        { onConflict:'profile_id,query' }
+      );
+      return { error:error||null };
     }catch(error){ return { error }; }
   },
 

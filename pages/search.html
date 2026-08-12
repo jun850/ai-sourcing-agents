@@ -67,15 +67,19 @@ window.ARCANA_PAGE=async function({IC}){
   }
   localizeStatic();
 
-  const localProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||({id:hit.objectID,name:hit.name||hit.objectID,img:hit.image||'',comp:hit.composition||'',spec:hit.specification||'',price:Number(hit.price||0),unit:hit.unit||'',moq:hit.moq?`${hit.moq} ${hit.unit||''}`:'',seller:hit.supplier||'',loc:[hit.city,hit.country].filter(Boolean).join(', '),country:hit.country||'',cat:hit.category||'fabrics',badge:''});
-  const localFactory=hit=>window.ARCANA_FACTORIES.find(factory=>factory.id===hit.objectID)||({id:hit.objectID,name:hit.name||hit.objectID,type:hit.type||'Verified supplier',region:hit.country||'',loc:hit.location||hit.city||'',verified:hit.verified!==false,tags:hit.capabilities||[],certs:hit.certifications||[],img:hit.image||'',bio:hit.description||'',moq:hit.moq||'',lead:hit.lead_time||''});
+  // Remote index hits must exist in the hydrated catalog before the UI gives
+  // them a destination. This prevents an out-of-date Algolia object from
+  // producing the product/factory pages' legacy fallback destination.
+  const localProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||null;
+  const localFactory=hit=>window.ARCANA_FACTORY_MAP?.[hit.objectID]||null;
   const searchableProduct=product=>[product.id,product.name,product.comp,product.spec,product.seller,product.cat,product.country].filter(Boolean).join(' ').toLowerCase();
   const searchableFactory=factory=>[factory.name,factory.type,factory.region,factory.loc,...(factory.tags||[]),...(factory.certs||[])].filter(Boolean).join(' ').toLowerCase();
   const localMatch=(text,value)=>!value||text.includes(value.toLowerCase())||value.toLowerCase().split(/\s+/).filter(word=>word.length>2).some(word=>text.includes(word));
 
   function factoryCard(factory){
     const location=window.ATELIX_factoryLocation(factory),image=window.ATELIX_factoryAsset(factory);
-    return `<a class="search-factory-card" href="/pages/supplier.html?id=${encodeURIComponent(factory.id)}"><img src="${image}" alt="" loading="lazy"><span class="search-factory-copy"><span class="search-factory-title"><b>${esc(TR(factory.name))}</b><em>${IC.check} ${T('Verified')}</em></span><span>${esc(TR(factory.type||T('Supplier')))} · ${esc(TR(location))}</span><small>${esc(TR((factory.tags||[]).slice(0,4).join(' · ')||factory.bio||T('View sourcing capabilities')))}</small></span><span class="search-factory-action" aria-hidden="true">→</span></a>`;
+    const href=window.ATELIX_factoryRoute(factory.id); if(!href) return '';
+    return `<a class="search-factory-card" href="${href}"><img src="${image}" alt="" loading="lazy"><span class="search-factory-copy"><span class="search-factory-title"><b>${esc(TR(factory.name))}</b><em>${IC.check} ${T('Verified')}</em></span><span>${esc(TR(factory.type||T('Supplier')))} · ${esc(TR(location))}</span><small>${esc(TR((factory.tags||[]).slice(0,4).join(' · ')||factory.bio||T('View sourcing capabilities')))}</small></span><span class="search-factory-action" aria-hidden="true">→</span></a>`;
   }
   const categoryLabels={fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'};
   function productFilters(){return [{key:'all',label:T('All')},...Object.keys(categoryLabels).map(key=>({key,label:TR(categoryLabels[key])}))];}
@@ -120,7 +124,7 @@ window.ARCANA_PAGE=async function({IC}){
     document.getElementById('factoriesTab').setAttribute('aria-selected',String(!isProducts));document.getElementById('factoriesTab').tabIndex=isProducts?-1:0;
     document.getElementById('searchResultsPanel').setAttribute('aria-labelledby',isProducts?'productsTab':'factoriesTab');
     count.textContent=`${list.length} ${T(list.length===1?'result':'results')}`;
-    if(isProducts){grid.innerHTML=list.length?list.map(product=>window.ARCANA_card(product,{href:'/pages/product.html?id='+encodeURIComponent(product.id),fabricSpec:product.cat==='fabrics'})).join(''):emptyState('products');window.ARCANA_wireCards(grid);}
+    if(isProducts){grid.innerHTML=list.length?list.map(product=>window.ARCANA_card(product,{href:window.ATELIX_productRoute(product.id),fabricSpec:product.cat==='fabrics'})).join(''):emptyState('products');window.ARCANA_wireCards(grid);}
     else factoryList.innerHTML=list.length?list.map(factoryCard).join(''):emptyState('factories');
     document.querySelectorAll('[data-clear-search]').forEach(button=>button.addEventListener('click',()=>{location.href='/search';}));
   }
@@ -128,7 +132,10 @@ window.ARCANA_PAGE=async function({IC}){
     status.hidden=false;grid.hidden=true;factoryList.hidden=true;
     try{
       const [products,factories]=await Promise.all([window.ATELIX_searchPublicAlgolia('products',query,{hitsPerPage:100}),window.ATELIX_searchPublicAlgolia('factories',query,{hitsPerPage:100})]);
-      productHits=(products.hits||[]).map(localProduct);factoryHits=(factories.hits||[]).map(localFactory);
+      productHits=(products.hits||[]).map(localProduct).filter(Boolean);factoryHits=(factories.hits||[]).map(localFactory).filter(Boolean);
+      const indexedProducts=new Set(productHits.map(product=>product.id)), indexedFactories=new Set(factoryHits.map(factory=>factory.id));
+      productHits.push(...window.ARCANA_PRODUCTS.filter(product=>!indexedProducts.has(product.id)&&localMatch(searchableProduct(product),query)));
+      factoryHits.push(...window.ARCANA_FACTORIES.filter(factory=>!indexedFactories.has(factory.id)&&localMatch(searchableFactory(factory),query)));
     }catch(_){
       productHits=window.ARCANA_PRODUCTS.filter(product=>localMatch(searchableProduct(product),query));
       factoryHits=window.ARCANA_FACTORIES.filter(factory=>localMatch(searchableFactory(factory),query));
@@ -149,6 +156,7 @@ window.ARCANA_PAGE=async function({IC}){
   rail.addEventListener('click',event=>{const button=event.target.closest('[data-search-filter]');if(button){activeFilter=button.dataset.searchFilter;render();}});
   sortSelect.addEventListener('change',()=>{sort=sortSelect.value;render();});
   await load();
+  if(query) window.ARCANA_API?.recordRecentSearch?.(query);
   window.ARCANA_onLang(()=>{localizeStatic();render();});
 };
 </script>

@@ -313,7 +313,6 @@ function brand(){
   return `<a class="brand" href="${HOME}" aria-label="Atelix">${markSVG()}<span class="brand-name"><span class="word">Atelix</span></span></a>`;
 }
 const ALGOLIA_CONFIG_URL='https://bobwfxvxzjovpgmmqsew.supabase.co/functions/v1/algolia-public-config';
-let algoliaExperiencesPromise=null;
 let algoliaConfigPromise=null;
 function getAlgoliaConfig(){
   if(!algoliaConfigPromise) algoliaConfigPromise=fetch(ALGOLIA_CONFIG_URL).then(response=>{
@@ -337,25 +336,18 @@ async function searchPublicAlgolia(kind,query,options){
 }
 window.ATELIX_getAlgoliaConfig=getAlgoliaConfig;
 window.ATELIX_searchPublicAlgolia=searchPublicAlgolia;
-function mountAlgoliaExperiences(){
-  const mount=document.getElementById('autocomplete');
-  if(!mount || mount.dataset.algoliaMount==='active') return;
-  mount.dataset.algoliaMount='loading';
-  const load=async()=>{
-    try{
-      const config=await getAlgoliaConfig();
-      const src=new URL('https://cdn.jsdelivr.net/npm/@algolia/experiences/dist/experiences.js');
-      src.searchParams.set('appId',config.appId); src.searchParams.set('apiKey',config.apiKey); src.searchParams.set('experienceId',config.experienceId); src.searchParams.set('env',config.env||'prod');
-      if(!document.querySelector('script[data-algolia-experiences]')){
-        await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src.href;script.dataset.algoliaExperiences='';script.onload=resolve;script.onerror=reject;document.body.appendChild(script);});
-      }
-      window.AlgoliaExperiences?.run?.();
-      mount.dataset.algoliaMount='active';
-    }catch(_){ mount.dataset.algoliaMount='fallback'; }
-  };
-  algoliaExperiencesPromise=algoliaExperiencesPromise||load();
-}
-window.addEventListener('pagehide',()=>window.AlgoliaExperiences?.dispose?.(),{once:true});
+/* Algolia is a search index, never an authority for customer-facing links.
+   Resolve every hit against the current public catalog before making it clickable. */
+const productRoute=id=>{
+  const product=window.ARCANA_PRODUCT_MAP?.[id];
+  return product ? P('product.html')+'?id='+encodeURIComponent(product.id) : null;
+};
+const factoryRoute=id=>{
+  const factory=window.ARCANA_FACTORY_MAP?.[id];
+  return factory ? P('supplier.html')+'?id='+encodeURIComponent(factory.id) : null;
+};
+window.ATELIX_productRoute=productRoute;
+window.ATELIX_factoryRoute=factoryRoute;
 
 const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <label class="visually-hidden" for="site-search">Search</label>${IC.search}
@@ -443,7 +435,6 @@ function buildHeader(){
     ${authCluster()}
     ${katPanel()}
   </div>`;
-  mountAlgoliaExperiences();
   syncBadges();
 }
 
@@ -850,7 +841,6 @@ function wireSearch(){
     'ykk zipper wholesale','denim 12 oz stretch','organic cotton jersey 180 gsm','linen blend shirting',
     'custom woven labels','wool flannel suiting','sampling package','private label packaging'];
   const POOL=[...new Set([...PROD.map(p=>p.name.toLowerCase()),...KW_EXTRA])];
-  const POPULAR=['cotton twill','denim','oem full package','linen blend','recycled polyester','ykk zipper'];
   const SUP_TOKENS=['mill','mills','factory','factories','supplier','suppliers','manufacturer','works','studio',
     'house','co.','ltd','textile','dye','senshoku','garment','verified'];
 
@@ -862,6 +852,10 @@ function wireSearch(){
   }
   const prodScore=(p,q,w)=>2*hit(p.name,q,w)+hit(p.comp,q,w)+hit(p.seller,q,w)+hit(p.cat,q,w)+hit(p.spec,q,w);
   const factScore=(f,q,w)=>2*hit(f.name,q,w)+hit(f.tags.join(' '),q,w)+hit(f.type,q,w)+hit(f.loc+' '+f.region,q,w);
+  const catalogMatch=(value,q)=>{
+    const text=norm(value), words=norm(q).split(/\s+/).filter(word=>word.length>2);
+    return !!q && (text.includes(norm(q)) || words.some(word=>text.includes(word)));
+  };
 
   /* --- open/close --- */
   let opts=[], sel=-1;
@@ -877,14 +871,14 @@ function wireSearch(){
   }
   const kwHref=k=>'/search?q='+encodeURIComponent(k);
   function kwRow(k,q,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${kwHref(k)}">${IC.search}<span class="s-kw">${mark(k,q)}</span></a>`; }
-  function supRow(f,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${P('supplier.html')+'?id='+f.id}">
+  function supRow(f,i){ const href=factoryRoute(f.id); if(!href)return ''; opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${href}">
       <img class="s-av" src="${factoryAsset(f)}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(f.name))} ${IC.check}</span>
       <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(factoryLocation(f)))}</span></span>
       <span class="s-go">${IC.chevR}</span></a>`; }
-  function prodRow(p,i){ opts.push(1);
+  function prodRow(p,i){ const href=productRoute(p.id); if(!href)return ''; opts.push(1);
     const price=p.price>0? t('From')+' '+money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
-    return `<a class="s-row" role="option" id="${optId(i)}" href="${P('product.html')+'?id='+p.id}">
+    return `<a class="s-row" role="option" id="${optId(i)}" href="${href}">
       <img class="s-th" src="${productAsset(p)}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(p.name))}</span>
       <span class="s-meta">${esc(tr(p.comp))} · ${esc(tr(p.seller))}</span></span>
@@ -909,15 +903,21 @@ function wireSearch(){
   }
 
   /* --- main render --- */
+  async function renderRecent(){
+    opts=[]; sel=-1;
+    const api=window.ARCANA_API;
+    const recent=Store.session()&&api?.getRecentSearches ? await api.getRecentSearches(6) : [];
+    if(input.value.trim()) return;
+    if(!recent.length){ close(); return; }
+    let html=`<div class="s-hd" role="presentation">${esc(t('Recent searches'))}</div>`,i=0;
+    recent.forEach(query=>{ html+=kwRow(query,'',i++); });
+    pop.innerHTML=html; open();
+  }
   function renderLocal(){
     const q=norm(input.value), words=q.split(/\s+/).filter(Boolean);
     let html=''; opts=[]; let i=0;
-    if(!q){
-      html+=`<div class="s-hd" role="presentation">${esc(t('Popular on Atelix'))}</div>`;
-      for(const k of POPULAR) html+=kwRow(k,'',i++);
-      html+=`<div class="s-hd" role="presentation">${esc(t('Verified suppliers'))}</div>`;
-      for(const f of FACT.slice(0,2)) html+=supRow(f,i++);
-    }else if(q.length<2){
+    if(!q){ close(); return; }
+    if(q.length<2){
       const kws=POOL.filter(k=>k.startsWith(q)).slice(0,6);
       for(const k of kws) html+=kwRow(k,q,i++);
       html+=footRow(q,i++);
@@ -940,18 +940,12 @@ function wireSearch(){
   }
 
   let renderSequence=0;
-  const algoliaProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||({
-    id:hit.objectID,name:hit.name||hit.objectID,img:hit.image||'',comp:hit.composition||'',spec:hit.specification||'',
-    price:Number(hit.price||0),unit:hit.unit||'',moq:hit.moq?String(hit.moq):'',seller:hit.supplier||'',
-    loc:[hit.city,hit.country].filter(Boolean).join(', '),country:hit.country||'',cat:hit.category||'fabrics',badge:''
-  });
-  const algoliaFactory=hit=>window.ARCANA_FACTORIES?.find(factory=>factory.id===hit.objectID)||({
-    id:hit.objectID,name:hit.name||hit.objectID,type:hit.type||'Verified supplier',region:hit.country||'',loc:hit.location||hit.city||'',
-    verified:hit.verified!==false,tags:hit.capabilities||[],certs:hit.certifications||[],img:hit.image||''
-  });
+  const algoliaProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||null;
+  const algoliaFactory=hit=>window.ARCANA_FACTORY_MAP?.[hit.objectID]||null;
   async function render(){
     const sequence=++renderSequence;
     const q=norm(input.value);
+    if(!q){ await renderRecent(); return; }
     pop.innerHTML=`<div class="s-loading" role="status"><span aria-hidden="true"></span>${esc(t('Searching Atelix…'))}</div>`;
     opts=[];sel=-1;open();
     try{
@@ -964,15 +958,19 @@ function wireSearch(){
       let html='',i=0;
       const suggestionRows=(suggestions.hits||[]).map(hit=>hit.query).filter(Boolean);
       if(suggestionRows.length){
-        html+=`<div class="s-hd" role="presentation">${esc(t(q?'Suggested searches':'Popular on Atelix'))}</div>`;
+        html+=`<div class="s-hd" role="presentation">${esc(t('Suggested searches'))}</div>`;
         suggestionRows.forEach(query=>{html+=kwRow(query,q,i++);});
       }
-      const productRows=(products.hits||[]).map(algoliaProduct);
+      const productRows=(products.hits||[]).map(algoliaProduct).filter(Boolean);
+      const indexedProducts=new Set(productRows.map(product=>product.id));
+      productRows.push(...PROD.filter(product=>!indexedProducts.has(product.id)&&catalogMatch([product.name,product.comp,product.spec,product.seller,product.cat].join(' '),q)).slice(0,3));
       if(productRows.length){
         html+=`<div class="s-hd" role="presentation">${esc(t('Products'))}</div>`;
         productRows.forEach(product=>{html+=prodRow(product,i++);});
       }
-      const factoryRows=(factories.hits||[]).map(algoliaFactory);
+      const factoryRows=(factories.hits||[]).map(algoliaFactory).filter(Boolean);
+      const indexedFactories=new Set(factoryRows.map(factory=>factory.id));
+      factoryRows.push(...FACT.filter(factory=>!indexedFactories.has(factory.id)&&catalogMatch([factory.name,factory.type,factory.loc,factory.region,...(factory.tags||[])].join(' '),q)).slice(0,2));
       if(factoryRows.length){
         html+=`<div class="s-hd" role="presentation">${esc(t('Factories'))}</div>`;
         factoryRows.forEach(factory=>{html+=supRow(factory,i++);});

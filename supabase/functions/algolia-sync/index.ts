@@ -17,6 +17,26 @@ async function algolia(index: string, body: unknown, suffix = "/batch", admin = 
   if (!result.ok) throw new Error(`algolia_${result.status}:${await result.text()}`);
   return result.json();
 }
+async function indexedObjectIds(index: string) {
+  const key = Deno.env.get("ALGOLIA_ADMIN_API_KEY");
+  if (!key) throw new Error("algolia_not_configured");
+  const ids: string[] = [];
+  let cursor = "";
+  do {
+    const suffix = `/browse?attributesToRetrieve=objectID${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+    const response = await fetch(algoliaUrl(index, suffix), { headers: { "X-Algolia-Application-Id": Deno.env.get("ALGOLIA_APP_ID")!, "X-Algolia-API-Key": key } });
+    if (!response.ok) throw new Error(`algolia_${response.status}:${await response.text()}`);
+    const page = await response.json();
+    ids.push(...(page.hits || []).map((hit: any) => String(hit.objectID)).filter(Boolean));
+    cursor = page.cursor || "";
+  } while (cursor);
+  return ids;
+}
+async function pruneIndex(index: string, validIds: Set<string>) {
+  const stale = (await indexedObjectIds(index)).filter(id => !validIds.has(id));
+  if (stale.length) await algolia(index, { requests: stale.map(objectID => ({ action: "deleteObject", body: { objectID } })) });
+  return stale.length;
+}
 
 function plain(value: unknown) { return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim(); }
 function publicRecord(product: any) {
@@ -123,9 +143,14 @@ Deno.serve(async (req) => {
       if (productRequests.length) await algolia(PUBLIC_INDEX, { requests: productRequests });
       if (factoryRequests.length) await algolia(PUBLIC_FACTORIES_INDEX, { requests: factoryRequests });
       await algolia(PUBLIC_SUGGESTIONS_INDEX, { requests: suggestions });
-      return json({ ok: true, products: productRequests.length, factories: factoryRequests.length, suggestions: suggestions.length });
+      const [removedProducts, removedFactories] = await Promise.all([
+        pruneIndex(PUBLIC_INDEX, new Set(productRequests.map((request: any) => request.body.objectID))),
+        pruneIndex(PUBLIC_FACTORIES_INDEX, new Set(factoryRequests.map((request: any) => request.body.objectID))),
+      ]);
+      return json({ ok: true, products: productRequests.length, factories: factoryRequests.length, suggestions: suggestions.length, removedProducts, removedFactories });
     }
     const { data: jobs = [] } = await admin.from("algolia_sync_outbox").select("*").is("processed_at", null).order("created_at").limit(Math.min(Number(limit) || 100, 500));
+    let processed = 0, failed = 0;
     for (const job of jobs) {
       try {
         if (job.entity_type === "product") await syncPublicProduct(admin, job.entity_id, job.payload?.sku);
@@ -134,10 +159,12 @@ Deno.serve(async (req) => {
         if (job.entity_type === "order_item") await syncOrder(admin, job.payload?.order_id);
         if (job.entity_type === "saved_item") await syncWishlist(admin, job.payload?.profile_id, job.payload?.product_id);
         await admin.from("algolia_sync_outbox").update({ processed_at: new Date().toISOString(), attempts: job.attempts + 1, last_error: null }).eq("id", job.id);
+        processed += 1;
       } catch (error) {
         await admin.from("algolia_sync_outbox").update({ attempts: job.attempts + 1, last_error: String(error).slice(0, 1000) }).eq("id", job.id);
+        failed += 1;
       }
     }
-    return json({ ok: true, processed: jobs.length, requester: requester?.id || "internal" });
+    return json({ ok: true, processed, failed, requester: requester?.id || "internal" });
   } catch (error) { return json({ error: String(error) }, 500); }
 });
