@@ -81,7 +81,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <td data-label="${T('Unit price')}">${money(p.price)}<small class="wl-unit"> /${TR(p.unit)}</small></td>
         <td class="wl-actions">
           <button class="btn btn-out" data-add-one="${p.id}" type="button">${T('Add to cart')}</button>
-          <a class="ci-remove" href="#" data-remove="${p.id}" style="margin-left:12px">${T('Remove')}</a>
+          <button class="ci-remove" type="button" data-remove="${p.id}" style="margin-left:12px">${T('Remove')}</button>
         </td>
       </tr>`;}).join('');
 

@@ -28,7 +28,7 @@
   <div class="listing">
     <!-- filter rail -->
     <aside class="filter-rail" aria-label="Product filters">
-      <div class="frl-head"><b data-i18n="cat.filters">Filters</b><span><a href="#" id="clearFilters" data-i18n="cat.reset">Reset</a><button class="sheet-close" type="button" data-close-filters aria-label="Close filters">×</button></span></div>
+        <div class="frl-head"><b data-i18n="cat.filters">Filters</b><span><button type="button" id="clearFilters" data-i18n="cat.reset">Reset</button><button class="sheet-close" type="button" data-close-filters aria-label="Close filters">×</button></span></div>
       <div class="frl-block">
         <h5 data-i18n="cat.oemavail">OEM availability</h5>
         <label class="frl-opt"><input type="radio" name="avail" value="all" checked> <span data-i18n="cat.all">All</span></label>
@@ -41,7 +41,7 @@
       </div>
       <div class="frl-block">
         <h5 data-i18n="cat.price">Price (US$ / unit)</h5>
-        <div class="frl-price"><input type="number" id="pmin" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" placeholder="Max" min="0"></div>
+        <div class="frl-price"><input type="number" id="pmin" aria-label="Minimum price" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" aria-label="Maximum price" placeholder="Max" min="0"></div>
       </div>
       <div class="frl-block" id="countryBlock">
         <h5>Country of Origin</h5>
@@ -557,7 +557,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       ? list.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id, fabricSpec:isFabric})).join('')
       : emptyForL3
         ? `<section class="catalog-empty"><span aria-hidden="true">⌁</span><h2>No ${heTitle.toLowerCase()} listed yet</h2><p>Verified suppliers have not listed this material family yet. Browse the wider category or tell us what you need.</p><div><a class="btn btn-out" href="/categories/${cat}">Browse all ${TR(meta.title).toLowerCase()}</a><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent(`Sourcing request: ${heading}`)}">Request sourcing</a></div></section>`
-        : `<section class="catalog-empty"><span aria-hidden="true">⌁</span><h2>No matching ${meta.noun}</h2><p>Try a different quick filter to see more verified supplier listings.</p><a class="btn btn-out" href="#" id="reset2">Reset filters</a></section>`;
+        : `<section class="catalog-empty"><span aria-hidden="true">⌁</span><h2>No matching ${meta.noun}</h2><p>Try a different quick filter to see more verified supplier listings.</p><button class="btn btn-out" type="button" id="reset2">Reset filters</button></section>`;
 
     window.ARCANA_wireCards(grid);
     if(oemMaterialSources){

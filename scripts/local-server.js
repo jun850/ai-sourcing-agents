@@ -17,7 +17,15 @@ function rewrite(url) {
     url.searchParams.set('l2', category[1]);
     return '/pages/category.html';
   }
-  return ({ '/search':'/pages/search.html', '/about':'/pages/about.html', '/help-center':'/pages/help-center.html' })[pathname] || pathname;
+  return ({
+    '/search':'/pages/search.html',
+    '/about':'/pages/about.html',
+    '/help-center':'/pages/help-center.html',
+    '/legal':'/pages/legal.html',
+    '/terms':'/pages/terms.html',
+    '/privacy':'/pages/privacy.html',
+    '/trust-safety':'/pages/trust-safety.html'
+  })[pathname] || pathname;
 }
 
 http.createServer((req, res) => {

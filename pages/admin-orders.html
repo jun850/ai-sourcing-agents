@@ -177,7 +177,7 @@ window.ARCANA_PAGE=async function({toast}){
         <td><span class="badge ${meta.cls}">${meta.label}</span></td>
         <td>
           <div style="display:flex;gap:6px;align-items:center">
-            <select data-status="${o.order_no}" style="border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 8px;font-size:12.5px;font-family:inherit">
+            <select data-status="${o.order_no}" style="border:1px solid var(--line);border-radius:var(--radius-sm);padding:6px 8px;font-size:12.5px">
               ${STATUSES.map(s=>`<option value="${s}" ${s===o.status?'selected':''}>${STATUS_META[s].label}</option>`).join('')}
             </select>
             <button class="btn btn-out" type="button" data-apply="${o.order_no}" style="padding:6px 12px;font-size:12px">Update</button>

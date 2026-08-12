@@ -28,18 +28,27 @@
 <script src="../js/api.js"></script>
 <script src="../js/copilot-llm.js"></script>
 <script>
-window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
   const productAsset=window.ATELIX_productAsset;
   const leadMap={fabrics:'7–14 days',accessories:'7–12 days',trims:'7–12 days',yarns:'10–15 days',oem:'—'};
 
   // Discount pricing only exists on the 11.11 sale page (campaign.html) — the PDP
   // always shows the real unit price, whichever surface the shopper arrived from.
-  let id=new URLSearchParams(location.search).get('id');
-  // Keep direct links resilient when a seeded SKU is retired from the catalog.
-  if(!M[id]) id=(PRODUCTS[0]&&PRODUCTS[0].id)||Object.keys(M)[0];
-  const p=M[id];
+  const id=new URLSearchParams(location.search).get('id');
+  let p=id?M[id]:null;
+  if(!p && id && window.ARCANA_API?.getMyPrivateProducts){
+    const result=await window.ARCANA_API.getMyPrivateProducts().catch(()=>({products:[]}));
+    p=(result.products||[]).find(product=>product.id===id)||null;
+    if(p){ M[id]=p; PRODUCTS.push(p); }
+  }
+  if(!p){
+    document.title='Product not found — Atelix';
+    document.getElementById('pdpRoot').innerHTML='<section class="panel empty-state"><h1>Product not found</h1><p>This product may have been removed or the link may be incorrect.</p><a class="btn btn-green" href="/categories">Browse categories</a></section>';
+    return;
+  }
   const isOEM=p.badge==='oem';
+  const minimumOrder=Math.max(1,Math.ceil(Number.parseFloat(p.moq)||1));
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
   const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
   const catUrl='/categories/'+p.cat;
@@ -118,10 +127,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           ${p.price>0?`<p class="pdp-price-note">Price depends on order quantity and requirements. Contact the supplier to confirm the details.</p>`:''}
         </div>
         <div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
-          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="Decrease quantity">−</button><input id="pdpQuantity" value="1" min="1" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="Increase quantity">+</button></div>
+          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="Decrease quantity">−</button><input id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="Increase quantity">+</button></div>
         </div></div>
         <div class="pdp-cta">
-          ${p.price>0
+          ${p.price>0&&!p.isPrivate
             ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
                <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} Email supplier</button>`
             : `<button class="btn btn-gold" type="button" id="emailBtn">${IC.msg} Email supplier</button>`}
@@ -145,9 +154,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
     // wiring (re-attached on every build)
     const qi=document.querySelector('#pdpQty input');
-    document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(1,(+qi.value||1)-1);
-    document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||1)+1;
-    qi.addEventListener('change',()=>{qi.value=Math.max(1,Math.floor(Number(qi.value)||1));});
+    document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(minimumOrder,(+qi.value||minimumOrder)-1);
+    document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||minimumOrder)+1;
+    qi.addEventListener('change',()=>{qi.value=Math.max(minimumOrder,Math.floor(Number(qi.value)||minimumOrder));});
     const add=document.getElementById('addBtn');
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');

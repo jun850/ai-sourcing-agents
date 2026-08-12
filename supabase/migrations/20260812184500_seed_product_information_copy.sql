@@ -1,4 +1,4 @@
--- GPT-authored MVP defaults: concise enough for the PDP, always editable in
+-- Beta-testing defaults: concise enough for the PDP, always editable in
 -- the supplier/admin workspace when a mill provides more exact information.
 UPDATE public.products
 SET

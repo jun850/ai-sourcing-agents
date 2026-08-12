@@ -1,10 +1,20 @@
 {
   "rewrites": [
     { "source": "/categories", "destination": "/pages/categories.html" },
-    { "source": "/categories/:l2", "destination": "/pages/category.html?l2=:l2" },
-    { "source": "/categories/:l2/:l3", "destination": "/pages/category.html?l2=:l2&l3=:l3" },
+    {
+      "source": "/categories/:l2",
+      "destination": "/pages/category.html?l2=:l2"
+    },
+    {
+      "source": "/categories/:l2/:l3",
+      "destination": "/pages/category.html?l2=:l2&l3=:l3"
+    },
     { "source": "/search", "destination": "/pages/search.html" },
     { "source": "/about", "destination": "/pages/about.html" },
-    { "source": "/help-center", "destination": "/pages/help-center.html" }
+    { "source": "/help-center", "destination": "/pages/help-center.html" },
+    { "source": "/legal", "destination": "/pages/legal.html" },
+    { "source": "/terms", "destination": "/pages/terms.html" },
+    { "source": "/privacy", "destination": "/pages/privacy.html" },
+    { "source": "/trust-safety", "destination": "/pages/trust-safety.html" }
   ]
 }

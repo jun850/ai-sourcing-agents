@@ -82,15 +82,15 @@
         <form data-quick>
         <div class="qp-row">
           <div class="qp-field"><label id="quickTypeLabel" for="quickType">Fabric type</label><select id="quickType" name="type"><option>Cotton</option><option>Linen</option><option>Polyester</option><option>Wool</option><option>Nylon</option><option>Rayon / Viscose</option><option>Tencel / Lyocell</option><option>Silk</option><option>Denim</option><option>Knit fabric</option><option>Other / describe in note</option></select></div>
-          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input name="quantity" placeholder="e.g. 500 meters / 100 pcs" data-i18n-ph="home.qtyph"></div>
-          <div class="qp-field"><label>Budget <span class="hint">optional</span></label><input name="budget" placeholder="e.g. US$8–12 / m"></div>
-          <div class="qp-field"><label>Origin preference <span class="hint">optional</span></label><input name="origin_preference" placeholder="e.g. Japan, Italy, or no preference"></div>
+          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input name="quantity" aria-label="Quantity" placeholder="e.g. 500 meters / 100 pcs" data-i18n-ph="home.qtyph"></div>
+          <div class="qp-field"><label>Budget <span class="hint">optional</span></label><input name="budget" aria-label="Budget" placeholder="e.g. US$8–12 / m"></div>
+          <div class="qp-field"><label>Origin preference <span class="hint">optional</span></label><input name="origin_preference" aria-label="Origin preference" placeholder="e.g. Japan, Italy, or no preference"></div>
         </div>
         <div class="qp-field" style="margin-bottom:14px">
           <label><span data-i18n="home.note">Note</span> <span class="tip" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
             <span class="tip-box"><span class="tip-row" data-i18n="home.notetip">Tell us the characteristics you need: composition, GSM/weight, color, certifications, MOQ flexibility, lead time, or anything else. We'll get back to you.</span></span>
           </span></label>
-          <textarea rows="2" data-i18n-ph="home.noteph" placeholder="e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ"></textarea>
+          <textarea rows="2" aria-label="Additional sourcing details" data-i18n-ph="home.noteph" placeholder="e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ"></textarea>
         </div>
         <button class="btn btn-green btn-block" type="submit" data-i18n="home.getquotes">Get quotes</button>
         </form>

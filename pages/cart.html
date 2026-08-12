@@ -32,6 +32,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const productAsset=window.ATELIX_productAsset;
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
+  const text=value=>String(TR(value)||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
 
   function render(){
@@ -39,68 +40,59 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(!cart.length){
       root.innerHTML=`<div class="panel cart-empty">
         <span class="ce-ic">${IC.cart}</span>
-        <h3>${T('Your cart is empty')}</h3>
+        <h1>${T('Your cart is empty')}</h1>
         <p>${T('Browse verified fabrics and OEM services to start your next collection.')}</p>
         <a class="btn btn-green" href="../index.html">${T('Start shopping')}</a>
       </div>
       <section class="section" style="margin-top:32px">
-        <div class="sec-head"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
+        <div class="sec-head"><h2>${T('Recommended for you')}</h2></div>
         <div class="prod-grid" id="cartRecoGrid">${reco.map(p=>window.ARCANA_card(p)).join('')}</div>
       </section>`;
       window.ARCANA_wireCards(document.getElementById('cartRecoGrid'));
       return;
     }
-    const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;return `
+    cart.forEach(i=>{
+      const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
+      if(i.qty<minimum){i.qty=minimum;Store.setQty(i.id,minimum);}
+    });
+    const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;
+      const productMeta=[p.comp,p.spec].filter(Boolean).map(text).join(' · ');
+      const supplierMeta=[p.seller,p.loc].filter(Boolean).map(text).join(' · ');
+      return `
       <div class="cart-line" data-row="${p.id}">
-        <img src="${productAsset(p)}" alt="${TR(p.name)}">
+        <img src="${productAsset(p)}" alt="${text(p.name)}">
         <div class="cl-info">
-          <h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4>
-          <div class="m">${TR(p.comp)} · ${TR(p.spec)}</div>
-          <div class="seller">${IC.factory}${TR(p.seller)} · ${TR(p.loc)}</div>
+          <h4><a href="product.html?id=${encodeURIComponent(p.id)}">${text(p.name)}</a></h4>
+          ${productMeta?`<div class="m">${productMeta}</div>`:''}
+          ${supplierMeta?`<div class="seller">${IC.factory}${supplierMeta}</div>`:''}
         </div>
         <div class="qty" data-qty data-id="${p.id}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
-        <div class="cl-price">${money(p.price)}<small>/${TR(p.unit)}</small></div>
-        <div style="text-align:right"><div class="cl-price">${money(sub)}</div><a class="ci-remove" href="#" data-remove="${p.id}">${T('Remove')}</a></div>
+        <div class="cl-price">${money(p.price)}<small>/${text(p.unit)}</small></div>
+        <div style="text-align:right"><div class="cl-price">${money(sub)}</div><button class="ci-remove" type="button" data-remove="${p.id}">${T('Remove')}</button></div>
       </div>`;}).join('');
 
     const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
-    const fee=+(subtotal*0.05).toFixed(2), ship=120;
-    const ad=Store.addons();
-    const rates=window.ARCANA_addonRates(subtotal);
-    const qcAmt=+(subtotal*rates.qc).toFixed(2), insAmt=+(subtotal*rates.ins).toFixed(2);
-    const qcFee=ad.qc?qcAmt:0, insFee=ad.ins?insAmt:0;
-    const total=subtotal+fee+ship+qcFee+insFee;
+    const fee=+(subtotal*0.05).toFixed(2);
+    const total=subtotal+fee;
 
     root.innerHTML=`<div class="cart-wrap">
       <div>
         <section class="panel" style="padding:24px 26px">
-          <h3 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('Your Cart')} <span class="muted" style="font-size:15px;font-family:var(--sans)">(${cart.length} ${T(cart.length===1?'item':'items')})</span></h3>
+          <h1 class="cart-title">${T('Your Cart')} <span class="muted">(${cart.length} ${T(cart.length===1?'item':'items')})</span></h1>
           <div style="margin-top:8px">${rows}</div>
           <div class="cart-actions"><a class="add-pkg" href="category.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg> ${T('Continue shopping')}</a></div>
         </section>
 
-        <section class="panel addon-panel" style="padding:22px 26px;margin-top:20px">
-          <div class="sec-title" style="margin-bottom:14px"><span class="ti">${IC.shield}</span><h2 style="font-family:var(--sans);font-size:20px;font-weight:600">${T('Add-on services')}</h2></div>
-          <label class="addon${ad.qc?' on':''}"><input type="checkbox" data-addon="qc" ${ad.qc?'checked':''}>
-            <span class="ad-body"><b>${T('Atelix QC Inspection')} <span class="ad-tag">${T('recommended')}</span></b><span>${T('Independent quality check by Atelix before dispatch')}</span></span>
-            <span class="ad-fee">+${money(qcAmt)}</span></label>
-          <label class="addon${ad.ins?' on':''}"><input type="checkbox" data-addon="ins" ${ad.ins?'checked':''}>
-            <span class="ad-body"><b>${T('Shipment Insurance')}</b><span>${T('Covers loss or damage in transit')}</span></span>
-            <span class="ad-fee">+${money(insAmt)}</span></label>
-        </section>
       </div>
       <aside>
         <section class="panel summary" style="position:sticky;top:88px">
           <h3>${T('Order Summary')}</h3>
           <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
           <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${money(fee)}</span></div>
-          ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection')} (${rates.qc*100}%)</span><span>${money(qcFee)}</span></div>`:''}
-          ${insFee?`<div class="sum-row"><span class="k">${T('Insurance')} (${rates.ins*100}%)</span><span>${money(insFee)}</span></div>`:''}
-          <div class="sum-row"><span class="k">${T('Estimated shipping')}</span><span>${money(ship)}</span></div>
-          <div class="promo"><input placeholder="${T('Promo code')}"><button class="btn btn-out" data-promo-btn>${T('Apply')}</button></div>
-          <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
+          <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${T('Quoted separately')}</span></div>
+          <div class="total-box"><div class="lbl">${T('Order total before shipping')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
           <button class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>
-          <div class="secure-note"><span>${IC.shield} ${T('Secure checkout')}</span> · <span>${T('SSL encrypted')}</span></div>
+          <div class="secure-note"><span>${IC.shield} ${T('Encrypted order details')}</span></div>
         </section>
       </aside>
     </div>`;
@@ -108,14 +100,14 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     // wire dynamic controls
     root.querySelectorAll('[data-qty]').forEach(q=>{
       const id=q.dataset.id, inp=q.querySelector('input');
+      const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[id].moq)||1));
+      inp.min=minimum;
       const commit=v=>{Store.setQty(id,v);render();};
-      q.querySelector('[data-dec]').onclick=()=>commit(Math.max(1,(+inp.value||1)-1));
-      q.querySelector('[data-inc]').onclick=()=>commit((+inp.value||1)+1);
-      inp.onchange=()=>commit(Math.max(1,parseInt(inp.value)||1));
+      q.querySelector('[data-dec]').onclick=()=>commit(Math.max(minimum,(+inp.value||minimum)-1));
+      q.querySelector('[data-inc]').onclick=()=>commit((+inp.value||minimum)+1);
+      inp.onchange=()=>commit(Math.max(minimum,parseInt(inp.value)||minimum));
     });
-    root.querySelectorAll('[data-addon]').forEach(c=>c.addEventListener('change',()=>{Store.setAddon(c.dataset.addon,c.checked);render();}));
     root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();Store.remove(a.dataset.remove);toast(T('Item removed'));render();}));
-    root.querySelector('[data-promo-btn]').addEventListener('click',()=>toast('Promo codes apply at checkout'));
     root.querySelector('[data-checkout]').addEventListener('click',()=>location.href='checkout.html');
   }
   render();

@@ -35,7 +35,12 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const T=window.ARCANA_T||(x=>x), TR=window.ARCANA_TR||(x=>x);
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  let id=new URLSearchParams(location.search).get('id'); if(!FMAP[id]) id=Object.keys(FMAP)[0];
+  const id=new URLSearchParams(location.search).get('id');
+  if(!id || !FMAP[id]){
+    document.title='Supplier not found — Atelix';
+    document.getElementById('supRoot').innerHTML='<section class="panel empty-state"><h1>Supplier not found</h1><p>This supplier may have been removed or the link may be incorrect.</p><a class="btn btn-green" href="factories.html">Browse factories</a></section>';
+    return;
+  }
   const f=FMAP[id];
   const displayLoc=window.ATELIX_factoryLocation(f);
   const own=PRODUCTS.filter(p=>p.seller===f.name);

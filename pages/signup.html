@@ -1,161 +1,438 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Create your account | Atelix</title>
-<meta name="description" content="Create a free Atelix account to source verified materials as a brand owner.">
-<meta name="robots" content="noindex, follow">
-<link rel="stylesheet" href="../css/styles.css">
-<link rel="stylesheet" href="../css/pages.css">
-</head>
-<body data-hdr="a" data-root=".." data-allcat="0">
-<div id="hdr"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create your account | Atelix</title>
+    <meta
+      name="description"
+      content="Create a free Atelix account to source verified materials as a brand owner."
+    />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <link rel="stylesheet" href="../css/pages.css" />
+  </head>
+  <body data-hdr="a" data-root=".." data-allcat="0">
+    <div id="hdr"></div>
 
-<main class="auth-wrap">
-  <div class="auth-aside">
-    <h1>Join the marketplace built for <span class="auth-type" data-typewriter="better sourcing.|your next collection.|the right partners.">better sourcing.</span></h1>
-    <p>Create a free account to source verified materials, trims, and OEM services as a brand owner.</p>
-    <div class="auth-points">
-      <div class="auth-point"><span class="ap-ic"></span><div><b id="signupFactoryCount">Verified factory directory</b><p>Fabrics, trims, accessories and full-package OEM.</p></div></div>
-      <div class="auth-point"><span class="ap-ic"></span><div><b>Free to join</b><p>No listing fees to browse and request quotes.</p></div></div>
-      <div class="auth-point"><span class="ap-ic"></span><div><b>Global logistics</b><p>Ship to 120+ countries with trusted partners.</p></div></div>
-    </div>
-  </div>
+    <main class="auth-wrap">
+      <div class="auth-aside">
+        <h1>
+          Join the marketplace built for better sourcing.
+        </h1>
+        <p>
+          Create a free account to source verified materials, trims, and OEM
+          services as a brand owner.
+        </p>
+        <div class="auth-points">
+          <div class="auth-point">
+            <span class="ap-ic"></span>
+            <div>
+              <b id="signupFactoryCount">Verified factory directory</b>
+              <p>Fabrics, trims, accessories and full-package OEM.</p>
+            </div>
+          </div>
+          <div class="auth-point">
+            <span class="ap-ic"></span>
+            <div>
+              <b>Free to join</b>
+              <p>No listing fees to browse and request quotes.</p>
+            </div>
+          </div>
+          <div class="auth-point">
+            <span class="ap-ic"></span>
+            <div>
+              <b>Cross-border sourcing</b>
+              <p>Compare suppliers and confirm shipping terms for your destination.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <form class="auth-card" id="signupForm" novalidate>
-    <h2>Create your account</h2>
-    <p class="sub">Create your brand-owner account to begin sourcing.</p>
-    <div class="field-lg" data-field><label for="fullName">Full name</label><input id="fullName" autocomplete="name" placeholder="Your full name"><span class="err">Enter your full name.</span></div>
-    <div class="field-lg" data-field><label for="company" id="companyLabel">Company name</label><input id="company" placeholder="Luxe Apparel Co."><span class="err">Company name is required.</span></div>
-    <div class="field-lg" data-field><label for="email">Work email</label><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><span class="err">Enter a valid email address.</span></div>
-    <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select your country…</option></select><span class="err">Select a country.</span></div>
-    <div class="field-lg" data-field><label for="pw">Password</label><div class="password-field"><input id="pw" type="password" placeholder="At least 6 characters" autocomplete="new-password"><button type="button" data-password-toggle="pw" aria-label="Show password"></button></div><span class="err">Use at least 6 characters.</span></div>
-    <div class="field-lg" data-field><label for="pwConfirm">Confirm password</label><div class="password-field"><input id="pwConfirm" type="password" placeholder="Re-enter your password" autocomplete="new-password"><button type="button" data-password-toggle="pwConfirm" aria-label="Show password"></button></div><span class="err">Passwords do not match.</span></div>
-    <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-bottom:18px"><input type="checkbox" id="tos" style="width:auto;margin-top:2px"> <span>I agree to Atelix's <a href="#" style="color:var(--muted);text-decoration:underline">Terms</a> and <a href="#" style="color:var(--muted);text-decoration:underline">Privacy Policy</a>.</span></label>
-    <div class="field-lg" data-field style="margin:-8px 0 16px"><span class="err" id="tosErr">Please accept the terms to continue.</span></div>
-    <div class="field-lg" data-field id="formErrWrap" style="margin:-4px 0 14px"><span class="err" id="formErr"></span></div>
-    <button class="btn btn-green btn-block" type="submit" style="padding:14px" id="submitBtn">Create Brand Owner account</button>
-    <div class="auth-alt">Already have an account? <a href="login.html">Log in</a></div>
-  </form>
+      <form class="auth-card" id="signupForm" novalidate>
+        <h2>Create your account</h2>
+        <p class="sub">Create your brand-owner account to begin sourcing.</p>
+        <div class="field-lg" data-field>
+          <label for="fullName">Full name</label
+          ><input
+            id="fullName"
+            autocomplete="name"
+            placeholder="Your full name"
+          /><span class="err">Enter your full name.</span>
+        </div>
+        <div class="field-lg" data-field>
+          <label for="company" id="companyLabel">Company name</label
+          ><input id="company" placeholder="Luxe Apparel Co." /><span
+            class="err"
+            >Company name is required.</span
+          >
+        </div>
+        <div class="field-lg" data-field>
+          <label for="email">Work email</label
+          ><input
+            id="email"
+            type="email"
+            placeholder="you@company.com"
+            autocomplete="email"
+          /><span class="err">Enter a valid email address.</span>
+        </div>
+        <div class="field-lg" data-field>
+          <label for="country">Country</label
+          ><select id="country">
+            <option value="">Select your country…</option></select
+          ><span class="err">Select a country.</span>
+        </div>
+        <div class="field-lg" data-field>
+          <label for="pw">Password</label>
+          <div class="password-field">
+            <input
+              id="pw"
+              type="password"
+              placeholder="At least 6 characters"
+              autocomplete="new-password"
+            /><button
+              type="button"
+              data-password-toggle="pw"
+              aria-label="Show password"
+            ></button>
+          </div>
+          <span class="err">Use at least 6 characters.</span>
+        </div>
+        <div class="field-lg" data-field>
+          <label for="pwConfirm">Confirm password</label>
+          <div class="password-field">
+            <input
+              id="pwConfirm"
+              type="password"
+              placeholder="Re-enter your password"
+              autocomplete="new-password"
+            /><button
+              type="button"
+              data-password-toggle="pwConfirm"
+              aria-label="Show password"
+            ></button>
+          </div>
+          <span class="err">Passwords do not match.</span>
+        </div>
+        <label
+          style="
+            display: flex;
+            gap: 9px;
+            align-items: flex-start;
+            font-size: 12.5px;
+            color: var(--muted);
+            margin-bottom: 18px;
+          "
+          ><input
+            type="checkbox"
+            id="tos"
+            style="width: auto; margin-top: 2px"
+          />
+          <span
+            >I agree to Atelix's
+            <a
+              href="terms.html"
+              style="color: var(--muted); text-decoration: underline"
+              >Terms</a
+            >
+            and acknowledge the
+            <a
+              href="privacy.html"
+              style="color: var(--muted); text-decoration: underline"
+              >Privacy Policy</a
+            >.</span
+          ></label
+        >
+        <div class="field-lg" data-field style="margin: -8px 0 16px">
+          <span class="err" id="tosErr"
+            >Please accept the terms to continue.</span
+          >
+        </div>
+        <div
+          class="field-lg"
+          data-field
+          id="formErrWrap"
+          style="margin: -4px 0 14px"
+        >
+          <span class="err" id="formErr"></span>
+        </div>
+        <button
+          class="btn btn-green btn-block"
+          type="submit"
+          style="padding: 14px"
+          id="submitBtn"
+        >
+          Create Brand Owner account
+        </button>
+        <div class="auth-alt">
+          Already have an account? <a href="login.html">Log in</a>
+        </div>
+      </form>
 
-  <div class="auth-card" id="confirmCard" hidden style="text-align:center">
-    <span class="ap-ic" id="confirmIc" style="width:52px;height:52px;border-radius:var(--radius);margin:4px auto 18px"></span>
-    <h2>Check your email to verify</h2>
-    <p class="sub" style="margin-top:10px">We've sent a verification link to <b id="confirmEmail" style="color:var(--ink)"></b>. Click it to activate your account, then log in.</p>
-    <p class="sub" style="margin-top:14px">Didn't get it? Check your spam folder — it can take a minute to arrive.</p>
-    <a class="btn btn-green btn-block" href="login.html" style="padding:14px;margin-top:22px">Back to log in</a>
-  </div>
-</main>
+      <div class="auth-card" id="confirmCard" hidden style="text-align: center">
+        <span
+          class="ap-ic"
+          id="confirmIc"
+          style="
+            width: 52px;
+            height: 52px;
+            border-radius: var(--radius);
+            margin: 4px auto 18px;
+          "
+        ></span>
+        <h2>Check your email to verify</h2>
+        <p class="sub" style="margin-top: 10px">
+          We've sent a verification link to
+          <b id="confirmEmail" style="color: var(--ink)"></b>. Click it to
+          activate your account, then log in.
+        </p>
+        <p class="sub" style="margin-top: 14px">
+          Didn't get it? Check your spam folder — it can take a minute to
+          arrive.
+        </p>
+        <a
+          class="btn btn-green btn-block"
+          href="login.html"
+          style="padding: 14px; margin-top: 22px"
+          >Back to log in</a
+        >
+      </div>
+    </main>
 
-<div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/components.js"></script>
-<script defer src="../js/analytics.bundle.js"></script>
-<script src="../js/supabase-client.bundle.js"></script>
-<script src="../js/api.js"></script>
-<script>
-window.ARCANA_PAGE = function({IC,toast}){
-  const catalogStats=window.ATELIX_catalogStats;
-  const signupFactoryCount=document.getElementById('signupFactoryCount');
-  if(signupFactoryCount) signupFactoryCount.textContent=`${catalogStats.factories} verified sourcing partners`;
-  const aps=document.querySelectorAll('.ap-ic');[IC.factory,IC.medal,IC.truck].forEach((s,i)=>{if(aps[i])aps[i].innerHTML=s;});
-  const typewriter=el=>{
-    const words=(el.dataset.typewriter||'').split('|').filter(Boolean);
-    if(!words.length||matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let wordIndex=0, characters=words[0].length, deleting=false;
-    const tick=()=>{
-      const word=words[wordIndex];
-      if(!deleting&&characters<word.length) characters++;
-      else if(!deleting){ deleting=true; setTimeout(tick,1350); return; }
-      else if(characters>0) characters--;
-      else { deleting=false; wordIndex=(wordIndex+1)%words.length; }
-      el.textContent=words[wordIndex].slice(0,characters);
-      setTimeout(tick,deleting?45:78);
-    };
-    setTimeout(tick,1350);
-  };
-  document.querySelectorAll('[data-typewriter]').forEach(typewriter);
-  const btn=document.getElementById('submitBtn'), cl=document.getElementById('companyLabel');
-  const formErrWrap=document.getElementById('formErrWrap'), formErr=document.getElementById('formErr');
-  const clearForm=()=>{ formErrWrap.classList.remove('invalid'); formErr.textContent=''; };
-  const showForm=msg=>{ formErr.textContent=msg; formErrWrap.classList.add('invalid'); };
-  clearForm();
-  const eye=(visible)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${visible?'<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>':'<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/>'}</svg>`;
-  document.querySelectorAll('[data-password-toggle]').forEach(toggle=>{
-    const input=document.getElementById(toggle.dataset.passwordToggle);
-    toggle.innerHTML=eye(false);
-    toggle.addEventListener('click',()=>{const visible=input.type==='text';input.type=visible?'password':'text';toggle.setAttribute('aria-label',visible?'Show password':'Hide password');toggle.innerHTML=eye(!visible);});
-  });
+    <div id="ftr"></div>
+    <script src="../js/data.js"></script>
+    <script src="../js/components.js"></script>
+    <script defer src="../js/analytics.bundle.js"></script>
+    <script src="../js/supabase-client.bundle.js"></script>
+    <script src="../js/api.js"></script>
+    <script>
+      window.ARCANA_PAGE = function ({ IC, toast }) {
+        const catalogStats = window.ATELIX_catalogStats;
+        const signupFactoryCount =
+          document.getElementById("signupFactoryCount");
+        if (signupFactoryCount)
+          signupFactoryCount.textContent = `${catalogStats.factories} verified sourcing partners`;
+        const aps = document.querySelectorAll(".ap-ic");
+        [IC.factory, IC.medal, IC.truck].forEach((s, i) => {
+          if (aps[i]) aps[i].innerHTML = s;
+        });
+        const typewriter = (el) => {
+          const words = (el.dataset.typewriter || "")
+            .split("|")
+            .filter(Boolean);
+          if (
+            !words.length ||
+            matchMedia("(prefers-reduced-motion: reduce)").matches
+          )
+            return;
+          let wordIndex = 0,
+            characters = words[0].length,
+            deleting = false;
+          const tick = () => {
+            const word = words[wordIndex];
+            if (!deleting && characters < word.length) characters++;
+            else if (!deleting) {
+              deleting = true;
+              setTimeout(tick, 1350);
+              return;
+            } else if (characters > 0) characters--;
+            else {
+              deleting = false;
+              wordIndex = (wordIndex + 1) % words.length;
+            }
+            el.textContent = words[wordIndex].slice(0, characters);
+            setTimeout(tick, deleting ? 45 : 78);
+          };
+          setTimeout(tick, 1350);
+        };
+        document.querySelectorAll("[data-typewriter]").forEach(typewriter);
+        const btn = document.getElementById("submitBtn"),
+          cl = document.getElementById("companyLabel");
+        const formErrWrap = document.getElementById("formErrWrap"),
+          formErr = document.getElementById("formErr");
+        const clearForm = () => {
+          formErrWrap.classList.remove("invalid");
+          formErr.textContent = "";
+        };
+        const showForm = (msg) => {
+          formErr.textContent = msg;
+          formErrWrap.classList.add("invalid");
+        };
+        clearForm();
+        const eye = (visible) =>
+          `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">${visible ? '<path d="M3 3l18 18"/><path d="M10.6 10.6a2 2 0 0 0 2.8 2.8"/>' : '<path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.8"/>'}</svg>`;
+        document
+          .querySelectorAll("[data-password-toggle]")
+          .forEach((toggle) => {
+            const input = document.getElementById(
+              toggle.dataset.passwordToggle,
+            );
+            toggle.innerHTML = eye(false);
+            toggle.addEventListener("click", () => {
+              const visible = input.type === "text";
+              input.type = visible ? "password" : "text";
+              toggle.setAttribute(
+                "aria-label",
+                visible ? "Show password" : "Hide password",
+              );
+              toggle.innerHTML = eye(!visible);
+            });
+          });
 
-  const role='buyer';
-  // Brand owners can register from any market. Keep supplier eligibility
-  // separate so the restricted supplier market list is never reused here.
-  const brandCountries=`Afghanistan|Albania|Algeria|Andorra|Angola|Antigua and Barbuda|Argentina|Armenia|Australia|Austria|Azerbaijan|Bahamas|Bahrain|Bangladesh|Barbados|Belarus|Belgium|Belize|Benin|Bhutan|Bolivia|Bosnia and Herzegovina|Botswana|Brazil|Brunei|Bulgaria|Burkina Faso|Burundi|Cabo Verde|Cambodia|Cameroon|Canada|Central African Republic|Chad|Chile|China|Colombia|Comoros|Congo (Republic of the)|Costa Rica|Côte d’Ivoire|Croatia|Cuba|Cyprus|Czechia|Democratic Republic of the Congo|Denmark|Djibouti|Dominica|Dominican Republic|Ecuador|Egypt|El Salvador|Equatorial Guinea|Eritrea|Estonia|Eswatini|Ethiopia|Fiji|Finland|France|Gabon|Gambia|Georgia|Germany|Ghana|Greece|Grenada|Guatemala|Guinea|Guinea-Bissau|Guyana|Haiti|Honduras|Hungary|Iceland|India|Indonesia|Iran|Iraq|Ireland|Israel|Italy|Jamaica|Japan|Jordan|Kazakhstan|Kenya|Kiribati|Kuwait|Kyrgyzstan|Laos|Latvia|Lebanon|Lesotho|Liberia|Libya|Liechtenstein|Lithuania|Luxembourg|Madagascar|Malawi|Malaysia|Maldives|Mali|Malta|Marshall Islands|Mauritania|Mauritius|Mexico|Micronesia|Moldova|Monaco|Mongolia|Montenegro|Morocco|Mozambique|Myanmar|Namibia|Nauru|Nepal|Netherlands|New Zealand|Nicaragua|Niger|Nigeria|North Korea|North Macedonia|Norway|Oman|Pakistan|Palau|Palestine|Panama|Papua New Guinea|Paraguay|Peru|Philippines|Poland|Portugal|Qatar|Romania|Russia|Rwanda|Saint Kitts and Nevis|Saint Lucia|Saint Vincent and the Grenadines|Samoa|San Marino|São Tomé and Príncipe|Saudi Arabia|Senegal|Serbia|Seychelles|Sierra Leone|Singapore|Slovakia|Slovenia|Solomon Islands|Somalia|South Africa|South Korea|South Sudan|Spain|Sri Lanka|Sudan|Suriname|Sweden|Switzerland|Syria|Taiwan|Tajikistan|Tanzania|Thailand|Timor-Leste|Togo|Tonga|Trinidad and Tobago|Tunisia|Türkiye|Turkmenistan|Tuvalu|Uganda|Ukraine|United Arab Emirates|United Kingdom|United States|Uruguay|Uzbekistan|Vanuatu|Vatican City|Venezuela|Vietnam|Yemen|Zambia|Zimbabwe`.split('|');
-  const supplierCountries=['Brunei','Cambodia','China','Hong Kong','Indonesia','Japan','Laos','Macau','Malaysia','Mongolia','Myanmar','Philippines','Singapore','South Korea','Taiwan','Thailand','Timor-Leste','Vietnam'];
-  const brandCountrySelect=document.getElementById('country');
-  brandCountries.forEach(country=>{const option=document.createElement('option');option.value=country;option.textContent=country;brandCountrySelect.append(option);});
+        const role = "buyer";
+        // Brand owners can register from any market. Keep supplier eligibility
+        // separate so the restricted supplier market list is never reused here.
+        const brandCountries =
+          `Afghanistan|Albania|Algeria|Andorra|Angola|Antigua and Barbuda|Argentina|Armenia|Australia|Austria|Azerbaijan|Bahamas|Bahrain|Bangladesh|Barbados|Belarus|Belgium|Belize|Benin|Bhutan|Bolivia|Bosnia and Herzegovina|Botswana|Brazil|Brunei|Bulgaria|Burkina Faso|Burundi|Cabo Verde|Cambodia|Cameroon|Canada|Central African Republic|Chad|Chile|China|Colombia|Comoros|Congo (Republic of the)|Costa Rica|Côte d’Ivoire|Croatia|Cuba|Cyprus|Czechia|Democratic Republic of the Congo|Denmark|Djibouti|Dominica|Dominican Republic|Ecuador|Egypt|El Salvador|Equatorial Guinea|Eritrea|Estonia|Eswatini|Ethiopia|Fiji|Finland|France|Gabon|Gambia|Georgia|Germany|Ghana|Greece|Grenada|Guatemala|Guinea|Guinea-Bissau|Guyana|Haiti|Honduras|Hungary|Iceland|India|Indonesia|Iran|Iraq|Ireland|Israel|Italy|Jamaica|Japan|Jordan|Kazakhstan|Kenya|Kiribati|Kuwait|Kyrgyzstan|Laos|Latvia|Lebanon|Lesotho|Liberia|Libya|Liechtenstein|Lithuania|Luxembourg|Madagascar|Malawi|Malaysia|Maldives|Mali|Malta|Marshall Islands|Mauritania|Mauritius|Mexico|Micronesia|Moldova|Monaco|Mongolia|Montenegro|Morocco|Mozambique|Myanmar|Namibia|Nauru|Nepal|Netherlands|New Zealand|Nicaragua|Niger|Nigeria|North Korea|North Macedonia|Norway|Oman|Pakistan|Palau|Palestine|Panama|Papua New Guinea|Paraguay|Peru|Philippines|Poland|Portugal|Qatar|Romania|Russia|Rwanda|Saint Kitts and Nevis|Saint Lucia|Saint Vincent and the Grenadines|Samoa|San Marino|São Tomé and Príncipe|Saudi Arabia|Senegal|Serbia|Seychelles|Sierra Leone|Singapore|Slovakia|Slovenia|Solomon Islands|Somalia|South Africa|South Korea|South Sudan|Spain|Sri Lanka|Sudan|Suriname|Sweden|Switzerland|Syria|Taiwan|Tajikistan|Tanzania|Thailand|Timor-Leste|Togo|Tonga|Trinidad and Tobago|Tunisia|Türkiye|Turkmenistan|Tuvalu|Uganda|Ukraine|United Arab Emirates|United Kingdom|United States|Uruguay|Uzbekistan|Vanuatu|Vatican City|Venezuela|Vietnam|Yemen|Zambia|Zimbabwe`.split(
+            "|",
+          );
+        const supplierCountries = [
+          "Brunei",
+          "Cambodia",
+          "China",
+          "Hong Kong",
+          "Indonesia",
+          "Japan",
+          "Laos",
+          "Macau",
+          "Malaysia",
+          "Mongolia",
+          "Myanmar",
+          "Philippines",
+          "Singapore",
+          "South Korea",
+          "Taiwan",
+          "Thailand",
+          "Timor-Leste",
+          "Vietnam",
+        ];
+        const brandCountrySelect = document.getElementById("country");
+        brandCountries.forEach((country) => {
+          const option = document.createElement("option");
+          option.value = country;
+          option.textContent = country;
+          brandCountrySelect.append(option);
+        });
 
-  const form=document.getElementById('signupForm');
-  const blockedEmailDomain=domain=>{
-    const d=domain.toLowerCase();
-    const personal=['gmail.com','googlemail.com','yahoo.com','yahoo.co.uk','ymail.com','rocketmail.com','outlook.com','hotmail.com','live.com','msn.com','icloud.com','me.com','mac.com','aol.com','proton.me','protonmail.com','gmx.com','mail.com'];
-    return personal.includes(d)||/(^|\.)edu(\.|$)/.test(d);
-  };
-  const businessEmail=value=>{
-    const match=value.trim().toLowerCase().match(/^[^@\s]+@([^@\s]+)$/);
-    return !!match&&!blockedEmailDomain(match[1]);
-  };
-  form.addEventListener('submit',async e=>{
-    e.preventDefault();
-    clearForm();
-    let ok=true;
-    const mark=(el,valid)=>{el.closest('[data-field]').classList.toggle('invalid',!valid);if(!valid)ok=false;};
-    mark(form.fullName, form.fullName.value.trim().length>1);
-    mark(form.company, form.company.value.trim().length>1);
-    const emailEligible=businessEmail(form.email.value);
-    mark(form.email, emailEligible);
-    if(!emailEligible) form.email.closest('[data-field]').querySelector('.err').textContent='Use your company email. Personal and education domains are not eligible.';
-    mark(form.country, !!form.country.value);
-    mark(form.pw, form.pw.value.length>=6);
-    mark(form.pwConfirm, form.pwConfirm.value.length>0 && form.pwConfirm.value===form.pw.value);
-    document.getElementById('tosErr').closest('[data-field]').classList.toggle('invalid', !form.tos.checked);
-    if(!form.tos.checked) ok=false;
-    if(!ok) return;
+        const form = document.getElementById("signupForm");
+        const blockedEmailDomain = (domain) => {
+          const d = domain.toLowerCase();
+          const personal = [
+            "gmail.com",
+            "googlemail.com",
+            "yahoo.com",
+            "yahoo.co.uk",
+            "ymail.com",
+            "rocketmail.com",
+            "outlook.com",
+            "hotmail.com",
+            "live.com",
+            "msn.com",
+            "icloud.com",
+            "me.com",
+            "mac.com",
+            "aol.com",
+            "proton.me",
+            "protonmail.com",
+            "gmx.com",
+            "mail.com",
+          ];
+          return personal.includes(d) || /(^|\.)edu(\.|$)/.test(d);
+        };
+        const businessEmail = (value) => {
+          const match = value
+            .trim()
+            .toLowerCase()
+            .match(/^[^@\s]+@([^@\s]+)$/);
+          return !!match && !blockedEmailDomain(match[1]);
+        };
+        form.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          clearForm();
+          let ok = true;
+          const mark = (el, valid) => {
+            el.closest("[data-field]").classList.toggle("invalid", !valid);
+            if (!valid) ok = false;
+          };
+          mark(form.fullName, form.fullName.value.trim().length > 1);
+          mark(form.company, form.company.value.trim().length > 1);
+          const emailEligible = businessEmail(form.email.value);
+          mark(form.email, emailEligible);
+          if (!emailEligible)
+            form.email
+              .closest("[data-field]")
+              .querySelector(".err").textContent =
+              "Use your company email. Personal and education domains are not eligible.";
+          mark(form.country, !!form.country.value);
+          mark(form.pw, form.pw.value.length >= 6);
+          mark(
+            form.pwConfirm,
+            form.pwConfirm.value.length > 0 &&
+              form.pwConfirm.value === form.pw.value,
+          );
+          document
+            .getElementById("tosErr")
+            .closest("[data-field]")
+            .classList.toggle("invalid", !form.tos.checked);
+          if (!form.tos.checked) ok = false;
+          if (!ok) return;
 
-    const email=form.email.value.trim(), company=form.company.value.trim(), fullName=form.fullName.value.trim();
-    btn.disabled=true; const label=btn.textContent; btn.textContent='Creating account…';
-    try{
-      const { error } = await window.ARCANA_API.signUp({
-        email, password:form.pw.value, role,
-        companyName:company, country:form.country.value, fullName,
-        factoryType: undefined
-      });
-      if(error){
-        const m=(error.message||'').toLowerCase();
-        if(m.includes('already')||m.includes('registered')){
-          showForm('An account with this email already exists. Try logging in instead.');
-        }else{
-          showForm(error.message||'Could not create your account. Please try again.');
-        }
-        btn.disabled=false; btn.textContent=label; return;
-      }
-      // Email confirmation is ON — do NOT log in. Show the check-your-email state.
-      document.getElementById('confirmEmail').textContent=email;
-      const cIc=document.getElementById('confirmIc'); if(cIc) cIc.innerHTML=IC.check;
-      form.hidden=true;
-      document.getElementById('confirmCard').hidden=false;
-    }catch(err){
-      showForm('Something went wrong. Please try again.');
-      btn.disabled=false; btn.textContent=label;
-    }
-  });
-  const validateConfirmation=()=>{
-    if(form.pwConfirm.value) form.pwConfirm.closest('[data-field]').classList.toggle('invalid',form.pwConfirm.value!==form.pw.value);
-  };
-  form.pw.addEventListener('input',validateConfirmation);
-  form.pwConfirm.addEventListener('input',validateConfirmation);
-};
-</script>
-</body>
+          const email = form.email.value.trim(),
+            company = form.company.value.trim(),
+            fullName = form.fullName.value.trim();
+          btn.disabled = true;
+          const label = btn.textContent;
+          btn.textContent = "Creating account…";
+          try {
+            const { error } = await window.ARCANA_API.signUp({
+              email,
+              password: form.pw.value,
+              role,
+              companyName: company,
+              country: form.country.value,
+              fullName,
+              factoryType: undefined,
+            });
+            if (error) {
+              const m = (error.message || "").toLowerCase();
+              if (m.includes("already") || m.includes("registered")) {
+                showForm(
+                  "An account with this email already exists. Try logging in instead.",
+                );
+              } else {
+                showForm(
+                  error.message ||
+                    "Could not create your account. Please try again.",
+                );
+              }
+              btn.disabled = false;
+              btn.textContent = label;
+              return;
+            }
+            // Email confirmation is ON — do NOT log in. Show the check-your-email state.
+            document.getElementById("confirmEmail").textContent = email;
+            const cIc = document.getElementById("confirmIc");
+            if (cIc) cIc.innerHTML = IC.check;
+            form.hidden = true;
+            document.getElementById("confirmCard").hidden = false;
+          } catch (err) {
+            showForm("Something went wrong. Please try again.");
+            btn.disabled = false;
+            btn.textContent = label;
+          }
+        });
+        const validateConfirmation = () => {
+          if (form.pwConfirm.value)
+            form.pwConfirm
+              .closest("[data-field]")
+              .classList.toggle(
+                "invalid",
+                form.pwConfirm.value !== form.pw.value,
+              );
+        };
+        form.pw.addEventListener("input", validateConfirmation);
+        form.pwConfirm.addEventListener("input", validateConfirmation);
+      };
+    </script>
+  </body>
 </html>

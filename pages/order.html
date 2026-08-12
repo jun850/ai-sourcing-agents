@@ -34,18 +34,18 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const profile = await API.getSessionProfile();
   if(!profile){
     root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
-      <span class="ce-ic">${IC.lock}</span><h3>Log in to view this order</h3>
+      <span class="ce-ic">${IC.lock}</span><h1>Log in to view this order</h1>
       <p>Your orders are private to your account. Sign in to see the details and payment status.</p>
       <a class="btn btn-green" href="login.html?next=${encodeURIComponent('order.html'+location.search)}">Log in</a>
     </div>`;
     return;
   }
 
-  // Platform escrow bank account (from platform_bank_accounts).
+  // Active payment account, available only to authenticated marketplace users.
   const bank = await API.getBankAccount();
   const PLATFORM_BANK = bank
     ? { bank:bank.bank_name, account:bank.account_number, holder:bank.account_name, swift:bank.swift||'—' }
-    : { bank:'—', account:'—', holder:'Atelix', swift:'—' };
+    : null;
 
   // Load the order (header + snapshot items) and map to the render shape.
   let order=null;
@@ -86,6 +86,12 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const fmtDate=ts=>new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
   function bankPanel(o){
+    if(o.status==='awaiting_payment' && !PLATFORM_BANK) return `
+      <section class="panel ord-bank">
+        <h2>Payment instructions pending</h2>
+        <p class="ph">Do not transfer funds yet. Atelix will publish verified payment instructions here after reviewing the order.</p>
+        <a class="btn btn-out" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Payment instructions for '+o.no)}">Contact Atelix</a>
+      </section>`;
     if(o.status==='awaiting_payment') return `
       <section class="panel ord-bank">
         <h2>Bank transfer required</h2>

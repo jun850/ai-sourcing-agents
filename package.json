@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "node scripts/local-server.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run qa:static",
+    "qa:static": "node scripts/qa-static.js",
+    "qa:browser": "node scripts/qa-browser.js",
     "bundle:analytics": "esbuild js/analytics-entry.js --bundle --minify --outfile=js/analytics.bundle.js",
     "bundle:supabase": "esbuild js/supabase-entry.js --bundle --minify --outfile=js/supabase-client.bundle.js",
     "bundle:all": "npm run bundle:analytics && npm run bundle:supabase"

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Checkout — Atelix</title>
-<meta name="description" content="Complete your order securely through Atelix's escrow checkout.">
+<meta name="description" content="Review shipping details and submit an Atelix sourcing order.">
 <meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -29,29 +29,30 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const money=n=>window.ARCANA_money(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const cart=Store.cart().filter(i=>M[i.id]);
+  cart.forEach(i=>{
+    const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
+    if(i.qty<minimum){i.qty=minimum;Store.setQty(i.id,minimum);}
+  });
   const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
-  const fee=+(subtotal*0.05).toFixed(2), ship=120;
-  const ad=Store.addons();
-  const rates=window.ARCANA_addonRates(subtotal);
-  const qcFee=ad.qc?+(subtotal*rates.qc).toFixed(2):0, insFee=ad.ins?+(subtotal*rates.ins).toFixed(2):0;
-  const total=subtotal+fee+ship+qcFee+insFee;
+  const fee=+(subtotal*0.05).toFixed(2);
+  const total=subtotal+fee;
   let step=1;
-  const terms={name:'',company:'',addr:'',city:'',country:'United States',incoterm:'FOB',po:''};
+  const terms={name:'',company:'',addr:'',city:'',country:'',incoterm:'FOB',po:''};
 
   if(!cart.length){
-    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h3>${T('Nothing to check out')}</h3><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="category.html">${T('Browse fabrics')}</a></div>`;
+    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`;
     return;
   }
 
-  // Checkout requires a signed-in buyer (place_order needs auth + escrow).
+  // Checkout requires a signed-in buyer because place_order is account-scoped.
   const profile = await window.ARCANA_API.getSessionProfile();
   if(!profile){
     root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
       <span class="ce-ic">${IC.lock}</span>
-      <h3>Log in to check out</h3>
-      <p>Sign in to your Atelix account to place this order securely. Your cart is saved.</p>
+      <h1>Log in to check out</h1>
+      <p>Sign in to your Atelix account to submit this order. Your cart is saved.</p>
       <a class="btn btn-green" href="login.html?next=checkout.html">Log in to continue</a>
-      <p style="margin-top:14px;font-size:13px;color:var(--muted)">New to Atelix? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
+      <p style="margin-top:14px;font-size:.9375rem;color:var(--muted)">New to Atelix? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
     </div>`;
     return;
   }
@@ -62,11 +63,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     ${cart.map(i=>{const p=M[i.id];return `<div class="sum-row"><span class="k">${TR(p.name)} × ${i.qty}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}
     <div class="sum-row strong"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
     <div class="sum-row"><span class="k">${T('Service fee')}</span><span>${money(fee)}</span></div>
-    ${qcFee?`<div class="sum-row"><span class="k">${T('QC Inspection')} (${rates.qc*100}%)</span><span>${money(qcFee)}</span></div>`:''}
-    ${insFee?`<div class="sum-row"><span class="k">${T('Insurance')} (${rates.ins*100}%)</span><span>${money(insFee)}</span></div>`:''}
-    <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${money(ship)}</span></div>
+    <div class="sum-row"><span class="k">${T('Shipping')}</span><span>Quoted separately</span></div>
     <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply')}</small></div></div>
-    <div class="secure-note" style="margin-top:14px"><span>${IC.lock} ${T('Secure checkout')}</span> · <span>${T('SSL encrypted')}</span></div>
+    <div class="secure-note" style="margin-top:14px"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
   </section></aside>`;
 
   const stepper=()=>{const items=[['Shipping & Terms',1],['Review & Place',2]];
@@ -88,13 +87,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       <div class="field-lg full" data-field><label>Company</label><input data-t="company" value="${terms.company}" placeholder="Luxe Apparel Co."><span class="err">Required.</span></div>
       <div class="field-lg full" data-field><label>Ship-to address</label><input data-t="addr" value="${terms.addr}" placeholder="Street, building, unit"><span class="err">Required.</span></div>
       <div class="field-lg" data-field><label>City</label><input data-t="city" value="${terms.city}" placeholder="New York"><span class="err">Required.</span></div>
-      <div class="field-lg"><label>Country</label><select data-t="country">${['United States','China','India','Vietnam','Turkey','United Kingdom'].map(c=>`<option ${c===terms.country?'selected':''}>${c}</option>`).join('')}</select></div>
-      <div class="field-lg"><label>Incoterms <span class="tip" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
+      <div class="field-lg" data-field><label>Country</label><input data-t="country" value="${terms.country}" autocomplete="country-name" placeholder="Destination country"><span class="err">Required.</span></div>
+      <div class="field-lg"><label>Incoterms® 2020 rule <span class="tip" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
         <span class="tip-box">
-          <span class="tip-row"><b>FOB</b> Ships to origin port. You pay freight, insurance, import duties &amp; delivery to your address.</span>
-          <span class="tip-row"><b>EXW</b> Picked up at the factory. You pay all freight, customs, insurance &amp; delivery.</span>
-          <span class="tip-row"><b>CIF</b> Freight &amp; insurance covered to your port. You pay import duties &amp; delivery from the port.</span>
-          <span class="tip-row"><b>DDP</b> Delivered to your address, duties paid. You pay nothing extra on arrival.</span>
+          <span class="tip-row"><b>FOB</b> For sea or inland-waterway freight; risk transfers when goods are on board at the named origin port.</span>
+          <span class="tip-row"><b>EXW</b> The buyer takes delivery at the named seller location and handles most transport formalities.</span>
+          <span class="tip-row"><b>CIF</b> The seller arranges cost, insurance and freight to the named port; risk transfers on board at origin.</span>
+          <span class="tip-row"><b>DDP</b> The seller bears agreed costs and risks to the named destination, including import clearance and duties.</span>
         </span></span></label><select data-t="incoterm">${['FOB','EXW','CIF','DDP'].map(c=>`<option ${c===terms.incoterm?'selected':''}>${c}</option>`).join('')}</select></div>
       <div class="field-lg"><label>PO number <span class="muted" style="font-weight:400">(optional)</span></label><input data-t="po" value="${terms.po}" placeholder="e.g. LA-20251111"></div>
     </div>
@@ -105,17 +104,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     <div class="co-review">
       <div class="co-rev-block"><div class="rt"><b>Items (${cart.length})</b></div>
         ${cart.map(i=>{const p=M[i.id];return `<div class="rl" style="display:flex;justify-content:space-between"><span>${p.name} × ${i.qty} · ${p.seller}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}</div>
-      <div class="co-rev-block"><div class="rt"><b>Shipping &amp; terms</b><a class="edit" href="#" data-goto="1">Edit</a></div>
+      <div class="co-rev-block"><div class="rt"><b>Shipping &amp; terms</b><button class="edit" type="button" data-goto="1">Edit</button></div>
         <div class="rl">${terms.name||'—'}, ${terms.company||'—'}<br>${terms.addr||'—'}, ${terms.city||''} ${terms.country}<br>Incoterms: ${terms.incoterm}${terms.po?` · PO ${terms.po}`:''}</div></div>
       <div class="co-rev-block"><div class="rt"><b>Payment</b></div>
-        <div class="pay-detail" style="margin-top:0">
-          <div class="bank-row"><span class="k">Method</span><span class="v">Bank Transfer via Atelix</span></div>
-          <div class="bank-row"><span class="k">Beneficiary</span><span class="v">Atelix Marketplace Ltd.</span></div>
-          <div class="bank-row"><span class="k">Bank</span><span class="v">DBS Bank, Singapore</span></div>
-          <div class="bank-row"><span class="k">Account</span><span class="v">0072-88-114529</span></div>
-          <div class="bank-row"><span class="k">SWIFT</span><span class="v">DBSSSGSG</span></div>
-        </div>
-        <div class="rl" style="margin-top:10px">Atelix holds your payment and releases it to the supplier(s) once your order is fulfilled. You'll get a reference number and transfer instructions on the next page.</div></div>
+        <div class="rl">Verified payment instructions will appear on the order page when they are available. Do not transfer funds using details received through an unverified message.</div></div>
     </div>
     <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${money(total)}</button></div>`;
 
@@ -130,7 +122,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       shipAddress,
       incoterms: terms.incoterm,
       notes: terms.po || null,
-      qc: ad.qc, insurance: ad.ins
+      qc: false, insurance: false
     });
     if(error || !orderNo){
       const msg=(error && error.message) || 'Please try again.';
@@ -148,7 +140,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const nextBtn=root.querySelector('[data-next]');
     if(nextBtn) nextBtn.addEventListener('click',()=>{
       if(step===1){ let ok=true;
-        root.querySelectorAll('[data-field]').forEach(f=>{const inp=f.querySelector('[data-t]');if(!inp)return;const req=['name','company','addr','city'].includes(inp.dataset.t);const bad=req&&!inp.value.trim();f.classList.toggle('invalid',bad);if(bad)ok=false;});
+        root.querySelectorAll('[data-field]').forEach(f=>{const inp=f.querySelector('[data-t]');if(!inp)return;const req=['name','company','addr','city','country'].includes(inp.dataset.t);const bad=req&&!inp.value.trim();f.classList.toggle('invalid',bad);if(bad)ok=false;});
         if(!ok){toast('Please complete the required fields');return;}
       }
       step++; view();

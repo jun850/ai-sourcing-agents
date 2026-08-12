@@ -1,5 +1,5 @@
 -- ============================================================================
--- ARCANA — 0009 address book + buyer<->seller chat (MVP, no maps/geocoding)
+-- ARCANA — 0009 address book + buyer<->seller chat (beta testing, no maps/geocoding)
 -- Idempotent: tables via CREATE TABLE IF NOT EXISTS, RLS dropped-then-created.
 -- ============================================================================
 

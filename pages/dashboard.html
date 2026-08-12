@@ -1,511 +1,1630 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supplier Dashboard — Atelix</title>
-<meta name="description" content="Manage your Atelix factory storefront, SKUs, orders and verification.">
-<meta name="robots" content="noindex, follow">
-<link rel="stylesheet" href="../css/styles.css">
-<link rel="stylesheet" href="../css/pages.css">
-</head>
-<body data-surface="seller" data-root=".." data-catalog>
-<div id="hdr"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Supplier Dashboard — Atelix</title>
+    <meta
+      name="description"
+      content="Manage your Atelix factory storefront, SKUs, orders and verification."
+    />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="stylesheet" href="../css/styles.css" />
+    <link rel="stylesheet" href="../css/pages.css" />
+  </head>
+  <body data-surface="seller" data-root=".." data-catalog>
+    <div id="hdr"></div>
 
-<div id="dashGate" class="wrap" hidden style="padding:80px 0;text-align:center;max-width:520px"></div>
+    <div
+      id="dashGate"
+      class="wrap"
+      hidden
+      style="padding: 80px 0; text-align: center; max-width: 520px"
+    ></div>
 
-<main class="wrap" id="dashMain" style="padding-top:26px;padding-bottom:40px" hidden>
-  <div class="dash">
-    <!-- LEFT: dashboard -->
-    <div>
-      <section class="panel dash-welcome">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:20px">
-          <div>
-            <p class="dash-kicker">Supplier Dashboard</p>
-            <h1 id="welcomeName">Welcome</h1>
-            <p class="sub" id="welcomeSub">Manage your factory's SKUs and profile.</p>
+    <main
+      class="wrap"
+      id="dashMain"
+      style="padding-top: 26px; padding-bottom: 40px"
+      hidden
+    >
+      <div class="dash">
+        <!-- LEFT: dashboard -->
+        <div>
+          <section class="panel dash-welcome">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                flex-wrap: wrap;
+                gap: 20px;
+              "
+            >
+              <div>
+                <p class="dash-kicker">Supplier Dashboard</p>
+                <h1 id="welcomeName">Welcome</h1>
+                <p class="sub" id="welcomeSub">
+                  Manage your factory's SKUs and profile.
+                </p>
+              </div>
+              <div style="min-width: 160px">
+                <div class="muted" style="font-size: 12px">Active SKUs</div>
+                <div class="big-num" id="skuStat">0 <small>/ 0</small></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Athelia: demand signals + AI listing drafter -->
+          <section class="cop-seller" aria-label="Athelia for suppliers">
+            <div class="cop-panel">
+              <div class="cph">
+                <span class="cop-avatar"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path
+                      d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"
+                    />
+                    <circle cx="12" cy="12" r="3" /></svg
+                ></span>
+                <h3>Athelia Demand</h3>
+              </div>
+              <p class="cpdesc">
+                Recent buyer briefs from the marketplace, matched against your
+                catalog so you can see what to list next.
+              </p>
+              <div id="demandList"></div>
+            </div>
+            <div class="cop-panel drafter">
+              <div class="cph">
+                <span class="cop-avatar"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path
+                      d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"
+                    />
+                    <circle cx="12" cy="12" r="3" /></svg
+                ></span>
+                <h3>AI Listing Drafter</h3>
+              </div>
+              <p class="cpdesc">
+                Describe a product in plain words. Athelia drafts a structured
+                SKU you can review and publish.
+              </p>
+              <form data-draft-form>
+                <label class="visually-hidden" for="draftInput"
+                  >Describe the product to list</label
+                >
+                <textarea
+                  id="draftInput"
+                  rows="3"
+                  placeholder="e.g. Recycled polyester twill, 180 gsm, OEM-ready, $3.60/m, MOQ 500"
+                ></textarea>
+                <button class="cop-ask" type="submit">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                  Draft SKU
+                </button>
+              </form>
+              <div id="draftOut"></div>
+            </div>
+          </section>
+
+          <div class="dash-tabs" data-tabs hidden>
+            <span data-tab class="on"
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8" />
+              </svg>
+              1. SKU Setup</span
+            >
+            <span data-tab
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z" />
+              </svg>
+              2. Ads Setup</span
+            >
+            <span data-tab
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
+              </svg>
+              3. Profile Details</span
+            >
+            <span data-tab
+              ><svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M6 3h9l4 4v14H6z" />
+              </svg>
+              4. Tax Documents</span
+            >
           </div>
-          <div style="min-width:160px">
-            <div class="muted" style="font-size:12px">Active SKUs</div>
-            <div class="big-num" id="skuStat">0 <small>/ 0</small></div>
+
+          <div class="dash-cols">
+            <!-- SKU -->
+            <div class="dash-mod">
+              <div class="mh">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
+                  <path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8" />
+                </svg>
+                <h4>SKU Setup</h4>
+              </div>
+              <p class="mdesc">
+                Add and manage your products with details and pricing.
+              </p>
+              <div class="muted" style="font-size: 12px">Products Listed</div>
+              <div class="big-num" id="skuCount">0</div>
+              <div class="mini-list" id="skuRecent"></div>
+              <button
+                class="btn btn-out btn-block"
+                type="button"
+                id="btnManageSkus"
+                style="margin-top: 14px; padding: 10px"
+              >
+                Manage SKUs
+              </button>
+            </div>
+
+            <!-- Ads are not exposed until the beta workflow is connected. -->
+            <div class="dash-mod" hidden>
+              <div class="mh">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
+                  <path
+                    d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"
+                  />
+                  <path d="M16 9a4 4 0 0 1 0 6" />
+                </svg>
+                <h4>2. Ads Setup</h4>
+              </div>
+              <p class="mdesc">
+                Create ad campaigns to boost visibility and get more inquiries.
+              </p>
+              <div class="muted" style="font-size: 12px">Campaigns</div>
+              <div class="big-num">1 <small>/ 3 Active</small></div>
+              <div class="bar" style="margin-top: 8px">
+                <i style="width: 33%"></i>
+              </div>
+              <div class="muted" style="font-size: 12px; margin-top: 14px">
+                Active Campaign
+              </div>
+              <div
+                style="
+                  border: 1px solid var(--line);
+                  border-radius: 10px;
+                  padding: 12px;
+                  margin-top: 8px;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                  "
+                >
+                  <div style="display: flex; gap: 10px; align-items: center">
+                    <img
+                      alt=""
+                      src="../assets/wool-flannel.webp"
+                      style="
+                        width: 34px;
+                        height: 34px;
+                        border-radius: 6px;
+                        object-fit: cover;
+                      "
+                    /><b style="font-size: 12.5px"
+                      >Spring / Summer Collection</b
+                    >
+                  </div>
+                  <span class="badge b-ok">Active</span>
+                </div>
+                <div style="display: flex; gap: 24px; margin-top: 12px">
+                  <div>
+                    <span class="muted" style="font-size: 11px"
+                      >Impressions</span
+                    >
+                    <div style="font-weight: 700">2,450</div>
+                  </div>
+                  <div>
+                    <span class="muted" style="font-size: 11px">Clicks</span>
+                    <div style="font-weight: 700">186</div>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Daily Budget (USD)</label><input value="50.00" />
+              </div>
+              <div class="field">
+                <label>Duration</label
+                ><input value="May 10, 2025 – Jun 10, 2025" />
+              </div>
+              <button
+                class="btn btn-out btn-block"
+                style="margin-top: 14px; padding: 10px"
+              >
+                Manage Ads
+              </button>
+            </div>
+
+            <!-- Profile -->
+            <div class="dash-mod">
+              <div class="mh">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
+                </svg>
+                <h4>Factory Profile</h4>
+              </div>
+              <p class="mdesc">Tell buyers about your factory.</p>
+              <form id="factoryForm">
+                <div class="field-lg">
+                  <label>Factory name</label><input name="name" required />
+                </div>
+                <div class="field-lg">
+                  <label>Region</label
+                  ><input name="region" placeholder="e.g. Zhejiang, China" />
+                </div>
+                <div class="field-lg">
+                  <label>Location</label
+                  ><input name="loc" placeholder="e.g. Shaoxing, Zhejiang" />
+                </div>
+                <div class="field-lg">
+                  <label>About</label
+                  ><input name="bio" placeholder="A short factory overview" />
+                </div>
+                <div class="field-lg">
+                  <label>Photo</label
+                  ><input name="imgFile" type="file" accept="image/*" />
+                </div>
+                <button
+                  class="btn btn-green btn-block"
+                  type="submit"
+                  style="margin-top: 4px; padding: 10px"
+                >
+                  Save Profile
+                </button>
+              </form>
+            </div>
+
+            <!-- Document management is not exposed until secure storage is connected. -->
+            <div class="dash-mod" hidden>
+              <div class="mh">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                >
+                  <path d="M6 3h9l4 4v14H6z" />
+                  <path d="M14 3v5h5" />
+                </svg>
+                <h4>4. Tax Documents</h4>
+              </div>
+              <p class="mdesc">Upload tax documents for verification.</p>
+              <div class="muted" style="font-size: 12px; margin-top: 6px">
+                GST / VAT Certificate
+              </div>
+              <div class="doc-row">
+                <span class="pdf">PDF</span>
+                <div style="flex: 1">
+                  <b>GST_Certificate.pdf</b><span>Uploaded on May 5, 2025</span>
+                </div>
+                <span class="st-ok"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="var(--green)"
+                    stroke="#fff"
+                    stroke-width="2"
+                    width="18"
+                    height="18"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="m8 12 3 3 5-6" /></svg
+                ></span>
+              </div>
+              <div class="muted" style="font-size: 12px; margin-top: 14px">
+                Business License
+              </div>
+              <div class="doc-row">
+                <span class="pdf">PDF</span>
+                <div style="flex: 1">
+                  <b>Business_License.pdf</b
+                  ><span>Uploaded on May 5, 2025</span>
+                </div>
+                <span class="st-ok"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="var(--green)"
+                    stroke="#fff"
+                    stroke-width="2"
+                    width="18"
+                    height="18"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="m8 12 3 3 5-6" /></svg
+                ></span>
+              </div>
+              <div class="muted" style="font-size: 12px; margin-top: 14px">
+                Bank Certificate
+              </div>
+              <div class="upload-box">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                >
+                  <path d="M12 16V4M8 8l4-4 4 4" />
+                  <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" /></svg
+                ><b style="color: var(--ink)">Upload File</b><br />PDF, JPG or
+                PNG (Max 10MB)
+              </div>
+              <div
+                class="st-err"
+                style="
+                  font-size: 12px;
+                  margin-top: 10px;
+                  display: flex;
+                  gap: 6px;
+                  align-items: center;
+                "
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="var(--danger)"
+                  stroke="#fff"
+                  stroke-width="2"
+                  width="16"
+                  height="16"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 7v6M12 16h.01" />
+                </svg>
+                Required
+              </div>
+              <button
+                class="btn btn-out btn-block"
+                style="margin-top: 14px; padding: 10px"
+              >
+                Manage Documents
+              </button>
+            </div>
+          </div>
+
+          <!-- SKU manager (real CRUD, toggled from the SKU Setup card) -->
+          <section
+            class="panel"
+            id="skuManager"
+            hidden
+            style="margin-top: 20px"
+          >
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+              "
+            >
+              <h3
+                style="
+                  font-family: var(--sans);
+                  font-size: 20px;
+                  font-weight: 600;
+                "
+              >
+                Manage SKUs
+              </h3>
+              <button
+                class="btn btn-green"
+                type="button"
+                id="btnAddSku"
+                style="padding: 9px 16px"
+              >
+                + Add SKU
+              </button>
+            </div>
+            <div id="skuTable" style="margin-top: 14px"></div>
+
+            <form
+              id="skuForm"
+              hidden
+              style="
+                margin-top: 20px;
+                border-top: 1px solid var(--line);
+                padding-top: 18px;
+              "
+            >
+              <h4
+                id="skuFormTitle"
+                style="
+                  font-family: var(--sans);
+                  font-size: 20px;
+                  font-weight: 600;
+                  margin-bottom: 12px;
+                "
+              >
+                Add SKU
+              </h4>
+              <input type="hidden" name="id" />
+              <div class="supplier-form-grid">
+                <div class="field-lg">
+                  <label>SKU</label><input name="sku" required />
+                </div>
+                <div class="field-lg">
+                  <label>Name</label><input name="name" required />
+                </div>
+                <div class="field-lg">
+                  <label>Category</label
+                  ><select name="category">
+                    <option value="fabrics">Fabrics</option>
+                    <option value="accessories">Accessories</option>
+                    <option value="trims">Trims</option>
+                    <option value="yarns">Yarns</option>
+                    <option value="oem">OEM</option>
+                  </select>
+                </div>
+                <div class="field-lg">
+                  <label>Unit</label
+                  ><select name="unit_type">
+                    <option value="m">Meter (m)</option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="pc">Piece (pc)</option>
+                    <option value="package">Package</option>
+                    <option value="style">Style</option>
+                    <option value="order">Order</option>
+                    <option value="color">Color</option>
+                  </select>
+                </div>
+                <div class="field-lg">
+                  <label>Pricing mode</label
+                  ><select name="pricing_mode">
+                    <option value="fixed">Fixed price</option>
+                    <option value="quote">Quote only</option>
+                  </select>
+                </div>
+                <div class="field-lg">
+                  <label>Price (US$)</label
+                  ><input name="price" type="number" step="0.01" min="0" />
+                </div>
+                <div class="field-lg">
+                  <label>MOQ</label
+                  ><input name="moq" type="number" step="1" min="0" />
+                </div>
+                <div class="field-lg">
+                  <label>Location</label
+                  ><input name="loc" placeholder="e.g. Shaoxing, China" />
+                </div>
+                <div class="field-lg full">
+                  <label>Composition</label
+                  ><input
+                    name="comp"
+                    placeholder="e.g. 55% Linen 45% Viscose"
+                  />
+                </div>
+                <div class="field-lg full">
+                  <label for="dashboardProductDescription"
+                    >About this product</label
+                  >
+                  <div class="rich-editor" data-rich-editor>
+                    <div
+                      class="rich-toolbar"
+                      role="toolbar"
+                      aria-label="About product formatting"
+                    >
+                      <button
+                        type="button"
+                        data-rich-command="bold"
+                        aria-label="Bold"
+                      >
+                        <strong>B</strong></button
+                      ><button
+                        type="button"
+                        data-rich-command="italic"
+                        aria-label="Italic"
+                      >
+                        <em>I</em></button
+                      ><button
+                        type="button"
+                        data-rich-command="underline"
+                        aria-label="Underline"
+                      >
+                        <u>U</u></button
+                      ><button
+                        type="button"
+                        data-rich-command="insertUnorderedList"
+                        aria-label="Bulleted list"
+                      >
+                        • List</button
+                      ><button
+                        type="button"
+                        data-rich-command="insertOrderedList"
+                        aria-label="Numbered list"
+                      >
+                        1. List</button
+                      ><select data-rich-size aria-label="Font size">
+                        <option value="3">Normal</option>
+                        <option value="2">Small</option>
+                        <option value="4">Large</option>
+                      </select>
+                    </div>
+                    <div
+                      id="dashboardProductDescription"
+                      class="rich-input"
+                      contenteditable="true"
+                      role="textbox"
+                      aria-multiline="true"
+                      data-rich-input
+                      data-placeholder="A concise, buyer-friendly description of what this product is."
+                    ></div>
+                    <textarea
+                      name="description"
+                      data-rich-value
+                      hidden
+                    ></textarea>
+                  </div>
+                </div>
+                <div class="field-lg">
+                  <label>Construction / format</label
+                  ><input name="construction" placeholder="e.g. Plain weave" />
+                </div>
+                <div class="field-lg">
+                  <label>Weight (GSM)</label
+                  ><input name="gsm" placeholder="e.g. 180 GSM" />
+                </div>
+                <div class="field-lg">
+                  <label>Width</label
+                  ><input name="fabric_width" placeholder="e.g. 150 cm" />
+                </div>
+                <div class="field-lg">
+                  <label>Roll length</label
+                  ><input name="roll_length" placeholder="e.g. 50 m roll" />
+                </div>
+                <div class="field-lg">
+                  <label>Style code</label
+                  ><input name="style_code" placeholder="e.g. 1015291" />
+                </div>
+                <div class="field-lg">
+                  <label>Best for</label
+                  ><select name="applications">
+                    <option value="">Select clothing type</option>
+                    <option>Blouson</option>
+                    <option>T-shirt</option>
+                    <option>Shirt</option>
+                    <option>Blouse</option>
+                    <option>Jacket</option>
+                    <option>Coat</option>
+                    <option>Pants</option>
+                    <option>Shorts</option>
+                    <option>Skirt</option>
+                    <option>Dress</option>
+                    <option>Suit</option>
+                    <option>Knitwear</option>
+                    <option>Activewear</option>
+                    <option>Underwear</option>
+                    <option>Socks</option>
+                    <option>Bag</option>
+                    <option>Footwear</option>
+                    <option>Multiple apparel types</option>
+                  </select>
+                </div>
+                <div class="field-lg">
+                  <label>Season</label
+                  ><input name="season" placeholder="e.g. All season" />
+                </div>
+                <div class="field-lg">
+                  <label>Colour family</label
+                  ><input
+                    name="color_family"
+                    placeholder="e.g. Solid, custom colours"
+                  />
+                </div>
+                <div class="field-lg">
+                  <label>Origin</label
+                  ><input name="origin_country" placeholder="e.g. Japan" />
+                </div>
+                <div class="field-lg">
+                  <label>Lead time</label
+                  ><input name="lead_time" placeholder="e.g. 7–14 days" />
+                </div>
+                <div class="field-lg full">
+                  <label for="dashboardHandlingNotes"
+                    >Handling notes <span class="hint">optional</span></label
+                  >
+                  <div class="rich-editor" data-rich-editor>
+                    <div
+                      class="rich-toolbar"
+                      role="toolbar"
+                      aria-label="Handling notes formatting"
+                    >
+                      <button
+                        type="button"
+                        data-rich-command="bold"
+                        aria-label="Bold"
+                      >
+                        <strong>B</strong></button
+                      ><button
+                        type="button"
+                        data-rich-command="italic"
+                        aria-label="Italic"
+                      >
+                        <em>I</em></button
+                      ><button
+                        type="button"
+                        data-rich-command="underline"
+                        aria-label="Underline"
+                      >
+                        <u>U</u></button
+                      ><button
+                        type="button"
+                        data-rich-command="insertUnorderedList"
+                        aria-label="Bulleted list"
+                      >
+                        • List</button
+                      ><button
+                        type="button"
+                        data-rich-command="insertOrderedList"
+                        aria-label="Numbered list"
+                      >
+                        1. List</button
+                      ><select data-rich-size aria-label="Font size">
+                        <option value="3">Normal</option>
+                        <option value="2">Small</option>
+                        <option value="4">Large</option>
+                      </select>
+                    </div>
+                    <div
+                      id="dashboardHandlingNotes"
+                      class="rich-input"
+                      contenteditable="true"
+                      role="textbox"
+                      aria-multiline="true"
+                      data-rich-input
+                      data-placeholder="Lot, cutting, care or quality notes a buyer should know."
+                    ></div>
+                    <textarea
+                      name="handling_notes"
+                      data-rich-value
+                      hidden
+                    ></textarea>
+                  </div>
+                </div>
+                <div class="field-lg">
+                  <label>Status</label
+                  ><select name="listing_status">
+                    <option value="active">Active</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </div>
+                <div class="field-lg">
+                  <label>Photo</label
+                  ><input name="imgFile" type="file" accept="image/*" />
+                </div>
+              </div>
+
+              <div style="margin-top: 8px">
+                <div
+                  class="muted"
+                  style="font-size: 12px; font-weight: 600; margin-bottom: 6px"
+                >
+                  Volume price breaks (optional)
+                </div>
+                <div id="priceBreakRows"></div>
+                <button
+                  class="btn btn-out"
+                  type="button"
+                  id="btnAddBreak"
+                  style="padding: 7px 12px; font-size: 12.5px; margin-top: 6px"
+                >
+                  + Add tier
+                </button>
+              </div>
+
+              <div style="display: flex; gap: 10px; margin-top: 18px">
+                <button
+                  class="btn btn-green"
+                  type="submit"
+                  style="padding: 10px 20px"
+                >
+                  Save SKU
+                </button>
+                <button
+                  class="btn btn-out"
+                  type="button"
+                  id="btnCancelSku"
+                  style="padding: 10px 20px"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <!-- bottom -->
+          <div class="dash-bottom" hidden>
+            <div class="panel" style="padding: 20px 22px">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span class="st-err"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                    width="22"
+                    height="22"
+                  >
+                    <path d="M12 3 2 20h20z" />
+                    <path d="M12 10v4M12 17h.01" /></svg
+                ></span>
+                <h4
+                  style="
+                    font-family: var(--sans);
+                    font-size: 20px;
+                    font-weight: 600;
+                  "
+                >
+                  Verification &amp; Alerts
+                </h4>
+                <span class="badge-count dot-red">2</span>
+              </div>
+              <div class="alert-row">
+                <span class="warn"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M12 3 2 20h20z" />
+                    <path d="M12 10v4M12 17h.01" /></svg
+                ></span>
+                <div>
+                  <b>Tax verification pending</b
+                  ><span
+                    >Please upload Bank Certificate to complete
+                    verification.</span
+                  >
+                </div>
+                <button class="btn btn-out">Upload Now</button>
+              </div>
+              <div class="alert-row">
+                <span class="warn"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M12 3 2 20h20z" />
+                    <path d="M12 10v4M12 17h.01" /></svg
+                ></span>
+                <div>
+                  <b>Profile incomplete</b
+                  ><span
+                    >Add more photos &amp; videos to strengthen your
+                    profile.</span
+                  >
+                </div>
+                <button class="btn btn-out">Go to Profile</button>
+              </div>
+            </div>
+            <div class="panel" style="padding: 20px 22px">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <h4
+                  style="
+                    font-family: var(--sans);
+                    font-size: 20px;
+                    font-weight: 600;
+                  "
+                >
+                  Pending Approvals
+                </h4>
+                <span class="badge-count" style="background: var(--muted)"
+                  >1</span
+                >
+              </div>
+              <div class="alert-row">
+                <span style="color: var(--muted)"
+                  ><svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    width="22"
+                    height="22"
+                  >
+                    <path d="M6 3h9l4 4v14H6z" />
+                    <path d="M9 13l2 2 4-4" /></svg
+                ></span>
+                <div>
+                  <b>SKU Review</b><span>3 SKUs submitted on May 8, 2025</span>
+                </div>
+                <span
+                  class="badge"
+                  style="
+                    background: var(--gold-l);
+                    color: var(--gold-d);
+                    margin-left: auto;
+                  "
+                  >Under Review</span
+                >
+              </div>
+              <a
+                class="link"
+                href="#"
+                style="
+                  color: var(--gold-d);
+                  font-size: 13px;
+                  text-decoration: underline;
+                  margin-top: 12px;
+                  display: inline-block;
+                "
+                >View All Submissions</a
+              >
+            </div>
+            <div class="panel" style="padding: 20px 22px">
+              <h4
+                style="
+                  font-family: var(--sans);
+                  font-size: 20px;
+                  font-weight: 600;
+                "
+              >
+                Account Summary
+              </h4>
+              <div style="margin-top: 8px">
+                <div class="ov-row" style="border: 0">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path d="M6 3h9l4 4v14H6z" /></svg
+                  ><span class="k">Member Since</span
+                  ><span class="v">May 5, 2025</span>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <circle cx="12" cy="8" r="4" />
+                    <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" /></svg
+                  ><span class="k">Account Type</span
+                  ><span class="v">Supplier</span>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="m3 7 9 6 9-6" /></svg
+                  ><span class="k">Company Email</span
+                  ><span class="v">info@greenknit.com</span>
+                </div>
+                <div class="ov-row">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  >
+                    <path
+                      d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"
+                    /></svg
+                  ><span class="k">Factory Location</span
+                  ><span class="v">Shaoxing, Zhejiang, China</span>
+                </div>
+              </div>
+              <button
+                class="btn btn-out btn-block"
+                style="margin-top: 14px; padding: 10px"
+              >
+                Edit Account
+              </button>
+            </div>
           </div>
         </div>
-      </section>
 
-      <!-- Athelia: demand signals + AI listing drafter -->
-      <section class="cop-seller" aria-label="Athelia for suppliers">
-        <div class="cop-panel">
-          <div class="cph"><span class="cop-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg></span><h3>Athelia Demand</h3></div>
-          <p class="cpdesc">Recent buyer briefs from the marketplace, matched against your catalog so you can see what to list next.</p>
-          <div id="demandList"></div>
-        </div>
-        <div class="cop-panel drafter">
-          <div class="cph"><span class="cop-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.3 6.3l2.4 2.4M15.3 15.3l2.4 2.4M17.7 6.3l-2.4 2.4M8.7 15.3l-2.4 2.4"/><circle cx="12" cy="12" r="3"/></svg></span><h3>AI Listing Drafter</h3></div>
-          <p class="cpdesc">Describe a product in plain words. Athelia drafts a structured SKU you can review and publish.</p>
-          <form data-draft-form>
-            <label class="visually-hidden" for="draftInput">Describe the product to list</label>
-            <textarea id="draftInput" rows="3" placeholder="e.g. Recycled polyester twill, 180 gsm, OEM-ready, $3.60/m, MOQ 500"></textarea>
-            <button class="cop-ask" type="submit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg> Draft SKU</button>
-          </form>
-          <div id="draftOut"></div>
-        </div>
-      </section>
-
-      <div class="dash-tabs" data-tabs>
-        <span data-tab class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg> 1. SKU Setup</span>
-        <span data-tab><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/></svg> 2. Ads Setup</span>
-        <span data-tab><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg> 3. Profile Details</span>
-        <span data-tab><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/></svg> 4. Tax Documents</span>
+        <!-- RIGHT: storefront preview -->
+        <aside
+          hidden
+          class="panel store"
+          style="align-self: start; position: sticky; top: 88px"
+        >
+          <div class="store-head">
+            <h3>Storefront Preview</h3>
+            <div class="ctrls">
+              <div class="seg">
+                <button class="on">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                  >
+                    <rect x="2" y="4" width="20" height="13" rx="2" />
+                    <path d="M8 20h8M12 17v3" />
+                  </svg></button
+                ><button>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.7"
+                  >
+                    <rect x="7" y="3" width="10" height="18" rx="2" />
+                  </svg>
+                </button>
+              </div>
+              <button class="btn btn-out" style="padding: 9px 14px">
+                View Store
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  width="14"
+                  height="14"
+                >
+                  <path d="M7 17 17 7M9 7h8v8" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          <div class="store-frame">
+            <div class="store-banner">
+              <img src="../assets/cotton-jersey.webp" alt="" />
+              <div class="ov">
+                <h2>Timeless essentials.<br />Modern purpose.</h2>
+                <button
+                  class="btn btn-dark"
+                  style="
+                    align-self: flex-start;
+                    margin-top: 12px;
+                    padding: 9px 16px;
+                  "
+                >
+                  View Collections
+                </button>
+              </div>
+            </div>
+            <div class="store-inner">
+              <div class="store-brandrow">
+                <span class="gk"
+                  ><svg
+                    viewBox="0 0 80 60"
+                    width="46"
+                    height="34"
+                    fill="none"
+                    stroke="var(--green)"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M40 6 30 20h20zM24 20h32v6H24zM28 26v26M52 26v26M28 52h24"
+                    /></svg
+                ></span>
+                <div>
+                  <b style="font-size: 16px">Zhejiang Greenknit Co., Ltd.</b>
+                  <div class="muted" style="font-size: 11.5px">
+                    Woven &amp; Knit Fabric Manufacturer
+                  </div>
+                </div>
+              </div>
+              <div class="store-nav">
+                <span class="on">Home</span><span>Fabrics</span
+                ><span>About Us</span><span>Certifications</span
+                ><span>Capabilities</span><span>Contact</span>
+              </div>
+              <div
+                class="muted"
+                style="
+                  font-size: 12px;
+                  margin: 14px 0 6px;
+                  display: flex;
+                  justify-content: space-between;
+                "
+              >
+                <b style="color: var(--ink); font-size: 14px"
+                  >Featured Fabrics</b
+                ><a href="#" style="color: var(--muted)">View all</a>
+              </div>
+              <div class="store-feat">
+                <div>
+                  <img alt="" src="../assets/linen.webp" /><b
+                    >Linen Blend Plain Weave</b
+                  ><span>55% Linen 45% Viscose</span>
+                </div>
+                <div>
+                  <img alt="" src="../assets/cotton-jersey.webp" /><b
+                    >Organic Cotton Twill</b
+                  ><span>100% Organic Cotton</span>
+                </div>
+                <div>
+                  <img alt="" src="../assets/rayon-suiting.webp" /><b
+                    >Polyester Rayon Suiting</b
+                  ><span>65% Polyester 35% Viscose</span>
+                </div>
+                <div>
+                  <img alt="" src="../assets/houndstooth.webp" /><b
+                    >Wool Blend Houndstooth</b
+                  ><span>30% Wool 70% Polyester</span>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 16px;
+                  font-size: 11px;
+                  color: var(--muted);
+                  border-top: 1px solid var(--line);
+                  padding-top: 12px;
+                "
+              >
+                <div>
+                  <b style="display: block; color: var(--ink)">MOQ</b>300 Yards
+                </div>
+                <div>
+                  <b style="display: block; color: var(--ink)">Lead Time</b
+                  >15–25 Days
+                </div>
+                <div>
+                  <b style="display: block; color: var(--ink)">Worldwide</b
+                  >Shipping
+                </div>
+                <div>
+                  <b style="display: block; color: var(--ink)">Custom</b
+                  >Development
+                </div>
+              </div>
+              <div
+                style="
+                  border-top: 1px solid var(--line);
+                  margin-top: 14px;
+                  padding-top: 14px;
+                "
+              >
+                <b style="font-family: var(--sans); font-size: 16px"
+                  >About Us</b
+                >
+                <div style="display: flex; gap: 12px; margin-top: 8px">
+                  <p class="muted" style="font-size: 11.5px; flex: 1">
+                    Established in 2003, Greenknit is a vertically integrated
+                    textile manufacturer with in-house weaving, dyeing,
+                    finishing and inspection.
+                  </p>
+                  <img
+                    alt=""
+                    src="../assets/factory-interior.webp"
+                    style="
+                      width: 110px;
+                      height: 74px;
+                      border-radius: 8px;
+                      object-fit: cover;
+                    "
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
+    </main>
 
-      <div class="dash-cols">
-        <!-- SKU -->
-        <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8"/></svg><h4>SKU Setup</h4></div>
-          <p class="mdesc">Add and manage your products with details and pricing.</p>
-          <div class="muted" style="font-size:12px">Products Listed</div>
-          <div class="big-num" id="skuCount">0</div>
-          <div class="mini-list" id="skuRecent"></div>
-          <button class="btn btn-out btn-block" type="button" id="btnManageSkus" style="margin-top:14px;padding:10px">Manage SKUs</button>
-        </div>
+    <div id="ftr"></div>
+    <script src="../js/data.js"></script>
+    <script src="../js/copilot.js"></script>
+    <script src="../js/components.js"></script>
+    <script defer src="../js/analytics.bundle.js"></script>
+    <script src="../js/supabase-client.bundle.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/copilot-llm.js"></script>
+    <script>
+      window.ARCANA_PAGE = async function ({ toast }) {
+        const api = window.ARCANA_API;
+        const money = (n) => window.ARCANA_money(n);
+        const productAsset = window.ATELIX_productAsset;
+        const gate = document.getElementById("dashGate");
+        const main = document.getElementById("dashMain");
+        const esc = (s) =>
+          String(s == null ? "" : s).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
 
-        <!-- Ads -->
-        <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg><h4>2. Ads Setup</h4></div>
-          <p class="mdesc">Create ad campaigns to boost visibility and get more inquiries.</p>
-          <div class="muted" style="font-size:12px">Campaigns</div>
-          <div class="big-num">1 <small>/ 3 Active</small></div>
-          <div class="bar" style="margin-top:8px"><i style="width:33%"></i></div>
-          <div class="muted" style="font-size:12px;margin-top:14px">Active Campaign</div>
-          <div style="border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:8px">
-            <div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;gap:10px;align-items:center"><img alt="" src="../assets/wool-flannel.webp" style="width:34px;height:34px;border-radius:6px;object-fit:cover"><b style="font-size:12.5px">Spring / Summer Collection</b></div><span class="badge b-ok">Active</span></div>
-            <div style="display:flex;gap:24px;margin-top:12px"><div><span class="muted" style="font-size:11px">Impressions</span><div style="font-weight:700">2,450</div></div><div><span class="muted" style="font-size:11px">Clicks</span><div style="font-weight:700">186</div></div></div>
-          </div>
-          <div class="field"><label>Daily Budget (USD)</label><input value="50.00"></div>
-          <div class="field"><label>Duration</label><input value="May 10, 2025 – Jun 10, 2025"></div>
-          <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Manage Ads</button>
-        </div>
+        function showGate(title, body, cta) {
+          gate.innerHTML = `<h2 style="font-family:var(--sans);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta || ""}`;
+          gate.hidden = false;
+        }
 
-        <!-- Profile -->
-        <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><h4>Factory Profile</h4></div>
-          <p class="mdesc">Tell buyers about your factory.</p>
-          <form id="factoryForm">
-            <div class="field-lg"><label>Factory name</label><input name="name" required></div>
-            <div class="field-lg"><label>Region</label><input name="region" placeholder="e.g. Zhejiang, China"></div>
-            <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, Zhejiang"></div>
-            <div class="field-lg"><label>About</label><input name="bio" placeholder="A short factory overview"></div>
-            <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
-            <button class="btn btn-green btn-block" type="submit" style="margin-top:4px;padding:10px">Save Profile</button>
-          </form>
-        </div>
+        // ---- Gate: signed in, role=seller, and linked to a factory (auto-provisioned at signup) ----
+        const profile = await api.getSessionProfile();
+        if (!profile) {
+          showGate(
+            "Log in to continue",
+            "Sign in to your Atelix seller account to access the dashboard.",
+            '<a class="btn btn-green" href="login.html?next=dashboard.html" style="margin-top:14px;display:inline-block">Log in</a>',
+          );
+          return;
+        }
+        if (profile.role !== "seller") {
+          showGate(
+            "Seller access only",
+            "This dashboard is for verified Atelix suppliers. Sign up as a factory or mill to get set up.",
+            '<a class="btn btn-green" href="sell.html" style="margin-top:14px;display:inline-block">Learn about selling</a>',
+          );
+          return;
+        }
+        const factory = await api.getMyFactory();
+        if (!factory) {
+          showGate(
+            "Not linked to a factory yet",
+            "Your seller account isn’t connected to a factory profile yet. Contact Atelix to get set up.",
+            '<a class="link" href="mailto:info@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact Atelix</a>',
+          );
+          return;
+        }
+        main.hidden = false;
+        document.getElementById("welcomeName").textContent =
+          `Welcome, ${factory.name}`;
+        document.getElementById("welcomeSub").textContent =
+          `Manage ${factory.loc || factory.region || "your factory"}'s SKUs and profile.`;
+        if (factory.verify_state !== "verified") {
+          const banner = document.createElement("div");
+          banner.className = "panel";
+          banner.style.cssText =
+            "margin-bottom:20px;padding:14px 18px;background:var(--panel);border:1px solid var(--gold-d);border-radius:var(--radius);font-size:13.5px;color:var(--ink)";
+          banner.innerHTML = `<b>Verification pending</b> — your factory profile is under review by Atelix. You can set up SKUs and your profile now; your listings go live once verified.`;
+          main.querySelector(".dash").prepend(banner);
+        }
 
-        <!-- Tax -->
-        <div class="dash-mod">
-          <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg><h4>4. Tax Documents</h4></div>
-          <p class="mdesc">Upload tax documents for verification.</p>
-          <div class="muted" style="font-size:12px;margin-top:6px">GST / VAT Certificate</div>
-          <div class="doc-row"><span class="pdf">PDF</span><div style="flex:1"><b>GST_Certificate.pdf</b><span>Uploaded on May 5, 2025</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-          <div class="muted" style="font-size:12px;margin-top:14px">Business License</div>
-          <div class="doc-row"><span class="pdf">PDF</span><div style="flex:1"><b>Business_License.pdf</b><span>Uploaded on May 5, 2025</span></div><span class="st-ok"><svg viewBox="0 0 24 24" fill="var(--green)" stroke="#fff" stroke-width="2" width="18" height="18"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg></span></div>
-          <div class="muted" style="font-size:12px;margin-top:14px">Bank Certificate</div>
-          <div class="upload-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><b style="color:var(--ink)">Upload File</b><br>PDF, JPG or PNG (Max 10MB)</div>
-          <div class="st-err" style="font-size:12px;margin-top:10px;display:flex;gap:6px;align-items:center"><svg viewBox="0 0 24 24" fill="var(--danger)" stroke="#fff" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16h.01"/></svg> Required</div>
-          <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Manage Documents</button>
-        </div>
-      </div>
-
-      <!-- SKU manager (real CRUD, toggled from the SKU Setup card) -->
-      <section class="panel" id="skuManager" hidden style="margin-top:20px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-          <h3 style="font-family:var(--sans);font-size:20px;font-weight:600">Manage SKUs</h3>
-          <button class="btn btn-green" type="button" id="btnAddSku" style="padding:9px 16px">+ Add SKU</button>
-        </div>
-        <div id="skuTable" style="margin-top:14px"></div>
-
-        <form id="skuForm" hidden style="margin-top:20px;border-top:1px solid var(--line);padding-top:18px">
-          <h4 id="skuFormTitle" style="font-family:var(--sans);font-size:20px;font-weight:600;margin-bottom:12px">Add SKU</h4>
-          <input type="hidden" name="id">
-          <div class="supplier-form-grid">
-            <div class="field-lg"><label>SKU</label><input name="sku" required></div>
-            <div class="field-lg"><label>Name</label><input name="name" required></div>
-            <div class="field-lg"><label>Category</label><select name="category">
-              <option value="fabrics">Fabrics</option><option value="accessories">Accessories</option>
-              <option value="trims">Trims</option><option value="yarns">Yarns</option><option value="oem">OEM</option>
-            </select></div>
-            <div class="field-lg"><label>Unit</label><select name="unit_type">
-              <option value="m">Meter (m)</option><option value="kg">Kilogram (kg)</option><option value="pc">Piece (pc)</option>
-              <option value="package">Package</option><option value="style">Style</option><option value="order">Order</option><option value="color">Color</option>
-            </select></div>
-            <div class="field-lg"><label>Pricing mode</label><select name="pricing_mode">
-              <option value="fixed">Fixed price</option><option value="quote">Quote only</option>
-            </select></div>
-            <div class="field-lg"><label>Price (US$)</label><input name="price" type="number" step="0.01" min="0"></div>
-            <div class="field-lg"><label>MOQ</label><input name="moq" type="number" step="1" min="0"></div>
-            <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, China"></div>
-            <div class="field-lg full"><label>Composition</label><input name="comp" placeholder="e.g. 55% Linen 45% Viscose"></div>
-            <div class="field-lg full"><label for="dashboardProductDescription">About this product</label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="About product formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="dashboardProductDescription" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="A concise, buyer-friendly description of what this product is."></div><textarea name="description" data-rich-value hidden></textarea></div></div>
-            <div class="field-lg"><label>Construction / format</label><input name="construction" placeholder="e.g. Plain weave"></div>
-            <div class="field-lg"><label>Weight (GSM)</label><input name="gsm" placeholder="e.g. 180 GSM"></div>
-            <div class="field-lg"><label>Width</label><input name="fabric_width" placeholder="e.g. 150 cm"></div>
-            <div class="field-lg"><label>Roll length</label><input name="roll_length" placeholder="e.g. 50 m roll"></div>
-            <div class="field-lg"><label>Style code</label><input name="style_code" placeholder="e.g. 1015291"></div>
-            <div class="field-lg"><label>Best for</label><select name="applications"><option value="">Select clothing type</option><option>Blouson</option><option>T-shirt</option><option>Shirt</option><option>Blouse</option><option>Jacket</option><option>Coat</option><option>Pants</option><option>Shorts</option><option>Skirt</option><option>Dress</option><option>Suit</option><option>Knitwear</option><option>Activewear</option><option>Underwear</option><option>Socks</option><option>Bag</option><option>Footwear</option><option>Multiple apparel types</option></select></div>
-            <div class="field-lg"><label>Season</label><input name="season" placeholder="e.g. All season"></div>
-            <div class="field-lg"><label>Colour family</label><input name="color_family" placeholder="e.g. Solid, custom colours"></div>
-            <div class="field-lg"><label>Origin</label><input name="origin_country" placeholder="e.g. Japan"></div>
-            <div class="field-lg"><label>Lead time</label><input name="lead_time" placeholder="e.g. 7–14 days"></div>
-            <div class="field-lg full"><label for="dashboardHandlingNotes">Handling notes <span class="hint">optional</span></label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="Handling notes formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="dashboardHandlingNotes" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="Lot, cutting, care or quality notes a buyer should know."></div><textarea name="handling_notes" data-rich-value hidden></textarea></div></div>
-            <div class="field-lg"><label>Status</label><select name="listing_status">
-              <option value="active">Active</option><option value="draft">Draft</option>
-            </select></div>
-            <div class="field-lg"><label>Photo</label><input name="imgFile" type="file" accept="image/*"></div>
-          </div>
-
-          <div style="margin-top:8px">
-            <div class="muted" style="font-size:12px;font-weight:600;margin-bottom:6px">Volume price breaks (optional)</div>
-            <div id="priceBreakRows"></div>
-            <button class="btn btn-out" type="button" id="btnAddBreak" style="padding:7px 12px;font-size:12.5px;margin-top:6px">+ Add tier</button>
-          </div>
-
-          <div style="display:flex;gap:10px;margin-top:18px">
-            <button class="btn btn-green" type="submit" style="padding:10px 20px">Save SKU</button>
-            <button class="btn btn-out" type="button" id="btnCancelSku" style="padding:10px 20px">Cancel</button>
-          </div>
-        </form>
-      </section>
-
-      <!-- bottom -->
-      <div class="dash-bottom">
-        <div class="panel" style="padding:20px 22px">
-          <div style="display:flex;align-items:center;gap:10px"><span class="st-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Verification &amp; Alerts</h4><span class="badge-count dot-red">2</span></div>
-          <div class="alert-row"><span class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><div><b>Tax verification pending</b><span>Please upload Bank Certificate to complete verification.</span></div><button class="btn btn-out">Upload Now</button></div>
-          <div class="alert-row"><span class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><div><b>Profile incomplete</b><span>Add more photos &amp; videos to strengthen your profile.</span></div><button class="btn btn-out">Go to Profile</button></div>
-        </div>
-        <div class="panel" style="padding:20px 22px">
-          <div style="display:flex;align-items:center;gap:10px"><h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Pending Approvals</h4><span class="badge-count" style="background:var(--muted)">1</span></div>
-          <div class="alert-row"><span style="color:var(--muted)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="22" height="22"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg></span><div><b>SKU Review</b><span>3 SKUs submitted on May 8, 2025</span></div><span class="badge" style="background:var(--gold-l);color:var(--gold-d);margin-left:auto">Under Review</span></div>
-          <a class="link" href="#" style="color:var(--gold-d);font-size:13px;text-decoration:underline;margin-top:12px;display:inline-block">View All Submissions</a>
-        </div>
-        <div class="panel" style="padding:20px 22px">
-          <h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Account Summary</h4>
-          <div style="margin-top:8px">
-            <div class="ov-row" style="border:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/></svg><span class="k">Member Since</span><span class="v">May 5, 2025</span></div>
-            <div class="ov-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="k">Account Type</span><span class="v">Supplier</span></div>
-            <div class="ov-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span class="k">Company Email</span><span class="v">info@greenknit.com</span></div>
-            <div class="ov-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg><span class="k">Factory Location</span><span class="v">Shaoxing, Zhejiang, China</span></div>
-          </div>
-          <button class="btn btn-out btn-block" style="margin-top:14px;padding:10px">Edit Account</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- RIGHT: storefront preview -->
-    <aside class="panel store" style="align-self:start;position:sticky;top:88px">
-      <div class="store-head"><h3>Storefront Preview</h3><div class="ctrls"><div class="seg"><button class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 20h8M12 17v3"/></svg></button><button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="7" y="3" width="10" height="18" rx="2"/></svg></button></div><button class="btn btn-out" style="padding:9px 14px">View Store <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="14" height="14"><path d="M7 17 17 7M9 7h8v8"/></svg></button></div></div>
-      <div class="store-frame">
-        <div class="store-banner"><img src="../assets/cotton-jersey.webp" alt=""><div class="ov"><h2>Timeless essentials.<br>Modern purpose.</h2><button class="btn btn-dark" style="align-self:flex-start;margin-top:12px;padding:9px 16px">View Collections</button></div></div>
-        <div class="store-inner">
-          <div class="store-brandrow"><span class="gk"><svg viewBox="0 0 80 60" width="46" height="34" fill="none" stroke="var(--green)" stroke-width="2"><path d="M40 6 30 20h20zM24 20h32v6H24zM28 26v26M52 26v26M28 52h24"/></svg></span><div><b style="font-size:16px">Zhejiang Greenknit Co., Ltd.</b><div class="muted" style="font-size:11.5px">Woven &amp; Knit Fabric Manufacturer</div></div></div>
-          <div class="store-nav"><span class="on">Home</span><span>Fabrics</span><span>About Us</span><span>Certifications</span><span>Capabilities</span><span>Contact</span></div>
-          <div class="muted" style="font-size:12px;margin:14px 0 6px;display:flex;justify-content:space-between"><b style="color:var(--ink);font-size:14px">Featured Fabrics</b><a href="#" style="color:var(--muted)">View all</a></div>
-          <div class="store-feat">
-            <div><img alt="" src="../assets/linen.webp"><b>Linen Blend Plain Weave</b><span>55% Linen 45% Viscose</span></div>
-            <div><img alt="" src="../assets/cotton-jersey.webp"><b>Organic Cotton Twill</b><span>100% Organic Cotton</span></div>
-            <div><img alt="" src="../assets/rayon-suiting.webp"><b>Polyester Rayon Suiting</b><span>65% Polyester 35% Viscose</span></div>
-            <div><img alt="" src="../assets/houndstooth.webp"><b>Wool Blend Houndstooth</b><span>30% Wool 70% Polyester</span></div>
-          </div>
-          <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:11px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px">
-            <div><b style="display:block;color:var(--ink)">MOQ</b>300 Yards</div><div><b style="display:block;color:var(--ink)">Lead Time</b>15–25 Days</div><div><b style="display:block;color:var(--ink)">Worldwide</b>Shipping</div><div><b style="display:block;color:var(--ink)">Custom</b>Development</div>
-          </div>
-          <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
-            <b style="font-family:var(--sans);font-size:16px">About Us</b>
-            <div style="display:flex;gap:12px;margin-top:8px"><p class="muted" style="font-size:11.5px;flex:1">Established in 2003, Greenknit is a vertically integrated textile manufacturer with in-house weaving, dyeing, finishing and inspection.</p><img alt="" src="../assets/factory-interior.webp" style="width:110px;height:74px;border-radius:8px;object-fit:cover"></div>
-          </div>
-        </div>
-      </div>
-    </aside>
-  </div>
-</main>
-
-<div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/copilot.js"></script>
-<script src="../js/components.js"></script>
-<script defer src="../js/analytics.bundle.js"></script>
-<script src="../js/supabase-client.bundle.js"></script>
-<script src="../js/api.js"></script>
-<script src="../js/copilot-llm.js"></script>
-<script>
-window.ARCANA_PAGE=async function({toast}){
-  const api=window.ARCANA_API;
-  const money=n=>window.ARCANA_money(n);
-  const productAsset=window.ATELIX_productAsset;
-  const gate=document.getElementById('dashGate');
-  const main=document.getElementById('dashMain');
-  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-  function showGate(title, body, cta){
-    gate.innerHTML=`<h2 style="font-family:var(--sans);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
-    gate.hidden=false;
-  }
-
-  // ---- Gate: signed in, role=seller, and linked to a factory (auto-provisioned at signup) ----
-  const profile=await api.getSessionProfile();
-  if(!profile){
-    showGate('Log in to continue','Sign in to your Atelix seller account to access the dashboard.',
-      '<a class="btn btn-green" href="login.html?next=dashboard.html" style="margin-top:14px;display:inline-block">Log in</a>');
-    return;
-  }
-  if(profile.role!=='seller'){
-    showGate('Seller access only','This dashboard is for verified Atelix suppliers. Sign up as a factory or mill to get set up.',
-      '<a class="btn btn-green" href="sell.html" style="margin-top:14px;display:inline-block">Learn about selling</a>');
-    return;
-  }
-  const factory=await api.getMyFactory();
-  if(!factory){
-    showGate('Not linked to a factory yet','Your seller account isn’t connected to a factory profile yet. Contact Atelix to get set up.',
-      '<a class="link" href="mailto:info@arcanawangsa.com" style="margin-top:14px;display:inline-block;color:var(--green);font-weight:600">Contact Atelix</a>');
-    return;
-  }
-  main.hidden=false;
-  document.getElementById('welcomeName').textContent=`Welcome, ${factory.name}`;
-  document.getElementById('welcomeSub').textContent=`Manage ${factory.loc||factory.region||'your factory'}'s SKUs and profile.`;
-  if(factory.verify_state!=='verified'){
-    const banner=document.createElement('div');
-    banner.className='panel';
-    banner.style.cssText='margin-bottom:20px;padding:14px 18px;background:var(--panel);border:1px solid var(--gold-d);border-radius:var(--radius);font-size:13.5px;color:var(--ink)';
-    banner.innerHTML=`<b>Verification pending</b> — your factory profile is under review by Atelix. You can set up SKUs and your profile now; your listings go live once verified.`;
-    main.querySelector('.dash').prepend(banner);
-  }
-
-  // ---- SKU CRUD ----
-  let products=[];
-  function statusBadge(s){
-    return s==='active' ? '<span class="badge b-ok">Active</span>'
-      : s==='draft' ? '<span class="badge b-std">Draft</span>'
-      : '<span class="badge b-nonoem">Archived</span>';
-  }
-  function renderSkuSummary(){
-    const active=products.filter(p=>p.listing_status==='active').length;
-    document.getElementById('skuStat').innerHTML=`${active} <small>/ ${products.length}</small>`;
-    document.getElementById('skuCount').textContent=products.length;
-    const recent=products.slice(0,5);
-    document.getElementById('skuRecent').innerHTML=recent.length ? recent.map(p=>`
+        // ---- SKU CRUD ----
+        let products = [];
+        function statusBadge(s) {
+          return s === "active"
+            ? '<span class="badge b-ok">Active</span>'
+            : s === "draft"
+              ? '<span class="badge b-std">Draft</span>'
+              : '<span class="badge b-nonoem">Archived</span>';
+        }
+        function renderSkuSummary() {
+          const active = products.filter(
+            (p) => p.listing_status === "active",
+          ).length;
+          document.getElementById("skuStat").innerHTML =
+            `${active} <small>/ ${products.length}</small>`;
+          document.getElementById("skuCount").textContent = products.length;
+          const recent = products.slice(0, 5);
+          document.getElementById("skuRecent").innerHTML = recent.length
+            ? recent
+                .map(
+                  (p) => `
       <div class="mini-row"><img alt="${esc(p.name)}" src="${esc(productAsset(p))}"><div><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)}</span></div>${statusBadge(p.listing_status)}</div>
-    `).join('') : '<p class="muted" style="font-size:12.5px;margin-top:8px">No SKUs yet — add your first product.</p>';
-  }
-  function renderSkuTable(){
-    const tbl=document.getElementById('skuTable');
-    if(!products.length){ tbl.innerHTML='<p class="muted">No SKUs yet.</p>'; return; }
-    tbl.innerHTML=products.map(p=>`
+    `,
+                )
+                .join("")
+            : '<p class="muted" style="font-size:12.5px;margin-top:8px">No SKUs yet — add your first product.</p>';
+        }
+        function renderSkuTable() {
+          const tbl = document.getElementById("skuTable");
+          if (!products.length) {
+            tbl.innerHTML = '<p class="muted">No SKUs yet.</p>';
+            return;
+          }
+          tbl.innerHTML = products
+            .map(
+              (p) => `
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line-2)">
         <img alt="${esc(p.name)}" src="${esc(productAsset(p))}" style="width:40px;height:40px;border-radius:var(--radius-sm);object-fit:cover;background:var(--panel)">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px;display:block">${esc(p.name)}</b>
-          <span class="muted" style="font-size:11.5px">SKU: ${esc(p.sku)} · ${p.category} · ${p.pricing_mode==='quote'?'Quote only':money(p.price)+'/'+p.unit_type}</span>
+          <span class="muted" style="font-size:11.5px">SKU: ${esc(p.sku)} · ${p.category} · ${p.pricing_mode === "quote" ? "Quote only" : money(p.price) + "/" + p.unit_type}</span>
         </div>
         ${statusBadge(p.listing_status)}
         <button class="btn btn-out" type="button" data-edit="${p.id}" style="padding:6px 12px;font-size:12px">Edit</button>
-        ${p.listing_status!=='archived'?`<button class="btn btn-out" type="button" data-archive="${p.id}" style="padding:6px 12px;font-size:12px">Archive</button>`:''}
+        ${p.listing_status !== "archived" ? `<button class="btn btn-out" type="button" data-archive="${p.id}" style="padding:6px 12px;font-size:12px">Archive</button>` : ""}
       </div>
-    `).join('');
-    tbl.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>openSkuForm(products.find(p=>p.id===b.dataset.edit))));
-    tbl.querySelectorAll('[data-archive]').forEach(b=>b.addEventListener('click', async ()=>{
-      if(!confirm('Archive this SKU? It will be removed from the public catalog.')) return;
-      const { error }=await api.archiveProduct(b.dataset.archive);
-      if(error){ toast(error.message||'Could not archive'); return; }
-      toast('SKU archived'); loadProducts();
-    }));
-  }
-  async function loadProducts(){
-    const r=await api.getMyProducts(factory.id);
-    products=r.products||[];
-    renderSkuSummary(); renderSkuTable();
-  }
+    `,
+            )
+            .join("");
+          tbl
+            .querySelectorAll("[data-edit]")
+            .forEach((b) =>
+              b.addEventListener("click", () =>
+                openSkuForm(products.find((p) => p.id === b.dataset.edit)),
+              ),
+            );
+          tbl.querySelectorAll("[data-archive]").forEach((b) =>
+            b.addEventListener("click", async () => {
+              if (
+                !confirm(
+                  "Archive this SKU? It will be removed from the public catalog.",
+                )
+              )
+                return;
+              const { error } = await api.archiveProduct(b.dataset.archive);
+              if (error) {
+                toast(error.message || "Could not archive");
+                return;
+              }
+              toast("SKU archived");
+              loadProducts();
+            }),
+          );
+        }
+        async function loadProducts() {
+          const r = await api.getMyProducts(factory.id);
+          products = r.products || [];
+          renderSkuSummary();
+          renderSkuTable();
+        }
 
-  const skuManager=document.getElementById('skuManager');
-  const skuForm=document.getElementById('skuForm');
-  const priceBreakRows=document.getElementById('priceBreakRows');
-  window.ATELIX_initRichEditors(skuForm);
+        const skuManager = document.getElementById("skuManager");
+        const skuForm = document.getElementById("skuForm");
+        const priceBreakRows = document.getElementById("priceBreakRows");
+        window.ATELIX_initRichEditors(skuForm);
 
-  document.getElementById('btnManageSkus').addEventListener('click',()=>{
-    skuManager.hidden=!skuManager.hidden;
-    if(!skuManager.hidden) skuManager.scrollIntoView({behavior:'smooth', block:'start'});
-  });
-  document.getElementById('btnAddSku').addEventListener('click',()=>openSkuForm(null));
-  document.getElementById('btnCancelSku').addEventListener('click',()=>{ skuForm.hidden=true; });
-  document.getElementById('btnAddBreak').addEventListener('click',()=>addBreakRow());
+        document
+          .getElementById("btnManageSkus")
+          .addEventListener("click", () => {
+            skuManager.hidden = !skuManager.hidden;
+            if (!skuManager.hidden)
+              skuManager.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        document
+          .getElementById("btnAddSku")
+          .addEventListener("click", () => openSkuForm(null));
+        document
+          .getElementById("btnCancelSku")
+          .addEventListener("click", () => {
+            skuForm.hidden = true;
+          });
+        document
+          .getElementById("btnAddBreak")
+          .addEventListener("click", () => addBreakRow());
 
-  function addBreakRow(minQty,unitPrice){
-    const row=document.createElement('div');
-    row.style.cssText='display:flex;gap:8px;align-items:center;margin-top:6px';
-    row.innerHTML=`<input type="number" min="1" step="1" placeholder="Min qty" value="${minQty!=null?minQty:''}" style="width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bmin>
-      <input type="number" min="0" step="0.01" placeholder="Unit price (US$)" value="${unitPrice!=null?unitPrice:''}" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bprice>
+        function addBreakRow(minQty, unitPrice) {
+          const row = document.createElement("div");
+          row.style.cssText =
+            "display:flex;gap:8px;align-items:center;margin-top:6px";
+          row.innerHTML = `<input type="number" min="1" step="1" placeholder="Min qty" value="${minQty != null ? minQty : ""}" style="width:110px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bmin>
+      <input type="number" min="0" step="0.01" placeholder="Unit price (US$)" value="${unitPrice != null ? unitPrice : ""}" style="width:150px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px" data-bprice>
       <button type="button" class="btn btn-out" style="padding:5px 10px;font-size:12px" data-brm>Remove</button>`;
-    row.querySelector('[data-brm]').addEventListener('click',()=>row.remove());
-    priceBreakRows.appendChild(row);
-  }
+          row
+            .querySelector("[data-brm]")
+            .addEventListener("click", () => row.remove());
+          priceBreakRows.appendChild(row);
+        }
 
-  async function openSkuForm(product){
-    skuForm.hidden=false;
-    document.getElementById('skuFormTitle').textContent=product?`Edit ${product.sku}`:'Add SKU';
-    skuForm.reset();
-    window.ATELIX_setRichEditor(skuForm,'description','');
-    window.ATELIX_setRichEditor(skuForm,'handling_notes','');
-    skuForm.elements.id.value=product?product.id:'';
-    priceBreakRows.innerHTML='';
-    if(product){
-      skuForm.elements.sku.value=product.sku;
-      skuForm.elements.name.value=product.name;
-      skuForm.elements.category.value=product.category;
-      skuForm.elements.unit_type.value=product.unit_type;
-      skuForm.elements.pricing_mode.value=product.pricing_mode;
-      skuForm.elements.price.value=product.price;
-      skuForm.elements.moq.value=product.moq!=null?product.moq:'';
-      skuForm.elements.loc.value=product.loc||'';
-      skuForm.elements.comp.value=product.comp||'';
-      ['construction','season','color_family','origin_country','lead_time','gsm','fabric_width','roll_length','style_code'].forEach(k=>skuForm.elements[k].value=product[k]||'');
-      window.ATELIX_setRichEditor(skuForm,'description',product.description||'');
-      window.ATELIX_setRichEditor(skuForm,'handling_notes',product.handling_notes||'');
-      const application=[...skuForm.elements.applications.options].some(option=>option.value===product.applications)?product.applications:(product.applications?'Multiple apparel types':'');
-      skuForm.elements.applications.value=application;
-      skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
-      const breaks=await api.getPriceBreaks(product.id);
-      breaks.forEach(b=>addBreakRow(b.minQty,b.unitPrice));
-    }
-    skuForm.scrollIntoView({behavior:'smooth', block:'center'});
-  }
+        async function openSkuForm(product) {
+          skuForm.hidden = false;
+          document.getElementById("skuFormTitle").textContent = product
+            ? `Edit ${product.sku}`
+            : "Add SKU";
+          skuForm.reset();
+          window.ATELIX_setRichEditor(skuForm, "description", "");
+          window.ATELIX_setRichEditor(skuForm, "handling_notes", "");
+          skuForm.elements.id.value = product ? product.id : "";
+          priceBreakRows.innerHTML = "";
+          if (product) {
+            skuForm.elements.sku.value = product.sku;
+            skuForm.elements.name.value = product.name;
+            skuForm.elements.category.value = product.category;
+            skuForm.elements.unit_type.value = product.unit_type;
+            skuForm.elements.pricing_mode.value = product.pricing_mode;
+            skuForm.elements.price.value = product.price;
+            skuForm.elements.moq.value = product.moq != null ? product.moq : "";
+            skuForm.elements.loc.value = product.loc || "";
+            skuForm.elements.comp.value = product.comp || "";
+            [
+              "construction",
+              "season",
+              "color_family",
+              "origin_country",
+              "lead_time",
+              "gsm",
+              "fabric_width",
+              "roll_length",
+              "style_code",
+            ].forEach((k) => (skuForm.elements[k].value = product[k] || ""));
+            window.ATELIX_setRichEditor(
+              skuForm,
+              "description",
+              product.description || "",
+            );
+            window.ATELIX_setRichEditor(
+              skuForm,
+              "handling_notes",
+              product.handling_notes || "",
+            );
+            const application = [...skuForm.elements.applications.options].some(
+              (option) => option.value === product.applications,
+            )
+              ? product.applications
+              : product.applications
+                ? "Multiple apparel types"
+                : "";
+            skuForm.elements.applications.value = application;
+            skuForm.elements.listing_status.value =
+              product.listing_status === "archived"
+                ? "draft"
+                : product.listing_status;
+            const breaks = await api.getPriceBreaks(product.id);
+            breaks.forEach((b) => addBreakRow(b.minQty, b.unitPrice));
+          }
+          skuForm.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
 
-  skuForm.addEventListener('submit', async e=>{
-    e.preventDefault();
-    window.ATELIX_syncRichEditors(skuForm);
-    const f=skuForm.elements;
-    const id=f.id.value;
-    const payload={
-      sku:f.sku.value.trim(), name:f.name.value.trim(), category:f.category.value,
-      unit_type:f.unit_type.value, pricing_mode:f.pricing_mode.value,
-      price:Number(f.price.value)||0, moq:f.moq.value?Number(f.moq.value):null,
-      loc:f.loc.value.trim(), comp:f.comp.value.trim(), description:f.description.value.trim(), construction:f.construction.value.trim(), applications:f.applications.value.trim(), season:f.season.value.trim(), color_family:f.color_family.value.trim(), origin_country:f.origin_country.value.trim(), lead_time:f.lead_time.value.trim(), handling_notes:f.handling_notes.value.trim(), gsm:f.gsm.value.trim(), fabric_width:f.fabric_width.value.trim(), roll_length:f.roll_length.value.trim(), style_code:f.style_code.value.trim(),
-      listing_status:f.listing_status.value
-    };
-    if(!payload.sku || !payload.name){ toast('SKU and name are required'); return; }
+        skuForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          window.ATELIX_syncRichEditors(skuForm);
+          const f = skuForm.elements;
+          const id = f.id.value;
+          const payload = {
+            sku: f.sku.value.trim(),
+            name: f.name.value.trim(),
+            category: f.category.value,
+            unit_type: f.unit_type.value,
+            pricing_mode: f.pricing_mode.value,
+            price: Number(f.price.value) || 0,
+            moq: f.moq.value ? Number(f.moq.value) : null,
+            loc: f.loc.value.trim(),
+            comp: f.comp.value.trim(),
+            description: f.description.value.trim(),
+            construction: f.construction.value.trim(),
+            applications: f.applications.value.trim(),
+            season: f.season.value.trim(),
+            color_family: f.color_family.value.trim(),
+            origin_country: f.origin_country.value.trim(),
+            lead_time: f.lead_time.value.trim(),
+            handling_notes: f.handling_notes.value.trim(),
+            gsm: f.gsm.value.trim(),
+            fabric_width: f.fabric_width.value.trim(),
+            roll_length: f.roll_length.value.trim(),
+            style_code: f.style_code.value.trim(),
+            listing_status: f.listing_status.value,
+          };
+          if (!payload.sku || !payload.name) {
+            toast("SKU and name are required");
+            return;
+          }
 
-    const file=f.imgFile.files[0];
-    if(file){
-      const up=await api.uploadImage(file,'products');
-      if(up.error){ toast(up.error.message||'Image upload failed'); return; }
-      payload.img=up.url;
-    }
+          const file = f.imgFile.files[0];
+          if (file) {
+            const up = await api.uploadImage(file, "products");
+            if (up.error) {
+              toast(up.error.message || "Image upload failed");
+              return;
+            }
+            payload.img = up.url;
+          }
 
-    let productId=id;
-    if(id){
-      const { error }=await api.updateProduct(id, payload);
-      if(error){ toast(error.message||'Could not save SKU'); return; }
-    } else {
-      payload.factory_id=factory.id;
-      const { product, error }=await api.createProduct(payload);
-      if(error){ toast(error.message||'Could not create SKU'); return; }
-      productId=product.id;
-    }
+          let productId = id;
+          if (id) {
+            const { error } = await api.updateProduct(id, payload);
+            if (error) {
+              toast(error.message || "Could not save SKU");
+              return;
+            }
+          } else {
+            payload.factory_id = factory.id;
+            const { product, error } = await api.createProduct(payload);
+            if (error) {
+              toast(error.message || "Could not create SKU");
+              return;
+            }
+            productId = product.id;
+          }
 
-    const breaks=[...priceBreakRows.children].map(row=>({
-      minQty:Number(row.querySelector('[data-bmin]').value)||0,
-      unitPrice:Number(row.querySelector('[data-bprice]').value)||0
-    })).filter(b=>b.minQty>0);
-    await api.setPriceBreaks(productId, breaks);
+          const breaks = [...priceBreakRows.children]
+            .map((row) => ({
+              minQty: Number(row.querySelector("[data-bmin]").value) || 0,
+              unitPrice: Number(row.querySelector("[data-bprice]").value) || 0,
+            }))
+            .filter((b) => b.minQty > 0);
+          await api.setPriceBreaks(productId, breaks);
 
-    toast(id?'SKU updated':'SKU added');
-    skuForm.hidden=true;
-    loadProducts();
-  });
+          toast(id ? "SKU updated" : "SKU added");
+          skuForm.hidden = true;
+          loadProducts();
+        });
 
-  // ---- Factory profile ----
-  const factoryForm=document.getElementById('factoryForm');
-  factoryForm.elements.name.value=factory.name||'';
-  factoryForm.elements.region.value=factory.region||'';
-  factoryForm.elements.loc.value=factory.loc||'';
-  factoryForm.elements.bio.value=factory.bio||'';
-  factoryForm.addEventListener('submit', async e=>{
-    e.preventDefault();
-    const f=factoryForm.elements;
-    const patch={ name:f.name.value.trim(), region:f.region.value.trim(), loc:f.loc.value.trim(), bio:f.bio.value.trim() };
-    const file=f.imgFile.files[0];
-    if(file){
-      const up=await api.uploadImage(file,'factories');
-      if(up.error){ toast(up.error.message||'Image upload failed'); return; }
-      patch.img=up.url;
-    }
-    const { error }=await api.updateFactory(factory.id, patch);
-    if(error){ toast(error.message||'Could not save profile'); return; }
-    Object.assign(factory, patch);
-    document.getElementById('welcomeName').textContent=`Welcome, ${factory.name}`;
-    toast('Factory profile updated');
-  });
+        // ---- Factory profile ----
+        const factoryForm = document.getElementById("factoryForm");
+        factoryForm.elements.name.value = factory.name || "";
+        factoryForm.elements.region.value = factory.region || "";
+        factoryForm.elements.loc.value = factory.loc || "";
+        factoryForm.elements.bio.value = factory.bio || "";
+        factoryForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const f = factoryForm.elements;
+          const patch = {
+            name: f.name.value.trim(),
+            region: f.region.value.trim(),
+            loc: f.loc.value.trim(),
+            bio: f.bio.value.trim(),
+          };
+          const file = f.imgFile.files[0];
+          if (file) {
+            const up = await api.uploadImage(file, "factories");
+            if (up.error) {
+              toast(up.error.message || "Image upload failed");
+              return;
+            }
+            patch.img = up.url;
+          }
+          const { error } = await api.updateFactory(factory.id, patch);
+          if (error) {
+            toast(error.message || "Could not save profile");
+            return;
+          }
+          Object.assign(factory, patch);
+          document.getElementById("welcomeName").textContent =
+            `Welcome, ${factory.name}`;
+          toast("Factory profile updated");
+        });
 
-  await loadProducts();
+        await loadProducts();
 
-  const Cop=window.ARCANA_Copilot;
-  const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
-  // Athelia Demand matches buyer briefs against this seller's real catalog (SELLER
-  // used to be a hardcoded /greenknit/i regex — now derived from the linked factory).
-  const SELLER=new RegExp(String(factory.name).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'i');
+        const Cop = window.ARCANA_Copilot;
+        const CHK =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m5 12 4 4 10-11"/></svg>';
+        // Athelia Demand matches buyer briefs against this seller's real catalog (SELLER
+        // used to be a hardcoded /greenknit/i regex — now derived from the linked factory).
+        const SELLER = new RegExp(
+          String(factory.name).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+          "i",
+        );
 
-  // ---- Athelia Demand: buyer briefs matched to this catalog ----
-  const dl=document.getElementById('demandList');
-  if(dl && Cop){
-    const label={fulfil:'You can fulfil',partial:'Partial fit',gap:'Catalog gap'};
-    dl.innerHTML=Cop.demandStream().map(d=>{
-      const m=Cop.demandMatch(d.text, SELLER);
-      const cta = m.status==='gap' ? ' cta' : '';
-      return `<div class="demand-row">
+        // ---- Athelia Demand: buyer briefs matched to this catalog ----
+        const dl = document.getElementById("demandList");
+        if (dl && Cop) {
+          const label = {
+            fulfil: "You can fulfil",
+            partial: "Partial fit",
+            gap: "Catalog gap",
+          };
+          dl.innerHTML = Cop.demandStream()
+            .map((d) => {
+              const m = Cop.demandMatch(d.text, SELLER);
+              const cta = m.status === "gap" ? " cta" : "";
+              return `<div class="demand-row">
         <div class="dm-body">
           <div class="dm-brief">${d.text}</div>
-          <div class="dm-meta"><span>${d.buyers} buyer${d.buyers>1?'s':''}</span><span>${d.when}</span></div>
+          <div class="dm-meta"><span>${d.buyers} buyer${d.buyers > 1 ? "s" : ""}</span><span>${d.when}</span></div>
           <div class="dm-reason">${m.reason}</div>
         </div>
-        <span class="dm-status ${m.status}${cta}" ${m.status==='gap'?'data-gap':''}>${label[m.status]}</span>
+        <span class="dm-status ${m.status}${cta}" ${m.status === "gap" ? "data-gap" : ""}>${label[m.status]}</span>
       </div>`;
-    }).join('');
-    dl.querySelectorAll('[data-gap]').forEach(el=>el.addEventListener('click',()=>toast('Draft a matching SKU in the Listing Drafter')));
-  }
+            })
+            .join("");
+          dl.querySelectorAll("[data-gap]").forEach((el) =>
+            el.addEventListener("click", () =>
+              toast("Draft a matching SKU in the Listing Drafter"),
+            ),
+          );
+        }
 
-  // ---- AI Listing Drafter: NL → structured SKU ----
-  const df=document.querySelector('[data-draft-form]');
-  if(df && Cop){
-    const out=document.getElementById('draftOut');
-    df.addEventListener('submit',e=>{ e.preventDefault();
-      const v=df.querySelector('textarea').value.trim();
-      if(!v){ toast('Describe the product first'); return; }
-      const d=Cop.draftListing(v);
-      const row=(k,val)=>`<div class="draft-field"><span class="dk">${k}</span><span class="dv">${val}</span></div>`;
-      const tags=d.certs.map(c=>`<span class="cop-tag">${c}</span>`).join('')||'<span class="dk">—</span>';
-      out.innerHTML=`
+        // ---- AI Listing Drafter: NL → structured SKU ----
+        const df = document.querySelector("[data-draft-form]");
+        if (df && Cop) {
+          const out = document.getElementById("draftOut");
+          df.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const v = df.querySelector("textarea").value.trim();
+            if (!v) {
+              toast("Describe the product first");
+              return;
+            }
+            const d = Cop.draftListing(v);
+            const row = (k, val) =>
+              `<div class="draft-field"><span class="dk">${k}</span><span class="dv">${val}</span></div>`;
+            const tags =
+              d.certs
+                .map((c) => `<span class="cop-tag">${c}</span>`)
+                .join("") || '<span class="dk">—</span>';
+            out.innerHTML = `
         <div class="do-head">${CHK} Draft SKU · review before publishing</div>
-        ${row('Product name', d.name)}
-        ${row('Category', d.category)}
-        ${row('Composition', d.composition)}
-        ${row('Specification', d.spec)}
-        ${row('MOQ', d.moq)}
-        ${row('Unit price', d.price!=null?('US$'+Number(d.price).toFixed(2)):'Set on publish')}
-        ${row('OEM-ready', d.oem?'Yes':'No')}
+        ${row("Product name", d.name)}
+        ${row("Category", d.category)}
+        ${row("Composition", d.composition)}
+        ${row("Specification", d.spec)}
+        ${row("MOQ", d.moq)}
+        ${row("Unit price", d.price != null ? "US$" + Number(d.price).toFixed(2) : "Set on publish")}
+        ${row("OEM-ready", d.oem ? "Yes" : "No")}
         <div class="draft-field"><span class="dk">Suggested tags</span><span class="dv tags">${tags}</span></div>
         <div class="draft-apply">
-          <button class="btn btn-green" style="padding:9px 16px" data-draft-publish>Publish draft SKU</button>
+          <button class="btn btn-green" style="padding:9px 16px" data-draft-publish>Open in SKU form</button>
           <button class="btn btn-out" style="padding:9px 16px" data-draft-clear>Discard</button>
         </div>`;
-      out.querySelector('[data-draft-publish]').addEventListener('click',()=>toast('SKU draft saved — sent for review'));
-      out.querySelector('[data-draft-clear]').addEventListener('click',()=>{ out.innerHTML=''; df.querySelector('textarea').value=''; });
-    });
-  }
+            out
+              .querySelector("[data-draft-publish]")
+              .addEventListener("click", async () => {
+                await openSkuForm(null);
+                const fields = skuForm.elements;
+                fields.name.value = d.name || "";
+                fields.category.value = d.category || "fabrics";
+                fields.comp.value = d.composition || "";
+                fields.moq.value = Number.parseInt(d.moq, 10) || "";
+                fields.price.value = d.price == null ? "" : d.price;
+                fields.pricing_mode.value =
+                  d.price == null ? "quote" : "fixed";
+                toast("Draft copied to the SKU form for review");
+              });
+            out
+              .querySelector("[data-draft-clear]")
+              .addEventListener("click", () => {
+                out.innerHTML = "";
+                df.querySelector("textarea").value = "";
+              });
+          });
+        }
 
-  document.querySelectorAll('main button.btn, main .seg button').forEach(b=>{
-    if(b.closest('.cop-seller')) return; // Copilot panels wire their own handlers
-    if(b.closest('#skuManager') || b.closest('#factoryForm')) return; // real CRUD wires its own handlers
-    b.addEventListener('click',()=>toast(b.textContent.trim().replace(/\s+/g,' ').slice(0,42)||'Updated'));
-  });
-  document.querySelectorAll('main a[href="#"]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();toast('Coming soon');}));
-};
-</script>
-</body>
+      };
+    </script>
+  </body>
 </html>

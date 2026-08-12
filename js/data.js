@@ -92,6 +92,7 @@ window.ARCANA_FACTORIES = [
 ];
 window.ARCANA_FACTORY_MAP = Object.fromEntries(window.ARCANA_FACTORIES.map(f=>[f.id,f]));
 window.ARCANA_FACTORY_BY_NAME = Object.fromEntries(window.ARCANA_FACTORIES.map(f=>[f.name,f.id]));
+window.ARCANA_FACTORY_BY_NAME['Shaoxing Shanning Textile'] = 'F-02';
 window.ARCANA_FACTORIES.forEach(f=>{
   // Never manufacture supplier facts for the storefront. Missing operational
   // details are rendered as "Ask supplier" at the decision point instead.
