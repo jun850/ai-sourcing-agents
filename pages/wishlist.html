@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-catalog data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body class="wishlist-page" data-catalog data-hdr="b" data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
 
 <main class="wrap">
@@ -35,7 +35,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const CAT_LABEL={fabrics:'Fabrics', accessories:'Accessories', trims:'Trims', yarns:'Yarns & Threads', oem:'OEM Services'};
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-  let q='', cat='all', sort='recent';
+  let q='', cat='all', sort='recent', remoteSkus=null, searchTimer=0, searchRequest=0;
+  const selected=new Set();
   const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
 
   function render(){
@@ -45,10 +46,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <span class="ce-ic">${IC.heart}</span>
         <h3>${T('Your wishlist is empty')}</h3>
         <p>${T('Save fabrics, trims and OEM packages you like — they’ll show up here.')}</p>
-        <a class="btn btn-green" href="../index.html">${T('Start shopping')}</a>
       </div>
       <section class="section" style="margin-top:32px">
-        <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
+        <div class="sec-head"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
         <div class="prod-grid" id="wlRecoGrid">${reco.map(p=>window.ARCANA_card(p)).join('')}</div>
       </section>`;
       window.ARCANA_wireCards(document.getElementById('wlRecoGrid'));
@@ -62,26 +62,28 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(cat!=='all') list=list.filter(i=>i.p.cat===cat);
     if(q.trim()){
       const needle=q.trim().toLowerCase();
-      list=list.filter(i=>[i.p.name,i.p.seller,i.p.comp,i.p.loc].some(v=>TR(v||'').toLowerCase().includes(needle)));
+      list=list.filter(i=>remoteSkus ? remoteSkus.has(i.p.id) : [i.p.name,i.p.seller,i.p.comp,i.p.loc].some(v=>TR(v||'').toLowerCase().includes(needle)));
     }
     if(sort==='recent') list=list.slice().reverse(); // saved() is oldest-first; newest saved shown first
     else if(sort==='name') list=list.slice().sort((a,b)=>TR(a.p.name).localeCompare(TR(b.p.name)));
     else if(sort==='priceAsc') list=list.slice().sort((a,b)=>a.p.price-b.p.price);
     else if(sort==='priceDesc') list=list.slice().sort((a,b)=>b.p.price-a.p.price);
 
-    const rows=list.map(i=>{const p=i.p; const sub=p.price*i.qty; return `
-      <tr data-row="${p.id}">
-        <td><div class="wl-prod"><img src="${productAsset(p)}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
-        <td>${money(p.price)}<small style="color:var(--muted);font-weight:500"> /${TR(p.unit)}</small></td>
-        <td><div class="qty" data-qty data-id="${p.id}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div></td>
-        <td class="wl-total">${money(sub)}</td>
-        <td style="white-space:nowrap">
-          <button class="btn btn-gold" data-move="${p.id}" style="padding:8px 14px;font-size:12.5px">${T('Add to cart')}</button>
+    const savedIds=new Set(saved.map(i=>i.id));
+    [...selected].forEach(id=>{ if(!savedIds.has(id)) selected.delete(id); });
+    const visibleIds=list.map(i=>i.id);
+    const selectedVisible=visibleIds.filter(id=>selected.has(id)).length;
+    const selectedIds=saved.map(i=>i.id).filter(id=>selected.has(id));
+    const rows=list.map(i=>{const p=i.p; return `
+      <tr data-row="${p.id}" class="${selected.has(p.id)?'is-selected':''}">
+        <td class="wl-check-cell"><input class="wl-check" type="checkbox" data-select="${p.id}" ${selected.has(p.id)?'checked':''} aria-label="${esc(T('Select'))} ${esc(TR(p.name))}"></td>
+        <td data-label="${T('Product')}"><div class="wl-prod"><img src="${productAsset(p)}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
+        <td data-label="${T('Unit price')}">${money(p.price)}<small class="wl-unit"> /${TR(p.unit)}</small></td>
+        <td class="wl-actions">
+          <button class="btn btn-out" data-add-one="${p.id}" type="button">${T('Add to cart')}</button>
           <a class="ci-remove" href="#" data-remove="${p.id}" style="margin-left:12px">${T('Remove')}</a>
         </td>
       </tr>`;}).join('');
-
-    const grand=list.reduce((s,i)=>s+i.p.price*i.qty,0);
 
     root.innerHTML=`
       <div class="acct-head">
@@ -90,68 +92,87 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
       <div class="wl-toolbar">
         <div class="wl-search">${IC.search}<input type="search" id="wlSearch" placeholder="${T('Search your wishlist…')}" value="${esc(q)}"></div>
-        <select class="wl-select" id="wlCat">
+        ${cats.length>1?`<select class="wl-select" id="wlCat">
           <option value="all">${T('All categories')}</option>
           ${cats.map(c=>`<option value="${c}" ${c===cat?'selected':''}>${T(CAT_LABEL[c]||c)}</option>`).join('')}
-        </select>
+        </select>`:''}
         <div class="sort-chips" id="wlSort">
           <button class="sort-chip${sort==='recent'?' on':''}" data-sort="recent" type="button">${T('Recently added')}</button>
           <button class="sort-chip${sort==='name'?' on':''}" data-sort="name" type="button">${T('Name A–Z')}</button>
           <button class="sort-chip${sort==='priceAsc'?' on':''}" data-sort="priceAsc" type="button">${T('Price: Low to High')}</button>
           <button class="sort-chip${sort==='priceDesc'?' on':''}" data-sort="priceDesc" type="button">${T('Price: High to Low')}</button>
         </div>
+        <label class="wl-mobile-sort"><span>${T('Sort by')}</span><select id="wlSortSelect"><option value="recent" ${sort==='recent'?'selected':''}>${T('Recently added')}</option><option value="name" ${sort==='name'?'selected':''}>${T('Name A–Z')}</option><option value="priceAsc" ${sort==='priceAsc'?'selected':''}>${T('Price: Low to High')}</option><option value="priceDesc" ${sort==='priceDesc'?'selected':''}>${T('Price: High to Low')}</option></select></label>
       </div>
 
-      <section class="panel" style="padding:0;overflow:hidden">
+      <div class="wl-selection" role="group" aria-label="${T('Wishlist selection')}">
+        <label class="wl-select-all" for="wlSelectAll">
+          <input id="wlSelectAll" class="wl-check" type="checkbox" ${visibleIds.length&&selectedVisible===visibleIds.length?'checked':''} ${visibleIds.length?'':'disabled'}>
+          <span>${T('Select all')}</span>
+        </label>
+        <span class="wl-selected-count" aria-live="polite">${selectedIds.length} ${T('selected')}</span>
+        <button class="btn btn-green" id="wlAddSelected" type="button" ${selectedIds.length?'':'disabled'}>${T('Add selected to cart')}${selectedIds.length?` (${selectedIds.length})`:''}</button>
+      </div>
+
+      <section class="panel wl-list-panel">
         <div style="overflow-x:auto">
           <table class="admin-tbl wl-tbl">
-            <thead><tr><th>${T('Product')}</th><th>${T('Unit price')}</th><th>${T('Quantity')}</th><th>${T('Total')}</th><th></th></tr></thead>
-            <tbody>${rows || `<tr><td colspan="5" class="muted" style="text-align:center;padding:36px">${T('No items match your search.')}</td></tr>`}</tbody>
+            <thead><tr><th><span class="visually-hidden">${T('Select')}</span></th><th>${T('Product')}</th><th>${T('Unit price')}</th><th></th></tr></thead>
+            <tbody>${rows || `<tr><td colspan="4" class="muted wl-no-match">${T('No items match your search.')}</td></tr>`}</tbody>
           </table>
         </div>
       </section>
 
       <div class="wl-summary">
         <span class="muted">${T('Showing')} ${list.length} ${T('of')} ${saved.length}</span>
-        <div style="display:flex;align-items:center;gap:18px">
-          <div><span class="muted" style="margin-right:8px">${T('Total')}</span><b style="font-size:17px">${money(grand)}</b></div>
-          <button class="btn btn-gold" id="wlAddAll" type="button">${T('Add all to cart')}</button>
-        </div>
       </div>
     `;
 
-    root.querySelectorAll('[data-qty]').forEach(qw=>{
-      const id=qw.dataset.id, inp=qw.querySelector('input');
-      const commit=v=>{Store.setSavedQty(id,v);render();};
-      qw.querySelector('[data-dec]').onclick=()=>commit(Math.max(1,(+inp.value||1)-1));
-      qw.querySelector('[data-inc]').onclick=()=>commit((+inp.value||1)+1);
-      inp.onchange=()=>commit(Math.max(1,parseInt(inp.value)||1));
-    });
-    root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{
-      e.preventDefault(); Store.removeSaved(a.dataset.remove); toast(T('Removed from wishlist')); render();
-    }));
-    root.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>{
-      const id=b.dataset.move, row=saved.find(i=>i.id===id);
-      Store.addToCart(id, row?row.qty:1); Store.removeSaved(id);
-      toast(T('Moved to cart'), {href:'cart.html', label:T('View cart')});
+    const selectAll=root.querySelector('#wlSelectAll');
+    if(selectAll){
+      selectAll.indeterminate=selectedVisible>0 && selectedVisible<visibleIds.length;
+      selectAll.addEventListener('change',()=>{
+        visibleIds.forEach(id=>selectAll.checked?selected.add(id):selected.delete(id));
+        render();
+      });
+    }
+    root.querySelectorAll('[data-select]').forEach(input=>input.addEventListener('change',()=>{
+      input.checked?selected.add(input.dataset.select):selected.delete(input.dataset.select);
       render();
     }));
-    const addAllBtn=root.querySelector('#wlAddAll');
-    if(addAllBtn) addAllBtn.addEventListener('click',()=>{
-      saved.forEach(i=>Store.addToCart(i.id, i.qty));
-      saved.forEach(i=>Store.removeSaved(i.id));
-      toast(T('Added all to cart'), {href:'cart.html', label:T('View cart')});
+    root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{
+      e.preventDefault(); selected.delete(a.dataset.remove); Store.removeSaved(a.dataset.remove); toast(T('Removed from wishlist')); render();
+    }));
+    root.querySelectorAll('[data-add-one]').forEach(b=>b.addEventListener('click',()=>{
+      Store.addToCart(b.dataset.addOne,1);
+      toast(T('Added to cart'), {href:'cart.html', label:T('View cart')});
+    }));
+    const addSelectedBtn=root.querySelector('#wlAddSelected');
+    if(addSelectedBtn) addSelectedBtn.addEventListener('click',()=>{
+      const ids=saved.map(i=>i.id).filter(id=>selected.has(id));
+      ids.forEach(id=>Store.addToCart(id,1));
+      selected.clear();
+      toast(`${ids.length} ${T(ids.length===1?'item':'items')} ${T('added to cart')}`, {href:'cart.html', label:T('View cart')});
       render();
     });
     const searchEl=root.querySelector('#wlSearch');
     if(searchEl) searchEl.addEventListener('input',e=>{
-      q=e.target.value; const pos=e.target.selectionStart;
+      q=e.target.value; remoteSkus=null; const pos=e.target.selectionStart, request=++searchRequest;
       render();
       const el=root.querySelector('#wlSearch');
       if(el){ el.focus(); el.setSelectionRange(pos,pos); }
+      clearTimeout(searchTimer);
+      if(!q.trim()) return;
+      searchTimer=setTimeout(async()=>{
+        const result=await window.ARCANA_API.searchPrivateAlgolia('wishlist',q);
+        if(request!==searchRequest || result.error || !result.hits.length) return;
+        remoteSkus=new Set(result.hits.map(hit=>hit.sku).filter(Boolean)); render();
+      },180);
     });
     const catEl=root.querySelector('#wlCat');
     if(catEl) catEl.addEventListener('change',()=>{ cat=catEl.value; render(); });
+    const sortEl=root.querySelector('#wlSortSelect');
+    if(sortEl) sortEl.addEventListener('change',()=>{ sort=sortEl.value; render(); });
     root.querySelectorAll('[data-sort]').forEach(c=>c.addEventListener('click',()=>{ sort=c.dataset.sort; render(); }));
   }
 

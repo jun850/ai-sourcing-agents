@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Create your account | Atelix</title>
-<meta name="description" content="Create a free Atelix account to source verified materials as a brand owner, or list your mill as a factory.">
+<meta name="description" content="Create a free Atelix account to source verified materials as a brand owner.">
 <meta name="robots" content="noindex, follow">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -15,7 +15,7 @@
 <main class="auth-wrap">
   <div class="auth-aside">
     <h1>Join the marketplace built for <span class="auth-type" data-typewriter="better sourcing.|your next collection.|the right partners.">better sourcing.</span></h1>
-    <p>Create a free account to source verified materials as a brand owner, or list your mill and reach global buyers as a factory.</p>
+    <p>Create a free account to source verified materials, trims, and OEM services as a brand owner.</p>
     <div class="auth-points">
       <div class="auth-point"><span class="ap-ic"></span><div><b id="signupFactoryCount">Verified factory directory</b><p>Fabrics, trims, accessories and full-package OEM.</p></div></div>
       <div class="auth-point"><span class="ap-ic"></span><div><b>Free to join</b><p>No listing fees to browse and request quotes.</p></div></div>
@@ -25,15 +25,11 @@
 
   <form class="auth-card" id="signupForm" novalidate>
     <h2>Create your account</h2>
-    <p class="sub">First, tell us who you are.</p>
-    <div class="role-toggle" data-role-toggle>
-      <button type="button" class="role-opt sel" data-role="buyer"><span class="ro-ic"></span><b>I'm a Brand Owner</b><span>Source fabrics &amp; OEM</span></button>
-      <button type="button" class="role-opt" data-role="seller"><span class="ro-ic"></span><b>I'm a Factory / Mill</b><span>Sell &amp; showcase products</span></button>
-    </div>
+    <p class="sub">Create your brand-owner account to begin sourcing.</p>
+    <div class="field-lg" data-field><label for="fullName">Full name</label><input id="fullName" autocomplete="name" placeholder="Your full name"><span class="err">Enter your full name.</span></div>
     <div class="field-lg" data-field><label for="company" id="companyLabel">Company name</label><input id="company" placeholder="Luxe Apparel Co."><span class="err">Company name is required.</span></div>
-    <div class="field-lg" data-field id="categoryField" hidden><label for="category">Supplier category</label><select id="category"><option value="">Select…</option><option value="fabric_mill">Fabrics</option><option value="accessories_supplier">Accessories</option><option value="trim_supplier">Trims</option><option value="yarn_supplier">Yarns &amp; Threads</option><option value="garment_manufacturer">OEM / Cut &amp; Sew (Garment Manufacturing)</option></select><span class="err">Select what you supply.</span></div>
     <div class="field-lg" data-field><label for="email">Work email</label><input id="email" type="email" placeholder="you@company.com" autocomplete="email"><span class="err">Enter a valid email address.</span></div>
-    <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select your country…</option><optgroup label="Southeast Asia"><option>Brunei</option><option>Cambodia</option><option>Indonesia</option><option>Laos</option><option>Malaysia</option><option>Myanmar</option><option>Philippines</option><option>Singapore</option><option>Thailand</option><option>Timor-Leste</option><option>Vietnam</option></optgroup><optgroup label="East Asia"><option>China</option><option>Hong Kong</option><option>Japan</option><option>Macau</option><option>Mongolia</option><option>South Korea</option><option>Taiwan</option></optgroup></select><span class="err">Select a country.</span></div>
+    <div class="field-lg" data-field><label for="country">Country</label><select id="country"><option value="">Select your country…</option></select><span class="err">Select a country.</span></div>
     <div class="field-lg" data-field><label for="pw">Password</label><div class="password-field"><input id="pw" type="password" placeholder="At least 6 characters" autocomplete="new-password"><button type="button" data-password-toggle="pw" aria-label="Show password"></button></div><span class="err">Use at least 6 characters.</span></div>
     <div class="field-lg" data-field><label for="pwConfirm">Confirm password</label><div class="password-field"><input id="pwConfirm" type="password" placeholder="Re-enter your password" autocomplete="new-password"><button type="button" data-password-toggle="pwConfirm" aria-label="Show password"></button></div><span class="err">Passwords do not match.</span></div>
     <label style="display:flex;gap:9px;align-items:flex-start;font-size:12.5px;color:var(--muted);margin-bottom:18px"><input type="checkbox" id="tos" style="width:auto;margin-top:2px"> <span>I agree to Atelix's <a href="#" style="color:var(--muted);text-decoration:underline">Terms</a> and <a href="#" style="color:var(--muted);text-decoration:underline">Privacy Policy</a>.</span></label>
@@ -80,8 +76,6 @@ window.ARCANA_PAGE = function({IC,toast}){
     setTimeout(tick,1350);
   };
   document.querySelectorAll('[data-typewriter]').forEach(typewriter);
-  document.querySelector('[data-role="buyer"] .ro-ic').innerHTML=IC.user;
-  document.querySelector('[data-role="seller"] .ro-ic').innerHTML=IC.seller;
   const btn=document.getElementById('submitBtn'), cl=document.getElementById('companyLabel');
   const formErrWrap=document.getElementById('formErrWrap'), formErr=document.getElementById('formErr');
   const clearForm=()=>{ formErrWrap.classList.remove('invalid'); formErr.textContent=''; };
@@ -94,28 +88,34 @@ window.ARCANA_PAGE = function({IC,toast}){
     toggle.addEventListener('click',()=>{const visible=input.type==='text';input.type=visible?'password':'text';toggle.setAttribute('aria-label',visible?'Show password':'Hide password');toggle.innerHTML=eye(!visible);});
   });
 
-  let role = new URLSearchParams(location.search).get('role')==='seller' ? 'seller':'buyer';
-  const categoryField=document.getElementById('categoryField');
-  const setRole=r=>{role=r;
-    document.querySelectorAll('[data-role]').forEach(b=>{const on=b.dataset.role===r;b.classList.toggle('sel',on);b.classList.toggle('seller-sel',on&&r==='seller');});
-    btn.className = r==='seller' ? 'btn btn-gold btn-block' : 'btn btn-green btn-block';
-    btn.textContent = r==='seller' ? 'Create Factory account' : 'Create Brand Owner account';
-    cl.textContent = r==='seller' ? 'Factory / mill name' : 'Company name';
-    categoryField.hidden = r!=='seller';
-    if(r!=='seller') categoryField.classList.remove('invalid');
-  };
-  setRole(role);
-  document.querySelectorAll('[data-role]').forEach(b=>b.addEventListener('click',()=>setRole(b.dataset.role)));
+  const role='buyer';
+  // Brand owners can register from any market. Keep supplier eligibility
+  // separate so the restricted supplier market list is never reused here.
+  const brandCountries=`Afghanistan|Albania|Algeria|Andorra|Angola|Antigua and Barbuda|Argentina|Armenia|Australia|Austria|Azerbaijan|Bahamas|Bahrain|Bangladesh|Barbados|Belarus|Belgium|Belize|Benin|Bhutan|Bolivia|Bosnia and Herzegovina|Botswana|Brazil|Brunei|Bulgaria|Burkina Faso|Burundi|Cabo Verde|Cambodia|Cameroon|Canada|Central African Republic|Chad|Chile|China|Colombia|Comoros|Congo (Republic of the)|Costa Rica|Côte d’Ivoire|Croatia|Cuba|Cyprus|Czechia|Democratic Republic of the Congo|Denmark|Djibouti|Dominica|Dominican Republic|Ecuador|Egypt|El Salvador|Equatorial Guinea|Eritrea|Estonia|Eswatini|Ethiopia|Fiji|Finland|France|Gabon|Gambia|Georgia|Germany|Ghana|Greece|Grenada|Guatemala|Guinea|Guinea-Bissau|Guyana|Haiti|Honduras|Hungary|Iceland|India|Indonesia|Iran|Iraq|Ireland|Israel|Italy|Jamaica|Japan|Jordan|Kazakhstan|Kenya|Kiribati|Kuwait|Kyrgyzstan|Laos|Latvia|Lebanon|Lesotho|Liberia|Libya|Liechtenstein|Lithuania|Luxembourg|Madagascar|Malawi|Malaysia|Maldives|Mali|Malta|Marshall Islands|Mauritania|Mauritius|Mexico|Micronesia|Moldova|Monaco|Mongolia|Montenegro|Morocco|Mozambique|Myanmar|Namibia|Nauru|Nepal|Netherlands|New Zealand|Nicaragua|Niger|Nigeria|North Korea|North Macedonia|Norway|Oman|Pakistan|Palau|Palestine|Panama|Papua New Guinea|Paraguay|Peru|Philippines|Poland|Portugal|Qatar|Romania|Russia|Rwanda|Saint Kitts and Nevis|Saint Lucia|Saint Vincent and the Grenadines|Samoa|San Marino|São Tomé and Príncipe|Saudi Arabia|Senegal|Serbia|Seychelles|Sierra Leone|Singapore|Slovakia|Slovenia|Solomon Islands|Somalia|South Africa|South Korea|South Sudan|Spain|Sri Lanka|Sudan|Suriname|Sweden|Switzerland|Syria|Taiwan|Tajikistan|Tanzania|Thailand|Timor-Leste|Togo|Tonga|Trinidad and Tobago|Tunisia|Türkiye|Turkmenistan|Tuvalu|Uganda|Ukraine|United Arab Emirates|United Kingdom|United States|Uruguay|Uzbekistan|Vanuatu|Vatican City|Venezuela|Vietnam|Yemen|Zambia|Zimbabwe`.split('|');
+  const supplierCountries=['Brunei','Cambodia','China','Hong Kong','Indonesia','Japan','Laos','Macau','Malaysia','Mongolia','Myanmar','Philippines','Singapore','South Korea','Taiwan','Thailand','Timor-Leste','Vietnam'];
+  const brandCountrySelect=document.getElementById('country');
+  brandCountries.forEach(country=>{const option=document.createElement('option');option.value=country;option.textContent=country;brandCountrySelect.append(option);});
 
   const form=document.getElementById('signupForm');
+  const blockedEmailDomain=domain=>{
+    const d=domain.toLowerCase();
+    const personal=['gmail.com','googlemail.com','yahoo.com','yahoo.co.uk','ymail.com','rocketmail.com','outlook.com','hotmail.com','live.com','msn.com','icloud.com','me.com','mac.com','aol.com','proton.me','protonmail.com','gmx.com','mail.com'];
+    return personal.includes(d)||/(^|\.)edu(\.|$)/.test(d);
+  };
+  const businessEmail=value=>{
+    const match=value.trim().toLowerCase().match(/^[^@\s]+@([^@\s]+)$/);
+    return !!match&&!blockedEmailDomain(match[1]);
+  };
   form.addEventListener('submit',async e=>{
     e.preventDefault();
     clearForm();
     let ok=true;
     const mark=(el,valid)=>{el.closest('[data-field]').classList.toggle('invalid',!valid);if(!valid)ok=false;};
+    mark(form.fullName, form.fullName.value.trim().length>1);
     mark(form.company, form.company.value.trim().length>1);
-    if(role==='seller') mark(form.category, !!form.category.value);
-    mark(form.email, /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.value.trim()));
+    const emailEligible=businessEmail(form.email.value);
+    mark(form.email, emailEligible);
+    if(!emailEligible) form.email.closest('[data-field]').querySelector('.err').textContent='Use your company email. Personal and education domains are not eligible.';
     mark(form.country, !!form.country.value);
     mark(form.pw, form.pw.value.length>=6);
     mark(form.pwConfirm, form.pwConfirm.value.length>0 && form.pwConfirm.value===form.pw.value);
@@ -123,13 +123,13 @@ window.ARCANA_PAGE = function({IC,toast}){
     if(!form.tos.checked) ok=false;
     if(!ok) return;
 
-    const email=form.email.value.trim(), company=form.company.value.trim();
+    const email=form.email.value.trim(), company=form.company.value.trim(), fullName=form.fullName.value.trim();
     btn.disabled=true; const label=btn.textContent; btn.textContent='Creating account…';
     try{
       const { error } = await window.ARCANA_API.signUp({
         email, password:form.pw.value, role,
-        companyName:company, country:form.country.value, fullName:company,
-        factoryType: role==='seller' ? form.category.value : undefined
+        companyName:company, country:form.country.value, fullName,
+        factoryType: undefined
       });
       if(error){
         const m=(error.message||'').toLowerCase();

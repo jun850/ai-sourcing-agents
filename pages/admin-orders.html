@@ -21,7 +21,7 @@
   </div>
 
   <section class="panel" style="padding:0;overflow:hidden;margin-bottom:20px">
-    <div style="padding:20px 24px 0"><h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Users</h2></div>
+    <div style="padding:20px 24px 0"><h2 style="font-family:var(--sans);font-size:19px;font-weight:600">Users</h2></div>
     <div style="overflow-x:auto">
       <table class="admin-tbl">
         <thead>
@@ -36,7 +36,7 @@
   <section class="panel" style="padding:0;overflow:hidden">
     <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:20px 24px 0">
       <div>
-        <h2 style="font-family:var(--serif);font-size:19px;font-weight:600">Orders</h2>
+        <h2 style="font-family:var(--sans);font-size:19px;font-weight:600">Orders</h2>
         <p class="muted" id="ordersFilterLabel" style="font-size:12.5px;margin-top:4px">Every order on Atelix.</p>
       </div>
       <button class="btn btn-out" type="button" id="clearUserFilter" style="padding:8px 14px;font-size:12.5px" hidden>Show all orders</button>
@@ -97,7 +97,7 @@ window.ARCANA_PAGE=async function({toast}){
   const ROLE_LABEL={admin:'Admin', seller:'Seller', buyer:'Buyer'};
 
   function showGate(title, body, cta){
-    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
+    gate.innerHTML=`<h2 style="font-family:var(--sans);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
     gate.hidden=false;
   }
 

@@ -12,9 +12,9 @@
 <body data-catalog data-root=".." data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
 <div id="hdr"></div>
 
-<div id="boGate" class="wrap" hidden style="padding:80px 0;text-align:center;max-width:520px"></div>
+<div id="boGate" class="wrap bo-gate" hidden></div>
 
-<main class="wrap" id="boMain" style="padding-top:24px;padding-bottom:40px" hidden>
+<main class="wrap brand-owner-page" id="boMain" hidden>
   <div class="acct-head">
     <h1>My Account</h1>
     <p class="sub">Manage your Atelix profile and view your order history.</p>
@@ -32,57 +32,57 @@
         <h2 id="boName">—</h2>
         <span class="role-tag" id="boRoleTag">Brand Owner</span>
       </div>
-      <nav class="panel acct-nav" aria-label="Account sections">
-        <a href="#profile" class="acct-nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg> Profile</a>
-        <a href="#address" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Address Book</a>
-        <a href="#orders" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg> Orders</a>
+      <nav class="panel acct-nav" role="tablist" aria-label="Account sections" aria-orientation="vertical">
+        <button type="button" role="tab" id="tab-profile" aria-controls="profile" aria-selected="true" tabindex="0" data-account-tab="profile" class="acct-nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg> Profile</button>
+        <button type="button" role="tab" id="tab-address" aria-controls="address" aria-selected="false" tabindex="-1" data-account-tab="address" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Address Book</button>
+        <button type="button" role="tab" id="tab-orders" aria-controls="orders" aria-selected="false" tabindex="-1" data-account-tab="orders" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg> Orders</button>
       </nav>
     </aside>
 
     <!-- main: profile form + order history -->
     <div class="acct-main">
-      <section class="panel acct-panel" id="profile">
+      <section class="panel acct-panel" id="profile" role="tabpanel" aria-labelledby="tab-profile">
         <div class="acct-panel-head"><h2>Profile Information</h2><p class="st-sub">Your personal and company details.</p></div>
         <form id="profileForm">
-          <div class="acct-row field-lg" data-field><label>Full name</label><input name="full_name"></div>
-          <div class="acct-row field-lg" data-field><label>Company name</label><input name="company_name" maxlength="100"></div>
-          <div class="acct-row field-lg" data-field><label>Country</label><input name="country"></div>
-          <div class="acct-row field-lg" data-field><label>Handle <span class="hint">unique, optional</span></label><input name="handle" placeholder="e.g. luxe-apparel"><span class="err">That handle is already taken.</span></div>
+          <div class="acct-row field-lg" data-field><label>Full name</label><input name="full_name" type="text"></div>
+          <div class="acct-row field-lg" data-field><label>Company name</label><input name="company_name" type="text" maxlength="100"></div>
+          <div class="acct-row field-lg" data-field><label>Country</label><input name="country" type="text"></div>
+          <div class="acct-row field-lg" data-field><label>Handle <span class="hint">unique, optional</span></label><input name="handle" type="text" placeholder="e.g. luxe-apparel"><span class="err">That handle is already taken.</span></div>
           <div class="acct-row field-lg" data-field><label>Email</label><input name="email" type="email"></div>
-          <div class="acct-form-actions"><button class="btn btn-green" type="submit" style="padding:10px 22px">Save changes</button></div>
+          <div class="acct-form-actions"><button class="btn btn-green acct-primary-action" type="submit">Save changes</button></div>
         </form>
       </section>
 
-      <section class="panel acct-panel" id="address">
+      <section class="panel acct-panel" id="address" role="tabpanel" aria-labelledby="tab-address" hidden>
         <div class="acct-panel-head"><h2>Address Book</h2><p class="st-sub">Shipping addresses for your orders — entered manually, no map lookup needed.</p></div>
         <div id="addrList"></div>
-        <button class="btn btn-out" type="button" id="btnAddAddress" style="margin-top:14px;padding:9px 16px">+ Add address</button>
+        <button class="btn btn-out acct-add-address" type="button" id="btnAddAddress">+ Add address</button>
 
-        <form id="addressForm" hidden style="margin-top:20px;border-top:1px solid var(--line-2);padding-top:18px">
+        <form id="addressForm" class="acct-address-form" hidden>
           <input type="hidden" name="id">
           <div class="addr-form-grid">
-            <div class="field-lg full"><label>Label <span class="hint">optional, e.g. Warehouse</span></label><input name="label"></div>
-            <div class="field-lg"><label>Recipient name</label><input name="recipient_name" required></div>
-            <div class="field-lg"><label>Phone</label><input name="phone"></div>
-            <div class="field-lg full"><label>Address line 1</label><input name="line1" required placeholder="Street, building, unit"></div>
-            <div class="field-lg full"><label>Address line 2 <span class="hint">optional</span></label><input name="line2"></div>
-            <div class="field-lg"><label>City</label><input name="city" required></div>
-            <div class="field-lg"><label>Province / State</label><input name="province"></div>
-            <div class="field-lg"><label>Postal code</label><input name="postal_code"></div>
-            <div class="field-lg"><label>Country</label><input name="country" required></div>
+            <div class="field-lg full"><label>Label <span class="hint">optional, e.g. Warehouse</span></label><input name="label" type="text"></div>
+            <div class="field-lg"><label>Recipient name</label><input name="recipient_name" type="text" required></div>
+            <div class="field-lg"><label>Phone</label><input name="phone" type="tel"></div>
+            <div class="field-lg full"><label>Address line 1</label><input name="line1" type="text" required placeholder="Street, building, unit"></div>
+            <div class="field-lg full"><label>Address line 2 <span class="hint">optional</span></label><input name="line2" type="text"></div>
+            <div class="field-lg"><label>City</label><input name="city" type="text" required></div>
+            <div class="field-lg"><label>Province / State</label><input name="province" type="text"></div>
+            <div class="field-lg"><label>Postal code</label><input name="postal_code" type="text"></div>
+            <div class="field-lg"><label>Country</label><input name="country" type="text" required></div>
           </div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:2px"><input type="checkbox" name="is_default"> Set as default address</label>
+          <label class="acct-default-address"><input type="checkbox" name="is_default"> Set as default address</label>
           <div class="acct-form-actions">
             <button class="btn btn-out" type="button" id="btnCancelAddress">Cancel</button>
-            <button class="btn btn-green" type="submit" style="padding:10px 22px">Save address</button>
+            <button class="btn btn-green acct-primary-action" type="submit">Save address</button>
           </div>
         </form>
       </section>
 
-      <section class="panel acct-panel orders" id="orders">
-        <div class="acct-panel-head"><h2>Order History</h2><p class="st-sub">Your recent orders, quotes and sample requests.</p></div>
+      <section class="panel acct-panel orders" id="orders" role="tabpanel" aria-labelledby="tab-orders" hidden>
+        <div class="acct-panel-head"><h2>Order History</h2><p class="st-sub">Your recent orders, quotes and purchases.</p></div>
         <div class="ord-tbl" id="ordTbl"></div>
-        <a class="link-arrow" href="category.html" style="margin-top:16px;color:var(--green)">Source more materials <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="link-arrow acct-source-link" href="category.html">Source more materials <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </section>
 
     </div>
@@ -106,18 +106,47 @@ window.ARCANA_PAGE=async function({toast}){
 
   const profile=await api.getMyProfile();
   if(!profile){
-    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">Log in to view your account</h2>
+    gate.innerHTML=`<h2>Log in to view your account</h2>
       <p class="muted">Sign in to manage your Atelix profile and see your order history.</p>
-      <a class="btn btn-green" href="login.html?next=brand-owner.html" style="margin-top:14px;display:inline-block">Log in</a>`;
+      <a class="btn btn-green" href="login.html?next=brand-owner.html">Log in</a>`;
     gate.hidden=false;
     return;
   }
   main.hidden=false;
-  // The Transactions tab links here from the mobile nav. The account content
-  // is revealed after the page loads, so restore the hash target explicitly.
-  if(location.hash==='#orders') requestAnimationFrame(()=>{
-    document.getElementById('orders')?.scrollIntoView({block:'start'});
+  const tabs=[...document.querySelectorAll('[data-account-tab]')];
+  const panels=tabs.map(tab=>document.getElementById(tab.dataset.accountTab));
+  const tablist=document.querySelector('.acct-nav[role="tablist"]');
+  const mobileTabs=window.matchMedia('(max-width:720px)');
+  const syncTabOrientation=()=>tablist.setAttribute('aria-orientation',mobileTabs.matches?'horizontal':'vertical');
+  syncTabOrientation();
+  if(mobileTabs.addEventListener) mobileTabs.addEventListener('change',syncTabOrientation);
+  else mobileTabs.addListener(syncTabOrientation);
+  function activateAccountTab(id,{focus=false,history=true}={}){
+    const next=tabs.find(tab=>tab.dataset.accountTab===id)||tabs[0];
+    tabs.forEach((tab,index)=>{
+      const active=tab===next;
+      tab.classList.toggle('on',active);
+      tab.setAttribute('aria-selected',String(active));
+      tab.tabIndex=active?0:-1;
+      panels[index].hidden=!active;
+    });
+    if(history) window.history.replaceState(null,'',`#${next.dataset.accountTab}`);
+    if(focus) next.focus();
+  }
+  tabs.forEach((tab,index)=>{
+    tab.addEventListener('click',()=>activateAccountTab(tab.dataset.accountTab));
+    tab.addEventListener('keydown',event=>{
+      if(!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      let next=index;
+      if(event.key==='Home') next=0;
+      else if(event.key==='End') next=tabs.length-1;
+      else next=(index+(event.key==='ArrowRight'||event.key==='ArrowDown'?1:-1)+tabs.length)%tabs.length;
+      activateAccountTab(tabs[next].dataset.accountTab,{focus:true});
+    });
   });
+  activateAccountTab(location.hash.slice(1),{history:false});
+  window.addEventListener('hashchange',()=>activateAccountTab(location.hash.slice(1),{history:false}));
 
   const ROLE_LABEL={admin:'Admin', seller:'Seller', buyer:'Brand Owner'};
   function renderProfile(p){
@@ -243,20 +272,6 @@ window.ARCANA_PAGE=async function({toast}){
   });
   loadAddresses();
 
-  // sidebar section nav: highlight the section currently scrolled into view
-  const navItems=[...document.querySelectorAll('.acct-nav-item')];
-  const sections=navItems.map(a=>document.getElementById(a.getAttribute('href').slice(1))).filter(Boolean);
-  if(sections.length){
-    const io=new IntersectionObserver(entries=>{
-      entries.forEach(en=>{
-        if(!en.isIntersecting) return;
-        const i=sections.indexOf(en.target);
-        navItems.forEach((a,j)=>a.classList.toggle('on', j===i));
-      });
-    }, { rootMargin:'-20% 0px -70% 0px' });
-    sections.forEach(s=>io.observe(s));
-  }
-
   // recent orders — status drives the pill colour
   const money=n=>window.ARCANA_money(n);
   const STATUS_META={
@@ -287,7 +302,7 @@ window.ARCANA_PAGE=async function({toast}){
       <div class="ord-cell"><span>Total</span><b>${o.total}</b></div>
       <div class="ord-cell"><span>Ordered</span><b>${o.date}</b></div>
       <span class="badge ${o.cls} ord-status">${o.status}</span>
-    </a>`).join('') : '<p class="muted" style="font-size:13px;padding:16px 4px">No orders yet.</p>';
+    </a>`).join('') : '<p class="muted acct-empty-copy">No orders yet.</p>';
 
 };
 </script>

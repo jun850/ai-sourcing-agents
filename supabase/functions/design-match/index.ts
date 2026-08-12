@@ -243,7 +243,7 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
     const score = typeBoost + catalogBoost + scoreText(source, briefWords);
     const coverage = brief.bomItems.filter((r: any) => scoreText(source, terms(`${r.name} ${r.specification} ${r.composition}`)) > 0).length;
     return { id: factory.slug, name: factory.name, type: factory.type, region: factory.region, loc: factory.loc,
-      verified: true, years: factory.years, moq: factory.moq, lead: factory.lead, rating: Number(factory.rating || 0),
+      verified: true, years: factory.years, moq: factory.moq, lead: factory.lead,
       orders: factory.orders_label, capacity: factory.capacity, certs: factory.certs || [], tags: factory.tags || [], img: factory.img,
       bio: factory.bio, matchScore: score + coverage * 2, coverage, requirementCount: brief.bomItems.length };
   }).filter(f => f.coverage > 0 || matchedSellerNames.has(f.name)).sort((a, b) => b.matchScore - a.matchScore).slice(0, 8);

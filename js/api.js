@@ -34,6 +34,8 @@ if(!sb || !sb.auth){
     getWishlist(){ return Promise.resolve([]); },
     syncWishlistItem(){ return Promise.resolve({ error: err }); },
     replaceWishlist(){ return Promise.resolve({ error: err }); },
+    getAlgoliaSearchToken(){ return Promise.resolve({ data:null, error: err }); },
+    searchPrivateAlgolia(){ return Promise.resolve({ hits:[], error: err }); },
     getMyProfile(){ return Promise.resolve(null); },
     updateProfile(){ return Promise.resolve({ error: err }); },
     updateEmail(){ return Promise.resolve({ error: err }); },
@@ -85,6 +87,42 @@ async function edgeResult(data, error){
     }catch(_){}
   }
   return { data:data||null, error };
+}
+
+/* Public product contract. Product writes pass through this narrow mapper so
+   callers cannot accidentally introduce ad-hoc field names or revive the
+   legacy free-form `spec` blob. Database enum/check constraints remain the
+   source of truth for allowed category, unit, price mode and status values. */
+const PRODUCT_INPUT_FIELDS = [
+  'sku','name','category','unit_type','pricing_mode','price','moq','factory_id',
+  'loc','comp','description','subcategory','construction','applications','season',
+  'color_family','origin_country','lead_time','handling_notes','gsm','fabric_width',
+  'roll_length','style_code','listing_status','is_private','img','badge'
+];
+const PRODUCT_TEXT_FIELDS = new Set(PRODUCT_INPUT_FIELDS.filter(key=>
+  !['price','moq','factory_id','is_private'].includes(key)
+));
+const PRODUCT_APPLICATIONS = new Set([
+  'Blouson','T-shirt','Shirt','Blouse','Jacket','Coat','Pants','Shorts','Skirt',
+  'Dress','Suit','Knitwear','Activewear','Underwear','Socks','Bag','Footwear',
+  'Multiple apparel types'
+]);
+function productInput(input, { create=false }={}){
+  const source=input||{}, payload={};
+  PRODUCT_INPUT_FIELDS.forEach(key=>{
+    if(source[key] === undefined) return;
+    if(PRODUCT_TEXT_FIELDS.has(key)) payload[key]=typeof source[key]==='string' ? source[key].trim() : source[key];
+    else if(key==='price') payload[key]=Number(source[key]) || 0;
+    else if(key==='moq') payload[key]=source[key]===null || source[key]==='' ? null : Number(source[key]);
+    else payload[key]=source[key];
+  });
+  if(create && (!payload.sku || !payload.name || !payload.factory_id)){
+    throw new Error('sku, name, and factory_id are required');
+  }
+  if(payload.applications && !PRODUCT_APPLICATIONS.has(payload.applications)){
+    throw new Error('applications must be a supported clothing type');
+  }
+  return payload;
 }
 
 /* ---- Shared cart helpers (used by placeOrder + the cart-sync methods) ---- */
@@ -235,8 +273,8 @@ const API = {
     const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
     const [prodRes, facRes] = await Promise.all([
       sb.from('products')
-        .select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name,region)')
-        .eq('listing_status','active'),
+        .select('sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name,region)')
+        .eq('listing_status','active').eq('is_private',false),
       sb.from('factories').select('*').eq('verify_state','verified')
     ]);
     if(prodRes.error) throw prodRes.error;
@@ -246,14 +284,13 @@ const API = {
       id: f.slug, name: f.name, type: TYPE_LABEL[f.type] || f.type,
       region: f.region, loc: f.loc, verified: f.verify_state === 'verified',
       years: f.years, moq: f.moq, lead: f.lead,
-      rating: f.rating != null ? Number(f.rating) : 0,
       orders: f.orders_label, capacity: f.capacity,
       certs: f.certs || [], tags: f.tags || [], img: f.img,
       sales: f.sales, phone: f.phone, web: f.web, founded: f.founded,
       employees: f.employees, area: f.area, port: f.port, bio: f.bio
     }));
     const products = (prodRes.data||[]).map(p=>({
-      id: p.sku, name: p.name, img: p.img, comp: p.comp, spec: p.spec,
+      id: p.sku, name: p.name, img: p.img, description:p.description, comp: p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', loc: p.loc,
@@ -420,6 +457,26 @@ const API = {
     }catch(error){ return { error }; }
   },
 
+  /* Private Algolia search never uses a browser-wide key. The Edge function
+     verifies the session and returns a five-minute, owner-filtered key. */
+  async getAlgoliaSearchToken(scope){
+    try { return await sb.functions.invoke('algolia-search-token', { body:{ scope } }); }
+    catch(error){ return { data:null, error }; }
+  },
+  async searchPrivateAlgolia(scope, query){
+    try{
+      const token=await API.getAlgoliaSearchToken(scope);
+      if(token.error || !token.data) return { hits:[], error:token.error||{message:'search unavailable'} };
+      const { appId,indexName,apiKey }=token.data;
+      const response=await fetch(`https://${appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(indexName)}/query`,{
+        method:'POST', headers:{'X-Algolia-Application-Id':appId,'X-Algolia-API-Key':apiKey,'Content-Type':'application/json'},
+        body:JSON.stringify({query:String(query||''),hitsPerPage:100,removeWordsIfNoResults:'none'})
+      });
+      if(!response.ok) throw new Error('search unavailable');
+      return { hits:(await response.json()).hits||[], error:null };
+    }catch(error){ return { hits:[], error }; }
+  },
+
   /* ---- Profile (self-serve edit, avatar upload) ---- */
   async getMyProfile(){
     try{
@@ -542,13 +599,27 @@ const API = {
     }catch(error){ return { error }; }
   },
 
+  async getMyPrivateProducts(){
+    try{
+      const { data, error }=await sb.from('products').select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,factories(name,region)').eq('listing_status','active').eq('is_private',true);
+      if(error) return { products:[], error };
+      const units={pc:'pcs',m:'m',kg:'kg',package:'package',style:'style',order:'order',color:'color'};
+      return { products:(data||[]).map(p=>({id:p.sku,name:p.name,img:p.img,comp:p.comp,spec:p.spec,price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${units[p.unit_type]||p.unit_type}`:'',seller:p.factories?.name||'Atelix Sourcing',loc:p.loc,country:p.factories?.region||'',badge:p.badge||'',cat:p.category,isPrivate:true})), error:null };
+    }catch(error){ return { products:[], error }; }
+  },
+
+  async adminSetPrivateProductAssignments(productId, emails){
+    try{const { error }=await sb.rpc('admin_set_private_product_assignments',{target_product:productId,brand_emails:emails});return {error:error||null};}
+    catch(error){return {error};}
+  },
+
   async createProduct(payload){
-    try{ const { data, error } = await sb.from('products').insert(payload).select().single(); return { product:data, error: error||null }; }
+    try{ const { data, error } = await sb.from('products').insert(productInput(payload,{create:true})).select().single(); return { product:data, error: error||null }; }
     catch(error){ return { error }; }
   },
 
   async updateProduct(id, patch){
-    try{ const { error } = await sb.from('products').update(patch).eq('id', id); return { error: error||null }; }
+    try{ const { error } = await sb.from('products').update(productInput(patch)).eq('id', id); return { error: error||null }; }
     catch(error){ return { error }; }
   },
 

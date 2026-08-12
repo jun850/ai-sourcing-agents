@@ -115,6 +115,10 @@ window.ARCANA_PAGE = function({IC,toast}){
   };
   passwordModeBtn.addEventListener('click',()=>setLoginMode(true));
   document.getElementById('magicModeBtn').addEventListener('click',()=>setLoginMode(false));
+  const offerPasswordFallback=()=>{
+    setLoginMode(true);
+    showForm('Magic links are temporarily rate-limited. Use your password to sign in now.');
+  };
   let finishing=false;
   async function finishLogin(){
     if(finishing) return; finishing=true;
@@ -169,11 +173,22 @@ window.ARCANA_PAGE = function({IC,toast}){
     const redirect=new URL(location.href); redirect.pathname=redirect.pathname.replace(/[^/]+$/, 'login.html'); redirect.search=next&&!/^(https?:)?\/\//i.test(next)?`?next=${encodeURIComponent(next)}`:''; redirect.hash='';
     try{
       const {error}=await window.ARCANA_API.signInWithMagicLink({email:em,redirectTo:redirect.toString()});
-      if(error){ showForm(error.message||'Could not send a magic link. Please try again.'); magicBtn.disabled=false; magicBtn.textContent=label; return; }
+      if(error){
+        const message=(error.message||'').toLowerCase();
+        const rateLimited=error.status===429||/rate limit|too many requests|email.*limit|limit.*email/.test(message);
+        magicBtn.disabled=false; magicBtn.textContent=label;
+        if(rateLimited){offerPasswordFallback();return;}
+        showForm(error.message||'Could not send a magic link. Please try again.'); return;
+      }
       document.getElementById('magicEmail').textContent=em;
       document.getElementById('magicIc').innerHTML=IC.check;
       form.hidden=true; document.getElementById('magicCard').hidden=false;
-    }catch(_){ showForm('Could not send a magic link. Please try again.'); magicBtn.disabled=false; magicBtn.textContent=label; }
+    }catch(err){
+      const message=(err&&err.message||'').toLowerCase();
+      magicBtn.disabled=false; magicBtn.textContent=label;
+      if(/rate limit|too many requests|email.*limit|limit.*email/.test(message)){offerPasswordFallback();return;}
+      showForm('Could not send a magic link. Please try again.');
+    }
   }
   magicBtn.addEventListener('click',sendMagicLink);
 };

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Product Details — Atelix</title>
-<meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, and order or request samples on Atelix.">
+<meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, then order or email the supplier through Atelix.">
 <link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/product.html">
 <meta property="og:type" content="product">
 <meta property="og:site_name" content="Atelix">
@@ -16,9 +16,9 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-catalog data-marketplace-search data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body data-catalog data-marketplace-search data-product-detail data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
-<main class="wrap"><div id="pdpRoot"></div><div style="height:40px"></div></main>
+<main class="wrap"><div id="pdpRoot"></div><div class="page-end-space" aria-hidden="true"></div></main>
 <div id="ftr"></div>
 <script src="../js/data.js"></script>
 <script src="../js/copilot.js"></script>
@@ -42,31 +42,58 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const isOEM=p.badge==='oem';
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
   const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
-  const catUrl='category.html?cat='+p.cat;
+  const catUrl='/categories/'+p.cat;
+  const productSubcategories={
+    fabrics:[['cotton','Cotton',['cotton']],['linen','Linen',['linen']],['polyester','Polyester',['polyester']],['viscose','Viscose & Rayon',['viscose','rayon','modal']],['knits','Knits',['knit','jersey','rib','fleece']],['denim','Denim',['denim','indigo']]],
+    accessories:[['labels','Labels & Tags',['label','tag','patch','badge']],['hardware','Garment Hardware',['hardware','grommet','rivet','buckle','hook','logo plate']]],
+    trims:[['zippers','Zippers',['zipper']],['buttons','Buttons',['button']],['interlining','Interlining',['interlining']],['lining','Lining',['lining']],['simple-trims','Tapes & Elastic',['tape','ribbon','elastic','lace','bias','cord','piping']]],
+    yarns:[['cotton','Cotton yarn',['cotton']],['polyester','Polyester thread',['polyester']],['wool','Wool yarn',['wool','merino','cashmere']],['nylon','Nylon yarn',['nylon']]],
+    oem:[['clothing','Clothing',['jacket','shirt','garment','apparel','clothing']],['accessories','Accessories',['bag','accessor','wallet']],['socks','Socks',['sock','hosiery']]]
+  };
+  function productSubcategory(product){
+    const text=[product.subcategory,product.name,product.comp,product.spec].filter(Boolean).join(' ').toLowerCase();
+    return (productSubcategories[product.cat]||[]).find(([slug,label,terms])=>String(product.subcategory||'').toLowerCase()===slug||String(product.subcategory||'').toLowerCase()===label.toLowerCase()||terms.some(term=>text.includes(term)));
+  }
 
   function build(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money;
-    const nm=TR(p.name), comp=TR(p.comp), spec=TR(p.spec), seller=TR(p.seller), loc=TR(p.loc);
+    const nm=TR(p.name), comp=TR(p.comp), seller=TR(p.seller), loc=TR(p.loc);
     const certs=(p.certs||[]).map(TR).join(' · ');
     const supplierHighlight=factory&&factory.highlight ? TR(factory.highlight) : '';
     document.title = `${nm} — ${seller} — Atelix`;
     const catLabel=TR({fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'}[p.cat]);
-    const specs=[
-      [T('Composition'),comp,'M20 7 12 3 4 7v10l8 4 8-4z'],
-      [T('Specification'),spec,'M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3'],
-      ...(certs ? [[T('Certifications'),certs,'M20 7 12 3 4 7v5c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10zM8.5 12l2.2 2.2 4.8-4.8']] : []),
-      [T('Min. Order'),TR(p.moq),'M21 8 12 3 3 8l9 5zM3 8v8l9 5 9-5V8'],
-      [T('Lead Time'),TR(leadMap[p.cat]),'M12 8v4l3 2'],
-      [T('Category'),catLabel,'M4 4h16v16H4z'],
-      [T('Country of Origin'),TR(p.country||p.loc.split(',').pop().trim()),'M3 12h18'],
-    ];
+    const subcategory=productSubcategory(p);
+    // A product is a destination, not another catalog level. The hierarchy
+    // ends at L3 when available, or L2 when the product is not classified yet.
+    const subcategoryUrl=subcategory?`${catUrl}/${subcategory[0]}`:'';
+    const breadcrumbItems=[['Home','/'],['All categories','/categories'],[catLabel,subcategory?catUrl:'']];
+    if(subcategory)breadcrumbItems.push([TR(subcategory[1]),subcategoryUrl]);
+    const mobileBack=document.querySelector('.mobile-back');
+    if(mobileBack){
+      const backLabel=TR(subcategory?subcategory[1]:catLabel);
+      mobileBack.href=subcategoryUrl||catUrl;
+      mobileBack.setAttribute('aria-label',`Back to ${backLabel}`);
+    }
+    const supplierCity=String(loc||'').split(',')[0].trim();
+    const supplierCountry=TR(String(p.origin_country||p.country||loc||'').split(',').pop().trim());
+    const supplierParts=[seller,supplierCountry,supplierCity].filter((value,index,all)=>value&&all.indexOf(value)===index);
+    const sanitizeRichText=window.ATELIX_sanitizeRichText||(value=>String(value||''));
+    const productSummary=sanitizeRichText(p.description||TR(`A ${comp||catLabel.toLowerCase()} product for considered sourcing and development.`));
+    const productSpecs=[
+      [T('Material'),comp],...(p.construction?[[T('Construction'),TR(p.construction)]]:[]),
+      ...(p.gsm?[[T('Weight'),TR(p.gsm)]]:[]),...(p.fabric_width?[[T('Width'),TR(p.fabric_width)]]:[]),
+      ...(p.roll_length?[[T('Roll length'),TR(p.roll_length)]]:[]),...(p.style_code?[[T('Style code'),TR(p.style_code)]]:[]),
+      [T('Category'),catLabel+(p.subcategory?` · ${TR(p.subcategory)}`:'')],
+      ...(p.applications?[[T('Best for'),TR(p.applications)]]:[]),...(p.season?[[T('Season'),TR(p.season)]]:[]),
+      ...(p.color_family?[[T('Colour family'),TR(p.color_family)]]:[]),...(certs?[[T('Certifications'),certs]]:[])
+    ].filter(([,value])=>value);
+    const sourcingSpecs=[[T('Order unit'),TR(p.unit)],['MOQ',TR(p.moq)],['Lead time',TR(p.lead_time||leadMap[p.cat])],['Origin',TR(p.origin_country||p.country||p.loc.split(',').pop().trim())]].filter(([,value])=>value&&value!=='—');
     document.getElementById('pdpRoot').innerHTML=`
-    <nav class="crumbs"><a href="../index.html">Home</a>${IC.chevR}<a href="${catUrl}">${catLabel}</a>${IC.chevR}<span class="cur">${nm}</span></nav>
+    <nav class="crumbs" aria-label="Breadcrumb"><ol>${breadcrumbItems.map(([label,href],index)=>`<li>${href?`<a href="${href}">${label}</a>`:`<span aria-current="page">${label}</span>`}</li>`).join('')}</ol></nav>
     <div class="pdp">
       <div class="gallery">
         <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img src="${productAsset(p)}" alt="${nm}">
           ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
-          <div class="caption">${comp} · ${spec} <span class="circ" style="width:22px;height:22px;box-shadow:none;background:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg></span></div>
         </div>
       </div>
       <div class="pdp-info">
@@ -80,27 +107,27 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <div class="muted" style="font-size:13px">SKU: ${p.id}</div>
         </div>
         <h1>${nm}</h1>
-        <p class="desc">${comp} · ${spec}. ${T('Sourced from')} ${seller}, ${loc}.</p>
-        <div class="spec-grid">
-          ${specs.map(s=>`<div class="spec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="${s[2]}"/></svg><div><span>${s[0]}</span><b>${s[1]}</b></div></div>`).join('')}
+        <p class="desc pdp-supplier-line">${supplierParts.join(' · ')}</p>
+        <div class="pdp-details">
+          <section class="pdp-about"><h2>${T('About this product')}</h2><div class="rich-content">${productSummary}</div></section>
+          <section class="pdp-spec-panel"><h2>${T('Specifications')}</h2><dl>${productSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl></section>
+          <section class="pdp-spec-panel pdp-sourcing"><h2>${T('Sourcing')}</h2><dl>${sourcingSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}</section>
         </div>
         <div class="price-box">
           <div><span class="muted" style="font-size:13px">${p.price>0?`${T('From')} ${T('Unit Price')}`:T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${T('From')} ${money(p.price)} <small>/${TR(p.unit)}</small>`:T('Contact for quote')}</div></div>
           ${p.price>0?`<p class="pdp-price-note">Price depends on order quantity and requirements. Contact the supplier to confirm the details.</p>`:''}
         </div>
-        <div class="buy-row"><div class="buy-qty"><span class="buy-qty-lbl">${T('Quantity')}</span>
-          <div class="qty" data-qty id="pdpQty"><button data-dec aria-label="Decrease">−</button><input value="1" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
-          <span class="muted" style="font-size:12.5px">${TR(p.unit)} · ${T('MOQ')} ${TR(p.moq)}</span></div></div>
+        <div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
+          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="Decrease quantity">−</button><input id="pdpQuantity" value="1" min="1" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="Increase quantity">+</button></div>
+        </div></div>
         <div class="pdp-cta">
           ${p.price>0
-            ? `<button class="btn btn-gold" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" id="buyBtn">${T('Buy Now')}</button>
-               <button class="btn btn-out" id="emailBtn">${IC.msg} Email supplier</button>
-               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`
-            : `<button class="btn btn-gold" id="emailBtn">${IC.msg} Email supplier</button>
-               <button class="btn btn-out" id="sampleBtn">${T('Request Sample')}</button>`}
+            ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
+               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} Email supplier</button>`
+            : `<button class="btn btn-gold" type="button" id="emailBtn">${IC.msg} Email supplier</button>`}
         </div>
         <div class="pdp-mini">
-          <button class="fav pdp-save" data-fav-id="${p.id}">${IC.bookmark} <span>${T('Wishlist')}</span></button>
+          <button class="fav pdp-save" data-fav-id="${p.id}">${IC.heart} <span>${T('Wishlist')}</span></button>
           <button class="pdp-share" data-share>${IC.share} ${T('Share')}</button>
         </div>
         <a class="pdp-supplier" href="${facId?`supplier.html?id=${facId}`:catUrl}">
@@ -112,7 +139,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </div>
     ${isOEM && p.cat!=='oem' ? oemSection(T,TR,money) : ''}
     <section class="section">
-      <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('More in')} ${catLabel}</h2><a class="link-arrow" href="${catUrl}">${T('View all')} ${IC.chevR}</a></div>
+      <div class="sec-head"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('More in')} ${catLabel}</h2><a class="link-arrow" href="${catUrl}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,6).map(x=>window.ARCANA_card(x,{href:'product.html?id='+x.id})).join('')||`<p class="muted">—</p>`}</div>
     </section>`;
 
@@ -120,6 +147,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const qi=document.querySelector('#pdpQty input');
     document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(1,(+qi.value||1)-1);
     document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||1)+1;
+    qi.addEventListener('change',()=>{qi.value=Math.max(1,Math.floor(Number(qi.value)||1));});
     const add=document.getElementById('addBtn');
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
@@ -137,10 +165,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const emailBtn=document.getElementById('emailBtn');
     if(emailBtn) emailBtn.addEventListener('click', ()=>{
       window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines()});
-    });
-    const sampleBtn=document.getElementById('sampleBtn');
-    if(sampleBtn) sampleBtn.addEventListener('click', ()=>{
-      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines(['Request: sample'])});
     });
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
@@ -174,7 +198,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <div class="cm-title">Matches your Athelia search · ${r.score}%<span>“${brief.text}”</span></div>
         </div>
         <div class="cop-chips">${hits}${miss}</div>`;
-      const sg=document.querySelector('.spec-grid'); if(sg) sg.insertAdjacentElement('afterend',panel);
+      const sg=document.querySelector('.pdp-details'); if(sg) sg.insertAdjacentElement('afterend',panel);
       requestAnimationFrame(()=>requestAnimationFrame(()=>panel.classList.add('in')));
     }
   }

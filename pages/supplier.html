@@ -109,7 +109,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   <div class="feat-fabrics">
     <section class="panel" style="padding:26px 28px">
-      <div class="sec-head" style="margin-bottom:20px"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('sp.productsFrom')}</h2><a class="link-arrow" href="category.html?cat=${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
+      <div class="sec-head" style="margin-bottom:20px"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('sp.productsFrom')}</h2><a class="link-arrow" href="/categories/${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${feat.map(card).join('')}</div>
     </section>
     <aside class="panel overview">

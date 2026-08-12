@@ -3,18 +3,19 @@
 'use strict';
 
 /* ---------- path helpers ---------- */
-const ROOT = document.body.dataset.root === '..'; // true inside /pages
-const P  = n => ROOT ? n : 'pages/' + n;          // link to a /pages file
-const HOME = ROOT ? '../index.html' : 'index.html';
-const ASSET = f => (ROOT ? '../assets/' : 'assets/') + f;
-const productAsset = product => {
-  const image = product && product.img;
-  return ASSET(image && /\.(?:avif|jpe?g|png|webp)$/i.test(image) ? image : (image || 'fabric-stack') + '.webp');
+const CLEAN_MARKETPLACE_ROUTE = /^\/(?:categories|search)(?:\/|$)/.test(location.pathname);
+const ROOT = document.body.dataset.root === '..' && !CLEAN_MARKETPLACE_ROUTE; // true inside /pages
+const P  = n => CLEAN_MARKETPLACE_ROUTE ? '/pages/'+n : (ROOT ? n : 'pages/'+n);
+const HOME = CLEAN_MARKETPLACE_ROUTE ? '/' : (ROOT ? '../index.html' : 'index.html');
+const ASSET = f => (CLEAN_MARKETPLACE_ROUTE ? '/assets/' : (ROOT ? '../assets/' : 'assets/')) + f;
+const resolveAsset = (value, fallback) => {
+  const image=String(value||'').trim();
+  if(!image) return ASSET(`${fallback}.webp`);
+  if(/^(?:https?:|data:|blob:|\/|\.\.?\/)/i.test(image)) return image;
+  return ASSET(/\.(?:avif|jpe?g|png|webp|gif|svg)$/i.test(image) ? image : `${image}.webp`);
 };
-const factoryAsset = factory => {
-  const image = factory && factory.img;
-  return ASSET(image && /\.(?:avif|jpe?g|png|webp)$/i.test(image) ? image : (image || 'factory-interior') + '.webp');
-};
+const productAsset = product => resolveAsset(product && product.img, 'fabric-stack');
+const factoryAsset = factory => resolveAsset(factory && factory.img, 'factory-interior');
 const factoryLocation = factory => {
   const cityById={
     'F-01':'Shaoxing','F-02':'Shaoxing','F-03':'Guangzhou','F-04':'Dongguan','F-05':'Huzhou',
@@ -27,6 +28,90 @@ const factoryLocation = factory => {
 window.ATELIX_factoryAsset=factoryAsset;
 window.ATELIX_factoryLocation=factoryLocation;
 window.ATELIX_productAsset=productAsset;
+document.addEventListener('error',event=>{
+  const image=event.target;
+  if(!(image instanceof HTMLImageElement)||image.dataset.atelixFallback==='done')return;
+  if(!image.dataset.atelixFallback&&/\.webp(?:$|[?#])/i.test(image.src)){
+    image.dataset.atelixFallback='jpg';
+    image.src=image.src.replace(/\.webp(?=$|[?#])/i,'.jpg');
+    return;
+  }
+  image.dataset.atelixFallback='done';
+  image.src=ASSET('fabric-stack.webp');
+},true);
+
+/* ---------- safe, lightweight rich text for editable product copy ---------- */
+function sanitizeRichText(value){
+  const template=document.createElement('template');
+  template.innerHTML=String(value||'');
+  const allowed=new Set(['P','BR','STRONG','B','EM','I','U','UL','OL','LI','FONT']);
+  const clean=(node, parent)=>{
+    if(node.nodeType===Node.TEXT_NODE){parent.appendChild(document.createTextNode(node.textContent||''));return;}
+    if(node.nodeType!==Node.ELEMENT_NODE)return;
+    const tag=node.tagName;
+    if(tag==='SCRIPT'||tag==='STYLE'||tag==='IFRAME'||tag==='OBJECT')return;
+    const target=allowed.has(tag)?document.createElement(tag==='B'?'strong':tag==='I'?'em':tag.toLowerCase()):parent;
+    if(target!==parent){
+      if(tag==='FONT'){
+        const size=node.getAttribute('size');
+        if(['2','3','4'].includes(size))target.setAttribute('size',size);
+      }
+      parent.appendChild(target);
+    }
+    [...node.childNodes].forEach(child=>clean(child,target));
+  };
+  const output=document.createElement('div');
+  [...template.content.childNodes].forEach(node=>clean(node,output));
+  return output.innerHTML;
+}
+function initRichEditors(scope=document){
+  scope.querySelectorAll('[data-rich-editor]').forEach(editor=>{
+    if(editor.dataset.richReady)return;
+    editor.dataset.richReady='1';
+    const input=editor.querySelector('[data-rich-input]');
+    const value=editor.querySelector('[data-rich-value]');
+    let range=null;
+    const remember=()=>{
+      const selection=getSelection();
+      if(selection&&selection.rangeCount&&input.contains(selection.anchorNode))range=selection.getRangeAt(0).cloneRange();
+    };
+    const restore=()=>{
+      input.focus();
+      if(!range)return;
+      const selection=getSelection();selection.removeAllRanges();selection.addRange(range);
+    };
+    const sync=()=>{value.value=sanitizeRichText(input.innerHTML).trim();};
+    ['keyup','mouseup','input'].forEach(type=>input.addEventListener(type,()=>{remember();sync();}));
+    input.addEventListener('blur',()=>{input.innerHTML=sanitizeRichText(input.innerHTML);sync();});
+    input.addEventListener('paste',event=>{
+      event.preventDefault();
+      document.execCommand('insertText',false,event.clipboardData.getData('text/plain'));
+    });
+    editor.querySelectorAll('[data-rich-command]').forEach(button=>button.addEventListener('click',()=>{
+      restore();document.execCommand(button.dataset.richCommand,false);remember();sync();
+    }));
+    const size=editor.querySelector('[data-rich-size]');
+    if(size)size.addEventListener('change',()=>{restore();document.execCommand('fontSize',false,size.value);remember();sync();});
+  });
+}
+function setRichEditor(form,name,value){
+  const hidden=form.elements[name];
+  const editor=hidden&&hidden.closest('[data-rich-editor]');
+  if(!editor)return;
+  const safe=sanitizeRichText(value);
+  editor.querySelector('[data-rich-input]').innerHTML=safe;
+  hidden.value=safe;
+}
+function syncRichEditors(scope=document){
+  scope.querySelectorAll('[data-rich-editor]').forEach(editor=>{
+    const input=editor.querySelector('[data-rich-input]');
+    editor.querySelector('[data-rich-value]').value=sanitizeRichText(input.innerHTML).trim();
+  });
+}
+window.ATELIX_sanitizeRichText=sanitizeRichText;
+window.ATELIX_initRichEditors=initRichEditors;
+window.ATELIX_setRichEditor=setRichEditor;
+window.ATELIX_syncRichEditors=syncRichEditors;
 
 /* ---------- stores (localStorage, mocked backend) ---------- */
 const LS = {
@@ -115,9 +200,10 @@ window.ARCANA_getCopilotMatchFor = getCopilotMatchFor;
 
 /* ---------- icons ---------- */
 const IC = {
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7"/><path d="M5.5 9v11h13V9M9.5 20v-6h5v6"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>',
   caret:'<svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
-  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 20s-7-4.35-9.3-8.5C1 8 2.8 5 6 5c2 0 3.2 1.2 4 2.3C10.8 6.2 12 5 14 5c3.2 0 5 3 3.3 6.5C19 15.65 12 20 12 20z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z"/></svg>',
   globe:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg>',
   user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
   seller:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 21h18M5 21V9l5-3v15M14 21V9l5 3v9M9 12h.01M9 15h.01"/></svg>',
@@ -145,7 +231,6 @@ window.ARCANA_IC = IC;
 
 /* ---------- shared product card (single source, used on every surface) ---------- */
 // Shared cards always show the catalog price. Campaign pricing is currently hidden.
-const rndRating = id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return (4.4+(h%7)/10).toFixed(1);};
 const soldOf = id=>['500+','1rb+','2rb+','5rb+','800+'][id.charCodeAt(4)%5];
 /* opts: {href, shop=true, fabricSpec=false} — language + currency aware */
 function cardHTML(p, opts){
@@ -164,7 +249,7 @@ function cardHTML(p, opts){
     : `<span class="tquote">${t('Contact for quote')}</span>`;
   const meta = isService
     ? `<div class="tmeta">${IC.truck} ${spec} ${t('lead')} <span class="dot">·</span> ${t('MOQ')} ${tr(p.moq)}</div>`
-    : `<div class="tmeta"><span class="star">★</span> ${rndRating(p.id)} <span class="dot">·</span> ${soldOf(p.id)} ${t('sold')}</div>`;
+    : `<div class="tmeta">${soldOf(p.id)} ${t('sold')}</div>`;
   const shopRow = (opts.shop===false) ? '' :
     `<div class="tshop"><span class="tnm">${tr(p.seller)}</span><span class="tvf">${IC.check}</span></div>`;
   return `<a class="tcard" href="${href}">
@@ -227,27 +312,72 @@ function markSVG(color){return `<svg class="mark" viewBox="0 0 2000 2000" fill="
 function brand(){
   return `<a class="brand" href="${HOME}" aria-label="Atelix">${markSVG()}<span class="brand-name"><span class="word">Atelix</span></span></a>`;
 }
+const ALGOLIA_CONFIG_URL='https://bobwfxvxzjovpgmmqsew.supabase.co/functions/v1/algolia-public-config';
+let algoliaExperiencesPromise=null;
+let algoliaConfigPromise=null;
+function getAlgoliaConfig(){
+  if(!algoliaConfigPromise) algoliaConfigPromise=fetch(ALGOLIA_CONFIG_URL).then(response=>{
+    if(!response.ok) throw new Error('search_config_unavailable');
+    return response.json();
+  });
+  return algoliaConfigPromise;
+}
+async function searchPublicAlgolia(kind,query,options){
+  const config=await getAlgoliaConfig();
+  const index=config.indices&&config.indices[kind];
+  if(!index) throw new Error('search_index_unavailable');
+  const params={attributesToHighlight:[],highlightPreTag:'',highlightPostTag:'',...(options||{})};
+  delete params.hitsPerPage; delete params.page;
+  const response=await fetch(`https://${config.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/query`,{
+    method:'POST',headers:{'X-Algolia-Application-Id':config.appId,'X-Algolia-API-Key':config.apiKey,'Content-Type':'application/json'},
+    body:JSON.stringify({query:String(query||''),hitsPerPage:options?.hitsPerPage||12,page:options?.page||0,...params})
+  });
+  if(!response.ok) throw new Error('search_request_failed');
+  return response.json();
+}
+window.ATELIX_getAlgoliaConfig=getAlgoliaConfig;
+window.ATELIX_searchPublicAlgolia=searchPublicAlgolia;
+function mountAlgoliaExperiences(){
+  const mount=document.getElementById('autocomplete');
+  if(!mount || mount.dataset.algoliaMount==='active') return;
+  mount.dataset.algoliaMount='loading';
+  const load=async()=>{
+    try{
+      const config=await getAlgoliaConfig();
+      const src=new URL('https://cdn.jsdelivr.net/npm/@algolia/experiences/dist/experiences.js');
+      src.searchParams.set('appId',config.appId); src.searchParams.set('apiKey',config.apiKey); src.searchParams.set('experienceId',config.experienceId); src.searchParams.set('env',config.env||'prod');
+      if(!document.querySelector('script[data-algolia-experiences]')){
+        await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=src.href;script.dataset.algoliaExperiences='';script.onload=resolve;script.onerror=reject;document.body.appendChild(script);});
+      }
+      window.AlgoliaExperiences?.run?.();
+      mount.dataset.algoliaMount='active';
+    }catch(_){ mount.dataset.algoliaMount='fallback'; }
+  };
+  algoliaExperiencesPromise=algoliaExperiencesPromise||load();
+}
+window.addEventListener('pagehide',()=>window.AlgoliaExperiences?.dispose?.(),{once:true});
+
 const searchBox=(ph)=>`<form class="search" role="search" data-search-form>
   <label class="visually-hidden" for="site-search">Search</label>${IC.search}
   <input id="site-search" name="q" placeholder="${ph}" data-i18n-ph="search.ph" autocomplete="off" spellcheck="false"
-    role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="search-pop">
+    role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="autocomplete">
   <button type="button" class="s-design" data-design-match aria-label="Match a design reference" title="Match a tech pack or design reference">${IC.document}</button>
   <button type="button" class="s-cam" data-cam aria-label="Search fabrics by photo" title="Search fabrics by photo">${IC.camera}</button>
-  <div class="s-pop" id="search-pop" role="listbox" aria-label="Search suggestions" data-search-pop hidden></div>
+  <div class="s-pop" id="autocomplete" role="listbox" aria-label="Search suggestions" data-search-pop hidden></div>
 </form>`;
 
 const KAT=[
-  ['Fabrics','Woven · Knit · Denim · Linen · Satin · Fleece · Canvas','fabrics'],
-  ['Accessories','Zippers · Buttons · Labels · Hooks · Rivets · Buckles','accessories'],
-  ['Trims','Ribbons · Elastics · Tapes · Cords · Lace · Bias binding','trims'],
-  ['Yarns & Threads','Cotton · Polyester · Nylon · Blended · Sewing thread','yarns'],
-  ['OEM Services','Sampling · Cut & Sew · Full Package · Private Label · Bulk','oem'],
-  ['Factories','Verified mills · By region · Sustainable · OEM factories','factories'],
+  {label:'Fabrics',slug:'fabrics',subs:[['Cotton','cotton'],['Linen','linen'],['Polyester','polyester'],['Viscose & Rayon','viscose'],['Knits','knits'],['Denim','denim']]},
+  {label:'Accessories',slug:'accessories',subs:[['Labels & Tags','labels'],['Garment Hardware','hardware']]},
+  {label:'Trims',slug:'trims',subs:[['Zippers','zippers'],['Buttons','buttons'],['Interlining','interlining'],['Lining','lining'],['Tapes & Elastic','simple-trims']]},
+  {label:'Yarns & Threads',slug:'yarns',subs:[['Cotton yarn','cotton'],['Polyester thread','polyester'],['Wool yarn','wool'],['Nylon yarn','nylon']]},
+  {label:'OEM Services',slug:'oem',subs:[['Clothing','clothing'],['Accessories','accessories'],['Socks','socks']]},
+  {label:'Factories',slug:'factories',subs:[['Verified mills',''],['OEM factories',''],['Material suppliers','']]},
 ];
-const katHref=slug=>slug==='factories'?P('factories.html'):P('category.html')+'?cat='+slug;
+const katHref=(slug,sub='')=>slug==='factories'?P('factories.html'):'/categories/'+slug+(sub?'/'+sub:'');
 function katPanel(){
-  const items=KAT.map((c,i)=>`<button class="kat-item${i===0?' on':''}" data-kat-item="${i}"><span>${c[0]}</span>${IC.chevR}</button>`).join('');
-  const panels=KAT.map((c,i)=>`<div class="kat-detail${i===0?' on':''}" data-kat-detail="${i}"><h4>${c[0]}</h4><div class="kat-subs">${c[1].split(' · ').map(s=>`<a href="${katHref(c[2])}">${s}</a>`).join('')}</div><a class="kat-all" href="${katHref(c[2])}">View all ${c[0]} ${IC.chevR}</a></div>`).join('');
+  const items=KAT.map((category,i)=>`<button class="kat-item${i===0?' on':''}" data-kat-item="${i}"><span>${category.label}</span>${IC.chevR}</button>`).join('');
+  const panels=KAT.map((category,i)=>`<div class="kat-detail${i===0?' on':''}" data-kat-detail="${i}"><h4>${category.label}</h4><div class="kat-subs">${category.subs.map(([label,sub])=>`<a href="${katHref(category.slug,sub)}">${label}</a>`).join('')}</div><a class="kat-all" href="${katHref(category.slug)}">View all ${category.label} ${IC.chevR}</a></div>`).join('');
   return `<div class="kat-panel" data-kat-panel hidden><div class="kat-list">${items}</div><div class="kat-details">${panels}</div></div>`;
 }
 
@@ -262,7 +392,8 @@ function accountMenu(s){
   const av = s.avatarUrl ? `<img src="${s.avatarUrl}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : initials;
   const dest = s.role==='seller' ? P('dashboard.html') : P('brand-owner.html');
   const roleLabel = s.role==='seller' ? 'Factory · Seller' : s.role==='admin' ? 'Atelix · Admin' : 'Brand Owner · Buyer';
-  const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Users &amp; orders</a>` : '';
+  const adminLink = s.role==='admin' ? `<a role="menuitem" href="${P('admin-orders.html')}">Users &amp; orders</a><a role="menuitem" href="${P('admin-supplier.html')}?id=b44b67da-39cd-4be1-abe2-7359d8cd7554">Atelix Sourcing workspace</a>` : '';
+  const privateOffers=s.role==='buyer'?`<a role="menuitem" href="${P('private-offers.html')}">Private offers</a>`:'';
   return `<div class="acct" data-acct>
     <button class="acct-btn" aria-haspopup="true" aria-expanded="false"><span class="acct-av">${av}</span><span class="acct-nm">${s.name.split(' ')[0]}</span>${IC.caret}</button>
     <div class="acct-pop" role="menu" hidden>
@@ -271,6 +402,7 @@ function accountMenu(s){
       ${adminLink}
       <a role="menuitem" href="${P('cart.html')}">My cart</a>
       <a role="menuitem" href="${P('wishlist.html')}">Wishlist</a>
+      ${privateOffers}
       <button role="menuitem" data-logout>${IC.logout}<span>Log out</span></button>
     </div>
   </div>`;
@@ -297,7 +429,7 @@ function buildHeader(){
   const cartIcon = seller ? '' :
     `<a class="ic-link cart-ic" href="${P('cart.html')}" aria-label="Cart">${IC.cart}<span class="badge-count" data-cart-badge hidden></span></a><span class="hdr-div"></span>`;
   const mobileBack=productContext
-    ? `<a class="mobile-back" href="${P('category.html')}" aria-label="Back to browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14 5-7 7 7 7M7 12h13"/></svg></a>`
+    ? `<a class="mobile-back" href="/categories" aria-label="Back to browse"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m14 5-7 7 7 7M7 12h13"/></svg></a>`
     : '';
   if(productContext) root.dataset.context='product';
   root.innerHTML=`
@@ -311,6 +443,7 @@ function buildHeader(){
     ${authCluster()}
     ${katPanel()}
   </div>`;
+  mountAlgoliaExperiences();
   syncBadges();
 }
 
@@ -323,30 +456,50 @@ function buildMobileNav(){
   const workspace=document.body.dataset.surface==='seller'||/\/(?:dashboard|admin-orders|admin-supplier)\.html$/.test(path);
   const transactional=/\/(?:cart|product)\.html$/.test(path);
   if(focused||workspace||transactional||document.querySelector('.mobile-nav')) return;
-  const current=(name, routes)=>routes.some(route=>path.endsWith('/'+route)||(!ROOT&&path.endsWith(route)))?'on':'';
-  const onOrders=/\/orders\.html$/.test(path);
-  const onAccount=/\/brand-owner\.html$/.test(path) && !onOrders;
+  const normalizedPath=path.replace(/\/+$/,'')||'/';
+  const onHome=normalizedPath==='/'||/\/index\.html$/.test(normalizedPath);
+  const onBrowse=/^\/(?:categories|search)(?:\/|$)/.test(normalizedPath)||/\/(?:category|categories|factories|supplier|search)\.html$/.test(normalizedPath);
+  const onSaved=/\/wishlist\.html$/.test(normalizedPath);
+  const onOrders=/\/orders\.html$/.test(normalizedPath);
+  const onAccount=/\/brand-owner\.html$/.test(normalizedPath)&&!onOrders;
+  const guest=!Store.session();
   const nav=document.createElement('nav');
   nav.className='mobile-nav'; nav.setAttribute('aria-label','Primary navigation');
+  const navItem=(active,href,icon,label,key,badge='')=>`<a class="${active?'on':''}" href="${href}" ${active?'aria-current="page"':''}><span class="mobile-nav__icon">${icon}${badge}</span><span data-i18n="${key}">${label}</span></a>`;
   nav.innerHTML=`
-    <a class="${current('home',['index.html'])}" href="${HOME}">${markSVG()}<span>Home</span></a>
-    <a class="${current('browse',['category.html','factories.html','supplier.html'])}" href="${P('category.html')}">${IC.search}<span>Browse</span></a>
-    <a class="${current('saved',['wishlist.html'])}" href="${P('wishlist.html')}">${IC.heart}<span>Saved</span></a>
-    <a class="${onOrders?'on':''}" href="${P('orders.html')}">${IC.document}<span>Orders</span></a>
-    <a class="${onAccount?'on':''}" href="${P('brand-owner.html')}">${IC.user}<span>Account</span></a>`;
+    ${navItem(onHome,HOME,IC.home,'Home','nav.home')}
+    ${navItem(onBrowse,'/categories',IC.search,'Browse','nav.browse')}
+    ${navItem(onSaved,P('wishlist.html'),IC.heart,'Saved','nav.saved','<i data-saved-badge hidden></i>')}
+    ${navItem(onOrders,P('orders.html'),IC.document,'Orders','nav.orders')}
+    ${guest
+      ? `<button class="mobile-account-trigger" type="button" aria-haspopup="dialog"><span class="mobile-nav__icon">${IC.user}</span><span data-i18n="nav.account">Account</span></button>`
+      : navItem(onAccount,P('brand-owner.html'),IC.user,'Account','nav.account')}`;
   document.body.appendChild(nav);
+  const accountTrigger=nav.querySelector('.mobile-account-trigger');
+  if(accountTrigger) accountTrigger.addEventListener('click',()=>{
+    const gate=document.createElement('div');
+    gate.className='mobile-account-gate';
+    gate.setAttribute('role','dialog');gate.setAttribute('aria-modal','true');gate.setAttribute('aria-labelledby','mobileAccountGateTitle');
+    gate.innerHTML=`<div class="mobile-account-gate__sheet"><button type="button" class="mobile-account-gate__close" aria-label="Close account options">×</button><span class="mobile-account-gate__icon">${IC.user}</span><h2 id="mobileAccountGateTitle">Your Atelix account</h2><p>Log in to manage orders and saved products, or create a brand owner account to start sourcing.</p><a class="btn btn-green btn-block" href="${P('signup.html')}">Create an account</a><a class="mobile-account-gate__login" href="${P('login.html')}">Log in</a></div>`;
+    const close=()=>{gate.remove();document.removeEventListener('keydown',onKey);};
+    const onKey=event=>{if(event.key==='Escape')close();};
+    gate.querySelector('.mobile-account-gate__close').addEventListener('click',close);
+    gate.addEventListener('click',event=>{if(event.target===gate)close();});
+    document.addEventListener('keydown',onKey);
+    document.body.appendChild(gate);gate.querySelector('.mobile-account-gate__close').focus();
+  });
   syncBadges();
 }
 
 function buildFooter(){
   const el=document.getElementById('ftr'); if(!el) return;
   const building=P('building.html');
+  const about=ROOT ? '../about' : 'about';
   const helpCenter=ROOT ? '../help-center' : 'help-center';
+  const legal=P('legal.html'), contact='mailto:info@arcanawangsa.com';
   const soc={
     x:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-6-5 6H2l8-9L2 2h6l4 5z"/></svg>',
     li:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zM9 9h3v2a3.5 3.5 0 0 1 3-2c3 0 4 2 4 5v7h-3v-6c0-1.5-.5-2.5-2-2.5S12 14 12 15.5V21H9z"/></svg>',
-    ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>',
-    fb:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V6h-3c-2.2 0-4 1.8-4 4v2H8v3h2v6h3v-6h3l1-3h-4v-2c0-.6.4-1 1-1z"/></svg>'
   };
   el.innerHTML=`
   <footer class="site-footer"><div class="sf-in">
@@ -356,22 +509,20 @@ function buildFooter(){
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.company">Atelix</h5>
-      <a href="${building}" data-i18n="ft.about">About Atelix</a>
-      <a href="${building}" data-i18n="ft.careers">Careers</a>
-      <a href="${building}" data-i18n="ft.blog">Blog</a>
+      <a href="${about}" data-i18n="ft.about">About Atelix</a>
       <a href="${building}" data-i18n="ft.b2b">B2B sourcing</a>
-      <a href="${building}" data-i18n="ft.trustsafety">Trust &amp; safety</a>
+      <a href="${legal}#trust-safety" data-i18n="ft.trustsafety">Trust &amp; safety</a>
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.help">Help &amp; Guides</h5>
       <a href="${helpCenter}" data-i18n="ft.helpcenter">Help center</a>
-      <a href="${building}" data-i18n="ft.terms">Terms &amp; conditions</a>
-      <a href="${building}" data-i18n="ft.privacy">Privacy policy</a>
-      <a href="${building}" data-i18n="ft.contact">Contact us</a>
+      <a href="${legal}#terms" data-i18n="ft.terms">Terms &amp; conditions</a>
+      <a href="${legal}#privacy" data-i18n="ft.privacy">Privacy policy</a>
+      <a href="${contact}" data-i18n="ft.contact">Contact us</a>
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.follow">Follow us</h5>
-      <div class="sf-social"><a href="${building}" aria-label="X">${soc.x}</a><a href="${building}" aria-label="LinkedIn">${soc.li}</a><a href="${building}" aria-label="Instagram">${soc.ig}</a><a href="${building}" aria-label="Facebook">${soc.fb}</a></div>
+      <div class="sf-social"><a href="https://x.com/junarcana263" target="_blank" rel="noopener noreferrer" aria-label="X">${soc.x}</a><a href="https://linkedin.com/junarcana" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">${soc.li}</a></div>
     </div>
   </div>
   <div class="sf-bottom">
@@ -418,15 +569,13 @@ function toast(msg, action){
 }
 window.ARCANA_toast = toast;
 
-/* ---------- contact-by-email: shared by the OEM CTA, "Email supplier",
-   "Request Sample" and "Contact Supplier" — all route to a pre-filled
-   mailto instead of an in-app flow. subjectPrefix becomes
-   "<subjectPrefix> - <userId>" (profile id when signed in, else "guest"). */
-async function contactEmail({subjectPrefix, bodyLines}){
-  const api = window.ARCANA_API;
-  const profile = api && api.getSessionProfile ? await api.getSessionProfile().catch(()=>null) : null;
-  const userId = profile ? profile.id : 'guest';
-  const subject = `${subjectPrefix} - ${userId}`;
+/* ---------- contact-by-email: shared by the OEM CTA, "Email supplier"
+   and "Contact Supplier". Keep this synchronous: mobile
+   browsers only hand mailto links to the email app during the original tap. */
+function contactEmail({subjectPrefix, bodyLines}){
+  const session = Store.session();
+  const requester = session?.name || 'guest';
+  const subject = `${subjectPrefix} - ${requester}`;
   const body = (bodyLines||[]).filter(Boolean).join('\n');
   location.href = `mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
@@ -685,7 +834,7 @@ window.ARCANA_openDesignMatch=function(initialFiles,options={}){
   });
 };
 
-/* ---------- smart search: intent autocomplete + Athelia image search ---------- */
+/* ---------- smart search: plain keyword autocomplete + image search ---------- */
 function wireSearch(){
   const form=document.querySelector('[data-search-form]'); if(!form) return;
   const input=form.querySelector('input'), pop=form.querySelector('[data-search-pop]');
@@ -726,12 +875,12 @@ function wireSearch(){
     if(i<0) return esc(k);
     return esc(k.slice(0,i+q.length))+'<b>'+esc(k.slice(i+q.length))+'</b>';
   }
-  const kwHref=k=>P('category.html')+'?q='+encodeURIComponent(k);
+  const kwHref=k=>'/search?q='+encodeURIComponent(k);
   function kwRow(k,q,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${kwHref(k)}">${IC.search}<span class="s-kw">${mark(k,q)}</span></a>`; }
   function supRow(f,i){ opts.push(1); return `<a class="s-row" role="option" id="${optId(i)}" href="${P('supplier.html')+'?id='+f.id}">
       <img class="s-av" src="${factoryAsset(f)}" alt="" loading="lazy">
       <span class="s-main"><span class="s-nm">${esc(tr(f.name))} ${IC.check}</span>
-      <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(factoryLocation(f)))} · ★ ${f.rating}</span></span>
+      <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(factoryLocation(f)))}</span></span>
       <span class="s-go">${IC.chevR}</span></a>`; }
   function prodRow(p,i){ opts.push(1);
     const price=p.price>0? t('From')+' '+money(p.price)+'<small>/'+esc(tr(p.unit))+'</small>' : esc(t('Contact for quote'));
@@ -741,29 +890,6 @@ function wireSearch(){
       <span class="s-meta">${esc(tr(p.comp))} · ${esc(tr(p.seller))}</span></span>
       <span class="s-pr">${price}</span></a>`; }
   function footRow(q,i){ opts.push(1); return `<a class="s-row s-foot" role="option" id="${optId(i)}" href="${kwHref(q)}">${IC.search}<span>${esc(t('See all results for'))} “${esc(q)}”</span>${IC.chevR}</a>`; }
-
-  /* --- Athelia integration: a natural-language brief typed into the
-     same search box routes to the AI-matched Copilot flow instead of a plain
-     keyword listing. Single/short keyword search stays open to everyone;
-     only this Copilot path is auth-gated (window.ARCANA_requireCopilotAuth). --- */
-  function briefLike(qv){
-    const Cop=window.ARCANA_Copilot; if(!Cop) return false;
-    const intent=Cop.parse(qv);
-    const words2=norm(qv).split(/\s+/).filter(Boolean);
-    return !!(intent.materials.length||intent.gsm||intent.priceMax!=null||intent.moqMax!=null||
-      intent.lowMoq||intent.leadMax!=null||intent.certs.length||intent.region||intent.oem||words2.length>=4);
-  }
-  function triggerCopilotAsk(qv){
-    window.ARCANA_Copilot.setBrief(qv);
-    if(!window.ARCANA_requireCopilotAuth()){ close(); return; }
-    location.href=P('category.html')+'?copilot=1';
-  }
-  function copilotRow(qv,i){
-    opts.push(1);
-    return `<a class="s-row s-copilot" role="option" id="${optId(i)}" href="${P('category.html')}?copilot=1" data-cop-ask="${esc(qv)}">
-      ${IC.spark}<span class="s-main"><span class="s-nm">${esc(t('Ask Athelia'))}</span>
-      <span class="s-meta">${esc(t('AI-matched picks for'))} “${esc(qv)}”</span></span>${IC.chevR}</a>`;
-  }
 
   /* --- image search --- */
   function camPanel(){
@@ -783,7 +909,7 @@ function wireSearch(){
   }
 
   /* --- main render --- */
-  function render(){
+  function renderLocal(){
     const q=norm(input.value), words=q.split(/\s+/).filter(Boolean);
     let html=''; opts=[]; let i=0;
     if(!q){
@@ -796,8 +922,7 @@ function wireSearch(){
       for(const k of kws) html+=kwRow(k,q,i++);
       html+=footRow(q,i++);
     }else{
-      if(briefLike(input.value)) html+=copilotRow(input.value.trim(),i++);
-      const kws=POOL.filter(k=>k.includes(q)||words.every(w=>k.includes(w)))
+      const kws=POOL.filter(k=>k.includes(q)||words.some(w=>k.includes(w)))
         .sort((a,b)=>(b.startsWith(q)?1:0)-(a.startsWith(q)?1:0)).slice(0,4);
       const fs=FACT.map(f=>[factScore(f,q,words),f]).filter(x=>x[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,3);
       const ps=PROD.map(p=>[prodScore(p,q,words),p]).filter(x=>x[0]>2).sort((a,b)=>b[0]-a[0]).slice(0,5);
@@ -814,8 +939,56 @@ function wireSearch(){
     open();
   }
 
+  let renderSequence=0;
+  const algoliaProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||({
+    id:hit.objectID,name:hit.name||hit.objectID,img:hit.image||'',comp:hit.composition||'',spec:hit.specification||'',
+    price:Number(hit.price||0),unit:hit.unit||'',moq:hit.moq?String(hit.moq):'',seller:hit.supplier||'',
+    loc:[hit.city,hit.country].filter(Boolean).join(', '),country:hit.country||'',cat:hit.category||'fabrics',badge:''
+  });
+  const algoliaFactory=hit=>window.ARCANA_FACTORIES?.find(factory=>factory.id===hit.objectID)||({
+    id:hit.objectID,name:hit.name||hit.objectID,type:hit.type||'Verified supplier',region:hit.country||'',loc:hit.location||hit.city||'',
+    verified:hit.verified!==false,tags:hit.capabilities||[],certs:hit.certifications||[],img:hit.image||''
+  });
+  async function render(){
+    const sequence=++renderSequence;
+    const q=norm(input.value);
+    pop.innerHTML=`<div class="s-loading" role="status"><span aria-hidden="true"></span>${esc(t('Searching Atelix…'))}</div>`;
+    opts=[];sel=-1;open();
+    try{
+      const [suggestions,products,factories]=await Promise.all([
+        searchPublicAlgolia('suggestions',q,{hitsPerPage:q?5:6}),
+        searchPublicAlgolia('products',q,{hitsPerPage:q?5:3}),
+        searchPublicAlgolia('factories',q,{hitsPerPage:q?3:2})
+      ]);
+      if(sequence!==renderSequence) return;
+      let html='',i=0;
+      const suggestionRows=(suggestions.hits||[]).map(hit=>hit.query).filter(Boolean);
+      if(suggestionRows.length){
+        html+=`<div class="s-hd" role="presentation">${esc(t(q?'Suggested searches':'Popular on Atelix'))}</div>`;
+        suggestionRows.forEach(query=>{html+=kwRow(query,q,i++);});
+      }
+      const productRows=(products.hits||[]).map(algoliaProduct);
+      if(productRows.length){
+        html+=`<div class="s-hd" role="presentation">${esc(t('Products'))}</div>`;
+        productRows.forEach(product=>{html+=prodRow(product,i++);});
+      }
+      const factoryRows=(factories.hits||[]).map(algoliaFactory);
+      if(factoryRows.length){
+        html+=`<div class="s-hd" role="presentation">${esc(t('Factories'))}</div>`;
+        factoryRows.forEach(factory=>{html+=supRow(factory,i++);});
+      }
+      if(!html) html=`<div class="s-empty">${esc(t('No matches in the catalog yet'))}<span>${esc(t('Try a material, product or factory name'))}</span></div>`;
+      if(q) html+=footRow(q,i++);
+      pop.innerHTML=html;sel=-1;input.removeAttribute('aria-activedescendant');open();
+    }catch(_){
+      if(sequence!==renderSequence) return;
+      renderLocal();
+    }
+  }
+
   /* --- events --- */
-  input.addEventListener('input',render);
+  let searchTimer;
+  input.addEventListener('input',()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,140);});
   input.addEventListener('focus',render);
   input.addEventListener('keydown',e=>{
     if(pop.hidden){ if(e.key==='ArrowDown'){ e.preventDefault(); render(); } return; }
@@ -826,23 +999,19 @@ function wireSearch(){
       els.forEach((el,j)=>el.classList.toggle('sel',j===sel));
       input.setAttribute('aria-activedescendant',els[sel].id);
       els[sel].scrollIntoView({block:'nearest'});
-    }else if(e.key==='Enter'&&sel>-1&&els[sel]){
+    }else if(e.key==='Enter'){
+      // Enter always honours the typed text. Suggestions remain click/arrow
+      // navigable, but never replace a deliberate text search with AI.
       e.preventDefault();
-      if(els[sel].dataset.copAsk) triggerCopilotAsk(els[sel].dataset.copAsk);
-      else location.href=els[sel].href;
+      form.requestSubmit();
     }else if(e.key==='Escape'){ close(); }
   });
   form.addEventListener('submit',e=>{
     e.preventDefault();
     const q=input.value.trim();
-    if(q && briefLike(q)){ triggerCopilotAsk(q); return; }
     const ps=[];
     if(q) ps.push('q='+encodeURIComponent(q));
-    location.href=P('category.html')+(ps.length?'?'+ps.join('&'):'');
-  });
-  pop.addEventListener('click',e=>{
-    const r=e.target.closest('[data-cop-ask]');
-    if(r){ e.preventDefault(); triggerCopilotAsk(r.dataset.copAsk); }
+    location.href='/search'+(ps.length?'?'+ps.join('&'):'');
   });
   if(cam) cam.addEventListener('click',()=>{ input.focus(); camPanel(); });
   const design=form.querySelector('[data-design-match]');
@@ -1033,7 +1202,7 @@ async function mergeSavedOnce(uid){
 /* ---------- i18n (EN default · JA · ZH) ---------- */
 const I18N={
   en:{
-    'nav.categories':'Categories','search.ph':'Search fabrics, trims, accessories, factories…','search.refine':'Add keywords to refine your photo search…','auth.login':'Log in','auth.signup':'Sign up',
+    'nav.categories':'Categories','nav.home':'Home','nav.browse':'Browse','nav.saved':'Saved','nav.orders':'Orders','nav.account':'Account','search.ph':'Search fabrics, trims, accessories, factories…','search.refine':'Add keywords to refine your photo search…','auth.login':'Log in','auth.signup':'Sign up',
     'tb.sell':'Sell on Atelix — reach 50,000+ verified buyers','tb.about':'About','tb.help':'Help','tb.saved':'Saved',
     'ft.tagline':'The wholesale marketplace connecting brand owners with verified fabric mills and OEM factories.',
     'ft.company':'Atelix','ft.about':'About Atelix','ft.careers':'Careers','ft.blog':'Blog','ft.b2b':'B2B sourcing','ft.trustsafety':'Trust & safety',
@@ -1045,9 +1214,9 @@ const I18N={
     'hero.btag1':'NEW SEASON SOURCING','hero.h1':'The wholesale marketplace for your next collection','hero.p1':'Quality materials and trusted, verified factories — built for brand owners.','hero.cta1':'Start sourcing',
     'hero.btag2':'LIMITED · 11.11 SALE','hero.h2':'Up to 50% off verified fabrics & OEM','hero.p2':'Stock your next collection for less — from mills you can trust.','hero.cta2':'Shop the sale',
     'home.popcat':'Popular Categories','home.popcatdesc':'Wovens, knits, denim, trims and full-package OEM — sourced from verified mills.','home.explore':'Explore now',
-    'home.quickreq':'Quick sourcing request','home.browseall':'Browse all','home.material':'Material','home.quantity':'Quantity','home.qtyph':'e.g. 500 m','home.note':'Note','home.notetip':"Tell us the characteristics you need: composition, GSM/weight, color, certifications, MOQ flexibility, lead time, or anything else. We'll get back to you.",'home.noteph':'e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ','home.getquotes':'Get quotes',
+    'home.quickreq':'Quick sourcing request','home.browseall':'Browse all','home.material':'Material','home.quantity':'Quantity','home.qtyph':'e.g. 500 meters / 100 pcs','home.note':'Note','home.notetip':"Tell us the characteristics you need: composition, GSM/weight, color, certifications, MOQ flexibility, lead time, or anything else. We'll get back to you.",'home.noteph':'e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ','home.getquotes':'Get quotes',
     'quick.fabrics':'Fabrics','quick.trims':'Trims','quick.oem':'OEM',
-    'pill.fabrics':'Fabrics','pill.accessories':'Accessories','pill.trims':'Trims','pill.yarns':'Yarns & Threads','pill.oem':'OEM Services','pill.factories':'Factories',
+    'beta.eyebrow':'Atelix beta','beta.title':'Start sourcing with us','beta.copy':'We’re inviting brand owners to try Atelix before public launch. Register early and receive a first-order launch code.','beta.support':'Need a supplier added or have a question?','beta.email':'Email our team','beta.cta':'Register as a brand owner','beta.close':'Closes automatically in 5 seconds.',
     'promo.title':'Mega Sourcing Sale — up to 50% off verified fabrics & OEM','promo.shopnow':'Shop now',
     'mat.cotton':'Cotton','mat.linen':'Linen','mat.polyester':'Polyester','mat.wool':'Wool','mat.nylon':'Nylon',
     'cat.filters':'Filters','cat.reset':'Reset','cat.oemavail':'OEM availability','cat.all':'All','cat.oemAvailable':'OEM available','cat.nonoem':'Non-OEM',
@@ -1060,7 +1229,7 @@ const I18N={
     'seo.p2':'Connect with fabric mills and OEM factories in key manufacturing regions — Zhejiang, Guangdong, Jiangsu and Shandong in China, plus partners in Japan, India, Vietnam and Turkey. Whether you need low-MOQ sampling, private-label production, custom color matching or bulk manufacturing with in-line quality control, Atelix’s OEM service packages take your collection from yarn to finished garment. Secure payments via T/T and PayPal, transparent trade terms and global shipping to 120+ countries keep sourcing organized and under control.'
   },
   ja:{
-    'nav.categories':'カテゴリー','search.ph':'生地・付属品・工場を検索…','search.refine':'キーワードで写真検索を絞り込む…','auth.login':'ログイン','auth.signup':'新規登録',
+    'nav.categories':'カテゴリー','nav.home':'ホーム','nav.browse':'探す','nav.saved':'保存済み','nav.orders':'注文','nav.account':'アカウント','search.ph':'生地・付属品・工場を検索…','search.refine':'キーワードで写真検索を絞り込む…','auth.login':'ログイン','auth.signup':'新規登録',
     'tb.sell':'Atelixで販売 — 5万社以上の認証バイヤーへ','tb.about':'会社概要','tb.help':'ヘルプ','tb.saved':'保存済み',
     'ft.tagline':'ブランドオーナーと認証済みの生地工場・OEM工場をつなぐ卸売マーケットプレイス。',
     'ft.company':'Atelix','ft.about':'Atelixについて','ft.careers':'採用情報','ft.blog':'ブログ','ft.b2b':'B2B調達','ft.trustsafety':'安全性と信頼',
@@ -1074,7 +1243,7 @@ const I18N={
     'home.popcat':'人気カテゴリー','home.popcatdesc':'織物・ニット・デニム・トリム・フルパッケージOEM — 認証工場から。','home.explore':'今すぐ見る',
     'home.quickreq':'クイック見積り依頼','home.browseall':'すべて見る','home.material':'素材','home.quantity':'数量','home.qtyph':'例: 500 m','home.note':'備考','home.notetip':'組成、目付(GSM)、色、認証、最低発注数量の柔軟性、リードタイムなど、必要な特性をお知らせください。担当者よりご連絡いたします。','home.noteph':'例: GOTS認証オーガニックコットン、180gsm、無染色、MOQ相談可','home.getquotes':'見積りを取得',
     'quick.fabrics':'生地','quick.trims':'トリム','quick.oem':'OEM',
-    'pill.fabrics':'生地','pill.accessories':'付属品','pill.trims':'トリム','pill.yarns':'糸・スレッド','pill.oem':'OEMサービス','pill.factories':'工場',
+    'beta.eyebrow':'Atelix ベータ','beta.title':'Atelixで調達を始めましょう','beta.copy':'一般公開に先駆け、ブランドオーナーの皆さまをAtelixへご招待しています。早期登録で初回取引用のローンチコードをお届けします。','beta.support':'追加してほしいサプライヤーやご質問がありますか？','beta.email':'チームにメールする','beta.cta':'ブランドオーナーとして登録','beta.close':'このメッセージは5秒後に閉じます。',
     'promo.title':'メガ調達セール — 認証生地・OEMが最大50%オフ','promo.shopnow':'今すぐ購入',
     'mat.cotton':'綿','mat.linen':'リネン','mat.polyester':'ポリエステル','mat.wool':'ウール','mat.nylon':'ナイロン',
     'cat.filters':'絞り込み','cat.reset':'リセット','cat.oemavail':'OEM対応','cat.all':'すべて','cat.oemAvailable':'OEM対応あり','cat.nonoem':'非OEM',
@@ -1087,7 +1256,7 @@ const I18N={
     'seo.p2':'中国の浙江・広東・江蘇・山東をはじめ、日本・インド・ベトナム・トルコの工場と直接つながります。小ロットのサンプリングからプライベートラベル、カラーマッチング、量産まで、AtelixのOEMパッケージが糸から完成品まで対応。T/T・PayPalによる安全な決済と120カ国以上への配送で、調達をシンプルに。'
   },
   zh:{
-    'nav.categories':'分类','search.ph':'搜索面料、辅料、工厂…','search.refine':'输入关键词细化图片搜索…','auth.login':'登录','auth.signup':'注册',
+    'nav.categories':'分类','nav.home':'首页','nav.browse':'浏览','nav.saved':'收藏','nav.orders':'订单','nav.account':'账户','search.ph':'搜索面料、辅料、工厂…','search.refine':'输入关键词细化图片搜索…','auth.login':'登录','auth.signup':'注册',
     'tb.sell':'在 Atelix 上销售 — 触达 5 万+ 认证买家','tb.about':'关于','tb.help':'帮助','tb.saved':'收藏',
     'ft.tagline':'连接品牌方与认证面料厂及 OEM 工厂的批发采购平台。',
     'ft.company':'Atelix','ft.about':'关于 Atelix','ft.careers':'招聘','ft.blog':'博客','ft.b2b':'B2B 采购','ft.trustsafety':'信任与安全',
@@ -1101,7 +1270,7 @@ const I18N={
     'home.popcat':'热门类目','home.popcatdesc':'梭织、针织、牛仔、织带及全包OEM — 来自认证工厂。','home.explore':'立即探索',
     'home.quickreq':'快速询价','home.browseall':'查看全部','home.material':'材料','home.quantity':'数量','home.qtyph':'例如 500 m','home.note':'备注','home.notetip':'请告诉我们您需要的特性：成分、克重(GSM)、颜色、认证、起订量灵活性、交货期等。我们会尽快与您联系。','home.noteph':'例如：GOTS认证有机棉，180gsm，本色未染，起订量可协商','home.getquotes':'获取报价',
     'quick.fabrics':'面料','quick.trims':'织带','quick.oem':'OEM',
-    'pill.fabrics':'面料','pill.accessories':'辅料','pill.trims':'织带','pill.yarns':'纱线与缝纫线','pill.oem':'OEM服务','pill.factories':'工厂',
+    'beta.eyebrow':'Atelix 测试版','beta.title':'和我们一起开始采购','beta.copy':'我们诚邀品牌方在正式上线前体验 Atelix。提前注册即可获得首笔交易的上线优惠码。','beta.support':'想新增供应商或有任何问题？','beta.email':'联系团队','beta.cta':'以品牌方身份注册','beta.close':'此提示将在 5 秒后自动关闭。',
     'promo.title':'超级采购大促 — 认证面料与OEM低至5折','promo.shopnow':'立即抢购',
     'mat.cotton':'棉','mat.linen':'亚麻','mat.polyester':'涤纶','mat.wool':'羊毛','mat.nylon':'锦纶',
     'cat.filters':'筛选','cat.reset':'重置','cat.oemavail':'OEM 可选','cat.all':'全部','cat.oemAvailable':'支持 OEM','cat.nonoem':'非 OEM',

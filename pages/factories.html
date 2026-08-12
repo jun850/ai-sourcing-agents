@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verified Factories & Mills — Atelix</title>
+<title>Verified Factories &amp; Mills — Atelix</title>
 <meta name="description" content="Browse verified fabric mills and OEM factories, audited for identity, license and capability. Filter by business type, region and certifications.">
-<link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/factories.html">
+<link rel="canonical" href="https://atelix.app/pages/factories.html">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Atelix">
-<meta property="og:title" content="Verified Factories & Mills — Atelix">
+<meta property="og:title" content="Verified Factories &amp; Mills — Atelix">
 <meta property="og:description" content="Browse verified fabric mills and OEM factories, audited for identity, license and capability.">
-<meta property="og:url" content="https://marketplace-three-peach.vercel.app/pages/factories.html">
+<meta property="og:url" content="https://atelix.app/pages/factories.html">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Verified Factories & Mills — Atelix">
+<meta name="twitter:title" content="Verified Factories &amp; Mills — Atelix">
 <meta name="twitter:description" content="Verified fabric mills and OEM factories, audited for identity, license and capability.">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
@@ -21,7 +21,7 @@
 <div id="hdr"></div>
 
 <main class="wrap">
-  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Factories</span></nav>
+  <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><span aria-current="page">Factories</span></li></ol></nav>
 
   <div class="listing">
     <aside class="filter-rail">
@@ -48,17 +48,16 @@
       <div class="sortbar">
         <span class="lbl">Sort</span>
         <div class="sort-chips" id="sortChips">
-          <button class="sort-chip on" data-sort="rec">Recommended</button>
-          <button class="sort-chip" data-sort="rating">Top rated</button>
-          <button class="sort-chip" data-sort="orders">Most orders</button>
-          <button class="sort-chip" data-sort="years">Most established</button>
+          <button class="sort-chip on" type="button" data-sort="rec">Recommended</button>
+          <button class="sort-chip" type="button" data-sort="orders">Most orders</button>
+          <button class="sort-chip" type="button" data-sort="years">Most established</button>
         </div>
         <span class="count" id="resCount"></span>
       </div>
       <div class="fac-grid" id="grid"></div>
     </div>
   </div>
-  <div style="height:40px"></div>
+  <div class="page-end-space" aria-hidden="true"></div>
 </main>
 
 <div id="ftr"></div>
@@ -92,8 +91,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const ty=sel('type'), rg=sel('region'), ct=sel('cert');
     let list=F.filter(f=>(!ty.length||ty.includes(f.type))&&(!rg.length||rg.includes(f.region))&&(!ct.length||ct.some(c=>f.certs.includes(c))));
     const isNewFactory=f=>+String(f.id).split('-')[1]>=14;
-    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewFactory(b))-Number(isNewFactory(a)) || b.rating-a.rating);
-    else if(sort==='rating') list=[...list].sort((a,b)=>b.rating-a.rating);
+    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewFactory(b))-Number(isNewFactory(a)) || (b.years||0)-(a.years||0));
     else if(sort==='orders') list=[...list].sort((a,b)=>parseInt(b.orders)-parseInt(a.orders));
     else if(sort==='years') list=[...list].sort((a,b)=>b.years-a.years);
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;
@@ -107,7 +105,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <div class="fbody">
           <div class="fname">${f.name}</div>
           <span class="ftype">${f.type}</span>
-          <div class="fmeta"><span class="star">★</span> ${f.rating.toFixed(1)} <span class="dot">·</span> ${orderDetail} <span class="dot">·</span> ${ageDetail}</div>
+          <div class="fmeta">${orderDetail} <span class="dot">·</span> ${ageDetail}</div>
           <div class="floc">${IC.pin}<span>${factoryLocation(f)}</span></div>
           <div class="ftags">${f.tags.map(t=>`<span>${t}</span>`).join('')}</div>
           <div class="ffoot"><div>MOQ<b>${f.moq}</b></div><div>Lead time<b>${f.lead}</b></div></div>

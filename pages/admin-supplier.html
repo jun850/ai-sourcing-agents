@@ -63,7 +63,7 @@
     <div id="skuTable" class="supplier-table"></div>
 
     <form id="skuForm" hidden style="margin-top:20px;border-top:1px solid var(--line);padding-top:18px">
-      <h3 id="skuFormTitle" style="font-family:var(--serif);font-size:19px;font-weight:600;margin-bottom:12px" data-page-i18n="admin.addSku">Add SKU</h3>
+      <h3 id="skuFormTitle" style="font-family:var(--sans);font-size:20px;font-weight:600;margin-bottom:12px" data-page-i18n="admin.addSku">Add SKU</h3>
       <input type="hidden" name="id">
       <div class="supplier-form-grid">
         <div class="field-lg"><label data-page-i18n="admin.sku">SKU</label><input name="sku" required></div>
@@ -81,9 +81,22 @@
         <div class="field-lg"><label data-page-i18n="admin.moq">MOQ</label><input name="moq" type="number" step="1" min="0"></div>
         <div class="field-lg"><label data-page-i18n="admin.location">Location</label><input name="loc" placeholder="e.g. Shaoxing, China"></div>
         <div class="field-lg full"><label data-page-i18n="admin.composition">Composition</label><input name="comp" placeholder="e.g. 55% Linen 45% Viscose"></div>
-        <div class="field-lg full"><label data-page-i18n="admin.spec">Spec</label><input name="spec" placeholder="e.g. 180 GSM, 150cm width"></div>
+        <div class="field-lg full"><label for="productDescription">About this product</label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="About product formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="productDescription" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="A concise, buyer-friendly description of what this product is."></div><textarea name="description" data-rich-value hidden></textarea></div></div>
+        <div class="field-lg"><label>Construction / format</label><input name="construction" placeholder="e.g. Plain weave"></div>
+        <div class="field-lg"><label>Weight (GSM)</label><input name="gsm" placeholder="e.g. 180 GSM"></div>
+        <div class="field-lg"><label>Width</label><input name="fabric_width" placeholder="e.g. 150 cm"></div>
+        <div class="field-lg"><label>Roll length</label><input name="roll_length" placeholder="e.g. 50 m roll"></div>
+        <div class="field-lg"><label>Style code</label><input name="style_code" placeholder="e.g. 1015291"></div>
+        <div class="field-lg"><label>Best for</label><select name="applications"><option value="">Select clothing type</option><option>Blouson</option><option>T-shirt</option><option>Shirt</option><option>Blouse</option><option>Jacket</option><option>Coat</option><option>Pants</option><option>Shorts</option><option>Skirt</option><option>Dress</option><option>Suit</option><option>Knitwear</option><option>Activewear</option><option>Underwear</option><option>Socks</option><option>Bag</option><option>Footwear</option><option>Multiple apparel types</option></select></div>
+        <div class="field-lg"><label>Season</label><input name="season" placeholder="e.g. All season"></div>
+        <div class="field-lg"><label>Colour family</label><input name="color_family" placeholder="e.g. Solid, custom colours"></div>
+        <div class="field-lg"><label>Origin</label><input name="origin_country" placeholder="e.g. Japan"></div>
+        <div class="field-lg"><label>Lead time</label><input name="lead_time" placeholder="e.g. 7–14 days"></div>
+        <div class="field-lg full"><label for="productHandlingNotes">Handling notes <span class="hint">optional</span></label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="Handling notes formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="productHandlingNotes" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="Lot, cutting, care or quality notes a buyer should know."></div><textarea name="handling_notes" data-rich-value hidden></textarea></div></div>
         <div class="field-lg"><label data-page-i18n="admin.status">Status</label><select name="listing_status"><option value="active" data-page-i18n="admin.active">Active</option><option value="draft" data-page-i18n="admin.draft">Draft</option></select></div>
         <div class="field-lg"><label data-page-i18n="admin.photo">Photo</label><input name="imgFile" type="file" accept="image/*"></div>
+        <div class="field-lg full private-sku-control"><label><input name="is_private" type="checkbox"> Private custom SKU</label><p>Private SKUs are never shown in the public catalog. Assign registered brand-owner emails below to let them view and add this item to cart.</p></div>
+        <div class="field-lg full private-sku-control" id="assignmentControl" hidden><label for="assignedEmails">Assigned brand-owner emails</label><textarea id="assignedEmails" name="assigned_emails" rows="2" placeholder="brand@company.com, buyer@brand.co"></textarea><p>Use one or more registered brand-owner emails, separated by commas.</p></div>
       </div>
       <div style="margin-top:8px">
         <div class="muted" style="font-size:12px;font-weight:600;margin-bottom:6px" data-page-i18n="admin.volumeBreaks">Volume price breaks (optional)</div>
@@ -134,9 +147,9 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
   const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
   const assetImage=(value,fallback)=>{
     if(!value) return ASSET(`${fallback}.webp`);
-    const raw=String(value);
-    if(/^(https?:|data:|\/|\.\.?\/)/i.test(raw)) return raw;
-    return ASSET(raw.endsWith('.webp')?raw:`${raw}.webp`);
+    const raw=String(value).trim();
+    if(/^(https?:|data:|blob:|\/|\.\.?\/)/i.test(raw)) return raw;
+    return ASSET(/\.(?:avif|jpe?g|png|webp|gif|svg)$/i.test(raw)?raw:`${raw}.webp`);
   };
   const factoryId=new URLSearchParams(location.search).get('id');
   const stateLabel=s=>T(`admin.${s||'unverified'}`);
@@ -147,7 +160,7 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
   }
 
   function showGate(title,body,cta){
-    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${esc(title)}</h2><p class="muted">${esc(body)}</p>${cta||''}`;
+    gate.innerHTML=`<h2 style="font-family:var(--sans);font-size:24px;margin-bottom:10px">${esc(title)}</h2><p class="muted">${esc(body)}</p>${cta||''}`;
     gate.hidden=false;
   }
 
@@ -231,7 +244,7 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
     const table=document.getElementById('skuTable');
     if(!products.length){table.innerHTML=`<div class="supplier-empty">${T('admin.noSkus')}</div>`;return;}
     table.innerHTML=products.map(p=>`<div class="supplier-product-row">
-      <img src="${esc(assetImage(p.img,'linen'))}" alt="">
+      <img src="${esc(assetImage(p.img,'linen'))}" alt="${esc(p.name)}">
       <div class="supplier-product-name"><b>${esc(p.name)}</b><span>${T('admin.sku')}: ${esc(p.sku)} · ${esc(T(`admin.cat.${p.category}`))} · ${p.pricing_mode==='quote'?T('admin.quoteOnly'):esc(money(p.price)+'/'+p.unit_type)}</span></div>
       ${statusBadge(p.listing_status)}
       <button class="btn btn-out" type="button" data-edit="${esc(p.id)}" style="padding:6px 12px;font-size:12px">${T('admin.edit')}</button>
@@ -248,6 +261,7 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
 
   const skuForm=document.getElementById('skuForm');
   const priceBreakRows=document.getElementById('priceBreakRows');
+  window.ATELIX_initRichEditors(skuForm);
   function addBreakRow(minQty,unitPrice){
     const row=document.createElement('div');row.className='supplier-break-row';
     row.innerHTML=`<input type="number" min="1" step="1" placeholder="${T('admin.minQty')}" value="${minQty!=null?esc(minQty):''}" data-bmin><input type="number" min="0" step="0.01" placeholder="${T('admin.unitPriceUsd')}" value="${unitPrice!=null?esc(unitPrice):''}" data-bprice><button type="button" class="btn btn-out" style="padding:5px 10px;font-size:12px" data-brm>${T('admin.remove')}</button>`;
@@ -255,29 +269,45 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
   }
   async function openSkuForm(product){
     skuForm.hidden=false;skuForm.reset();priceBreakRows.innerHTML='';
+    window.ATELIX_setRichEditor(skuForm,'description','');
+    window.ATELIX_setRichEditor(skuForm,'handling_notes','');
     skuForm.elements.id.value=product?product.id:'';
     document.getElementById('skuFormTitle').textContent=product?format('admin.editSku',{sku:product.sku}):T('admin.addSku');
     if(product){
-      ['sku','name','category','unit_type','pricing_mode','loc','comp','spec'].forEach(k=>skuForm.elements[k].value=product[k]||'');
+      ['sku','name','category','unit_type','pricing_mode','loc','comp','construction','season','color_family','origin_country','lead_time','gsm','fabric_width','roll_length','style_code'].forEach(k=>skuForm.elements[k].value=product[k]||'');
+      window.ATELIX_setRichEditor(skuForm,'description',product.description||'');
+      window.ATELIX_setRichEditor(skuForm,'handling_notes',product.handling_notes||'');
+      const application=[...skuForm.elements.applications.options].some(option=>option.value===product.applications)?product.applications:(product.applications?'Multiple apparel types':'');
+      skuForm.elements.applications.value=application;
       skuForm.elements.price.value=product.price||0;skuForm.elements.moq.value=product.moq!=null?product.moq:'';
       skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
+      skuForm.elements.is_private.checked=!!product.is_private;
       (await api.getPriceBreaks(product.id)).forEach(b=>addBreakRow(b.minQty,b.unitPrice));
     }
+    document.getElementById('assignmentControl').hidden=!skuForm.elements.is_private.checked;
     skuForm.scrollIntoView({behavior:'smooth',block:'center'});
   }
   document.getElementById('btnAddSku').addEventListener('click',()=>openSkuForm(null));
   document.getElementById('btnCancelSku').addEventListener('click',()=>{skuForm.hidden=true;});
   document.getElementById('btnAddBreak').addEventListener('click',()=>addBreakRow());
+  skuForm.elements.is_private.addEventListener('change',()=>{document.getElementById('assignmentControl').hidden=!skuForm.elements.is_private.checked;});
   skuForm.addEventListener('submit',async e=>{
     e.preventDefault();
+    window.ATELIX_syncRichEditors(skuForm);
     const f=skuForm.elements,id=f.id.value;
-    const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),spec:f.spec.value.trim(),listing_status:f.listing_status.value};
+    const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),description:f.description.value.trim(),construction:f.construction.value.trim(),applications:f.applications.value.trim(),season:f.season.value.trim(),color_family:f.color_family.value.trim(),origin_country:f.origin_country.value.trim(),lead_time:f.lead_time.value.trim(),handling_notes:f.handling_notes.value.trim(),gsm:f.gsm.value.trim(),fabric_width:f.fabric_width.value.trim(),roll_length:f.roll_length.value.trim(),style_code:f.style_code.value.trim(),listing_status:f.listing_status.value,is_private:f.is_private.checked};
     if(!payload.sku||!payload.name){toast(T('admin.skuRequired'));return;}
     const file=f.imgFile.files[0];
     if(file){const up=await api.uploadImage(file,'products');if(up.error){toast(up.error.message||T('admin.imageUploadFailed'));return;}payload.img=up.url;}
     let productId=id;
     if(id){const r=await api.updateProduct(id,payload);if(r.error){toast(r.error.message||T('admin.skuSaveFailed'));return;}}
     else{payload.factory_id=factory.id;const r=await api.createProduct(payload);if(r.error){toast(r.error.message||T('admin.skuCreateFailed'));return;}productId=r.product.id;}
+    if(payload.is_private){
+      const emails=f.assigned_emails.value.split(',').map(value=>value.trim()).filter(Boolean);
+      if(!emails.length){toast('Add at least one registered brand-owner email for a private SKU.');return;}
+      const assignment=await api.adminSetPrivateProductAssignments(productId,emails);
+      if(assignment.error){toast(assignment.error.message||'Could not assign brand owners.');return;}
+    }
     const breaks=[...priceBreakRows.children].map(row=>({minQty:Number(row.querySelector('[data-bmin]').value)||0,unitPrice:Number(row.querySelector('[data-bprice]').value)||0})).filter(b=>b.minQty>0);
     const br=await api.setPriceBreaks(productId,breaks);if(br.error){toast(br.error.message||T('admin.breakSaveFailed'));return;}
     skuForm.hidden=true;toast(id?T('admin.skuUpdated'):T('admin.skuAdded'));loadProducts();

@@ -1,0 +1,3 @@
+-- Historical baseline: this migration was applied to the linked production
+-- database before this repository became its source of truth. Its original
+-- source is unavailable; the live schema is authoritative.

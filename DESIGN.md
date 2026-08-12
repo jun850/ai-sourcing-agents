@@ -20,7 +20,7 @@ colors:
   danger: "#c0492f"
 typography:
   display:
-    fontFamily: "Playfair Display, Georgia, serif"
+    fontFamily: "Inter, system-ui, sans-serif"
     fontSize: "clamp(2rem, 4vw, 2.75rem)"
     fontWeight: 600
     lineHeight: 1.12
@@ -32,8 +32,8 @@ typography:
     lineHeight: 1.05
     letterSpacing: "-0.02em"
   title:
-    fontFamily: "Playfair Display, Georgia, serif"
-    fontSize: "1.5rem"
+    fontFamily: "Inter, system-ui, sans-serif"
+    fontSize: "1.25rem"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "normal"
@@ -110,7 +110,7 @@ components:
 
 Atelix reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection — every fabric card, supplier profile, and spec table feels curated and auditable rather than sold. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision.
 
-The system is deliberately restrained. Serif display type (Playfair) carries page and product titles with editorial weight; a neutral sans (Inter) does all the functional work. Surfaces are white panels on a soft ground, separated by hairline borders rather than heavy shadow. Space is generous; density is earned only where comparison demands it (spec grids, filter rows, cart tables). Color is used as signal — green for the brand-owner/buyer path and trust, brass for the primary money action and factory/seller accents — never as decoration.
+The system is deliberately restrained. Inter carries both editorial hierarchy and functional UI, with weight and scale separating titles from data. Surfaces are white panels on a soft ground, separated by hairline borders rather than heavy shadow. Space is generous; density is earned only where comparison demands it (spec grids, filter rows, cart tables). Color is used as signal — green for the brand-owner/buyer path and trust, brass for the primary money action and factory/seller accents — never as decoration.
 
 What this system explicitly rejects: the cluttered, red-bannered density of a cheap bulk-wholesale portal; the purple/blue gradients, glassmorphism, and identical stat-card grids of a generic SaaS dashboard; and the hype-drop, influencer energy of trend-chasing consumer fashion. Atelix is a professional sourcing tool with editorial craft.
 
@@ -155,20 +155,20 @@ A composed, low-chroma palette: two saturated brand signals over warm neutrals, 
 
 ## 3. Typography
 
-**Display Font:** Playfair Display (with Georgia, serif fallback)
+**Display Font:** Inter (with system-ui, sans-serif fallback)
 **Body Font:** Inter (with system-ui, sans-serif fallback)
 
-**Character:** A high-contrast editorial serif paired with a neutral, highly legible grotesque. The pairing is split strictly by role — Playfair signals "this is a titled thing worth reading" (page titles, product names, panel headings); Inter does every functional job (nav, specs, labels, data). The contrast axis (serif vs sans) keeps them from competing.
+**Character:** One neutral, highly legible grotesque across every surface. Inter distinguishes editorial titles from functional UI through weight, size, spacing and line-height rather than switching type families.
 
 ### Hierarchy
-- **Display** (Playfair 600, clamp 2–2.75rem, 1.12): Hero lead, product/page titles ("Cotton Twill", "Order Summary"), panel section headings. Editorial, calm.
+- **Display** (Inter 600, clamp 2–2.75rem, 1.12): Hero lead, product/page titles ("Cotton Twill", "Order Summary"), panel section headings. Editorial, calm.
 - **Headline** (Inter 800, clamp 2.5–3.25rem, 1.05): The one heavy grotesque moment — big category titles ("Fabric Categories"). Used sparingly for wayfinding weight.
-- **Title** (Playfair 600, 1.5rem, 1.2): Sub-section headings inside panels.
+- **Title** (Inter 600, 1.25rem, 1.2): Sub-section headings inside panels.
 - **Body** (Inter 400, 0.9375rem/15px, 1.5): All running text; cap prose at 65–75ch.
 - **Label** (Inter 600, 0.75rem): Meta, spec labels, badges, chip text. Not tracked/uppercased by default.
 
 ### Named Rules
-**The Split-Role Rule.** Playfair is for titled, editorial moments only; Inter carries all UI and data. A fabric spec, a price, a nav item, a button — always Inter. Never set functional UI in the serif.
+**The One-Family Rule.** Inter carries every editorial and functional role. Use weight, scale and spacing—not another typeface—to distinguish a page title from a spec, price, nav item or button.
 
 **The No-Eyebrow Rule.** No tiny uppercase tracked kickers above sections, and no numbered section markers (01 / 02). Section rhythm comes from serif headings and space, not scaffold labels.
 
@@ -190,7 +190,7 @@ Refined and restrained. The system is flat at rest: white panels sit on the warm
 - **Shape:** Gently rounded (10px radius); pill (999px) only for the header "Sign up" and search field.
 - **Primary (green):** `green` fill, white text, 13×22px padding — the buyer path and confirming actions.
 - **CTA (brass):** `brass` fill, white text — actions that move toward purchase (Request for Quote, Proceed to Checkout). One brass CTA per view; it is the money action.
-- **Outline:** White fill, 1px `line` border, ink text — secondary actions (Request Sample, Save, Share). Hover shifts border toward `muted`.
+- **Outline:** White fill, 1px `line` border, ink text — secondary actions (Email supplier, Save, Share). Hover shifts border toward `muted`.
 - **Hover / Focus:** Green→Deep Forest, Brass→Deep Brass, 0.15s transition. Focus must show a visible ring (AAA).
 
 ### Chips
@@ -223,7 +223,7 @@ The system's hero primitive: square macro-fabric image with a top-left status ba
 - **Do** lead with macro material photography; the fabric is the hero, the chrome is quiet.
 - **Do** keep the Two-Signal Rule: green for buyer/trust, brass for the money action, one brass CTA per view.
 - **Do** draw structure with 1px `line` borders and tonal panels (the Hairline Rule); reserve shadow for hover/selection state.
-- **Do** set titles in Playfair and everything functional in Inter (the Split-Role Rule).
+- **Do** use Inter everywhere, with restrained weight and scale changes to establish hierarchy (the One-Family Rule).
 - **Do** surface trust at the decision point — verification badges, specs, secure-payment signals are load-bearing UI.
 - **Do** keep secondary text on `muted` (#54534e ≈ 7:1, AAA) and reserve `faint` (#6e6e68 ≈ 4.6:1, AA) for placeholders and decorative icons only. Brass small text on white still misses 4.5:1 — use it as a fill/border, not as body copy.
 

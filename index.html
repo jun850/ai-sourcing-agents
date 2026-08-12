@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="algolia-site-verification" content="BC306867B66F9942">
 <title>Atelix | B2B Fashion Sourcing Marketplace</title>
 <meta name="description" content="Source fabrics, trims, accessories and full-package OEM from verified factories and mills. Compare specs, MOQ and lead time, and pay securely through Atelix.">
 <link rel="canonical" href="https://atelix.app/">
@@ -72,25 +73,18 @@
     <div class="bov"><span class="btag" data-i18n="hero.btag1">NEW SEASON SOURCING</span><h1 id="home-banner-title" data-i18n="hero.h1">The wholesale marketplace for your next collection</h1><p data-i18n="hero.p1">Quality materials from trusted, verified factories, built for brand owners.</p></div>
   </section>
 
-  <!-- POPULAR CATEGORIES + QUICK REQUEST -->
+  <!-- QUICK REQUEST -->
   <div class="home-2col">
-    <div class="pop-cat" data-reveal>
-      <div class="pc-body">
-        <h3 data-i18n="home.popcat">Popular Categories</h3>
-        <p data-i18n="home.popcatdesc">Wovens, knits, denim, trims and full-package OEM, sourced from verified mills.</p>
-        <a class="btn" href="pages/category.html" data-i18n="home.explore">Explore now</a>
-      </div>
-      <div class="pc-media">
-        <img class="pc-img" src="assets/fabric-stack-macro.webp" alt="Macro photograph of folded denim, cotton twill and wool fabric bolts" loading="lazy">
-      </div>
-    </div>
-    <div class="quick-panel">
-      <div class="qp-head"><b data-i18n="home.quickreq">Quick sourcing request</b><a href="pages/category.html" data-i18n="home.browseall">Browse all</a></div>
-      <div class="qp-tabs" data-tabs><span data-tab class="on" data-i18n="quick.fabrics">Fabrics</span><span data-tab data-i18n="quick.trims">Trims</span><span data-tab data-i18n="quick.oem">OEM</span></div>
-      <form data-quick>
+    <details class="quick-panel" data-quick-panel open>
+      <summary class="qp-head"><b data-i18n="home.quickreq">Quick sourcing request</b><span class="qp-toggle" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m7 10 5 5 5-5"/></svg></span></summary>
+      <div class="qp-body">
+        <div class="qp-tabs" data-tabs><span data-tab data-quick-category="fabrics" class="on" data-i18n="quick.fabrics">Fabrics</span><span data-tab data-quick-category="trims" data-i18n="quick.trims">Trims</span><span data-tab data-quick-category="oem" data-i18n="quick.oem">OEM</span></div>
+        <form data-quick>
         <div class="qp-row">
-          <div class="qp-field"><label data-i18n="home.material">Material</label><select><option data-i18n="mat.cotton">Cotton</option><option data-i18n="mat.linen">Linen</option><option data-i18n="mat.polyester">Polyester</option><option data-i18n="mat.wool">Wool</option><option data-i18n="mat.nylon">Nylon</option></select></div>
-          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input placeholder="e.g. 500 m" data-i18n-ph="home.qtyph"></div>
+          <div class="qp-field"><label id="quickTypeLabel" for="quickType">Fabric type</label><select id="quickType" name="type"><option>Cotton</option><option>Linen</option><option>Polyester</option><option>Wool</option><option>Nylon</option><option>Rayon / Viscose</option><option>Tencel / Lyocell</option><option>Silk</option><option>Denim</option><option>Knit fabric</option><option>Other / describe in note</option></select></div>
+          <div class="qp-field"><label data-i18n="home.quantity">Quantity</label><input name="quantity" placeholder="e.g. 500 meters / 100 pcs" data-i18n-ph="home.qtyph"></div>
+          <div class="qp-field"><label>Budget <span class="hint">optional</span></label><input name="budget" placeholder="e.g. US$8–12 / m"></div>
+          <div class="qp-field"><label>Origin preference <span class="hint">optional</span></label><input name="origin_preference" placeholder="e.g. Japan, Italy, or no preference"></div>
         </div>
         <div class="qp-field" style="margin-bottom:14px">
           <label><span data-i18n="home.note">Note</span> <span class="tip" tabindex="0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="14" height="14"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>
@@ -99,23 +93,25 @@
           <textarea rows="2" data-i18n-ph="home.noteph" placeholder="e.g. GOTS-certified organic cotton, 180gsm, natural undyed, flexible MOQ"></textarea>
         </div>
         <button class="btn btn-green btn-block" type="submit" data-i18n="home.getquotes">Get quotes</button>
-      </form>
-    </div>
+        </form>
+      </div>
+    </details>
   </div>
-
-  <!-- CATEGORY PILLS -->
-  <nav class="cat-pills" aria-label="Category shortcuts">
-    <a class="cat-pill" href="pages/category.html?cat=fabrics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.fabrics">Fabrics</span></a>
-    <a class="cat-pill" href="pages/category.html?cat=accessories"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M20.6 13.4 12 22l-9-9V4a1 1 0 0 1 1-1h9zM7.5 7.5h.01"/></svg><span data-i18n="pill.accessories">Accessories</span></a>
-    <a class="cat-pill" href="pages/category.html?cat=trims"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span data-i18n="pill.trims">Trims</span></a>
-    <a class="cat-pill" href="pages/category.html?cat=yarns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg><span data-i18n="pill.yarns">Yarns &amp; Threads</span></a>
-    <a class="cat-pill" href="pages/category.html?cat=oem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 9h16"/></svg><span data-i18n="pill.oem">OEM Services</span></a>
-    <a class="cat-pill" href="pages/factories.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V9l6 3V9l6 3V6l6 3v12z"/></svg><span data-i18n="pill.factories">Factories</span></a>
-  </nav>
+  <script>
+    // The request form is a full desktop workspace and a compact disclosure on
+    // phones. Native <details> hides content when closed, so keep its state in
+    // sync with the intentional breakpoint rather than relying on CSS alone.
+    (()=>{
+      const panel=document.querySelector('[data-quick-panel]');
+      const desktop=window.matchMedia('(min-width:721px)');
+      const sync=()=>{ panel.open=desktop.matches; };
+      sync(); desktop.addEventListener('change',sync);
+    })();
+  </script>
 
   <!-- CURATED -->
   <section class="section">
-    <div class="sec-head"><h2 data-i18n="home.curated">Curated for you</h2><a class="link-arrow" href="pages/category.html"><span data-i18n="home.viewall">View all products</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    <div class="sec-head"><h2 data-i18n="home.curated">Curated for you</h2><a class="link-arrow" href="/categories"><span data-i18n="home.viewall">View all products</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     <div class="tabs" data-tabs id="curatedTabs">
       <span data-tab data-cat="all" class="on" data-i18n="home.tab.all">All</span><span data-tab data-cat="fabrics" data-i18n="home.tab.fabrics">Fabrics</span><span data-tab data-cat="accessories" data-i18n="home.tab.accessories">Accessories</span><span data-tab data-cat="trims" data-i18n="home.tab.trims">Trims</span>
     </div>
@@ -182,6 +178,23 @@
 </main>
 
 <div id="ftr"></div>
+
+<aside class="beta-invite" id="betaInvite" role="dialog" aria-modal="true" aria-labelledby="betaInviteTitle" aria-describedby="betaInviteCopy" hidden>
+  <div class="beta-invite__panel">
+    <button class="beta-invite__close" type="button" aria-label="Close beta invitation">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17"/></svg>
+    </button>
+    <img class="beta-invite__illustration" src="assets/atelix-beta-source-box.webp" alt="A friendly sourcing box with a growing plant" width="768" height="512">
+    <div class="beta-invite__copy">
+      <span class="beta-invite__eyebrow" data-i18n="beta.eyebrow">Atelix beta</span>
+      <h2 id="betaInviteTitle" data-i18n="beta.title">Start sourcing with us</h2>
+      <p id="betaInviteCopy" data-i18n="beta.copy">We’re inviting brand owners to try Atelix before public launch. Register early and receive a first-order launch code.</p>
+      <p class="beta-invite__support"><span data-i18n="beta.support">Need a supplier added or have a question?</span> <a href="mailto:info@arcanawangsa.com" data-i18n="beta.email">Email our team</a>.</p>
+    </div>
+    <a class="beta-invite__cta" href="pages/signup.html"><span data-i18n="beta.cta">Register as a brand owner</span> <span aria-hidden="true">→</span></a>
+    <p class="beta-invite__note" aria-hidden="true" data-i18n="beta.close">Closes automatically in 5 seconds.</p>
+  </div>
+</aside>
 <script src="js/data.js"></script>
 <script src="js/copilot.js"></script>
 <script src="js/components.js"></script>
@@ -191,32 +204,61 @@
 <script src="js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
-  // reveal-on-scroll for the Popular Categories card (single, purposeful entrance)
-  const reveal=document.querySelector('[data-reveal]');
-  if(reveal){
-    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)){
-      reveal.classList.add('in');
-    } else {
-      const io=new IntersectionObserver(([entry])=>{
-        if(entry.isIntersecting){ reveal.classList.add('in'); io.unobserve(reveal); }
-      }, {threshold:.25});
-      io.observe(reveal);
+  const betaInvite=document.getElementById('betaInvite');
+  if(betaInvite){
+    const showBetaInvite=()=>{
+      betaInvite.hidden=false;
+      let betaInviteTimer;
+      const closeBetaInvite=()=>{
+        if(betaInvite.classList.contains('is-closing')) return;
+        window.clearTimeout(betaInviteTimer);
+        betaInvite.classList.add('is-closing');
+        window.setTimeout(()=>betaInvite.remove(),220);
+      };
+      betaInvite.querySelector('.beta-invite__close').addEventListener('click',closeBetaInvite);
+      betaInviteTimer=window.setTimeout(closeBetaInvite,5000);
+    };
+    const api=window.ARCANA_API;
+    if(api?.getSessionProfile){
+      api.getSessionProfile().then(profile=>{
+        if(profile) betaInvite.remove();
+        else showBetaInvite();
+      }).catch(()=>betaInvite.remove());
+    }else{
+      betaInvite.remove();
     }
   }
+
+  // Keep the sourcing type list specific to the selected request category.
+  const quickCategories={
+    fabrics:{label:'Fabric type',options:['Cotton','Linen','Polyester','Wool','Nylon','Rayon / Viscose','Tencel / Lyocell','Silk','Denim','Knit fabric','Other / describe in note']},
+    trims:{label:'Trim type',options:['Zippers','Buttons','Interlining','Lining','Tapes & Elastic']},
+    oem:{label:'Product type',options:['Clothing','Accessories','Socks']}
+  };
+  const quickType=document.getElementById('quickType');
+  const quickTypeLabel=document.getElementById('quickTypeLabel');
+  const setQuickCategory=category=>{
+    const config=quickCategories[category]||quickCategories.fabrics;
+    if(quickTypeLabel) quickTypeLabel.textContent=config.label;
+    if(quickType) quickType.innerHTML=config.options.map(option=>`<option>${option}</option>`).join('');
+  };
+  document.querySelectorAll('.qp-tabs [data-quick-category]').forEach(tab=>tab.addEventListener('click',()=>setQuickCategory(tab.dataset.quickCategory)));
 
   // Quick sourcing request opens a pre-filled email instead of a fake toast.
   const qf=document.querySelector('[data-quick]');
   if(qf) qf.addEventListener('submit', async e=>{
     e.preventDefault();
     const cat=qf.querySelector('.qp-tabs [data-tab].on')?.textContent.trim()||'Fabrics';
-    const material=qf.querySelector('select').value;
-    const qty=qf.querySelector('input').value.trim();
+    const material=quickType?.value||'';
+    const qty=qf.elements.quantity.value.trim();
+    const budget=qf.elements.budget.value.trim();
+    const originPreference=qf.elements.origin_preference.value.trim();
     const note=qf.querySelector('textarea').value.trim();
     const profile=window.ARCANA_API ? await window.ARCANA_API.getSessionProfile().catch(()=>null) : null;
     const userId=profile ? profile.id : 'guest';
     const date=new Date().toISOString().slice(0,10);
     const subject=`Quick sourcing request - ${userId}_${date}`;
-    const body=[`Category: ${cat}`,`Material: ${material}`,`Quantity: ${qty||'Not specified'}`,`Note: ${note||'Not specified'}`].join('\n');
+    const body=[`Category: ${cat}`,`Material: ${material}`,`Quantity: ${qty||'Not specified'}`,`Budget: ${budget||'Not specified'}`,`Origin preference: ${originPreference||'No preference'}`,`Note: ${note||'Not specified'}`].join('\n');
     location.href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 

@@ -9,15 +9,16 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-root=".." data-allcat="0">
+<body class="orders-page-body" data-root=".." data-allcat="0">
 <div id="hdr"></div>
 
 <main class="wrap orders-page">
   <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Orders</span></nav>
   <header class="orders-page-head">
     <div><h1>Orders</h1><p>Review payment, production and delivery updates.</p></div>
+    <label class="orders-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg><span class="visually-hidden">Search orders</span><input id="ordersSearch" type="search" placeholder="Search order number, item or supplier" autocomplete="off"></label>
   </header>
-  <div class="orders-filters" aria-label="Filter orders">
+  <div class="orders-filters">
     <div class="order-filter-group" role="group" aria-label="Order status"><button class="order-filter-chip on" type="button" data-order-status="all">All</button><button class="order-filter-chip" type="button" data-order-status="open">In progress</button><button class="order-filter-chip" type="button" data-order-status="completed">Completed</button><button class="order-filter-chip" type="button" data-order-status="cancelled">Cancelled</button></div>
     <div class="order-filter-group" role="group" aria-label="Order date"><button class="order-filter-chip on" type="button" data-order-date="all">All time</button><button class="order-filter-chip" type="button" data-order-date="30">Last 30 days</button><button class="order-filter-chip" type="button" data-order-date="90">Last 90 days</button></div>
   </div>
@@ -33,7 +34,7 @@
 <script>
 window.ARCANA_PAGE=async function({IC}){
   const root=document.getElementById('ordersRoot');
-  let statusFilter='all', dateFilter='all';
+  let statusFilter='all', dateFilter='all', orderQuery='', remoteOrderNumbers=null, searchTimer=0, searchRequest=0;
   const API=window.ARCANA_API;
   const money=n=>window.ARCANA_money(Number(n)||0);
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -62,7 +63,9 @@ window.ARCANA_PAGE=async function({IC}){
     const status=statusFilter, days=Number(dateFilter);
     const visible=orders.filter(order=>{
       const meta=STATUS[order.status]||STATUS.awaiting_payment;
-      return (status==='all'||meta.group===status)&&(!days||inDays(order.placed_at,days));
+      const localText=[order.order_no,order.status,...(order.order_items||[]).flatMap(item=>[item.sku_snapshot,item.name_snapshot,item.seller_snapshot])].join(' ').toLowerCase();
+      const matchesSearch=!orderQuery || (remoteOrderNumbers ? remoteOrderNumbers.has(order.order_no) : localText.includes(orderQuery));
+      return matchesSearch&&(status==='all'||meta.group===status)&&(!days||inDays(order.placed_at,days));
     });
     root.setAttribute('aria-busy','false');
     if(!visible.length){
@@ -93,6 +96,17 @@ window.ARCANA_PAGE=async function({IC}){
     document.querySelectorAll('[data-order-date]').forEach(item=>item.classList.toggle('on',item===chip));
     render();
   }));
+  const orderSearch=document.getElementById('ordersSearch');
+  if(orderSearch) orderSearch.addEventListener('input',()=>{
+    orderQuery=orderSearch.value.trim().toLowerCase(); remoteOrderNumbers=null; render();
+    clearTimeout(searchTimer); const request=++searchRequest;
+    if(!orderQuery) return;
+    searchTimer=setTimeout(async()=>{
+      const result=await API.searchPrivateAlgolia('orders',orderQuery);
+      if(request!==searchRequest || result.error || !result.hits.length) return;
+      remoteOrderNumbers=new Set(result.hits.map(hit=>hit.order_no).filter(Boolean)); render();
+    },180);
+  });
   render();
 };
 </script>

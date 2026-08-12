@@ -1,0 +1,143 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const PUBLIC_INDEX = "atelix_app_7lq8h80eli_products";
+const PUBLIC_FACTORIES_INDEX = "atelix_app_7lq8h80eli_factories";
+const PUBLIC_SUGGESTIONS_INDEX = "atelix_app_7lq8h80eli_query_suggestions";
+const PRIVATE_ORDERS_INDEX = "atelix_private_orders";
+const PRIVATE_WISHLIST_INDEX = "atelix_private_wishlist";
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-algolia-sync-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+
+function algoliaUrl(index: string, suffix = "") { return `https://${Deno.env.get("ALGOLIA_APP_ID")}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}${suffix}`; }
+async function algolia(index: string, body: unknown, suffix = "/batch", admin = false, method = "POST") {
+  const key = Deno.env.get(admin ? "ALGOLIA_ADMIN_API_KEY" : "ALGOLIA_WRITE_API_KEY");
+  if (!key) throw new Error("algolia_not_configured");
+  const result = await fetch(algoliaUrl(index, suffix), { method, headers: { "X-Algolia-Application-Id": Deno.env.get("ALGOLIA_APP_ID")!, "X-Algolia-API-Key": key, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!result.ok) throw new Error(`algolia_${result.status}:${await result.text()}`);
+  return result.json();
+}
+
+function plain(value: unknown) { return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim(); }
+function publicRecord(product: any) {
+  const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
+  const city = plain(product.loc).split(",")[0];
+  const description = [product.description, product.comp, product.spec, product.construction, product.applications].map(plain).filter(Boolean).join(" · ");
+  return {
+    objectID: product.sku, sku: product.sku, style_code: product.style_code || "", name: product.name,
+    description, category: product.category, subcategory: product.subcategory || "", composition: product.comp || "", specification: product.spec || "",
+    supplier: factory?.name || "", country: product.country || "", city, price: Number(product.price || 0), unit: product.unit_type || "", moq: Number(product.moq || 0),
+    lead_time: product.lead_time || "", image: product.img || "", url: `https://atelix.app/pages/product.html?id=${encodeURIComponent(product.sku)}`,
+  };
+}
+async function publicProduct(admin: any, id: string) {
+  const { data } = await admin.from("products").select("*, factories(name)").eq("id", id).maybeSingle();
+  if (!data || data.listing_status !== "active" || data.is_private) return null;
+  return publicRecord(data);
+}
+async function syncPublicProduct(admin: any, id: string, deletedSku?: string) {
+  const record = await publicProduct(admin, id);
+  if (record) return algolia(PUBLIC_INDEX, { requests: [{ action: "updateObject", body: record }] });
+  return deletedSku ? algolia(PUBLIC_INDEX, { requests: [{ action: "deleteObject", body: { objectID: deletedSku } }] }) : undefined;
+}
+async function syncFactoryProducts(admin: any, id: string) {
+  const { data = [] } = await admin.from("products").select("id").eq("factory_id", id);
+  await Promise.all(data.map((product: any) => syncPublicProduct(admin, product.id)));
+}
+function factoryRecord(factory: any) {
+  return {
+    objectID: factory.slug,
+    id: factory.slug,
+    name: factory.name,
+    type: factory.type,
+    country: factory.region || "",
+    city: plain(factory.loc).split(",")[0],
+    location: factory.loc || "",
+    certifications: factory.certs || [],
+    capabilities: factory.tags || [],
+    moq: factory.moq || "",
+    lead_time: factory.lead || "",
+    description: factory.bio || "",
+    image: factory.img || "",
+    verified: factory.verify_state === "verified",
+    url: `https://atelix.app/pages/supplier.html?id=${encodeURIComponent(factory.slug)}`,
+  };
+}
+async function syncPublicFactory(admin: any, id: string, deletedSlug?: string) {
+  const { data } = await admin.from("factories").select("*").eq("id", id).maybeSingle();
+  if(data?.verify_state === "verified") return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "updateObject", body: factoryRecord(data) }] });
+  const slug=data?.slug||deletedSlug;
+  if(slug) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "deleteObject", body: { objectID: slug } }] });
+}
+async function syncOrder(admin: any, id: string) {
+  const { data: order } = await admin.from("orders").select("id,order_no,buyer_profile_id,status,total,placed_at,order_items(sku_snapshot,name_snapshot,seller_snapshot,qty)").eq("id", id).maybeSingle();
+  if (!order) return algolia(PRIVATE_ORDERS_INDEX, { requests: [{ action: "deleteObject", body: { objectID: `order_${id}` } }] });
+  const lines = (order.order_items || []).map((item: any) => [item.sku_snapshot, item.name_snapshot, item.seller_snapshot].filter(Boolean).join(" "));
+  return algolia(PRIVATE_ORDERS_INDEX, { requests: [{ action: "updateObject", body: { objectID: `order_${order.id}`, owner_profile_id: order.buyer_profile_id, order_no: order.order_no, status: order.status, total: Number(order.total || 0), placed_at: order.placed_at, searchable_text: lines.join(" · ") } }] });
+}
+async function syncWishlist(admin: any, profileId: string, productId: string) {
+  const { data: saved } = await admin.from("saved_items").select("profile_id,qty,products(id,sku,name,comp,spec,category,factories(name))").eq("profile_id", profileId).eq("product_id", productId).maybeSingle();
+  const objectID = `wishlist_${profileId}_${productId}`;
+  if (!saved || !saved.products) return algolia(PRIVATE_WISHLIST_INDEX, { requests: [{ action: "deleteObject", body: { objectID } }] });
+  const product: any = saved.products;
+  const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
+  return algolia(PRIVATE_WISHLIST_INDEX, { requests: [{ action: "updateObject", body: { objectID, owner_profile_id: profileId, sku: product.sku, product_id: product.id, name: product.name, category: product.category, supplier: factory?.name || "", searchable_text: [product.name, product.sku, product.comp, product.spec, factory?.name].filter(Boolean).join(" · "), qty: Number(saved.qty || 1), url: `https://atelix.app/pages/product.html?id=${encodeURIComponent(product.sku)}` } }] });
+}
+async function configureIndexes() {
+  await algolia(PUBLIC_INDEX, { searchableAttributes: ["unordered(sku)", "unordered(style_code)", "unordered(name)", "unordered(description)", "unordered(supplier)", "unordered(category)", "unordered(subcategory)"], attributesForFaceting: ["filterOnly(category)", "filterOnly(subcategory)", "filterOnly(country)"], customRanking: ["asc(price)", "asc(moq)"], queryType: "prefixLast", removeWordsIfNoResults: "none", exactOnSingleWordQuery: "attribute", alternativesAsExact: ["ignorePlurals", "singleWordSynonym"] }, "/settings", true, "PUT");
+  await algolia(PUBLIC_FACTORIES_INDEX, { searchableAttributes: ["unordered(name)", "unordered(type)", "unordered(capabilities)", "unordered(certifications)", "unordered(description)", "unordered(country)", "unordered(city)"], attributesForFaceting: ["filterOnly(type)", "filterOnly(country)", "filterOnly(certifications)"], customRanking: ["desc(verified)"], queryType: "prefixLast", removeWordsIfNoResults: "none", exactOnSingleWordQuery: "attribute", alternativesAsExact: ["ignorePlurals", "singleWordSynonym"] }, "/settings", true, "PUT");
+  await algolia(PUBLIC_SUGGESTIONS_INDEX, { searchableAttributes: ["unordered(query)", "unordered(category)"], customRanking: ["desc(weight)"], queryType: "prefixAll", removeWordsIfNoResults: "none" }, "/settings", true, "PUT");
+  await Promise.all([PRIVATE_ORDERS_INDEX, PRIVATE_WISHLIST_INDEX].map(index => algolia(index, { searchableAttributes: ["unordered(order_no)", "unordered(name)", "unordered(sku)", "unordered(supplier)", "unordered(searchable_text)"], attributesForFaceting: ["filterOnly(owner_profile_id)"], queryType: "prefixLast", removeWordsIfNoResults: "none" }, "/settings", true, "PUT")));
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const internal = !!Deno.env.get("ALGOLIA_SYNC_SECRET") && req.headers.get("x-algolia-sync-secret") === Deno.env.get("ALGOLIA_SYNC_SECRET");
+  let requester: any = null;
+  if (!internal) {
+    const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
+    const { data: { user } } = await admin.auth.getUser(jwt);
+    if (!user) return json({ error: "unauthorized" }, 401);
+    const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (profile?.role !== "admin") return json({ error: "forbidden" }, 403);
+    requester = user;
+  }
+  const { action = "process_queue", limit = 100 } = await req.json().catch(() => ({}));
+  try {
+    if (action === "configure") { await configureIndexes(); return json({ ok: true }); }
+    if (action === "reindex_public") {
+      const [{ data: products = [] }, { data: factories = [] }] = await Promise.all([
+        admin.from("products").select("*, factories(name)").eq("listing_status", "active").eq("is_private", false),
+        admin.from("factories").select("*").eq("verify_state", "verified"),
+      ]);
+      const productRequests = products.map(publicRecord).map((body: any) => ({ action: "updateObject", body }));
+      const factoryRequests = factories.map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
+      const suggestions = [
+        ["cotton twill", "Fabrics", 100], ["linen fabric", "Fabrics", 95], ["organic cotton jersey", "Fabrics", 92],
+        ["denim", "Fabrics", 90], ["recycled polyester", "Fabrics", 88], ["wool suiting", "Fabrics", 84],
+        ["ykk zipper", "Trims", 82], ["metal buttons", "Trims", 78], ["woven labels", "Accessories", 76],
+        ["oem clothing", "OEM Services", 74], ["private label manufacturer", "OEM Services", 72], ["sock manufacturer", "OEM Services", 68],
+      ].map(([query, category, weight], index) => ({ action: "updateObject", body: { objectID: `suggestion_${index + 1}`, query, category, weight } }));
+      if (productRequests.length) await algolia(PUBLIC_INDEX, { requests: productRequests });
+      if (factoryRequests.length) await algolia(PUBLIC_FACTORIES_INDEX, { requests: factoryRequests });
+      await algolia(PUBLIC_SUGGESTIONS_INDEX, { requests: suggestions });
+      return json({ ok: true, products: productRequests.length, factories: factoryRequests.length, suggestions: suggestions.length });
+    }
+    const { data: jobs = [] } = await admin.from("algolia_sync_outbox").select("*").is("processed_at", null).order("created_at").limit(Math.min(Number(limit) || 100, 500));
+    for (const job of jobs) {
+      try {
+        if (job.entity_type === "product") await syncPublicProduct(admin, job.entity_id, job.payload?.sku);
+        if (job.entity_type === "factory") { await syncPublicFactory(admin, job.entity_id, job.payload?.factory_slug); await syncFactoryProducts(admin, job.entity_id); }
+        if (job.entity_type === "order") await syncOrder(admin, job.entity_id);
+        if (job.entity_type === "order_item") await syncOrder(admin, job.payload?.order_id);
+        if (job.entity_type === "saved_item") await syncWishlist(admin, job.payload?.profile_id, job.payload?.product_id);
+        await admin.from("algolia_sync_outbox").update({ processed_at: new Date().toISOString(), attempts: job.attempts + 1, last_error: null }).eq("id", job.id);
+      } catch (error) {
+        await admin.from("algolia_sync_outbox").update({ attempts: job.attempts + 1, last_error: String(error).slice(0, 1000) }).eq("id", job.id);
+      }
+    }
+    return json({ ok: true, processed: jobs.length, requester: requester?.id || "internal" });
+  } catch (error) { return json({ error: String(error) }, 500); }
+});

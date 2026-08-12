@@ -146,13 +146,12 @@ function scoreProduct(p, intent){
   const relN = Math.min(1, rel/5);
 
   const verified = f ? !!f.verified : true;
-  const rating = f ? f.rating : null;
   const base = total ? matched/total : 0;
   // 70% constraint satisfaction + 20% relevance + 10% trust
   let sc = Math.round((total ? base*0.7 : 0.5) * 100 + relN*20 + (verified?10:0));
   sc = Math.max(0, Math.min(100, sc));
 
-  if(verified) hits.push(`Verified${rating?` · ${rating}★`:''}`);
+  if(verified) hits.push('Verified');
   return {p, f, score:sc, hits, miss, matched, total, verified, rel};
 }
 
@@ -167,7 +166,7 @@ function match(intent, opts){
   if(!intent.cat && !hardConstraints){
     out = out.filter(r => r.rel > 0);
   }
-  out.sort((a,b) => b.score - a.score || (b.f?b.f.rating:0) - (a.f?a.f.rating:0));
+  out.sort((a,b) => b.score - a.score || String(a.p.name).localeCompare(String(b.p.name)));
   return opts.limit ? out.slice(0, opts.limit) : out;
 }
 

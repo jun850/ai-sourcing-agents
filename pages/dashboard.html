@@ -118,15 +118,15 @@
       <!-- SKU manager (real CRUD, toggled from the SKU Setup card) -->
       <section class="panel" id="skuManager" hidden style="margin-top:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
-          <h3 style="font-family:var(--serif);font-size:19px;font-weight:600">Manage SKUs</h3>
+          <h3 style="font-family:var(--sans);font-size:20px;font-weight:600">Manage SKUs</h3>
           <button class="btn btn-green" type="button" id="btnAddSku" style="padding:9px 16px">+ Add SKU</button>
         </div>
         <div id="skuTable" style="margin-top:14px"></div>
 
         <form id="skuForm" hidden style="margin-top:20px;border-top:1px solid var(--line);padding-top:18px">
-          <h4 id="skuFormTitle" style="font-family:var(--serif);font-size:19px;font-weight:600;margin-bottom:12px">Add SKU</h4>
+          <h4 id="skuFormTitle" style="font-family:var(--sans);font-size:20px;font-weight:600;margin-bottom:12px">Add SKU</h4>
           <input type="hidden" name="id">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px">
+          <div class="supplier-form-grid">
             <div class="field-lg"><label>SKU</label><input name="sku" required></div>
             <div class="field-lg"><label>Name</label><input name="name" required></div>
             <div class="field-lg"><label>Category</label><select name="category">
@@ -144,7 +144,18 @@
             <div class="field-lg"><label>MOQ</label><input name="moq" type="number" step="1" min="0"></div>
             <div class="field-lg"><label>Location</label><input name="loc" placeholder="e.g. Shaoxing, China"></div>
             <div class="field-lg full"><label>Composition</label><input name="comp" placeholder="e.g. 55% Linen 45% Viscose"></div>
-            <div class="field-lg full"><label>Spec</label><input name="spec" placeholder="e.g. 180 GSM, 150cm width"></div>
+            <div class="field-lg full"><label for="dashboardProductDescription">About this product</label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="About product formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="dashboardProductDescription" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="A concise, buyer-friendly description of what this product is."></div><textarea name="description" data-rich-value hidden></textarea></div></div>
+            <div class="field-lg"><label>Construction / format</label><input name="construction" placeholder="e.g. Plain weave"></div>
+            <div class="field-lg"><label>Weight (GSM)</label><input name="gsm" placeholder="e.g. 180 GSM"></div>
+            <div class="field-lg"><label>Width</label><input name="fabric_width" placeholder="e.g. 150 cm"></div>
+            <div class="field-lg"><label>Roll length</label><input name="roll_length" placeholder="e.g. 50 m roll"></div>
+            <div class="field-lg"><label>Style code</label><input name="style_code" placeholder="e.g. 1015291"></div>
+            <div class="field-lg"><label>Best for</label><select name="applications"><option value="">Select clothing type</option><option>Blouson</option><option>T-shirt</option><option>Shirt</option><option>Blouse</option><option>Jacket</option><option>Coat</option><option>Pants</option><option>Shorts</option><option>Skirt</option><option>Dress</option><option>Suit</option><option>Knitwear</option><option>Activewear</option><option>Underwear</option><option>Socks</option><option>Bag</option><option>Footwear</option><option>Multiple apparel types</option></select></div>
+            <div class="field-lg"><label>Season</label><input name="season" placeholder="e.g. All season"></div>
+            <div class="field-lg"><label>Colour family</label><input name="color_family" placeholder="e.g. Solid, custom colours"></div>
+            <div class="field-lg"><label>Origin</label><input name="origin_country" placeholder="e.g. Japan"></div>
+            <div class="field-lg"><label>Lead time</label><input name="lead_time" placeholder="e.g. 7–14 days"></div>
+            <div class="field-lg full"><label for="dashboardHandlingNotes">Handling notes <span class="hint">optional</span></label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="Handling notes formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="dashboardHandlingNotes" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="Lot, cutting, care or quality notes a buyer should know."></div><textarea name="handling_notes" data-rich-value hidden></textarea></div></div>
             <div class="field-lg"><label>Status</label><select name="listing_status">
               <option value="active">Active</option><option value="draft">Draft</option>
             </select></div>
@@ -167,17 +178,17 @@
       <!-- bottom -->
       <div class="dash-bottom">
         <div class="panel" style="padding:20px 22px">
-          <div style="display:flex;align-items:center;gap:10px"><span class="st-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><h4 style="font-family:var(--serif);font-size:19px;font-weight:600">Verification &amp; Alerts</h4><span class="badge-count dot-red">2</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span class="st-err"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="22" height="22"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Verification &amp; Alerts</h4><span class="badge-count dot-red">2</span></div>
           <div class="alert-row"><span class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><div><b>Tax verification pending</b><span>Please upload Bank Certificate to complete verification.</span></div><button class="btn btn-out">Upload Now</button></div>
           <div class="alert-row"><span class="warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg></span><div><b>Profile incomplete</b><span>Add more photos &amp; videos to strengthen your profile.</span></div><button class="btn btn-out">Go to Profile</button></div>
         </div>
         <div class="panel" style="padding:20px 22px">
-          <div style="display:flex;align-items:center;gap:10px"><h4 style="font-family:var(--serif);font-size:19px;font-weight:600">Pending Approvals</h4><span class="badge-count" style="background:var(--muted)">1</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Pending Approvals</h4><span class="badge-count" style="background:var(--muted)">1</span></div>
           <div class="alert-row"><span style="color:var(--muted)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="22" height="22"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg></span><div><b>SKU Review</b><span>3 SKUs submitted on May 8, 2025</span></div><span class="badge" style="background:var(--gold-l);color:var(--gold-d);margin-left:auto">Under Review</span></div>
           <a class="link" href="#" style="color:var(--gold-d);font-size:13px;text-decoration:underline;margin-top:12px;display:inline-block">View All Submissions</a>
         </div>
         <div class="panel" style="padding:20px 22px">
-          <h4 style="font-family:var(--serif);font-size:19px;font-weight:600">Account Summary</h4>
+          <h4 style="font-family:var(--sans);font-size:20px;font-weight:600">Account Summary</h4>
           <div style="margin-top:8px">
             <div class="ov-row" style="border:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 3h9l4 4v14H6z"/></svg><span class="k">Member Since</span><span class="v">May 5, 2025</span></div>
             <div class="ov-row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg><span class="k">Account Type</span><span class="v">Supplier</span></div>
@@ -208,7 +219,7 @@
             <div><b style="display:block;color:var(--ink)">MOQ</b>300 Yards</div><div><b style="display:block;color:var(--ink)">Lead Time</b>15–25 Days</div><div><b style="display:block;color:var(--ink)">Worldwide</b>Shipping</div><div><b style="display:block;color:var(--ink)">Custom</b>Development</div>
           </div>
           <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
-            <b style="font-family:var(--serif);font-size:16px">About Us</b>
+            <b style="font-family:var(--sans);font-size:16px">About Us</b>
             <div style="display:flex;gap:12px;margin-top:8px"><p class="muted" style="font-size:11.5px;flex:1">Established in 2003, Greenknit is a vertically integrated textile manufacturer with in-house weaving, dyeing, finishing and inspection.</p><img alt="" src="../assets/factory-interior.webp" style="width:110px;height:74px;border-radius:8px;object-fit:cover"></div>
           </div>
         </div>
@@ -229,12 +240,13 @@
 window.ARCANA_PAGE=async function({toast}){
   const api=window.ARCANA_API;
   const money=n=>window.ARCANA_money(n);
+  const productAsset=window.ATELIX_productAsset;
   const gate=document.getElementById('dashGate');
   const main=document.getElementById('dashMain');
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   function showGate(title, body, cta){
-    gate.innerHTML=`<h2 style="font-family:var(--serif);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
+    gate.innerHTML=`<h2 style="font-family:var(--sans);font-size:24px;margin-bottom:10px">${title}</h2><p class="muted">${body}</p>${cta||''}`;
     gate.hidden=false;
   }
 
@@ -280,7 +292,7 @@ window.ARCANA_PAGE=async function({toast}){
     document.getElementById('skuCount').textContent=products.length;
     const recent=products.slice(0,5);
     document.getElementById('skuRecent').innerHTML=recent.length ? recent.map(p=>`
-      <div class="mini-row"><img alt="" src="${p.img||'../assets/linen.webp'}"><div><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)}</span></div>${statusBadge(p.listing_status)}</div>
+      <div class="mini-row"><img alt="${esc(p.name)}" src="${esc(productAsset(p))}"><div><b>${esc(p.name)}</b><span>SKU: ${esc(p.sku)}</span></div>${statusBadge(p.listing_status)}</div>
     `).join('') : '<p class="muted" style="font-size:12.5px;margin-top:8px">No SKUs yet — add your first product.</p>';
   }
   function renderSkuTable(){
@@ -288,7 +300,7 @@ window.ARCANA_PAGE=async function({toast}){
     if(!products.length){ tbl.innerHTML='<p class="muted">No SKUs yet.</p>'; return; }
     tbl.innerHTML=products.map(p=>`
       <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line-2)">
-        <img alt="" src="${p.img||'../assets/linen.webp'}" style="width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--panel)">
+        <img alt="${esc(p.name)}" src="${esc(productAsset(p))}" style="width:40px;height:40px;border-radius:var(--radius-sm);object-fit:cover;background:var(--panel)">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px;display:block">${esc(p.name)}</b>
           <span class="muted" style="font-size:11.5px">SKU: ${esc(p.sku)} · ${p.category} · ${p.pricing_mode==='quote'?'Quote only':money(p.price)+'/'+p.unit_type}</span>
@@ -315,6 +327,7 @@ window.ARCANA_PAGE=async function({toast}){
   const skuManager=document.getElementById('skuManager');
   const skuForm=document.getElementById('skuForm');
   const priceBreakRows=document.getElementById('priceBreakRows');
+  window.ATELIX_initRichEditors(skuForm);
 
   document.getElementById('btnManageSkus').addEventListener('click',()=>{
     skuManager.hidden=!skuManager.hidden;
@@ -338,6 +351,8 @@ window.ARCANA_PAGE=async function({toast}){
     skuForm.hidden=false;
     document.getElementById('skuFormTitle').textContent=product?`Edit ${product.sku}`:'Add SKU';
     skuForm.reset();
+    window.ATELIX_setRichEditor(skuForm,'description','');
+    window.ATELIX_setRichEditor(skuForm,'handling_notes','');
     skuForm.elements.id.value=product?product.id:'';
     priceBreakRows.innerHTML='';
     if(product){
@@ -350,7 +365,11 @@ window.ARCANA_PAGE=async function({toast}){
       skuForm.elements.moq.value=product.moq!=null?product.moq:'';
       skuForm.elements.loc.value=product.loc||'';
       skuForm.elements.comp.value=product.comp||'';
-      skuForm.elements.spec.value=product.spec||'';
+      ['construction','season','color_family','origin_country','lead_time','gsm','fabric_width','roll_length','style_code'].forEach(k=>skuForm.elements[k].value=product[k]||'');
+      window.ATELIX_setRichEditor(skuForm,'description',product.description||'');
+      window.ATELIX_setRichEditor(skuForm,'handling_notes',product.handling_notes||'');
+      const application=[...skuForm.elements.applications.options].some(option=>option.value===product.applications)?product.applications:(product.applications?'Multiple apparel types':'');
+      skuForm.elements.applications.value=application;
       skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
       const breaks=await api.getPriceBreaks(product.id);
       breaks.forEach(b=>addBreakRow(b.minQty,b.unitPrice));
@@ -360,13 +379,14 @@ window.ARCANA_PAGE=async function({toast}){
 
   skuForm.addEventListener('submit', async e=>{
     e.preventDefault();
+    window.ATELIX_syncRichEditors(skuForm);
     const f=skuForm.elements;
     const id=f.id.value;
     const payload={
       sku:f.sku.value.trim(), name:f.name.value.trim(), category:f.category.value,
       unit_type:f.unit_type.value, pricing_mode:f.pricing_mode.value,
       price:Number(f.price.value)||0, moq:f.moq.value?Number(f.moq.value):null,
-      loc:f.loc.value.trim(), comp:f.comp.value.trim(), spec:f.spec.value.trim(),
+      loc:f.loc.value.trim(), comp:f.comp.value.trim(), description:f.description.value.trim(), construction:f.construction.value.trim(), applications:f.applications.value.trim(), season:f.season.value.trim(), color_family:f.color_family.value.trim(), origin_country:f.origin_country.value.trim(), lead_time:f.lead_time.value.trim(), handling_notes:f.handling_notes.value.trim(), gsm:f.gsm.value.trim(), fabric_width:f.fabric_width.value.trim(), roll_length:f.roll_length.value.trim(), style_code:f.style_code.value.trim(),
       listing_status:f.listing_status.value
     };
     if(!payload.sku || !payload.name){ toast('SKU and name are required'); return; }

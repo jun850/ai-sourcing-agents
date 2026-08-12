@@ -44,7 +44,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <a class="btn btn-green" href="../index.html">${T('Start shopping')}</a>
       </div>
       <section class="section" style="margin-top:32px">
-        <div class="sec-head"><h2 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
+        <div class="sec-head"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('Recommended for you')}</h2></div>
         <div class="prod-grid" id="cartRecoGrid">${reco.map(p=>window.ARCANA_card(p)).join('')}</div>
       </section>`;
       window.ARCANA_wireCards(document.getElementById('cartRecoGrid'));
@@ -74,13 +74,13 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     root.innerHTML=`<div class="cart-wrap">
       <div>
         <section class="panel" style="padding:24px 26px">
-          <h3 style="font-family:var(--serif);font-size:24px;font-weight:600">${T('Your Cart')} <span class="muted" style="font-size:15px;font-family:var(--sans)">(${cart.length} ${T(cart.length===1?'item':'items')})</span></h3>
+          <h3 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('Your Cart')} <span class="muted" style="font-size:15px;font-family:var(--sans)">(${cart.length} ${T(cart.length===1?'item':'items')})</span></h3>
           <div style="margin-top:8px">${rows}</div>
           <div class="cart-actions"><a class="add-pkg" href="category.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg> ${T('Continue shopping')}</a></div>
         </section>
 
         <section class="panel addon-panel" style="padding:22px 26px;margin-top:20px">
-          <div class="sec-title" style="margin-bottom:14px"><span class="ti">${IC.shield}</span><h2 style="font-family:var(--serif);font-size:20px;font-weight:600">${T('Add-on services')}</h2></div>
+          <div class="sec-title" style="margin-bottom:14px"><span class="ti">${IC.shield}</span><h2 style="font-family:var(--sans);font-size:20px;font-weight:600">${T('Add-on services')}</h2></div>
           <label class="addon${ad.qc?' on':''}"><input type="checkbox" data-addon="qc" ${ad.qc?'checked':''}>
             <span class="ad-body"><b>${T('Atelix QC Inspection')} <span class="ad-tag">${T('recommended')}</span></b><span>${T('Independent quality check by Atelix before dispatch')}</span></span>
             <span class="ad-fee">+${money(qcAmt)}</span></label>
