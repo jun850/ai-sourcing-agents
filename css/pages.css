@@ -672,7 +672,7 @@
 .about-team-list article{min-width:0}
 .about-team-photo{aspect-ratio:1;margin:0;overflow:hidden;border-radius:var(--radius-sm);background:var(--panel)}
 .about-team-photo img{width:100%;height:100%;object-fit:cover}
-.about-team-photo--jun img{object-position:center 62%;transform:scale(1.55)}
+.about-team-photo--jun img{object-position:center 70%;transform:scale(2.05)}
 .about-team-photo--celina img{object-position:center top}
 .about-team-list article>div{padding-top:16px}
 .about-team-list h3{font-size:1.25rem;font-weight:700;line-height:1.25}
