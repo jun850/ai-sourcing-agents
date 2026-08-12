@@ -177,9 +177,15 @@ async function inspect(route, viewport) {
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
     if (!data.cart.quotesShipping) issues.push("cart does not identify shipping as separately quoted");
   }
-  if (["/", "/search?q=wool%20suiting", "/pages/cart.html?seed=cart", "/terms", "/privacy", "/trust-safety"].includes(route)) {
+  if (["/", "/search?q=wool%20suiting", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
     fs.mkdirSync(outputDir, { recursive: true });
-    const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: false });
+    if (route === "/about") {
+      await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, document.documentElement.scrollHeight)" });
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, 0)" });
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: route === "/about" });
     fs.writeFileSync(path.join(outputDir, `${viewport.name}-${route.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")||"home"}.png`), Buffer.from(shot.data, "base64"));
   }
   cdp.close();
