@@ -69,6 +69,21 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const nm=TR(p.name), comp=TR(p.comp), seller=TR(p.seller), loc=TR(p.loc);
     const certs=(p.certs||[]).map(TR).join(' · ');
     const supplierHighlight=factory&&factory.highlight ? TR(factory.highlight) : '';
+    const requester=Store.session()?.name||'guest';
+    const productLines=(quantity,extra)=>[
+      `Product: ${nm} (SKU: ${p.id})`,
+      `Quantity requested: ${quantity} ${TR(p.unit)}`,
+      `Composition: ${comp}`,
+      `Specification: ${TR(p.spec||p.construction||'Not specified')}`,
+      `MOQ: ${TR(p.moq)}`,
+      `Supplier: ${seller}, ${loc}`,
+      ...(extra||[]),
+    ];
+    const contactHref=(subjectPrefix,quantity,extra)=>{
+      const subject=`${subjectPrefix} - ${requester}`;
+      const body=productLines(quantity,extra).filter(Boolean).join('\n');
+      return `mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
     document.title = `${nm} — ${seller} — Atelix`;
     const catLabel=TR({fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'}[p.cat]);
     const subcategory=productSubcategory(p);
@@ -129,11 +144,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
           <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="Decrease quantity">−</button><input id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="Increase quantity">+</button></div>
         </div></div>
-        <div class="pdp-cta">
+        <div class="pdp-cta${p.price>0&&!p.isPrivate?'':' pdp-cta--quote'}">
           ${p.price>0&&!p.isPrivate
             ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
                <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} Email supplier</button>`
-            : `<button class="btn btn-gold" type="button" id="emailBtn">${IC.msg} Email supplier</button>`}
+            : `<a class="btn btn-gold" id="emailBtn" href="${contactHref('Product quote request',minimumOrder)}">${IC.msg} Contact Atelix for quote</a>`}
         </div>
         <div class="pdp-mini">
           <button class="fav pdp-save" data-fav-id="${p.id}">${IC.heart} <span>${T('Wishlist')}</span></button>
@@ -161,25 +176,16 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
     if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));location.href='checkout.html';});
-    // Product details shared by the email-based contact CTAs below.
-    const productLines=extra=>[
-      `Product: ${nm} (SKU: ${p.id})`,
-      `Quantity requested: ${qi.value} ${TR(p.unit)}`,
-      `Composition: ${comp}`,
-      `Specification: ${TR(p.spec||p.construction||'Not specified')}`,
-      `MOQ: ${TR(p.moq)}`,
-      `Supplier: ${seller}, ${loc}`,
-      ...(extra||[]),
-    ];
     const emailBtn=document.getElementById('emailBtn');
     if(emailBtn) emailBtn.addEventListener('click', ()=>{
-      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines()});
+      if(emailBtn.tagName==='A') emailBtn.href=contactHref('Product quote request',qi.value);
+      else window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines(qi.value)});
     });
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
       const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
       const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
-      window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines([`OEM service selected: ${pkgName}`])});
+      window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines(qi.value,[`OEM service selected: ${pkgName}`])});
     });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
     sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'), on?{href:'wishlist.html',label:T('View wishlist')}:undefined);});

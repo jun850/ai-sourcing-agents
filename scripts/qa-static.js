@@ -18,5 +18,10 @@ for(const file of files){
   }
 }
 for(const file of ["vercel.json","package.json"])try{JSON.parse(fs.readFileSync(path.join(root,file),"utf8"));}catch(error){problems.push(`${file}: ${error.message}`)}
+const quotePage=fs.readFileSync(path.join(root,"pages/product.html"),"utf8");
+const pageStyles=fs.readFileSync(path.join(root,"css/pages.css"),"utf8");
+if(!/return `mailto:info@arcanawangsa\.com\?subject=/.test(quotePage))problems.push("pages/product.html: quote contact must use a real mailto link to info@arcanawangsa.com");
+if(!/<a class="btn btn-gold" id="emailBtn" href="\$\{contactHref\([^}]+\}\">\$\{IC\.msg\} Contact Atelix for quote<\/a>/.test(quotePage))problems.push("pages/product.html: quote-only products must render the Contact Atelix email anchor");
+if(!/\.pdp-cta--quote\{position:static;/.test(pageStyles))problems.push("css/pages.css: mobile quote contact action must remain in the product page flow");
 if(problems.length){console.error(problems.join("\n"));process.exit(1)}
 console.log(`Static QA passed across ${files.length} files.`);
