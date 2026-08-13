@@ -142,7 +142,7 @@ async function inspect(route, viewport) {
   const { result } = await cdp.send("Runtime.evaluate", {
     returnByValue: true,
     expression: `(() => {
-      const visible = el => { const s=getComputedStyle(el), r=el.getBoundingClientRect(); return !el.hidden && s.display!=='none' && s.visibility!=='hidden' && r.width>0 && r.height>0; };
+      const visible = el => { if(!el) return false; const s=getComputedStyle(el), r=el.getBoundingClientRect(); return !el.hidden && s.display!=='none' && s.visibility!=='hidden' && r.width>0 && r.height>0; };
       const ids=[...document.querySelectorAll('[id]')].map(el=>el.id).filter(Boolean);
       const duplicates=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
       const brokenImages=[...document.images].filter(img=>visible(img)&&img.complete&&img.naturalWidth===0).map(img=>img.currentSrc||img.src);
@@ -155,7 +155,7 @@ async function inspect(route, viewport) {
       const sentinel=(bodyText.match(/\\b(undefined|null|NaN)\\b|\\[object Object\\]/g)||[]);
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
       const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
-      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart};
+      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart};
     })()`,
   });
   const data = result.value;
@@ -176,6 +176,14 @@ async function inspect(route, viewport) {
     if (!data.cart.quantityInputs.length || data.cart.quantityInputs.some((input) => input.value < input.min)) issues.push("cart quantity is below product MOQ");
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
     if (!data.cart.quotesShipping) issues.push("cart does not identify shipping as separately quoted");
+  }
+  if (route === "/") {
+    if (viewport.mobile && (!data.isolation.mobileNav || data.isolation.desktopCategories)) issues.push("mobile marketplace navigation isolation failed");
+    if (!viewport.mobile && (data.isolation.mobileNav || !data.isolation.desktopCategories)) issues.push("desktop marketplace navigation isolation failed");
+  }
+  if (route === "/categories/fabrics") {
+    if (viewport.mobile && (!data.isolation.mobileListTools || data.isolation.desktopFilters)) issues.push("mobile catalog controls are not isolated from desktop filters");
+    if (!viewport.mobile && (data.isolation.mobileListTools || !data.isolation.desktopFilters)) issues.push("desktop catalog controls are not isolated from mobile controls");
   }
   if (["/", "/search?q=wool%20suiting", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
     fs.mkdirSync(outputDir, { recursive: true });

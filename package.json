@@ -8,6 +8,8 @@
     "test": "npm run qa:static",
     "qa:static": "node scripts/qa-static.js",
     "qa:browser": "node scripts/qa-browser.js",
+    "qa:intools": "node scripts/qa-intools.js",
+    "qa:regression": "npm run qa:static && npm run qa:browser && npm run qa:intools",
     "bundle:analytics": "esbuild js/analytics-entry.js --bundle --minify --outfile=js/analytics.bundle.js",
     "bundle:supabase": "esbuild js/supabase-entry.js --bundle --minify --outfile=js/supabase-client.bundle.js",
     "bundle:all": "npm run bundle:analytics && npm run bundle:supabase"

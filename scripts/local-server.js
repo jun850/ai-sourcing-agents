@@ -18,6 +18,7 @@ function rewrite(url) {
     return '/pages/category.html';
   }
   return ({
+    '/intools/dashboard':'/intools/dashboard.html',
     '/search':'/pages/search.html',
     '/about':'/pages/about.html',
     '/help-center':'/pages/help-center.html',
@@ -36,7 +37,15 @@ http.createServer((req, res) => {
   if (!filename.startsWith(root + path.sep)) { res.writeHead(403); res.end('Forbidden'); return; }
   fs.readFile(filename, (error, file) => {
     if (error) { res.writeHead(error.code === 'ENOENT' ? 404 : 500); res.end(error.code === 'ENOENT' ? 'Not found' : 'Server error'); return; }
-    res.writeHead(200, { 'Content-Type': `${mime[path.extname(filename).toLowerCase()] || 'application/octet-stream'}; charset=utf-8` });
+    const headers = { 'Content-Type': `${mime[path.extname(filename).toLowerCase()] || 'application/octet-stream'}; charset=utf-8` };
+    if (url.pathname.startsWith('/intools/')) {
+      headers['Cache-Control'] = 'private, no-store, max-age=0';
+      headers['X-Robots-Tag'] = 'noindex, nofollow, noarchive';
+      headers['Referrer-Policy'] = 'no-referrer';
+      headers['X-Content-Type-Options'] = 'nosniff';
+      headers['X-Frame-Options'] = 'SAMEORIGIN';
+    }
+    res.writeHead(200, headers);
     res.end(file);
   });
 }).listen(port, () => console.log(`Atelix local server: http://localhost:${port}`));

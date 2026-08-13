@@ -91,7 +91,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <button class="btn btn-green" data-contact-factory>${IC.msg||''} ${T('Contact Supplier')}</button>
         <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} ${T('Save Supplier')}</button>
         <button class="btn btn-out" data-share>${T('Share')}</button>
-        <a class="btn btn-out admin-supplier-entry" id="adminSupplierEntry" href="#" hidden>${T('sp.manage')}</a>
       </div>
     </section>
     <section class="panel map-panel">
@@ -129,21 +128,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>${T('sp.contactFactory')}</button>
     </aside>
   </div>`;
-
-  // Public supplier pages are buyer-facing, but admins need a direct path into
-  // the existing support workspace. Keep the control hidden unless both the
-  // session role and database factory lookup confirm admin access.
-  async function wireAdminEntry(){
-    const entry=document.getElementById('adminSupplierEntry');
-    if(!entry || !api || !api.getSessionProfile || !api.getFactoryForAdminEntry) return;
-    const profile=await api.getSessionProfile().catch(()=>null);
-    if(!profile || profile.role!=='admin') return;
-    const dbFactory=await api.getFactoryForAdminEntry(f.id,f.name).catch(()=>null);
-    if(!dbFactory || !dbFactory.id) return;
-    entry.href=`admin-supplier.html?id=${encodeURIComponent(dbFactory.id)}`;
-    entry.hidden=false;
-  }
-    wireAdminEntry();
 
   // interactions
     const facFav=document.querySelector('[data-fac-fav]'); facFav.classList.toggle('on',Store.isSaved(f.id));

@@ -68,7 +68,30 @@ if(!sb || !sb.auth){
     adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
     adminListUsers(){ return Promise.resolve([]); },
     adminSetFactoryVerification(){ return Promise.resolve({ error: err }); },
-    adminListAudit(){ return Promise.resolve([]); }
+    adminListAudit(){ return Promise.resolve([]); },
+    getPublishedContentPage(){ return Promise.resolve({ page:null, error:err }); },
+    intoolsListPages(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsLoadPage(){ return Promise.resolve({ page:null, revisions:[], error:err }); },
+    intoolsSavePage(){ return Promise.resolve({ page:null, error:err }); },
+    intoolsPublishPage(){ return Promise.resolve({ page:null, error:err }); },
+    intoolsRollbackPage(){ return Promise.resolve({ page:null, error:err }); },
+    intoolsArchivePage(){ return Promise.resolve({ page:null, error:err }); },
+    intoolsListWidgets(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsLoadWidget(){ return Promise.resolve({ widget:null, revisions:[], error:err }); },
+    intoolsSaveWidget(){ return Promise.resolve({ widget:null, error:err }); },
+    intoolsPublishWidget(){ return Promise.resolve({ widget:null, error:err }); },
+    intoolsRollbackWidget(){ return Promise.resolve({ widget:null, error:err }); },
+    intoolsArchiveWidget(){ return Promise.resolve({ widget:null, error:err }); },
+    intoolsListMedia(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsSaveMedia(){ return Promise.resolve({ asset:null, error:err }); },
+    intoolsArchiveMedia(){ return Promise.resolve({ asset:null, error:err }); },
+    intoolsListProducts(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsSaveProduct(){ return Promise.resolve({ product:null, error:err }); },
+    intoolsArchiveProduct(){ return Promise.resolve({ product:null, error:err }); },
+    intoolsListSuppliers(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsSaveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
+    intoolsArchiveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
+    intoolsListAudit(){ return Promise.resolve({ items:[], error:err }); }
   };
   return;
 }
@@ -543,7 +566,7 @@ const API = {
       const { error } = await sb.storage.from('uploads').upload(path, file, { upsert:true });
       if(error) return { error };
       const { data } = sb.storage.from('uploads').getPublicUrl(path);
-      return { url: data.publicUrl };
+      return { url: data.publicUrl, path };
     }catch(error){ return { error }; }
   },
 
@@ -771,6 +794,107 @@ const API = {
       if(error) return [];
       return data || [];
     }catch(_){ return []; }
+  },
+
+  /* ---- Intools: all private methods are backed by confirmed-admin RPCs. ---- */
+  async getPublishedContentPage(route, locale='en'){
+    try{
+      const { data, error }=await sb.rpc('public_get_content_page',{p_route:route,p_locale:locale});
+      return { page:data||null, error:error||null };
+    }catch(error){ return { page:null, error }; }
+  },
+
+  async intoolsListPages(){
+    try{const {data,error}=await sb.rpc('intools_list_pages');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsLoadPage(route){
+    try{const {data,error}=await sb.rpc('intools_load_page',{p_route:route});return {page:data||null,revisions:data?.revisions||[],error:error||null};}
+    catch(error){return {page:null,revisions:[],error};}
+  },
+  async intoolsSavePage({route,title,template='standard',document,expectedRevision=0}){
+    try{const {data,error}=await sb.rpc('intools_save_page',{p_route:route,p_title:title,p_template:template,p_document:document,p_expected_revision:expectedRevision});return {page:data||null,error:error||null};}
+    catch(error){return {page:null,error};}
+  },
+  async intoolsPublishPage(pageId,expectedRevision){
+    try{const {data,error}=await sb.rpc('intools_publish_page',{p_page_id:pageId,p_expected_revision:expectedRevision});return {page:data||null,error:error||null};}
+    catch(error){return {page:null,error};}
+  },
+  async intoolsRollbackPage(pageId,revisionNo,expectedRevision){
+    try{const {data,error}=await sb.rpc('intools_rollback_page',{p_page_id:pageId,p_revision_no:revisionNo,p_expected_revision:expectedRevision});return {page:data||null,error:error||null};}
+    catch(error){return {page:null,error};}
+  },
+  async intoolsArchivePage(pageId,expectedRevision,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_page',{p_page_id:pageId,p_expected_revision:expectedRevision,p_restore:restore});return {page:data||null,error:error||null};}
+    catch(error){return {page:null,error};}
+  },
+
+  async intoolsListWidgets(){
+    try{const {data,error}=await sb.rpc('intools_list_widgets');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsLoadWidget(key){
+    try{const {data,error}=await sb.rpc('intools_load_widget',{p_key:key});return {widget:data||null,revisions:data?.revisions||[],error:error||null};}
+    catch(error){return {widget:null,revisions:[],error};}
+  },
+  async intoolsSaveWidget({key,type,zone,document,expectedRevision=0}){
+    try{const {data,error}=await sb.rpc('intools_save_widget',{p_key:key,p_type:type,p_zone:zone,p_document:document,p_expected_revision:expectedRevision});return {widget:data||null,error:error||null};}
+    catch(error){return {widget:null,error};}
+  },
+  async intoolsPublishWidget(widgetId,expectedRevision){
+    try{const {data,error}=await sb.rpc('intools_publish_widget',{p_widget_id:widgetId,p_expected_revision:expectedRevision});return {widget:data||null,error:error||null};}
+    catch(error){return {widget:null,error};}
+  },
+  async intoolsRollbackWidget(widgetId,revisionNo,expectedRevision){
+    try{const {data,error}=await sb.rpc('intools_rollback_widget',{p_widget_id:widgetId,p_revision_no:revisionNo,p_expected_revision:expectedRevision});return {widget:data||null,error:error||null};}
+    catch(error){return {widget:null,error};}
+  },
+  async intoolsArchiveWidget(widgetId,expectedRevision,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_widget',{p_widget_id:widgetId,p_expected_revision:expectedRevision,p_restore:restore});return {widget:data||null,error:error||null};}
+    catch(error){return {widget:null,error};}
+  },
+
+  async intoolsListMedia(){
+    try{const {data,error}=await sb.rpc('intools_list_media');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsSaveMedia({id=null,name,path,publicUrl,mimeType,bytes,width=null,height=null,altText={},expectedUpdatedAt=null}){
+    try{const {data,error}=await sb.rpc('intools_save_media',{p_id:id,p_name:name,p_path:path,p_public_url:publicUrl,p_mime_type:mimeType,p_bytes:bytes,p_width:width,p_height:height,p_alt_text:altText,p_expected_updated_at:expectedUpdatedAt});return {asset:data||null,error:error||null};}
+    catch(error){return {asset:null,error};}
+  },
+  async intoolsArchiveMedia(id,expectedUpdatedAt,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_media',{p_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {asset:data||null,error:error||null};}
+    catch(error){return {asset:null,error};}
+  },
+
+  async intoolsListProducts(){
+    try{const {data,error}=await sb.rpc('intools_list_products');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsSaveProduct({id=null,payload,expectedUpdatedAt=null}){
+    try{const {data,error}=await sb.rpc('intools_save_product',{p_product_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {product:data||null,error:error||null};}
+    catch(error){return {product:null,error};}
+  },
+  async intoolsArchiveProduct(id,expectedUpdatedAt,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_product',{p_product_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {product:data||null,error:error||null};}
+    catch(error){return {product:null,error};}
+  },
+
+  async intoolsListSuppliers(){
+    try{const {data,error}=await sb.rpc('intools_list_suppliers');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsSaveSupplier({id=null,payload,expectedUpdatedAt=null}){
+    try{const {data,error}=await sb.rpc('intools_save_supplier',{p_supplier_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {supplier:data||null,error:error||null};}
+    catch(error){return {supplier:null,error};}
+  },
+  async intoolsArchiveSupplier(id,expectedUpdatedAt,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_supplier',{p_supplier_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {supplier:data||null,error:error||null};}
+    catch(error){return {supplier:null,error};}
+  },
+  async intoolsListAudit({targetType=null,targetId=null,limit=100}={}){
+    try{const {data,error}=await sb.rpc('intools_list_audit',{p_target_type:targetType,p_target_id:targetId,p_limit:limit});return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
   }
 };
 

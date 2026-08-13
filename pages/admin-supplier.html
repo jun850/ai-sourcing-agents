@@ -156,7 +156,7 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
 
   function renderStatic(){
     document.querySelectorAll('[data-page-i18n]').forEach(el=>{el.textContent=T(el.dataset.pageI18n);});
-    document.title=`${T('admin.manageSupplier')} — ARCANA Admin`;
+    document.title=`${T('admin.manageSupplier')} — Atelix Admin`;
   }
 
   function showGate(title,body,cta){
@@ -219,17 +219,17 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
       openVerificationModal(nextVerify,patch,file);
       return;
     }
-    await saveProfile(patch,file);
+    await saveProfile(patch,file,nextVerify);
   });
-  async function saveProfile(patch,file){
+  async function saveProfile(patch,file,verifyState=factory.verify_state){
     if(file){
       const up=await api.uploadImage(file,'factories');
       if(up.error){toast(up.error.message||T('admin.imageUploadFailed'));return;}
       patch.img=up.url;
     }
-    const {error}=await api.updateFactory(factory.id,patch);
+    const {supplier,error}=await api.intoolsSaveSupplier({id:factory.id,payload:{...patch,verify_state:verifyState},expectedUpdatedAt:factory.updated_at});
     if(error){toast(error.message||T('admin.profileSaveFailed'));return;}
-    Object.assign(factory,patch);
+    Object.assign(factory,supplier||patch,{verify_state:verifyState});
     renderFactory();
     toast(T('admin.profileUpdated'));
     return true;
@@ -254,8 +254,8 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
     table.querySelectorAll('[data-archive]').forEach(b=>b.addEventListener('click',()=>openArchiveModal(b.dataset.archive)));
   }
   async function loadProducts(){
-    const r=await api.getMyProducts(factory.id);
-    if(r.error){toast(r.error.message||T('admin.productLoadFailed'));products=[];}else products=r.products||[];
+    const r=await api.intoolsListProducts();
+    if(r.error){toast(r.error.message||T('admin.productLoadFailed'));products=[];}else products=(r.items||[]).filter(product=>product.factory_id===factory.id);
     renderProducts();
   }
 
@@ -282,7 +282,8 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
       skuForm.elements.price.value=product.price||0;skuForm.elements.moq.value=product.moq!=null?product.moq:'';
       skuForm.elements.listing_status.value=product.listing_status==='archived'?'draft':product.listing_status;
       skuForm.elements.is_private.checked=!!product.is_private;
-      (await api.getPriceBreaks(product.id)).forEach(b=>addBreakRow(b.minQty,b.unitPrice));
+      skuForm.elements.assigned_emails.value=(product.brand_emails||[]).join(', ');
+      (product.price_breaks||[]).forEach(b=>addBreakRow(b.minQty??b.min_qty,b.unitPrice??b.unit_price));
     }
     document.getElementById('assignmentControl').hidden=!skuForm.elements.is_private.checked;
     skuForm.scrollIntoView({behavior:'smooth',block:'center'});
@@ -297,19 +298,15 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
     const f=skuForm.elements,id=f.id.value;
     const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),description:f.description.value.trim(),construction:f.construction.value.trim(),applications:f.applications.value.trim(),season:f.season.value.trim(),color_family:f.color_family.value.trim(),origin_country:f.origin_country.value.trim(),lead_time:f.lead_time.value.trim(),handling_notes:f.handling_notes.value.trim(),gsm:f.gsm.value.trim(),fabric_width:f.fabric_width.value.trim(),roll_length:f.roll_length.value.trim(),style_code:f.style_code.value.trim(),listing_status:f.listing_status.value,is_private:f.is_private.checked};
     if(!payload.sku||!payload.name){toast(T('admin.skuRequired'));return;}
+    const breaks=[...priceBreakRows.children].map(row=>({minQty:Number(row.querySelector('[data-bmin]').value)||0,unitPrice:Number(row.querySelector('[data-bprice]').value)||0})).filter(b=>b.minQty>0);
+    const emails=f.assigned_emails.value.split(',').map(value=>value.trim()).filter(Boolean);
+    if(payload.is_private&&!emails.length){toast('Add at least one registered brand-owner email for a private SKU.');return;}
     const file=f.imgFile.files[0];
     if(file){const up=await api.uploadImage(file,'products');if(up.error){toast(up.error.message||T('admin.imageUploadFailed'));return;}payload.img=up.url;}
-    let productId=id;
-    if(id){const r=await api.updateProduct(id,payload);if(r.error){toast(r.error.message||T('admin.skuSaveFailed'));return;}}
-    else{payload.factory_id=factory.id;const r=await api.createProduct(payload);if(r.error){toast(r.error.message||T('admin.skuCreateFailed'));return;}productId=r.product.id;}
-    if(payload.is_private){
-      const emails=f.assigned_emails.value.split(',').map(value=>value.trim()).filter(Boolean);
-      if(!emails.length){toast('Add at least one registered brand-owner email for a private SKU.');return;}
-      const assignment=await api.adminSetPrivateProductAssignments(productId,emails);
-      if(assignment.error){toast(assignment.error.message||'Could not assign brand owners.');return;}
-    }
-    const breaks=[...priceBreakRows.children].map(row=>({minQty:Number(row.querySelector('[data-bmin]').value)||0,unitPrice:Number(row.querySelector('[data-bprice]').value)||0})).filter(b=>b.minQty>0);
-    const br=await api.setPriceBreaks(productId,breaks);if(br.error){toast(br.error.message||T('admin.breakSaveFailed'));return;}
+    payload.factory_id=factory.id;payload.brand_emails=payload.is_private?emails:[];payload.price_breaks=breaks.map(b=>({min_qty:b.minQty,unit_price:b.unitPrice}));
+    const existing=products.find(product=>product.id===id);
+    const saved=await api.intoolsSaveProduct({id:id||null,payload,expectedUpdatedAt:existing?.updated_at||null});
+    if(saved.error){toast(saved.error.message||(id?T('admin.skuSaveFailed'):T('admin.skuCreateFailed')));return;}
     skuForm.hidden=true;toast(id?T('admin.skuUpdated'):T('admin.skuAdded'));loadProducts();
   });
 
@@ -331,13 +328,12 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
   modalConfirm.addEventListener('click',async()=>{
     if(!pending)return;modalConfirm.disabled=true;
     if(pending.kind==='verification'){
-      const saved=await saveProfile(pending.profilePatch,pending.profileFile);
+      const saved=await saveProfile(pending.profilePatch,pending.profileFile,pending.next);
       if(!saved){modalConfirm.disabled=false;return;}
-      const r=await api.adminSetFactoryVerification(factory.id,pending.next);
-      if(r.error){toast(r.error.message||T('admin.verifyFailed'));modalConfirm.disabled=false;return;}
-      factory.verify_state=pending.next;renderFactory();await loadAudit();toast(T('admin.verifyUpdated'));
+      renderFactory();await loadAudit();toast(T('admin.verifyUpdated'));
     }else{
-      const r=await api.archiveProduct(pending.id);
+      const product=products.find(item=>item.id===pending.id);
+      const r=await api.intoolsArchiveProduct(pending.id,product?.updated_at||null,false);
       if(r.error){toast(r.error.message||T('admin.archiveFailed'));modalConfirm.disabled=false;return;}
       await loadProducts();toast(T('admin.skuArchived'));
     }

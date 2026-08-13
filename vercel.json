@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/intools/dashboard", "destination": "/intools/dashboard.html" },
     { "source": "/categories", "destination": "/pages/categories.html" },
     {
       "source": "/categories/:l2",
@@ -16,5 +17,18 @@
     { "source": "/terms", "destination": "/pages/terms.html" },
     { "source": "/privacy", "destination": "/pages/privacy.html" },
     { "source": "/trust-safety", "destination": "/pages/trust-safety.html" }
+  ],
+  "headers": [
+    {
+      "source": "/intools/:path*",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store, max-age=0" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+      ]
+    }
   ]
 }

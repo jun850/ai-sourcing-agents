@@ -768,9 +768,9 @@
         : s.role === "admin"
           ? "Atelix · Admin"
           : "Brand Owner · Buyer";
-    const adminLink =
+    const adminLinks =
       s.role === "admin"
-        ? `<a role="menuitem" href="${P("admin-orders.html")}">Users &amp; orders</a><a role="menuitem" href="${P("admin-supplier.html")}?id=b44b67da-39cd-4be1-abe2-7359d8cd7554">Atelix Sourcing workspace</a>`
+        ? `<a role="menuitem" href="/intools/dashboard">Intools</a><a role="menuitem" href="${P("admin-orders.html")}">Users &amp; orders</a>`
         : "";
     const privateOffers =
       s.role === "buyer"
@@ -781,7 +781,7 @@
     <div class="acct-pop" role="menu" hidden>
       <div class="acct-hd"><span class="acct-av">${av}</span><div><b>${s.name}</b><span>${roleLabel}</span></div></div>
       <a role="menuitem" href="${dest}">${s.role === "seller" ? "Supplier dashboard" : "My profile"}</a>
-      ${adminLink}
+      ${adminLinks}
       <a role="menuitem" href="${P("cart.html")}">My cart</a>
       <a role="menuitem" href="${P("wishlist.html")}">Wishlist</a>
       ${privateOffers}
