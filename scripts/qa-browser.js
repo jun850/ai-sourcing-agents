@@ -18,6 +18,7 @@ const routes = [
   "/search?q=%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E",
   "/search?q=YKK%20Corporation&type=factories",
   "/pages/product.html?id=FAB-153",
+  "/pages/product.html?id=FAB-100",
   "/pages/product.html?id=does-not-exist",
   "/pages/factories.html",
   "/pages/supplier.html?id=F-18",
@@ -139,6 +140,14 @@ async function inspect(route, viewport) {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
+  let contactData = null;
+  if (["/pages/product.html?id=FAB-153", "/pages/product.html?id=FAB-100"].includes(route)) {
+    const contactResult = await cdp.send("Runtime.evaluate", {
+      returnByValue: true,
+      expression: `(() => { window.__qaContacts=[]; window.ARCANA_contactEmail=payload=>window.__qaContacts.push(payload); document.getElementById('emailBtn')?.click(); document.getElementById('oemContactBtn')?.click(); return window.__qaContacts; })()`,
+    });
+    contactData = contactResult.result.value;
+  }
   const { result } = await cdp.send("Runtime.evaluate", {
     returnByValue: true,
     expression: `(() => {
@@ -177,6 +186,10 @@ async function inspect(route, viewport) {
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
     if (!data.cart.quotesShipping) issues.push("cart does not identify shipping as separately quoted");
   }
+  if (["/pages/product.html?id=FAB-153", "/pages/product.html?id=FAB-100"].includes(route)) {
+    if (!contactData?.length || contactData.some((contact) => contact.subjectPrefix !== "Product Request" && contact.subjectPrefix !== "OEM request") || contactData.some((contact) => !contact.bodyLines?.some((line) => /^Specification: /.test(line)))) issues.push("PDP contact CTA did not build a complete email request");
+    if (route.endsWith("FAB-100") && !contactData?.some((contact) => contact.subjectPrefix === "OEM request")) issues.push("PDP OEM Contact us CTA did not trigger email contact");
+  }
   if (route === "/") {
     if (viewport.mobile && (!data.isolation.mobileNav || data.isolation.desktopCategories)) issues.push("mobile marketplace navigation isolation failed");
     if (!viewport.mobile && (data.isolation.mobileNav || !data.isolation.desktopCategories)) issues.push("desktop marketplace navigation isolation failed");
@@ -197,7 +210,7 @@ async function inspect(route, viewport) {
     fs.writeFileSync(path.join(outputDir, `${viewport.name}-${route.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")||"home"}.png`), Buffer.from(shot.data, "base64"));
   }
   cdp.close();
-  return { route, viewport: viewport.name, issues, data };
+  return { route, viewport: viewport.name, issues, data: { ...data, contactData } };
 }
 
 async function inspectSearch(viewport) {

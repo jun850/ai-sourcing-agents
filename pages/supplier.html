@@ -69,10 +69,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(TR(f.name))}</span></nav>
   <div class="sup-hero">
     <section class="panel sup-main">
+      ${(f.page_img||f.img)?`<div class="sup-company-image"><img src="${window.ATELIX_factoryPageAsset(f)}" alt="${esc(TR(f.name))} company"></div>`:''}
       <div class="sup-top">
         <div class="sup-name">
-          <h1>${esc(TR(f.name))}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
-          <div class="role">${esc(TR(value(f.type)))} · ${esc(TR(location))}</div>
+          <div class="sup-identity">${f.logo_img?`<img class="sup-logo" src="${window.ATELIX_factoryAsset(f)}" alt="${esc(TR(f.name))} logo">`:''}<div><h1>${esc(TR(f.name))}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
+          <div class="role">${esc(TR(value(f.type)))} · ${esc(TR(location))}</div></div></div>
           <p class="bio">${esc(TR(bio))}</p>
           <div class="sup-tags">${tags.map(tag=>`<span class="pill-tag">${esc(TR(tag))}</span>`).join('')}${certs.map(c=>`<span class="pill-tag">${esc(TR(c))}</span>`).join('')}</div>
         </div>

@@ -30,7 +30,9 @@
   const productAsset = (product) =>
     resolveAsset(product && product.img, "fabric-stack");
   const factoryAsset = (factory) =>
-    resolveAsset(factory && factory.img, "factory-interior");
+    resolveAsset(factory && (factory.logo_img || factory.img), "factory-interior");
+  const factoryPageAsset = (factory) =>
+    resolveAsset(factory && (factory.page_img || factory.img), "factory-interior");
   const factoryLocation = (factory) => {
     const cityById = {
       "F-01": "Shaoxing",
@@ -55,6 +57,7 @@
     return [city, factory && factory.region].filter(Boolean).join(", ");
   };
   window.ATELIX_factoryAsset = factoryAsset;
+  window.ATELIX_factoryPageAsset = factoryPageAsset;
   window.ATELIX_factoryLocation = factoryLocation;
   window.ATELIX_productAsset = productAsset;
   document.addEventListener(

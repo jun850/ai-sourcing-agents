@@ -166,7 +166,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       `Product: ${nm} (SKU: ${p.id})`,
       `Quantity requested: ${qi.value} ${TR(p.unit)}`,
       `Composition: ${comp}`,
-      `Specification: ${spec}`,
+      `Specification: ${TR(p.spec||p.construction||'Not specified')}`,
       `MOQ: ${TR(p.moq)}`,
       `Supplier: ${seller}, ${loc}`,
       ...(extra||[]),

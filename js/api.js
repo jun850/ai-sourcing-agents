@@ -311,6 +311,7 @@ const API = {
       years: f.years, moq: f.moq, lead: f.lead,
       orders: f.orders_label, capacity: f.capacity,
       certs: f.certs || [], tags: f.tags || [], img: f.img,
+      logo_img: f.logo_img, page_img: f.page_img,
       sales: f.sales, phone: f.phone, web: f.web, founded: f.founded,
       employees: f.employees, area: f.area, port: f.port, bio: f.bio
     }));
@@ -885,7 +886,7 @@ const API = {
     catch(error){return {items:[],error};}
   },
   async intoolsSaveSupplier({id=null,payload,expectedUpdatedAt=null}){
-    try{const {data,error}=await sb.rpc('intools_save_supplier',{p_supplier_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {supplier:data||null,error:error||null};}
+    try{const {data,error}=await sb.rpc('intools_save_supplier_with_images',{p_supplier_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {supplier:data||null,error:error||null};}
     catch(error){return {supplier:null,error};}
   },
   async intoolsArchiveSupplier(id,expectedUpdatedAt,restore=false){
