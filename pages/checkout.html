@@ -76,10 +76,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   });
   const supplierItems=groups.map(group=>`<div class="checkout-supplier">
     <header><span aria-hidden="true">${IC.factory}</span><strong>${text(group.name)}</strong></header>
-    ${group.items.map(item=>{const product=M[item.id],options=optionSummary(item);return `<div class="checkout-item">
+    ${group.items.map(item=>{const product=M[item.id],options=optionSummary(item),itemIndex=cart.indexOf(item);return `<div class="checkout-item">
       <img src="${window.ATELIX_productAsset(product)}" alt="${text(product.name)}">
       <div><a href="product.html?id=${encodeURIComponent(product.id)}">${text(TR(product.name))}</a>${options?`<p>${options}</p>`:''}<p>${item.qty} × ${productMoney(product)}</p></div>
       <strong>${productMoney(product,item.qty)}</strong>
+      <label class="checkout-item-note"><span>Note for supplier <small>Optional</small></span><textarea maxlength="300" data-item-note="${itemIndex}" aria-label="Note for ${text(TR(product.name))}" placeholder="Color matching, packaging, or handling instructions for this item"></textarea><small><span data-item-note-count>0</span>/300</small></label>
     </div>`;}).join('')}
   </div>`).join('');
 
@@ -97,10 +98,6 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <section class="panel checkout-block" aria-labelledby="itemsTitle">
           <header class="checkout-block-head"><div><span class="checkout-step">3</span><h2 id="itemsTitle">Items (${cart.length})</h2></div><a href="cart.html">Edit cart</a></header>
           <div class="checkout-suppliers">${supplierItems}</div>
-        </section>
-        <section class="panel checkout-block" aria-labelledby="noteTitle">
-          <header class="checkout-block-head"><div><span class="checkout-step">4</span><h2 id="noteTitle">Order note</h2></div><span>Optional</span></header>
-          <label class="checkout-note"><span class="sr-only">Order note for suppliers</span><textarea id="orderNote" maxlength="500" placeholder="Add delivery access details or instructions for your suppliers."></textarea><small><span id="noteCount">0</span>/500</small></label>
         </section>
         <section class="checkout-payment-note" aria-label="Payment information">${IC.shield}<p><strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span></p></section>
       </div>
@@ -135,11 +132,12 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   function updateAddress(){
     const target=document.getElementById('selectedAddress');
     if(!selectedAddress){
-      target.innerHTML=`<div class="checkout-empty-address"><div><strong>No delivery address selected</strong><p>Add an address so Atelix can calculate shipping.</p></div><button class="btn btn-green" type="button" data-empty-address>Add address</button></div>`;
-      target.querySelector('[data-empty-address]').onclick=()=>addressBook.openForm();
+      pickerTrigger.hidden=false;
       pickerTrigger.textContent='Add address';
+      target.innerHTML=`<div class="checkout-empty-address"><div><strong>No delivery address selected</strong><p>Add an address so Atelix can calculate shipping.</p></div></div>`;
       return;
     }
+    pickerTrigger.hidden=false;
     pickerTrigger.textContent='Change';
     target.innerHTML=`<div class="checkout-address-title"><strong>${text(selectedAddress.label||'Delivery address')}</strong>${selectedAddress.is_default?'<span class="address-badge">Default</span>':''}</div><p><b>${text(selectedAddress.recipient_name)}</b>${selectedAddress.phone?` · ${text(selectedAddress.phone)}`:''}</p><p>${text(window.ATELIX_formatAddress(selectedAddress))}</p>`;
   }
@@ -173,10 +171,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(place){ place.disabled=true; place.textContent='Placing order…'; }
     const shipAddress=[selectedAddress.recipient_name,selectedAddress.phone,window.ATELIX_formatAddress(selectedAddress)].filter(Boolean).join(' · ');
     const { orderNo, error } = await window.ARCANA_API.placeOrder({
-      items: cart.map(i=>({id:i.id,qty:i.qty,key:i.key||i.id,options:i.options||{}})),
+      items: cart.map((i,index)=>({id:i.id,qty:i.qty,key:i.key||i.id,options:i.options||{},note:root.querySelector(`[data-item-note="${index}"]`)?.value.trim()||null})),
       shipCountry: selectedAddress.country,
       shipAddress,
-      notes: document.getElementById('orderNote').value.trim()||null,
+      notes: null,
       qc: false, insurance: false
     });
     if(error || !orderNo){
@@ -194,7 +192,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   picker.querySelector('[data-picker-close]').addEventListener('click',()=>picker.close());
   picker.addEventListener('click',event=>{if(event.target===picker)picker.close();});
   root.querySelector('[data-place]').addEventListener('click',placeOrder);
-  const note=document.getElementById('orderNote');note.addEventListener('input',()=>document.getElementById('noteCount').textContent=note.value.length);
+  root.querySelectorAll('[data-item-note]').forEach(note=>note.addEventListener('input',()=>note.closest('.checkout-item-note').querySelector('[data-item-note-count]').textContent=note.value.length));
   addressBook=window.ATELIX_createAddressBook({
     api:window.ARCANA_API,
     list:document.getElementById('checkoutAddressList'),

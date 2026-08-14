@@ -28,6 +28,7 @@ const checkoutPage=fs.readFileSync(path.join(root,"pages/checkout.html"),"utf8")
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
+const itemNotesMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814223000_item_level_order_notes.sql"),"utf8");
 const algoliaSync=fs.readFileSync(path.join(root,"supabase/functions/algolia-sync/index.ts"),"utf8");
 const vercelIgnore=fs.readFileSync(path.join(root,".vercelignore"),"utf8");
 for(const privatePath of ['.env*','data/','research/','scripts/','supabase/'])if(!vercelIgnore.split(/\r?\n/).includes(privatePath))problems.push(`.vercelignore: missing private deployment boundary ${privatePath}`);
@@ -58,7 +59,10 @@ if(!translations.includes("window.ATELIX_CONTACT_EMAIL = 'info@arcanawangsa.com'
 if(!catalogApi.includes('supplier_taxonomy_memberships(l2,l3,is_primary)'))problems.push('js/api.js: verified supplier taxonomy must hydrate with the public catalog');
 if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages/category.html: existing category grid must surface matching verified suppliers');
 if(/Incoterms|PO number|data-t="(?:incoterm|po)"/.test(checkoutPage))problems.push('pages/checkout.html: Incoterms and PO number must stay out of the customer checkout flow');
+if(/id="orderNote"|Order note for suppliers/.test(checkoutPage)||!checkoutPage.includes('data-item-note'))problems.push('pages/checkout.html: supplier notes must be captured per item, never as a global order note');
+if(checkoutPage.includes('data-empty-address')||!checkoutPage.includes("pickerTrigger.textContent='Add address'"))problems.push('pages/checkout.html: empty delivery state must expose one slim address action');
 if(!/p_incoterms:\s*null/.test(catalogApi))problems.push('js/api.js: checkout must submit a null internal Incoterms value');
+for(const contract of ['cart_items','order_items','buyer_note','snapshot_order_item_buyer_note'])if(!itemNotesMigration.includes(contract))problems.push(`item note migration missing: ${contract}`);
 if(categoryPage.includes('class="ftags"'))problems.push('pages/category.html: supplier cards must not render capability tags');
 if(fs.readFileSync(path.join(root,'pages/factories.html'),'utf8').includes('class="ftags"'))problems.push('pages/factories.html: supplier cards must not render capability tags');
 if(!/\.sup-company-image img\{[^}]*object-fit:contain/.test(pageStyles))problems.push('css/pages.css: supplier hero images must preserve the full crop');

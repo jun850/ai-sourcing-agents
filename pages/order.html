@@ -56,7 +56,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
     if(error || !o){ order=null; return; }
     order={
       no:o.order_no, placedAt:o.placed_at, status:o.status,
-      items:(items||[]).map(it=>({ name:it.name_snapshot, seller:it.seller_snapshot, qty:Number(it.qty), price:Number(it.unit_price) })),
+      items:(items||[]).map(it=>({ name:it.name_snapshot, seller:it.seller_snapshot, qty:Number(it.qty), price:Number(it.unit_price), note:it.buyer_note||'' })),
       subtotal:Number(o.subtotal), fee:Number(o.fee), ship:Number(o.ship),
       shippingService:o.shipping_service||'',shippingEtaMin:o.shipping_eta_min_days,shippingEtaMax:o.shipping_eta_max_days,
       shipCountry:o.ship_country||'',shipAddress:o.ship_address||'',
@@ -130,7 +130,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       <h3>Items</h3>
       ${Object.entries(bySeller).map(([seller,items])=>`
         <div class="co-rev-block"><div class="rt"><b>Sourced from ${seller}</b></div>
-          ${items.map(i=>`<div class="rl" style="display:flex;justify-content:space-between"><span>${i.name} × ${i.qty}</span><span>${money(i.price*i.qty)}</span></div>`).join('')}
+          ${items.map(i=>`<div class="rl"><div style="display:flex;justify-content:space-between;gap:16px"><span>${esc(i.name)} × ${i.qty}</span><span>${money(i.price*i.qty)}</span></div>${i.note?`<p class="order-item-note"><b>Supplier note</b>${esc(i.note)}</p>`:''}</div>`).join('')}
         </div>`).join('')}
     </section>`;
   }

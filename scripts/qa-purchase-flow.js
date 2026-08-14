@@ -54,7 +54,7 @@ const mockApi = `(() => {
     getSessionProfile:async()=>profile,getMyProfile:async()=>profile,onChange:()=>({data:{subscription:{unsubscribe(){}}}}),
     fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
     getWishlist:async()=>[],replaceWishlist:async()=>({error:null}),getMyOrders:async()=>[],
-    getAddresses:async()=>addresses.map(address=>({...address})),
+    getAddresses:async()=>location.search.includes('qa-empty-address')?[]:addresses.map(address=>({...address})),
     createAddress:async payload=>{const address={...payload,id:'addr-new',is_default:false};addresses.push(address);return {address,error:null};},
     updateAddress:async(id,payload)=>{addresses=addresses.map(address=>address.id===id?{...address,...payload}:address);return {address:addresses.find(address=>address.id===id),error:null};},
     deleteAddress:async id=>{addresses=addresses.filter(address=>address.id!==id);return {error:null};},
@@ -127,19 +127,28 @@ async function checkoutScenario(width, height) {
     const second=picker.querySelector('[data-address-select="addr-jp"]');
     const pickerOpened=picker.open;
     second?.click();
-    return new Promise(resolve=>setTimeout(()=>resolve({
-      h1:document.querySelector('h1')?.textContent.trim(),pickerOpened,pickerClosed:!picker.open,
-      selected:document.getElementById('selectedAddress')?.innerText,shipping:document.getElementById('shippingStatus')?.innerText,
-      summary:document.getElementById('summaryShipping')?.textContent,placeEnabled:!place.disabled,
-      overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
-      dialogs:document.querySelectorAll('dialog.address-dialog').length
-    }),250));
+    return new Promise(resolve=>setTimeout(()=>{
+      const note=document.querySelector('[data-item-note="0"]');
+      note.value='Match the approved Light Gray lab dip.';
+      note.dispatchEvent(new Event('input',{bubbles:true}));
+      place.click();
+      setTimeout(()=>resolve({
+        h1:document.querySelector('h1')?.textContent.trim(),pickerOpened,pickerClosed:!picker.open,
+        selected:document.getElementById('selectedAddress')?.innerText,shipping:document.getElementById('shippingStatus')?.innerText,
+        summary:document.getElementById('summaryShipping')?.textContent,placeEnabled:!place.disabled,
+        noteFields:document.querySelectorAll('[data-item-note]').length,noteCount:document.querySelector('[data-item-note-count]')?.textContent,
+        globalNote:Boolean(document.getElementById('orderNote')),orderPayload:window.__qaOrderPayload,
+        overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,
+        dialogs:document.querySelectorAll('dialog.address-dialog').length
+      }),100);
+    },250));
   })()`);
   cdp.close();
   const issues = [...browser.errors, ...browser.failures];
   if (data.h1 !== "Checkout") issues.push("missing checkout heading");
   if (!data.pickerOpened || !data.pickerClosed) issues.push("address picker open/select/close flow failed");
   if (!/Tokyo showroom/.test(data.selected) || !/Air freight/.test(data.shipping) || data.summary === "—" || !data.placeEnabled) issues.push("address selection did not update shipping and summary");
+  if (data.noteFields !== 1 || data.globalNote || data.noteCount !== "38" || data.orderPayload?.items?.[0]?.note !== "Match the approved Light Gray lab dip." || data.orderPayload?.notes) issues.push("item-level supplier note did not replace the global order note contract");
   if (data.dialogs !== 1) issues.push("shared address editor was not created exactly once");
   if (data.overflow > 2) issues.push(`horizontal overflow: ${data.overflow}px`);
   return issues;
@@ -166,10 +175,30 @@ async function profileScenario() {
   return issues;
 }
 
+async function emptyAddressScenario() {
+  const browser = await open("/pages/checkout.html?qa-empty-address=1", 1440, 900);
+  const { cdp } = browser;
+  if (!await waitFor(cdp, "document.querySelector('[data-address-picker]')?.textContent === 'Add address'")) throw new Error("Empty checkout did not expose the address action");
+  const data = await evaluate(cdp, `(() => {
+    const visible=element=>{const style=getComputedStyle(element),box=element.getBoundingClientRect();return !element.hidden&&style.display!=='none'&&box.width>0&&box.height>0;};
+    const buttons=[...document.querySelectorAll('button')].filter(button=>visible(button)&&button.textContent.trim()==='Add address');
+    const action=document.querySelector('[data-address-picker]');
+    const height=Math.round(action.getBoundingClientRect().height),width=Math.round(action.getBoundingClientRect().width);
+    action.click();
+    return {buttons:buttons.length,height,width,pickerOpen:document.querySelector('.address-picker').open,hasBodyAction:Boolean(document.querySelector('[data-empty-address]'))};
+  })()`);
+  cdp.close();
+  const issues = [...browser.errors, ...browser.failures];
+  if (data.buttons !== 1 || data.hasBodyAction || !data.pickerOpen) issues.push("empty delivery state has duplicate or nonfunctional address actions");
+  if (data.height > 38 || data.width > 120) issues.push(`desktop address action is not slim (${data.width}×${data.height})`);
+  return issues;
+}
+
 (async () => {
   const scenarios = [
     ["checkout desktop", () => checkoutScenario(1440, 900)],
     ["checkout mobile", () => checkoutScenario(390, 844)],
+    ["checkout empty address", emptyAddressScenario],
     ["profile addresses", profileScenario],
   ];
   let failed = 0;

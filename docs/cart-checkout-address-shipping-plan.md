@@ -12,7 +12,8 @@ real payment model, and server-authoritative totals.
   removal, totals, and the checkout action.
 - `/pages/checkout.html`: use saved addresses, support add/edit/select in
   accessible dialogs, show a configured shipping quote, group order lines by
-  supplier, capture buyer notes, and place the order from one review surface.
+  supplier, capture one optional buyer note per item, and place the order from
+  one review surface.
 - `/pages/brand-owner.html#address`: use the same saved-address list and editor
   as checkout for add, edit, default, and delete operations.
 - `/intools/dashboard`: add a desktop-only Shipping view for one destination
@@ -30,6 +31,9 @@ real payment model, and server-authoritative totals.
 - A new migration stores country rates and snapshots the selected service,
   charge, and ETA onto each order. `place_order` resolves shipping server-side;
   the client never supplies a price.
+- Item notes are stored on cart lines and snapshotted onto immutable order
+  items so each supplier sees the instruction attached to the correct SKU and
+  selected variant.
 - The same migration keeps `products.images` ordered and synchronizes
   `products.img` to the first item whenever Intools saves a product.
 

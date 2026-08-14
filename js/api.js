@@ -175,14 +175,14 @@ async function skuIdMap(skus){
   return { map: Object.fromEntries((prods||[]).map(p=>[p.sku, p.id])) };
 }
 
-/* Replace a cart's contents with items:[{id:sku,qty,options,key}]. Unknown SKUs are dropped;
+/* Replace a cart's contents with items:[{id:sku,qty,options,key,note}]. Unknown SKUs are dropped;
    returns { matched } = how many rows actually got written, so callers can tell
    "cart cleared" apart from "every SKU was invalid". */
 async function writeCartRows(cartId, items){
   const { map: idBySku, error: me } = await skuIdMap((items||[]).map(i=>i.id));
   if(me) return { error: me };
   const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
-    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty, line_key:i.key||i.id, option_selection:i.options||{} }));
+    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty, line_key:i.key||i.id, option_selection:i.options||{}, buyer_note:typeof i.note==='string'?(i.note.trim()||null):null }));
   const del = await sb.from('cart_items').delete().eq('cart_id', cartId);
   if(del.error) return { error: del.error };
   if(rows.length){
@@ -349,7 +349,8 @@ const API = {
   /* ---- Checkout / orders ----
      placeOrder syncs the client cart into the DB cart, then calls the
      place_order RPC which recomputes every total server-side and returns the
-     order_no. Requires a signed-in buyer. items: [{ id:sku, qty }]. */
+     order_no. Requires a signed-in buyer. Item notes are written to each cart
+     line and snapshotted onto the matching order item. */
   async placeOrder({ items, shipCountry, shipAddress, notes, qc, insurance }){
     try{
       const { data:{ session } } = await sb.auth.getSession();
@@ -425,9 +426,9 @@ const API = {
       if(!session || !session.user) return [];
       const { data: cart } = await sb.from('carts').select('id').eq('profile_id', session.user.id).maybeSingle();
       if(!cart) return [];
-      const { data: items, error } = await sb.from('cart_items').select('qty,line_key,option_selection,products(sku)').eq('cart_id', cart.id);
+      const { data: items, error } = await sb.from('cart_items').select('qty,line_key,option_selection,buyer_note,products(sku)').eq('cart_id', cart.id);
       if(error || !items) return [];
-      return items.filter(i=>i.products).map(i=>({ id:i.products.sku,qty:Number(i.qty),key:i.line_key||i.products.sku,options:i.option_selection||{} }));
+      return items.filter(i=>i.products).map(i=>({ id:i.products.sku,qty:Number(i.qty),key:i.line_key||i.products.sku,options:i.option_selection||{},note:i.buyer_note||null }));
     }catch(_){ return []; }
   },
 
