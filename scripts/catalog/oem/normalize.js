@@ -8,6 +8,7 @@ const SOURCE_NAME = 'apparelx';
 const SOURCE_HOST = 'www.apparel-x.com';
 const CONTACT_EMAIL = 'info@arcanawangsa.com';
 const SCHEMA_VERSION = 1;
+const REMOVED_SOURCE_IDS = new Set(['TTON']);
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 
 function nullableText(value, { multiline = false } = {}) {
@@ -208,7 +209,9 @@ function normalizeManifest(input) {
     throw new Error(`Unsupported source host: ${sourceHost}`);
   }
   const crawledAt = nullableText(input.metadata && input.metadata.crawledAt);
-  const normalized = input.records.map(record => buildSupplier(record, crawledAt));
+  const normalized = input.records
+    .filter(record => !REMOVED_SOURCE_IDS.has(String(record.companyId || '').trim().toUpperCase()))
+    .map(record => buildSupplier(record, crawledAt));
   const ids = normalized.map(item => item.supplier.id);
   if (new Set(ids).size !== ids.length) throw new Error('Duplicate canonical supplier identity detected');
 

@@ -25,15 +25,16 @@ function supplier(result, sourceId) {
   return result.publicManifest.suppliers.find(value => value.id === `apparelx:${sourceId.toLowerCase()}`);
 }
 
-test('normalizes all 35 records deterministically', () => {
+test('normalizes the approved supplier set deterministically', () => {
   const first = normalizeManifest(input());
   const second = normalizeManifest(input());
   assert.deepEqual(first, second);
-  assert.equal(first.publicManifest.metadata.supplierCount, 35);
-  assert.equal(first.report.readyCount, 35);
+  assert.equal(first.publicManifest.metadata.supplierCount, 34);
+  assert.equal(first.report.readyCount, 34);
   assert.equal(first.report.reviewRequiredCount, 0);
   assert.equal(first.report.privateEmailCount, 21);
   assert.equal(first.report.mediaCount, 90);
+  assert.equal(supplier(first, 'TTON'), undefined);
 });
 
 test('assigns evidence-backed primary and secondary current taxonomy memberships', () => {
@@ -114,8 +115,7 @@ test('normalizes supplier locations as country then city while retaining source 
   assert.equal(supplier(result, 'KAORIS').city, 'Suzhou');
   assert.equal(supplier(result, 'NRF8').country, 'Bangladesh');
   assert.equal(supplier(result, 'NRF8').city, 'Narayanganj');
-  assert.equal(supplier(result, 'TTON').country, null);
-  assert.equal(supplier(result, 'TTON').city, null);
+  assert.equal(result.publicManifest.suppliers.filter(value => value.address).every(value => value.country && value.city), true);
 });
 
 test('CLI supports help, dry-run/report, and separate exclusive output manifests', () => {
@@ -126,7 +126,7 @@ test('CLI supports help, dry-run/report, and separate exclusive output manifests
 
   const dryRun = spawnSync(process.execPath, [CLI, '--dry-run', '--report'], { encoding: 'utf8' });
   assert.equal(dryRun.status, 0, dryRun.stderr);
-  assert.equal(JSON.parse(dryRun.stdout).supplierCount, 35);
+    assert.equal(JSON.parse(dryRun.stdout).supplierCount, 34);
 
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'atelix-oem-normalize-'));
   try {

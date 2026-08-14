@@ -28,10 +28,11 @@ const routes = [
   "/pages/product.html?id=FAB-163",
   "/pages/product.html?id=does-not-exist",
   "/pages/factories.html",
-  "/pages/supplier.html?id=F-18",
-  "/pages/supplier.html?id=apparelx-7im",
-  "/pages/supplier.html?id=apparelx-basi",
-  "/pages/supplier.html?id=does-not-exist",
+  "/pages/supplier.html?id=F-18&lang=en",
+  "/pages/supplier.html?id=apparelx-7im&lang=en",
+  "/pages/supplier.html?id=apparelx-basi&lang=en",
+  "/pages/supplier.html?id=apparelx-nancy&lang=en",
+  "/pages/supplier.html?id=does-not-exist&lang=en",
   "/pages/cart.html",
   "/pages/cart.html?seed=cart",
   "/pages/checkout.html",
@@ -174,7 +175,8 @@ async function inspect(route, viewport) {
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
       const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
       const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span')].map(button=>Math.round(button.getBoundingClientRect().height))};
-      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', supplierCards:{count:document.querySelectorAll('.fcard').length,tags:document.querySelectorAll('.fcard .ftags').length}, supplierProfile:{tags:document.querySelectorAll('.sup-tags,.capabilities').length,products:document.querySelectorAll('.feat-fabrics .prod-grid .tcard').length,location:document.querySelector('.sup-name .role')?.textContent.split('·').pop().trim()||''}, supplierHero:{fit:getComputedStyle(document.querySelector('.sup-company-image img')||document.body).objectFit||'',naturalWidth:document.querySelector('.sup-company-image img')?.naturalWidth||0}, isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
+      const supplierDetailText=[...document.querySelectorAll('.sup-main,.map-panel,.overview')].map(el=>el.innerText).join(' ');
+      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', supplierCards:{count:document.querySelectorAll('.fcard').length,tags:document.querySelectorAll('.fcard .ftags').length}, supplierProfile:{tags:document.querySelectorAll('.sup-tags,.capabilities').length,overview:document.querySelectorAll('.overview').length,products:document.querySelectorAll('.feat-fabrics .prod-grid .tcard').length,emptyProducts:Boolean(document.querySelector('.supplier-products-empty')),location:document.querySelector('.sup-name .role')?.textContent.split('·').pop().trim()||'',hasCjk:/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(supplierDetailText)}, supplierHero:{fit:getComputedStyle(document.querySelector('.sup-company-image img')||document.body).objectFit||'',naturalWidth:document.querySelector('.sup-company-image img')?.naturalWidth||0}, isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
     })()`,
   });
   const data = result.value;
@@ -219,11 +221,14 @@ async function inspect(route, viewport) {
     if (!viewport.mobile && (data.isolation.mobileListTools || !data.isolation.desktopFilters)) issues.push("desktop catalog controls are not isolated from mobile controls");
   }
   if (["/categories/oem/clothing", "/pages/factories.html"].includes(route) && data.supplierCards.tags) issues.push("supplier cards still render capability tags");
-  if (route === "/pages/supplier.html?id=apparelx-7im" && (data.supplierHero.fit !== "contain" || data.supplierHero.naturalWidth < 1)) issues.push("supplier hero does not preserve its full image crop");
+  if (route.startsWith("/pages/supplier.html?id=apparelx-7im") && (data.supplierHero.fit !== "contain" || data.supplierHero.naturalWidth < 1)) issues.push("supplier hero does not preserve its full image crop");
   if (route.includes('/pages/supplier.html') && data.supplierProfile.tags) issues.push('supplier profile exposes backend-only tags or capability metadata');
-  if (route === "/pages/supplier.html?id=apparelx-basi" && data.supplierProfile.products) issues.push("supplier profile borrowed products from another factory");
-  if (route === "/pages/supplier.html?id=apparelx-basi" && data.supplierProfile.location !== "Bangladesh, Dhaka") issues.push(`supplier location is not Country, City: ${data.supplierProfile.location}`);
-  if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/supplier.html?id=apparelx-7im", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
+  if (route.includes('/pages/supplier.html') && data.supplierProfile.overview) issues.push('supplier profile exposes the removed company overview section');
+  if (route.includes('/pages/supplier.html') && route.includes('lang=en') && data.supplierProfile.hasCjk) issues.push('English supplier profile exposes untranslated CJK source details');
+  if (route.startsWith("/pages/supplier.html?id=apparelx-basi") && (data.supplierProfile.products || !data.supplierProfile.emptyProducts)) issues.push("supplier profile must show an empty product state without borrowing products");
+  if (route.startsWith("/pages/supplier.html?id=apparelx-basi") && data.supplierProfile.location !== "Bangladesh, Dhaka") issues.push(`supplier location is not Country, City: ${data.supplierProfile.location}`);
+  if (route.startsWith("/pages/supplier.html?id=apparelx-nancy") && data.supplierProfile.location !== "Japan, Nagoya") issues.push(`supplier location is not English Country, City: ${data.supplierProfile.location}`);
+  if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/supplier.html?id=apparelx-7im&lang=en", "/pages/supplier.html?id=apparelx-nancy&lang=en", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
     fs.mkdirSync(outputDir, { recursive: true });
     if (route === "/about") {
       await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, document.documentElement.scrollHeight)" });

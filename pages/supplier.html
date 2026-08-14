@@ -43,7 +43,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   }
   const f=FMAP[id];
   const displayLoc=window.ATELIX_factoryLocation(f);
-  const belongsToSupplier=p=>p.factorySlug?String(p.factorySlug)===String(f.id):p.factoryId&&f.databaseId?String(p.factoryId)===String(f.databaseId):p.seller===f.name;
+  const belongsToSupplier=p=>p.factorySlug?String(p.factorySlug)===String(f.id):p.factoryId&&f.databaseId?String(p.factoryId)===String(f.databaseId):/^F-\d+$/.test(String(f.id))&&p.seller===f.name;
   const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5);
   const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
   const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
@@ -98,22 +98,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </section>
   </div>
 
-  <div class="feat-fabrics${feat.length?'':' no-products'}">
-    ${feat.length?`<section class="panel" style="padding:26px 28px">
-      <div class="sec-head" style="margin-bottom:20px"><h2 class="supplier-products-title">${T('sp.productsFrom')}</h2><a class="link-arrow" href="/categories/${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
-      <div class="prod-grid">${feat.map(card).join('')}</div>
-    </section>`:''}
-    <aside class="panel overview">
-      <h3>${T('sp.overview')}</h3>
-      <p>${esc(bio)}</p>
-      <div style="margin-top:16px">
-        <div class="ov-row" style="border:0">${IC.factory}<span class="k">${T('sp.factoryArea')}</span><span class="v">${esc(value(f.area))}</span></div>
-        <div class="ov-row">${IC.user}<span class="k">${T('sp.employees')}</span><span class="v">${esc(value(f.employees))}</span></div>
-        <div class="ov-row">${IC.medal}<span class="k">${T('sp.established')}</span><span class="v">${esc(value(f.founded))}</span></div>
-        <div class="ov-row">${IC.globe}<span class="k">${T('sp.mainRegion')}</span><span class="v">${esc(TR(value(f.region)))}</span></div>
-      </div>
-      <button class="btn btn-green btn-block" style="margin-top:18px" data-contact-factory>${T('sp.contactFactory')}</button>
-    </aside>
+  <div class="feat-fabrics">
+    <section class="panel" style="padding:26px 28px">
+      <div class="sec-head" style="margin-bottom:20px"><h2 class="supplier-products-title">${T('sp.productsFrom')}</h2>${feat.length?`<a class="link-arrow" href="/categories/${feat[0].cat}">${T('View all')} ${IC.chevR}</a>`:''}</div>
+      ${feat.length?`<div class="prod-grid">${feat.map(card).join('')}</div>`:`<div class="empty-state supplier-products-empty"><h3>${T('No products listed yet')}</h3><p>${T('This supplier has no linked products in the catalogue.')}</p></div>`}
+    </section>
   </div>`;
 
   // interactions
