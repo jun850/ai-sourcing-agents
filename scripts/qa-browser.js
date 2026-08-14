@@ -150,6 +150,16 @@ async function inspect(route, viewport) {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
+  if (route.startsWith("/pages/supplier.html")) {
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const settled = await cdp.send("Runtime.evaluate", {
+        returnByValue: true,
+        expression: "(() => { const image=document.querySelector('.sup-company-image img'); return !image || (image.complete && image.naturalWidth > 0); })()",
+      });
+      if (settled.result.value) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
   let contactData = null;
   if (route === "/pages/product.html?id=FAB-100&lang=en") {
     const contactResult = await cdp.send("Runtime.evaluate", {
