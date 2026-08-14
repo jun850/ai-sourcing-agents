@@ -567,8 +567,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const supplierCard=f=>{
       const name=window.ATELIX_supplierText(f,'name');
       const type=window.ATELIX_supplierText(f,'supplierType')||f.type;
+      const useLogo=cat==='oem'&&!window.ATELIX_factoryHasLinkedProducts(f)&&Boolean(f.logo_img);
+      const image=useLogo?window.ATELIX_factoryAsset(f):window.ATELIX_factoryCardAsset(f);
       return `<a class="fcard" href="/pages/supplier.html?id=${encodeURIComponent(f.id)}">
-        <div class="fthumb"><img src="${esc(window.ATELIX_factoryCardAsset(f))}" alt="${esc(name)}" loading="lazy"><span class="fveric">${IC.shield} ${T('Verified')}</span></div>
+        <div class="fthumb${useLogo?' fthumb-logo':''}"><img src="${esc(image)}" alt="${esc(name)}" loading="lazy"><span class="fveric">${IC.shield} ${T('Verified')}</span></div>
         <div class="fbody"><div class="fname">${esc(name)}</div><span class="ftype">${esc(type)}</span>
         <div class="floc">${IC.pin}<span>${esc(window.ATELIX_factoryLocation(f)||T('Contact supplier'))}</span></div>
         <div class="ffoot"><div>MOQ<b>${esc(window.ATELIX_publicValue(f.moq))}</b></div><div>${T('Lead Time')}<b>${esc(window.ATELIX_publicValue(f.lead))}</b></div></div>

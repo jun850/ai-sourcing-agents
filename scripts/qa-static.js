@@ -24,6 +24,7 @@ const globalStyles=fs.readFileSync(path.join(root,"css/styles.css"),"utf8");
 const translations=fs.readFileSync(path.join(root,"js/data.js"),"utf8");
 const catalogApi=fs.readFileSync(path.join(root,"js/api.js"),"utf8");
 const categoryPage=fs.readFileSync(path.join(root,"pages/category.html"),"utf8");
+const checkoutPage=fs.readFileSync(path.join(root,"pages/checkout.html"),"utf8");
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
@@ -56,6 +57,8 @@ for(const relative of ['index.html','pages/product.html','pages/supplier.html','
 if(!translations.includes("window.ATELIX_CONTACT_EMAIL = 'info@arcanawangsa.com'"))problems.push('js/data.js: missing canonical Atelix contact address');
 if(!catalogApi.includes('supplier_taxonomy_memberships(l2,l3,is_primary)'))problems.push('js/api.js: verified supplier taxonomy must hydrate with the public catalog');
 if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages/category.html: existing category grid must surface matching verified suppliers');
+if(/Incoterms|PO number|data-t="(?:incoterm|po)"/.test(checkoutPage))problems.push('pages/checkout.html: Incoterms and PO number must stay out of the customer checkout flow');
+if(!/p_incoterms:\s*null/.test(catalogApi))problems.push('js/api.js: checkout must submit a null internal Incoterms value');
 if(categoryPage.includes('class="ftags"'))problems.push('pages/category.html: supplier cards must not render capability tags');
 if(fs.readFileSync(path.join(root,'pages/factories.html'),'utf8').includes('class="ftags"'))problems.push('pages/factories.html: supplier cards must not render capability tags');
 if(!/\.sup-company-image img\{[^}]*object-fit:contain/.test(pageStyles))problems.push('css/pages.css: supplier hero images must preserve the full crop');

@@ -345,7 +345,7 @@ const API = {
      placeOrder syncs the client cart into the DB cart, then calls the
      place_order RPC which recomputes every total server-side and returns the
      order_no. Requires a signed-in buyer. items: [{ id:sku, qty }]. */
-  async placeOrder({ items, shipCountry, shipAddress, incoterms, notes, qc, insurance }){
+  async placeOrder({ items, shipCountry, shipAddress, notes, qc, insurance }){
     try{
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated', code:'not_authenticated' } };
@@ -361,7 +361,7 @@ const API = {
       const { data, error } = await sb.rpc('place_order', {
         p_ship_country: shipCountry || null,
         p_ship_address: shipAddress || null,
-        p_incoterms: incoterms || null,
+        p_incoterms: null,
         p_notes: notes || null,
         p_qc: !!qc,
         p_insurance: !!insurance

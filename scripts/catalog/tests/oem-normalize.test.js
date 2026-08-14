@@ -29,12 +29,15 @@ test('normalizes the approved supplier set deterministically', () => {
   const first = normalizeManifest(input());
   const second = normalizeManifest(input());
   assert.deepEqual(first, second);
-  assert.equal(first.publicManifest.metadata.supplierCount, 34);
-  assert.equal(first.report.readyCount, 34);
+  assert.equal(first.publicManifest.metadata.supplierCount, 28);
+  assert.equal(first.report.readyCount, 28);
   assert.equal(first.report.reviewRequiredCount, 0);
-  assert.equal(first.report.privateEmailCount, 21);
-  assert.equal(first.report.mediaCount, 90);
+  assert.equal(first.report.privateEmailCount, 17);
+  assert.equal(first.report.mediaCount, 79);
   assert.equal(supplier(first, 'TTON'), undefined);
+  for (const sourceId of ['BASI', 'GMLEAJ', 'IZ9S', 'NRF8', 'SEGU', 'THELU']) {
+    assert.equal(supplier(first, sourceId), undefined);
+  }
 });
 
 test('assigns evidence-backed primary and secondary current taxonomy memberships', () => {
@@ -43,7 +46,6 @@ test('assigns evidence-backed primary and secondary current taxonomy memberships
   assert.deepEqual(supplier(result, 'CANAL').taxonomy.primary, { l2: 'oem', l3: 'accessories' });
   assert.deepEqual(supplier(result, 'DONGS').taxonomy.primary, { l2: 'trims', l3: 'simple-trims' });
   assert.ok(supplier(result, 'DONGS').taxonomy.memberships.some(value => value.l2 === 'yarns' && value.l3 === 'cotton'));
-  assert.ok(supplier(result, 'GMLEAJ').taxonomy.memberships.some(value => value.l2 === 'oem' && value.l3 === 'accessories'));
 
   for (const value of result.publicManifest.suppliers) {
     for (const item of value.taxonomy.memberships) {
@@ -113,8 +115,11 @@ test('normalizes supplier locations as country then city while retaining source 
   assert.match(supplier(result, '7IM').address, /大阪府吹田市/u);
   assert.equal(supplier(result, 'KAORIS').country, 'China');
   assert.equal(supplier(result, 'KAORIS').city, 'Suzhou');
-  assert.equal(supplier(result, 'NRF8').country, 'Bangladesh');
-  assert.equal(supplier(result, 'NRF8').city, 'Narayanganj');
+  assert.equal(result.publicManifest.suppliers.every(value => [
+    'Brunei', 'Cambodia', 'China', 'Hong Kong', 'Indonesia', 'Japan', 'Laos', 'Macau',
+    'Malaysia', 'Mongolia', 'Myanmar', 'North Korea', 'Philippines', 'Singapore',
+    'South Korea', 'Taiwan', 'Thailand', 'Timor-Leste', 'Vietnam'
+  ].includes(value.country)), true);
   assert.equal(result.publicManifest.suppliers.filter(value => value.address).every(value => value.country && value.city), true);
 });
 
@@ -126,7 +131,7 @@ test('CLI supports help, dry-run/report, and separate exclusive output manifests
 
   const dryRun = spawnSync(process.execPath, [CLI, '--dry-run', '--report'], { encoding: 'utf8' });
   assert.equal(dryRun.status, 0, dryRun.stderr);
-    assert.equal(JSON.parse(dryRun.stdout).supplierCount, 34);
+  assert.equal(JSON.parse(dryRun.stdout).supplierCount, 28);
 
   const outputDir = fs.mkdtempSync(path.join(os.tmpdir(), 'atelix-oem-normalize-'));
   try {

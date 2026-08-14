@@ -31,6 +31,7 @@ const routes = [
   "/pages/supplier.html?id=F-18&lang=en",
   "/pages/supplier.html?id=apparelx-7im&lang=en",
   "/pages/supplier.html?id=apparelx-basi&lang=en",
+  "/pages/supplier.html?id=apparelx-segu&lang=en",
   "/pages/supplier.html?id=apparelx-nancy&lang=en",
   "/pages/supplier.html?id=does-not-exist&lang=en",
   "/pages/cart.html",
@@ -160,6 +161,16 @@ async function inspect(route, viewport) {
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
+  if (route === "/categories/oem/clothing") {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const settled = await cdp.send("Runtime.evaluate", {
+        returnByValue: true,
+        expression: "(() => { const images=[...document.querySelectorAll('.fthumb-logo img')].filter(image => { const box=image.getBoundingClientRect(); return box.top < innerHeight + 200 && box.bottom > -200; }); return images.length > 0 && images.every(image => image.complete && image.naturalWidth > 0); })()",
+      });
+      if (settled.result.value) break;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
   let contactData = null;
   if (route === "/pages/product.html?id=FAB-100&lang=en") {
     const contactResult = await cdp.send("Runtime.evaluate", {
@@ -184,10 +195,10 @@ async function inspect(route, viewport) {
       const sentinel=(bodyText.match(/\\b(undefined|null|NaN)\\b|\\[object Object\\]/g)||[]);
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
       const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
-      const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span')].map(button=>Math.round(button.getBoundingClientRect().height))};
+      const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,applicationIcons:[...document.querySelectorAll('.application-icon')].map(icon=>({type:icon.dataset.application,label:icon.getAttribute('aria-label'),title:icon.title})),touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span,.application-icon')].map(button=>Math.round(button.getBoundingClientRect().height))};
       const supplierDetailText=[...document.querySelectorAll('.sup-main,.map-panel,.overview')].map(el=>el.innerText).join(' ');
       const website=document.querySelector('.supplier-website');
-      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', supplierCards:{count:document.querySelectorAll('.fcard').length,tags:document.querySelectorAll('.fcard .ftags').length}, supplierProfile:{tags:document.querySelectorAll('.sup-tags,.capabilities').length,overview:document.querySelectorAll('.overview').length,products:document.querySelectorAll('.feat-fabrics .prod-grid .tcard').length,emptyProducts:Boolean(document.querySelector('.supplier-products-empty')),location:document.querySelector('.sup-name .role')?.textContent.split('·').pop().trim()||'',hasCjk:/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(supplierDetailText),website:website?{href:website.href,target:website.target,rel:website.rel,color:getComputedStyle(website).color}:null}, supplierHero:{fit:getComputedStyle(document.querySelector('.sup-company-image img')||document.body).objectFit||'',naturalWidth:document.querySelector('.sup-company-image img')?.naturalWidth||0}, isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
+      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', supplierCards:{count:document.querySelectorAll('.fcard').length,tags:document.querySelectorAll('.fcard .ftags').length,logoFallbacks:[...document.querySelectorAll('.fthumb-logo img')].map(img=>({fit:getComputedStyle(img).objectFit,naturalWidth:img.naturalWidth,src:img.currentSrc||img.src}))}, supplierProfile:{tags:document.querySelectorAll('.sup-tags,.capabilities').length,overview:document.querySelectorAll('.overview').length,products:document.querySelectorAll('.feat-fabrics .prod-grid .tcard').length,emptyProducts:Boolean(document.querySelector('.supplier-products-empty')),location:document.querySelector('.sup-name .role')?.textContent.split('·').pop().trim()||'',hasCjk:/[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff]/u.test(supplierDetailText),website:website?{href:website.href,target:website.target,rel:website.rel,color:getComputedStyle(website).color}:null}, supplierHero:{fit:getComputedStyle(document.querySelector('.sup-company-image img')||document.body).objectFit||'',naturalWidth:document.querySelector('.sup-company-image img')?.naturalWidth||0}, isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
     })()`,
   });
   const data = result.value;
@@ -223,6 +234,7 @@ async function inspect(route, viewport) {
   }
   if (route === "/pages/product.html?id=FAB-163" && (data.pdp.optionGroups !== 1 || data.pdp.optionValues !== 3 || data.pdp.selectedOptions !== 1 || data.pdp.galleryButtons !== 3)) issues.push("variant PDP did not render one selected color group and the supplied image gallery");
   if (route === "/pages/product.html?id=FAB-100&lang=en" && (data.pdp.packageRadios !== 4 || data.pdp.selectedPackages !== 1)) issues.push("OEM package radio group is incomplete or lacks one selected option");
+  if (route === "/pages/product.html?id=FAB-100&lang=en" && (!data.pdp.applicationIcons.length || data.pdp.applicationIcons.some(icon => !icon.type || !/^For /.test(icon.label) || icon.title !== icon.label))) issues.push("product applications are not itemized as accessible garment icons");
   if (route === "/") {
     if (viewport.mobile && (!data.isolation.mobileNav || data.isolation.desktopCategories)) issues.push("mobile marketplace navigation isolation failed");
     if (!viewport.mobile && (data.isolation.mobileNav || !data.isolation.desktopCategories)) issues.push("desktop marketplace navigation isolation failed");
@@ -232,12 +244,13 @@ async function inspect(route, viewport) {
     if (!viewport.mobile && (data.isolation.mobileListTools || !data.isolation.desktopFilters)) issues.push("desktop catalog controls are not isolated from mobile controls");
   }
   if (["/categories/oem/clothing", "/pages/factories.html"].includes(route) && data.supplierCards.tags) issues.push("supplier cards still render capability tags");
+  if (route === "/categories/oem/clothing" && (!data.supplierCards.logoFallbacks.some(image => image.naturalWidth > 0) || data.supplierCards.logoFallbacks.some(image => image.naturalWidth > 0 && image.fit !== "contain"))) issues.push("OEM suppliers without linked products do not use intact logo card images");
   if (route.startsWith("/pages/supplier.html?id=apparelx-7im") && (data.supplierHero.fit !== "contain" || data.supplierHero.naturalWidth < 1)) issues.push("supplier hero does not preserve its full image crop");
   if (route.includes('/pages/supplier.html') && data.supplierProfile.tags) issues.push('supplier profile exposes backend-only tags or capability metadata');
   if (route.includes('/pages/supplier.html') && data.supplierProfile.overview) issues.push('supplier profile exposes the removed company overview section');
   if (route.includes('/pages/supplier.html') && route.includes('lang=en') && data.supplierProfile.hasCjk) issues.push('English supplier profile exposes untranslated CJK source details');
-  if (route.startsWith("/pages/supplier.html?id=apparelx-basi") && (data.supplierProfile.products || !data.supplierProfile.emptyProducts)) issues.push("supplier profile must show an empty product state without borrowing products");
-  if (route.startsWith("/pages/supplier.html?id=apparelx-basi") && data.supplierProfile.location !== "Bangladesh, Dhaka") issues.push(`supplier location is not Country, City: ${data.supplierProfile.location}`);
+  if (["apparelx-basi", "apparelx-segu"].some(id => route.startsWith(`/pages/supplier.html?id=${id}`)) && !/supplier not found/i.test(data.h1)) issues.push("removed South Asian supplier is still publicly reachable");
+  if (route.startsWith("/pages/supplier.html?id=apparelx-nancy") && (data.supplierProfile.products || !data.supplierProfile.emptyProducts)) issues.push("supplier profile must show an empty product state without borrowing products");
   if (route.startsWith("/pages/supplier.html?id=apparelx-nancy") && data.supplierProfile.location !== "Japan, Nagoya") issues.push(`supplier location is not English Country, City: ${data.supplierProfile.location}`);
   if (route.startsWith("/pages/supplier.html?id=apparelx-7im") && (!data.supplierProfile.website?.href.startsWith('https://') || data.supplierProfile.website.target !== '_blank' || !data.supplierProfile.website.rel.includes('noopener') || data.supplierProfile.website.color !== 'rgb(28, 28, 26)')) issues.push('supplier website is not a safe clickable black link');
   if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/supplier.html?id=apparelx-7im&lang=en", "/pages/supplier.html?id=apparelx-nancy&lang=en", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {

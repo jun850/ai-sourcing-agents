@@ -9,6 +9,11 @@ const SOURCE_HOST = 'www.apparel-x.com';
 const CONTACT_EMAIL = 'info@arcanawangsa.com';
 const SCHEMA_VERSION = 1;
 const REMOVED_SOURCE_IDS = new Set(['TTON']);
+const PUBLIC_SUPPLIER_COUNTRIES = new Set([
+  'Brunei', 'Cambodia', 'China', 'Hong Kong', 'Indonesia', 'Japan', 'Laos', 'Macau',
+  'Malaysia', 'Mongolia', 'Myanmar', 'North Korea', 'Philippines', 'Singapore',
+  'South Korea', 'Taiwan', 'Thailand', 'Timor-Leste', 'Vietnam'
+]);
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 
 function nullableText(value, { multiline = false } = {}) {
@@ -211,7 +216,8 @@ function normalizeManifest(input) {
   const crawledAt = nullableText(input.metadata && input.metadata.crawledAt);
   const normalized = input.records
     .filter(record => !REMOVED_SOURCE_IDS.has(String(record.companyId || '').trim().toUpperCase()))
-    .map(record => buildSupplier(record, crawledAt));
+    .map(record => buildSupplier(record, crawledAt))
+    .filter(item => PUBLIC_SUPPLIER_COUNTRIES.has(item.supplier.country));
   const ids = normalized.map(item => item.supplier.id);
   if (new Set(ids).size !== ids.length) throw new Error('Duplicate canonical supplier identity detected');
 

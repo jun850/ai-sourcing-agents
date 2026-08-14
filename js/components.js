@@ -38,6 +38,14 @@
     );
   const factoryPageAsset = (factory) =>
     factoryCardAsset(factory);
+  const factoryHasLinkedProducts = (factory) =>
+    (window.ARCANA_PRODUCTS || []).some((product) =>
+      product.factorySlug
+        ? String(product.factorySlug) === String(factory && factory.id)
+        : product.factoryId && factory && factory.databaseId
+          ? String(product.factoryId) === String(factory.databaseId)
+          : /^F-\d+$/.test(String(factory && factory.id)) && product.seller === factory.name,
+    );
   const factoryLocation = (factory) => {
     const cityById = {
       "F-01": "Shaoxing",
@@ -67,6 +75,7 @@
   window.ATELIX_factoryAsset = factoryAsset;
   window.ATELIX_factoryCardAsset = factoryCardAsset;
   window.ATELIX_factoryPageAsset = factoryPageAsset;
+  window.ATELIX_factoryHasLinkedProducts = factoryHasLinkedProducts;
   window.ATELIX_factoryLocation = factoryLocation;
   window.ATELIX_productAsset = productAsset;
   document.addEventListener(

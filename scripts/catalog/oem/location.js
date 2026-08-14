@@ -17,6 +17,7 @@ const LOCATION_RULES = [
   [/神奈川県横浜市/u, 'Japan', 'Yokohama'],
   [/岡山県岡山市/u, 'Japan', 'Okayama'],
   [/東京都(?:大田|目黒|北|渋谷|板橋|墨田|新宿)区/u, 'Japan', 'Tokyo'],
+  [/(?:Tokyo, Japan|Japan, Tokyo)/iu, 'Japan', 'Tokyo'],
   [/(?:서울|Seoul)/iu, 'South Korea', 'Seoul'],
   [/(?:Jiangsu|Wujiang|Suzhou)/iu, 'China', 'Suzhou'],
   [/(?:Haryana|Gurugram)/iu, 'India', 'Gurugram'],
