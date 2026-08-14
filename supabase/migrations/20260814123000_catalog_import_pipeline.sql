@@ -228,7 +228,7 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.catalog_jsonb_has_email_key(p_value jsonb)
 RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path='' AS $$
-DECLARE v_key text; v_child jsonb;
+DECLARE v_key text; v_child jsonb; v_match text[];
 BEGIN
   IF p_value IS NULL THEN RETURN false; END IF;
   IF jsonb_typeof(p_value)='object' THEN
@@ -240,8 +240,9 @@ BEGIN
       IF public.catalog_jsonb_has_email_key(v_child) THEN RETURN true; END IF;
     END LOOP;
   ELSIF jsonb_typeof(p_value)='string' THEN
-    IF (p_value #>> '{}') ~* '[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}'
-      AND lower(btrim(p_value #>> '{}')) <> 'info@arcanawangsa.com' THEN RETURN true; END IF;
+    FOR v_match IN SELECT regexp_matches(p_value #>> '{}','[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}','gi') LOOP
+      IF lower(v_match[1]) <> 'info@arcanawangsa.com' THEN RETURN true; END IF;
+    END LOOP;
   END IF;
   RETURN false;
 END;

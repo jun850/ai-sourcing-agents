@@ -108,6 +108,7 @@ test('migration includes private contact, batch cap, and public-safe price contr
   assert.match(sql, /item_count integer NOT NULL DEFAULT 0 CHECK \(item_count BETWEEN 0 AND 50\)/);
   assert.match(sql, /catalog_finalize_product_batch/);
   assert.match(sql, /catalog_finalize_supplier_batch/);
+  assert.match(sql, /regexp_matches\(p_value #>> '\{\}'[\s\S]*lower\(v_match\[1\]\) <> 'info@arcanawangsa\.com'/);
   assert.match(sql, /REVOKE ALL ON public\.catalog_import_sources[\s\S]*public\.supplier_source_contacts/);
   assert.doesNotMatch(sql.match(/CREATE OR REPLACE FUNCTION public\.catalog_public_prices[\s\S]*?\$\$;/)[0], /source_amount|supplier_source_contacts/);
 });
