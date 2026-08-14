@@ -64,6 +64,7 @@ const supplierPage=fs.readFileSync(path.join(root,'pages/supplier.html'),'utf8')
 if(supplierPage.includes('class="sup-tags"')||supplierPage.includes('class="panel capabilities"'))problems.push('pages/supplier.html: crawled supplier tags and capability metadata must remain backend-only');
 if(supplierPage.includes('class="crumbs"'))problems.push('pages/supplier.html: supplier profiles must not render the broken factory breadcrumb');
 if(supplierPage.includes('class="panel overview"'))problems.push('pages/supplier.html: supplier profiles must not render a company overview section');
+if(!supplierPage.includes('class="supplier-website"')||!supplierPage.includes('rel="noopener noreferrer"'))problems.push('pages/supplier.html: supplier websites must render as safe clickable links');
 if(!supplierPage.includes("const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5)")||supplierPage.includes('own.length?own')||!supplierPage.includes("/^F-\\d+$/.test(String(f.id))"))problems.push('pages/supplier.html: public products must use exact supplier linkage without imported-name or category fallback');
 if(!supplierPage.includes('supplier-products-empty'))problems.push('pages/supplier.html: suppliers without exact linked products must render an empty state');
 if(fs.readFileSync(path.join(root,'pages/search.html'),'utf8').includes('(factory.tags||[])'))problems.push('pages/search.html: supplier tags must not render or drive public browser search');

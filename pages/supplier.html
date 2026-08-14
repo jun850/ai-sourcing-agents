@@ -47,6 +47,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5);
   const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
   const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
+  const websiteHref=value=>{try{const url=new URL(String(value||''));return /^(?:https?:)$/.test(url.protocol)?url.href:null;}catch(_){return null;}};
 
   function render(){
     const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
@@ -56,6 +57,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const supplierName=window.ATELIX_supplierText(f,'name');
     const supplierType=window.ATELIX_supplierText(f,'supplierType')||value(f.type);
     const location=value(displayLoc), bio=value(window.ATELIX_supplierText(f,'description')||f.bio);
+    const publicWebsite=websiteHref(f.web);
     document.title = `${supplierName} — Atelix`;
     document.getElementById('supRoot').innerHTML=`
   <div class="sup-hero">
@@ -69,7 +71,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         </div>
         <div class="sup-contact" style="min-width:230px">
           <div class="sc-row"><span class="ci">${IC.user}</span><div><span>${T('sp.salesContact')}</span><b>${esc(value(f.sales))}</b><div class="muted" style="font-size:12px">${esc(value(f.phone))}</div></div></div>
-          <div class="sc-row"><span class="ci">${IC.globe}</span><div><span>${T('sp.website')}</span><b>${esc(value(f.web))}</b></div></div>
+          <div class="sc-row"><span class="ci">${IC.globe}</span><div><span>${T('sp.website')}</span>${publicWebsite?`<a class="supplier-website" href="${esc(publicWebsite)}" target="_blank" rel="noopener noreferrer">${esc(f.web)}</a>`:`<b>${esc(ask)}</b>`}</div></div>
           <div class="sc-row"><span class="ci">${IC.factory}</span><div><span>${T('sp.businessType')}</span><b>${esc(supplierType)}</b></div></div>
         </div>
       </div>
