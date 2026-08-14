@@ -51,7 +51,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
   function render(){
     const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
-    const ask=T('sp.askSupplier');
+    const ask=T('Contact supplier');
     const has=v=>Array.isArray(v)?v.length>0:v!=null&&String(v).trim()!=='';
     const value=v=>has(v)?(Array.isArray(v)?v.join(', '):String(v)):ask;
     const certs=Array.isArray(f.certs)?f.certs:[];
@@ -63,24 +63,26 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       ['sp.finishing',ask,ask],
       ['sp.inspection',value(certs),value(certs)]
     ];
-    const location=value(displayLoc), bio=value(f.bio);
-    document.title = `${TR(f.name)} — Atelix`;
+    const supplierName=window.ATELIX_supplierText(f,'name');
+    const supplierType=window.ATELIX_supplierText(f,'supplierType')||value(f.type);
+    const location=value(displayLoc), bio=value(window.ATELIX_supplierText(f,'description')||f.bio);
+    document.title = `${supplierName} — Atelix`;
     document.getElementById('supRoot').innerHTML=`
-  <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(TR(f.name))}</span></nav>
+  <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(supplierName)}</span></nav>
   <div class="sup-hero">
     <section class="panel sup-main">
-      ${(f.page_img||f.img)?`<div class="sup-company-image"><img src="${window.ATELIX_factoryPageAsset(f)}" alt="${esc(TR(f.name))} company"></div>`:''}
+      ${(f.page_img||f.img)?`<div class="sup-company-image"><img src="${esc(window.ATELIX_factoryPageAsset(f))}" alt="${esc(supplierName)} company"></div>`:''}
       <div class="sup-top">
         <div class="sup-name">
-          <div class="sup-identity">${f.logo_img?`<img class="sup-logo" src="${window.ATELIX_factoryAsset(f)}" alt="${esc(TR(f.name))} logo">`:''}<div><h1>${esc(TR(f.name))}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
-          <div class="role">${esc(TR(value(f.type)))} · ${esc(TR(location))}</div></div></div>
-          <p class="bio">${esc(TR(bio))}</p>
+          <div class="sup-identity">${f.logo_img?`<img class="sup-logo" src="${esc(window.ATELIX_factoryAsset(f))}" alt="${esc(supplierName)} logo">`:''}<div><h1>${esc(supplierName)}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
+          <div class="role">${esc(supplierType)} · ${esc(TR(location))}</div></div></div>
+          <p class="bio">${esc(bio)}</p>
           <div class="sup-tags">${tags.map(tag=>`<span class="pill-tag">${esc(TR(tag))}</span>`).join('')}${certs.map(c=>`<span class="pill-tag">${esc(TR(c))}</span>`).join('')}</div>
         </div>
         <div class="sup-contact" style="min-width:230px">
           <div class="sc-row"><span class="ci">${IC.user}</span><div><span>${T('sp.salesContact')}</span><b>${esc(value(f.sales))}</b><div class="muted" style="font-size:12px">${esc(value(f.phone))}</div></div></div>
           <div class="sc-row"><span class="ci">${IC.globe}</span><div><span>${T('sp.website')}</span><b>${esc(value(f.web))}</b></div></div>
-          <div class="sc-row"><span class="ci">${IC.factory}</span><div><span>${T('sp.businessType')}</span><b>${esc(TR(value(f.type)))}</b></div></div>
+          <div class="sc-row"><span class="ci">${IC.factory}</span><div><span>${T('sp.businessType')}</span><b>${esc(supplierType)}</b></div></div>
         </div>
       </div>
       <div class="metrics">
@@ -98,7 +100,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       <h3>${T('sp.location')}</h3>
       <div class="map-box">
         <svg class="map-svg" viewBox="0 0 400 210" preserveAspectRatio="xMidYMid slice"><rect width="400" height="210" fill="#eef1ec"/><path d="M250 0 L285 40 L300 90 L285 140 L320 210 L400 210 L400 0 Z" fill="#cfe0ec"/><path d="M0 60 Q90 55 150 90 T280 120" stroke="#dcdcd2" stroke-width="2" fill="none"/><path d="M120 20 L200 100 L160 200" stroke="#e2c9a0" stroke-width="2" fill="none"/></svg>
-        <div class="pin" style="left:56%;top:52%"><div style="background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;display:flex;gap:8px;align-items:center"><span style="color:var(--green)"><svg viewBox="0 0 24 24" fill="var(--green)" width="18" height="18"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg></span><span style="font-size:12px"><b>${esc(TR(f.name))}</b><br><span class="muted">${esc(TR(location))}</span></span></div></div>
+        <div class="pin" style="left:56%;top:52%"><div style="background:#fff;border-radius:10px;box-shadow:var(--shadow);padding:8px 12px;display:flex;gap:8px;align-items:center"><span style="color:var(--green)"><svg viewBox="0 0 24 24" fill="var(--green)" width="18" height="18"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/></svg></span><span style="font-size:12px"><b>${esc(supplierName)}</b><br><span class="muted">${esc(TR(location))}</span></span></div></div>
       </div>
       <div class="map-facts">
         <div class="map-fact">${IC.pin}<span>${T('sp.region')}</span><b>${esc(TR(value(f.region)))}</b></div>
@@ -119,7 +121,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </section>
     <aside class="panel overview">
       <h3>${T('sp.overview')}</h3>
-      <p>${esc(TR(bio))}</p>
+      <p>${esc(bio)}</p>
       <div style="margin-top:16px">
         <div class="ov-row" style="border:0">${IC.factory}<span class="k">${T('sp.factoryArea')}</span><span class="v">${esc(value(f.area))}</span></div>
         <div class="ov-row">${IC.user}<span class="k">${T('sp.employees')}</span><span class="v">${esc(value(f.employees))}</span></div>
@@ -136,7 +138,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('sp.linkCopied'));});
     document.querySelectorAll('[data-contact-factory]').forEach(b=>b.addEventListener('click',()=>{
       window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
-        `${T('sp.emailSupplier')}: ${f.name}`,
+        `${T('sp.emailSupplier')}: ${supplierName}`,
         `${T('sp.emailLocation')}: ${location}`,
         `${T('MOQ')}: ${value(f.moq)}`,
         `${T('sp.emailLead')}: ${value(f.lead)}`,

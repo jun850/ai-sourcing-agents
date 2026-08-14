@@ -6,6 +6,12 @@
   "scripts": {
     "dev": "node scripts/local-server.js",
     "test": "npm run qa:static",
+    "crawl:apparel-x-oem": "node scripts/crawl-apparel-x-oem.js",
+    "catalog:crawl-only": "node scripts/catalog/crawl/cli.js",
+    "catalog:oem-normalize": "node scripts/catalog/oem/cli.js",
+    "catalog:build-manifest": "node scripts/catalog/publish/build-manifest.js",
+    "catalog:prepare-oem": "node scripts/catalog/publish/prepare-oem-batches.js",
+    "catalog:publish": "node scripts/catalog/publish/publisher.js",
     "qa:static": "node scripts/qa-static.js",
     "qa:browser": "node scripts/qa-browser.js",
     "qa:intools": "node scripts/qa-intools.js",
@@ -28,7 +34,8 @@
   "homepage": "https://github.com/jun850/marketplace#readme",
   "dependencies": {
     "@supabase/supabase-js": "^2.111.0",
-    "@vercel/analytics": "^2.0.1"
+    "@vercel/analytics": "^2.0.1",
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"

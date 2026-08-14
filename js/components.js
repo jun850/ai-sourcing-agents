@@ -78,7 +78,11 @@
         return;
       }
       image.dataset.atelixFallback = "done";
-      image.src = ASSET("fabric-stack.webp");
+      image.src = ASSET(
+        image.closest(".fcard,.factory-network-item,.sup-company-image,.sup-identity")
+          ? "factory-interior.webp"
+          : "fabric-stack.webp",
+      );
     },
     true,
   );
@@ -228,6 +232,21 @@
       localStorage.setItem("arcana_" + k, JSON.stringify(v));
     },
   };
+  const normalizeSelection = (options) =>
+    Object.fromEntries(
+      Object.entries(options || {})
+        .map(([name, value]) => [String(name).trim(), String(value).trim()])
+        .filter(([name, value]) => name && value)
+        .sort(([left], [right]) => left.localeCompare(right)),
+    );
+  const cartLineKey = (id, options) => {
+    const selection = normalizeSelection(options);
+    const suffix = Object.entries(selection)
+      .map(([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`)
+      .join("&");
+    return suffix ? `${id}::${suffix}` : id;
+  };
+  window.ATELIX_cartLineKey = cartLineKey;
   const Store = {
     session() {
       return LS.get("session", null);
@@ -250,7 +269,11 @@
       return Promise.resolve();
     },
     cart() {
-      return LS.get("cart", []);
+      return LS.get("cart", []).map((item) => ({
+        ...item,
+        key: item.key || cartLineKey(item.id, item.options),
+        options: normalizeSelection(item.options),
+      }));
     },
     cartCount() {
       return Store.cart().length;
@@ -258,33 +281,36 @@
     cartUnits() {
       return Store.cart().reduce((n, i) => n + i.qty, 0);
     },
-    addToCart(id, qty) {
+    addToCart(id, qty, options = {}) {
       qty = qty || 1;
+      const selection = normalizeSelection(options);
+      const key = cartLineKey(id, selection);
       const c = Store.cart();
-      const row = c.find((i) => i.id === id);
+      const row = c.find((i) => i.key === key);
       if (row) row.qty += qty;
-      else c.push({ id, qty });
+      else c.push({ id, qty, key, options: selection });
       LS.set("cart", c);
       syncBadges();
-      pushCartItem(id, row ? row.qty : qty);
+      pushCartItem(id, row ? row.qty : qty, selection, key);
       return Store.cartCount();
     },
-    setQty(id, qty) {
+    setQty(key, qty) {
       const c = Store.cart();
-      const r = c.find((i) => i.id === id);
+      const r = c.find((i) => i.key === key || (i.id === key && i.key === i.id));
       if (r) {
         r.qty = Math.max(1, qty);
         LS.set("cart", c);
-        pushCartItem(id, r.qty);
+        pushCartItem(r.id, r.qty, r.options, r.key);
       }
     },
-    remove(id) {
+    remove(key) {
+      const row = Store.cart().find((item) => item.key === key || (item.id === key && item.key === item.id));
       LS.set(
         "cart",
-        Store.cart().filter((i) => i.id !== id),
+        Store.cart().filter((i) => i.key !== key && !(i.id === key && i.key === i.id)),
       );
       syncBadges();
-      pushCartItem(id, 0);
+      if(row)pushCartItem(row.id,0,row.options,row.key);
     },
     clearCart() {
       localStorage.removeItem("arcana_cart");
@@ -470,7 +496,8 @@
     p = p || {};
     const tr = window.ARCANA_TR || ((s) => s),
       t = window.ARCANA_T || ((s) => s),
-      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2));
+      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2)),
+      productMoney = window.ATELIX_productMoney || ((product) => money(product.price));
     const esc = (s) =>
       String(s == null ? "" : s).replace(
         /[&<>"']/g,
@@ -501,8 +528,8 @@
     const title = titleParts.filter(Boolean).join(" — ");
     const priceLine =
       p.price > 0
-        ? `${esc(t("From"))} ${esc(money(p.price))}${p.unit ? `<small>/${esc(translated(p.unit))}</small>` : ""}`
-        : `<span class="tquote">${t("Contact for quote")}</span>`;
+        ? `${esc(t("From"))} ${esc(productMoney(p))}${p.unit ? `<small>/${esc(translated(p.unit))}</small>` : ""}`
+        : `<span class="tquote">${t("Contact supplier")}</span>`;
     const meta = isService
       ? `<div class="tmeta">${IC.truck} ${esc(spec)} ${t("lead")} <span class="dot">·</span> ${t("MOQ")} ${esc(translated(p.moq))}</div>`
       : `<div class="tmeta">${soldOf(p.id)} ${t("sold")}</div>`;
@@ -971,10 +998,10 @@
   }
 
   /* Fire-and-forget DB write-through for a cart line, only when signed in. */
-  function pushCartItem(sku, qty) {
+  function pushCartItem(sku, qty, options, lineKey) {
     const api = window.ARCANA_API;
     if (!api || api.unavailable || !Store.session()) return;
-    api.syncCartItem(sku, qty).catch(() => {});
+    api.syncCartItem(sku, qty, options, lineKey).catch(() => {});
   }
 
   /* Fire-and-forget DB write-through for a wishlist line, only when signed in. */
@@ -1030,7 +1057,8 @@
     const requester = session?.name || "guest";
     const subject = `${subjectPrefix} - ${requester}`;
     const body = (bodyLines || []).filter(Boolean).join("\n");
-    location.href = `mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const contact = window.ATELIX_CONTACT_EMAIL || "info@arcanawangsa.com";
+    location.href = `mailto:${contact}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
   window.ARCANA_contactEmail = contactEmail;
 
@@ -1599,7 +1627,8 @@
     if (!input || !pop) return;
     const t = window.ARCANA_T || ((s) => s),
       tr = window.ARCANA_TR || ((s) => s),
-      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2));
+      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2)),
+      productMoney = window.ATELIX_productMoney || ((product) => money(product.price));
     const PROD = window.ARCANA_PRODUCTS || [],
       FACT = window.ARCANA_FACTORIES || [];
     const esc = (s) =>
@@ -1666,7 +1695,7 @@
       hit(p.cat, q, w) +
       hit(p.spec, q, w);
     const factScore = (f, q, w) =>
-      2 * hit(f.name, q, w) +
+      2 * hit([f.name, ...Object.values(f.copyI18n||{}).map(copy=>copy&&copy.name)].filter(Boolean).join(' '), q, w) +
       hit(f.tags.join(" "), q, w) +
       hit(f.type, q, w) +
       hit(f.loc + " " + f.region, q, w);
@@ -1719,10 +1748,11 @@
     function supRow(f, i) {
       const href = factoryRoute(f.id);
       if (!href) return "";
+      const supplierName = window.ATELIX_supplierText ? window.ATELIX_supplierText(f, 'name') : tr(f.name);
       opts.push(1);
       return `<a class="s-row" role="option" id="${optId(i)}" href="${href}">
       <img class="s-av" src="${factoryAsset(f)}" alt="" loading="lazy">
-      <span class="s-main"><span class="s-nm">${esc(tr(f.name))} ${IC.check}</span>
+      <span class="s-main"><span class="s-nm">${esc(supplierName)} ${IC.check}</span>
       <span class="s-meta">${esc(tr(f.type))} · ${esc(tr(factoryLocation(f)))}</span></span>
       <span class="s-go">${IC.chevR}</span></a>`;
     }
@@ -1734,7 +1764,7 @@
         p.price > 0
           ? t("From") +
             " " +
-            money(p.price) +
+            productMoney(p) +
             "<small>/" +
             esc(tr(p.unit)) +
             "</small>"
@@ -2297,10 +2327,10 @@
       syncBadges();
       return;
     }
-    const map = new Map(dbItems.map((i) => [i.id, { ...i }]));
+    const map = new Map(dbItems.map((i) => [i.key || cartLineKey(i.id,i.options), { ...i }]));
     Store.cart().forEach((li) => {
-      if (map.has(li.id)) map.get(li.id).qty += li.qty;
-      else map.set(li.id, { ...li });
+      if (map.has(li.key)) map.get(li.key).qty += li.qty;
+      else map.set(li.key, { ...li });
     });
     const merged = Array.from(map.values());
     if (merged.length) await api.replaceCart(merged);

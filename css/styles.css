@@ -3,7 +3,7 @@
 
 :root{
   --green:#2e4a3a;        --green-d:#25402f;   --green-l:#eef2ee;
-  --gold:#96702b;         --gold-d:#785a20;    --gold-l:#f6eede;
+  --gold:#72531d;         --gold-d:#654815;    --gold-l:#f6eede;
   --ink:#1c1c1a;          --muted:#54534e;     --faint:#5c5b54;
   --bg:#f7f6f3;           --panel:#fbfaf8;     --card:#ffffff;
   --line:#e7e3db;         --line-2:#efece5;
@@ -282,18 +282,18 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
   font-weight:600;font-size:14.5px;border:1px solid transparent;transition:.15s}
 .btn svg{width:18px;height:18px}
 .btn-green{background:var(--green);color:#fff}.btn-green:hover{background:var(--green-d)}
-.btn-gold{background:var(--gold);color:#fff}.btn-gold:hover{background:var(--gold-d)}
+.btn-gold{background:var(--gold);color:var(--card)}.btn-gold:hover{background:var(--gold-d)}
 .btn-dark{background:var(--ink);color:#fff}
-.btn-out{background:#fff;border-color:var(--line);color:var(--ink)}.btn-out:hover{border-color:var(--muted)}
-.btn-out-green{background:#fff;border-color:var(--green);color:var(--green)}
-.btn-out-gold{background:#fff;border-color:var(--gold);color:var(--gold-d)}
+.btn-out{background:var(--card);border-color:var(--line);color:var(--ink)}.btn-out:hover{border-color:var(--muted)}
+.btn-out-green{background:var(--card);border-color:var(--green);color:var(--green)}
+.btn-out-gold{background:var(--card);border-color:var(--gold);color:var(--gold-d)}
 .btn-block{width:100%}
 
 /* ---------- Badges / chips ---------- */
 .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:var(--radius-pill)}
 .b-oem{background:var(--green);color:#fff}
 .b-oem-soft{background:var(--green-l);color:var(--green)}
-.b-nonoem{background:#c46a3f;color:#fff}
+.b-nonoem{background:var(--ink);color:var(--card)}
 .b-new{background:var(--gold);color:#fff}
 .b-best{background:var(--gold);color:#fff}
 .b-rec{background:var(--gold);color:#fff}

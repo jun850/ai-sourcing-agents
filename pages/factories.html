@@ -74,6 +74,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const catalogStats=window.ATELIX_catalogStats;
   const factoryImage=window.ATELIX_factoryAsset;
   const factoryLocation=window.ATELIX_factoryLocation;
+  const supplierText=window.ATELIX_supplierText;
+  const esc=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const uniq=(k)=>[...new Set(F.map(f=>f[k]))];
   const types=uniq('type'), regions=uniq('region');
   const certs=[...new Set(F.flatMap(f=>f.certs))];
@@ -85,9 +87,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   let sort='rec';
   const sel=name=>[...document.querySelectorAll(`[name=${name}]:checked`)].map(c=>c.value);
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount');
-  document.getElementById('factoryDirectorySummary').innerHTML=`<b style="color:var(--ink)">${catalogStats.factories}</b> verified material and production companies across <b style="color:var(--ink)">${catalogStats.countries}</b> countries`;
 
   function render(){
+    const T=window.ARCANA_T;
+    document.getElementById('factoryDirectorySummary').innerHTML=`<b style="color:var(--ink)">${catalogStats.factories}</b> ${T('verified material and production companies across')} <b style="color:var(--ink)">${catalogStats.countries}</b> ${T('countries')}`;
     const ty=sel('type'), rg=sel('region'), ct=sel('cert');
     let list=F.filter(f=>(!ty.length||ty.includes(f.type))&&(!rg.length||rg.includes(f.region))&&(!ct.length||ct.some(c=>f.certs.includes(c))));
     const isNewFactory=f=>+String(f.id).split('-')[1]>=14;
@@ -97,19 +100,20 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;
     grid.innerHTML=list.map(f=>{
       const isNewFactory=+String(f.id).split('-')[1]>=14;
-      const orderDetail=f.orders==='New'?'Recently listed':`${f.orders} orders`;
-      const ageDetail=f.years?`${f.years} yrs`:(f.founded?`Est. ${f.founded}`:'Established supplier');
+      const orderDetail=f.orders==='New'?T('Recently listed'):(f.orders?`${f.orders} ${T('orders')}`:T('Contact supplier'));
+      const ageDetail=f.years?`${f.years} ${T('sp.years')}`:(f.founded?`${T('sp.established')} ${f.founded}`:T('Established supplier'));
+      const supplierName=supplierText(f,'name');
       return `
-      <a class="fcard" href="supplier.html?id=${f.id}">
-        <div class="fthumb"><img src="${factoryImage(f)}" alt="${f.name}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} Verified Factory</span>`:''}${isNewFactory?'<span class="fnew">New source</span>':''}</div>
+      <a class="fcard" href="supplier.html?id=${encodeURIComponent(f.id)}">
+        <div class="fthumb"><img src="${esc(factoryImage(f))}" alt="${esc(supplierName)}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} ${T('Verified Factory')}</span>`:''}${isNewFactory?`<span class="fnew">${T('New source')}</span>`:''}</div>
         <div class="fbody">
-          <div class="fname">${f.name}</div>
-          <span class="ftype">${f.type}</span>
+          <div class="fname">${esc(supplierName)}</div>
+          <span class="ftype">${esc(f.type)}</span>
           <div class="fmeta">${orderDetail} <span class="dot">·</span> ${ageDetail}</div>
-          <div class="floc">${IC.pin}<span>${factoryLocation(f)}</span></div>
-          <div class="ftags">${f.tags.map(t=>`<span>${t}</span>`).join('')}</div>
-          <div class="ffoot"><div>MOQ<b>${f.moq}</b></div><div>Lead time<b>${f.lead}</b></div></div>
-          <span class="btn btn-out btn-block">View factory</span>
+          <div class="floc">${IC.pin}<span>${esc(factoryLocation(f))}</span></div>
+          <div class="ftags">${f.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>
+          <div class="ffoot"><div>MOQ<b>${esc(window.ATELIX_publicValue(f.moq))}</b></div><div>Lead time<b>${esc(window.ATELIX_publicValue(f.lead))}</b></div></div>
+          <span class="btn btn-out btn-block">${T('View factory')}</span>
         </div></a>`;
     }).join('');
   }
@@ -117,6 +121,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   document.querySelectorAll('.filter-rail input').forEach(i=>i.addEventListener('change',render));
   document.querySelectorAll('.sort-chip').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.sort-chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');sort=c.dataset.sort;render();}));
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();document.querySelectorAll('.filter-rail input').forEach(i=>i.checked=false);sort='rec';document.querySelectorAll('.sort-chip').forEach(x=>x.classList.toggle('on',x.dataset.sort==='rec'));render();});
+  window.ARCANA_onLang(render);
 };
 </script>
 </body>

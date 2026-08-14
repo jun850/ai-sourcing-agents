@@ -51,8 +51,9 @@ function publicRecord(product: any) {
   };
 }
 async function publicProduct(admin: any, id: string) {
-  const { data } = await admin.from("products").select("*, factories(name)").eq("id", id).maybeSingle();
-  if (!data || data.listing_status !== "active" || data.is_private) return null;
+  const { data } = await admin.from("products").select("*, factories(name,verify_state,archived_at)").eq("id", id).maybeSingle();
+  const factory = Array.isArray(data?.factories) ? data.factories[0] : data?.factories;
+  if (!data || data.listing_status !== "active" || data.is_private || data.archived_at || factory?.verify_state !== "verified" || factory?.archived_at) return null;
   return publicRecord(data);
 }
 async function syncPublicProduct(admin: any, id: string, deletedSku?: string) {
@@ -65,6 +66,8 @@ async function syncFactoryProducts(admin: any, id: string) {
   await Promise.all(data.map((product: any) => syncPublicProduct(admin, product.id)));
 }
 function factoryRecord(factory: any) {
+  const localized = Object.values(factory.copy_i18n || {}) as any[];
+  const taxonomy = (factory.supplier_taxonomy_memberships || []).map((item: any) => `${plain(item.l2)}/${plain(item.l3)}`);
   return {
     objectID: factory.slug,
     id: factory.slug,
@@ -78,14 +81,17 @@ function factoryRecord(factory: any) {
     moq: factory.moq || "",
     lead_time: factory.lead || "",
     description: factory.bio || "",
+    localized_names: localized.map(copy => plain(copy?.name)).filter(Boolean),
+    localized_descriptions: localized.map(copy => plain(copy?.description)).filter(Boolean),
+    taxonomy,
     image: factory.img || "",
     verified: factory.verify_state === "verified",
     url: `https://atelix.app/pages/supplier.html?id=${encodeURIComponent(factory.slug)}`,
   };
 }
 async function syncPublicFactory(admin: any, id: string, deletedSlug?: string) {
-  const { data } = await admin.from("factories").select("*").eq("id", id).maybeSingle();
-  if(data?.verify_state === "verified") return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "updateObject", body: factoryRecord(data) }] });
+  const { data } = await admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("id", id).maybeSingle();
+  if(data?.verify_state === "verified" && !data.archived_at) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "updateObject", body: factoryRecord(data) }] });
   const slug=data?.slug||deletedSlug;
   if(slug) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "deleteObject", body: { objectID: slug } }] });
 }
@@ -105,7 +111,7 @@ async function syncWishlist(admin: any, profileId: string, productId: string) {
 }
 async function configureIndexes() {
   await algolia(PUBLIC_INDEX, { searchableAttributes: ["unordered(sku)", "unordered(style_code)", "unordered(name)", "unordered(description)", "unordered(supplier)", "unordered(category)", "unordered(subcategory)"], attributesForFaceting: ["filterOnly(category)", "filterOnly(subcategory)", "filterOnly(country)"], customRanking: ["asc(price)", "asc(moq)"], queryType: "prefixLast", removeWordsIfNoResults: "none", exactOnSingleWordQuery: "attribute", alternativesAsExact: ["ignorePlurals", "singleWordSynonym"] }, "/settings", true, "PUT");
-  await algolia(PUBLIC_FACTORIES_INDEX, { searchableAttributes: ["unordered(name)", "unordered(type)", "unordered(capabilities)", "unordered(certifications)", "unordered(description)", "unordered(country)", "unordered(city)"], attributesForFaceting: ["filterOnly(type)", "filterOnly(country)", "filterOnly(certifications)"], customRanking: ["desc(verified)"], queryType: "prefixLast", removeWordsIfNoResults: "none", exactOnSingleWordQuery: "attribute", alternativesAsExact: ["ignorePlurals", "singleWordSynonym"] }, "/settings", true, "PUT");
+  await algolia(PUBLIC_FACTORIES_INDEX, { searchableAttributes: ["unordered(name)", "unordered(localized_names)", "unordered(type)", "unordered(taxonomy)", "unordered(capabilities)", "unordered(certifications)", "unordered(description)", "unordered(localized_descriptions)", "unordered(country)", "unordered(city)"], attributesForFaceting: ["filterOnly(type)", "filterOnly(country)", "filterOnly(certifications)", "filterOnly(taxonomy)"], customRanking: ["desc(verified)"], queryType: "prefixLast", removeWordsIfNoResults: "none", exactOnSingleWordQuery: "attribute", alternativesAsExact: ["ignorePlurals", "singleWordSynonym"] }, "/settings", true, "PUT");
   await algolia(PUBLIC_SUGGESTIONS_INDEX, { searchableAttributes: ["unordered(query)", "unordered(category)"], customRanking: ["desc(weight)"], queryType: "prefixAll", removeWordsIfNoResults: "none" }, "/settings", true, "PUT");
   await Promise.all([PRIVATE_ORDERS_INDEX, PRIVATE_WISHLIST_INDEX].map(index => algolia(index, { searchableAttributes: ["unordered(order_no)", "unordered(name)", "unordered(sku)", "unordered(supplier)", "unordered(searchable_text)"], attributesForFaceting: ["filterOnly(owner_profile_id)"], queryType: "prefixLast", removeWordsIfNoResults: "none" }, "/settings", true, "PUT")));
 }
@@ -114,7 +120,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
-  const internal = !!Deno.env.get("ALGOLIA_SYNC_SECRET") && req.headers.get("x-algolia-sync-secret") === Deno.env.get("ALGOLIA_SYNC_SECRET");
+  const authorization = req.headers.get("Authorization") || "";
+  const internal = (!!Deno.env.get("ALGOLIA_SYNC_SECRET") && req.headers.get("x-algolia-sync-secret") === Deno.env.get("ALGOLIA_SYNC_SECRET")) ||
+    (!!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && authorization === `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`);
   let requester: any = null;
   if (!internal) {
     const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
@@ -129,10 +137,13 @@ Deno.serve(async (req) => {
     if (action === "configure") { await configureIndexes(); return json({ ok: true }); }
     if (action === "reindex_public") {
       const [{ data: products = [] }, { data: factories = [] }] = await Promise.all([
-        admin.from("products").select("*, factories(name)").eq("listing_status", "active").eq("is_private", false),
-        admin.from("factories").select("*").eq("verify_state", "verified"),
+        admin.from("products").select("*, factories(name,verify_state,archived_at)").eq("listing_status", "active").eq("is_private", false).is("archived_at", null),
+        admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null),
       ]);
-      const productRequests = products.map(publicRecord).map((body: any) => ({ action: "updateObject", body }));
+      const productRequests = products.filter((product: any) => {
+        const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
+        return factory?.verify_state === "verified" && !factory?.archived_at;
+      }).map(publicRecord).map((body: any) => ({ action: "updateObject", body }));
       const factoryRequests = factories.map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
       const suggestions = [
         ["cotton twill", "Fabrics", 100], ["linen fabric", "Fabrics", 95], ["organic cotton jersey", "Fabrics", 92],

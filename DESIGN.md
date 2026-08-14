@@ -5,8 +5,8 @@ colors:
   green: "#2e4a3a"
   green-deep: "#25402f"
   green-wash: "#eef2ee"
-  brass: "#96702b"
-  brass-deep: "#785a20"
+  brass: "#72531d"
+  brass-deep: "#654815"
   brass-wash: "#f6eede"
   ink: "#1c1c1a"
   muted: "#54534e"
@@ -131,8 +131,8 @@ A composed, low-chroma palette: two saturated brand signals over warm neutrals, 
 - **Green Wash** (`#eef2ee`): Soft green-tinted fill behind verified/OEM badges, avatar rings, and icon chips.
 
 ### Secondary
-- **Brass** (`#96702b`): The money action and the factory/seller accent. Primary CTAs that move toward purchase (Request for Quote, Proceed to Checkout), factory-path buttons, selected-package borders. Deepened from the original `#b0863c` so white CTA text clears AA large-text contrast. Brass appears where value or a decision is at stake.
-- **Deep Brass** (`#785a20`): Hover/pressed for brass surfaces; also the accessible link-text shade on light backgrounds (~6:1 on white).
+- **Brass** (`#72531d`): The money action and the factory/seller accent. Primary CTAs that move toward purchase (Request for Quote, Proceed to Checkout), factory-path buttons, selected-package borders. White text clears the product's 7:1 AAA target. Brass appears where value or a decision is at stake.
+- **Deep Brass** (`#654815`): Hover/pressed for brass surfaces and accessible link text on light backgrounds.
 - **Brass Wash** (`#f6eede`): Total box background, factory hero tint, "Built for Your Brand" badge.
 
 ### Tertiary

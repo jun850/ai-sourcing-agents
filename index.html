@@ -310,20 +310,26 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   if(factoryNetwork){
     const factoryLocation=window.ATELIX_factoryLocation;
     const renderFactory=factory=>{
-      const logo=factoryLogos[factory.id];
+      const supplierName=window.ATELIX_supplierText(factory,'name');
+      const logo=factory.logo_img||factoryLogos[factory.id];
+      const logoSrc=logo&&(/^https?:|^\//i.test(logo)?logo:`assets/${logo}`);
       const mark=logo
-        ? `<img src="assets/${logo}" alt="" loading="lazy">`
-        : `<span aria-hidden="true">${initials(factory.name)}</span>`;
+        ? `<img src="${escapeHTML(logoSrc)}" alt="" loading="lazy" decoding="async">`
+        : `<span aria-hidden="true">${escapeHTML(initials(supplierName))}</span>`;
       const location=factoryLocation(factory);
-      return `<a class="factory-network-item" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(factory.name)}, ${escapeHTML(location)}">
+      return `<a class="factory-network-item" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(supplierName)}, ${escapeHTML(location)}">
         <span class="factory-network-mark${logo?' has-logo':''}">${mark}</span>
-        <span class="factory-network-copy"><strong>${escapeHTML(factory.name)}</strong><small>${escapeHTML(location)}</small></span>
+        <span class="factory-network-copy"><strong>${escapeHTML(supplierName)}</strong><small>${escapeHTML(location)}</small></span>
         <svg class="factory-network-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
       </a>`;
     };
-    const factories=[...(window.ARCANA_FACTORIES||[])].sort((a,b)=>a.name.localeCompare(b.name));
-    factoryNetwork.innerHTML=factories.map(renderFactory).join('');
-    document.getElementById('factoryNetworkDescription').textContent=`${catalogStats.factories} verified sourcing partners across ${catalogStats.countries} countries.`;
+    const renderFactoryNetwork=()=>{
+      const factories=[...(window.ARCANA_FACTORIES||[])].sort((a,b)=>window.ATELIX_supplierText(a,'name').localeCompare(window.ATELIX_supplierText(b,'name')));
+      factoryNetwork.innerHTML=factories.map(renderFactory).join('');
+      document.getElementById('factoryNetworkDescription').textContent=`${catalogStats.factories} ${window.ARCANA_T('verified material and production companies across')} ${catalogStats.countries} ${window.ARCANA_T('countries')}.`;
+    };
+    renderFactoryNetwork();
+    window.ARCANA_onLang(renderFactoryNetwork);
   }
 
   const certificationList=document.getElementById('certificationList');

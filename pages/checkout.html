@@ -27,13 +27,18 @@
 window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('coRoot');
   const money=n=>window.ARCANA_money(n);
+  const productMoney=(p,qty=1)=>window.ATELIX_productMoney(p,qty);
+  const productAmount=(p,qty=1)=>window.ATELIX_productAmount(p,qty);
+  const currencyMoney=n=>window.ATELIX_currencyMoney(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
+  const text=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const optionSummary=item=>Object.entries(item.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
   const cart=Store.cart().filter(i=>M[i.id]);
   cart.forEach(i=>{
     const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
-    if(i.qty<minimum){i.qty=minimum;Store.setQty(i.id,minimum);}
+    if(i.qty<minimum){i.qty=minimum;Store.setQty(i.key||i.id,minimum);}
   });
-  const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
+  const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
   const fee=+(subtotal*0.05).toFixed(2);
   const total=subtotal+fee;
   let step=1;
@@ -41,6 +46,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   if(!cart.length){
     root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`;
+    return;
+  }
+  if(cart.some(item=>M[item.id].pricingMode==='quote'||!(M[item.id].price>0))){
+    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.msg}</span><h1>${T('Contact supplier')}</h1><p>${T('Volume pricing shared on quote')}</p><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><a class="btn btn-out" href="cart.html">${T('View cart')}</a></div>`;
     return;
   }
 
@@ -60,11 +69,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   const summaryRail=()=>`<aside><section class="panel summary" style="position:sticky;top:88px">
     <h3>${T('Order Summary')}</h3>
-    ${cart.map(i=>{const p=M[i.id];return `<div class="sum-row"><span class="k">${TR(p.name)} × ${i.qty}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}
-    <div class="sum-row strong"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
-    <div class="sum-row"><span class="k">${T('Service fee')}</span><span>${money(fee)}</span></div>
+    ${cart.map(i=>{const p=M[i.id],options=optionSummary(i);return `<div class="sum-row"><span class="k">${text(TR(p.name))} × ${i.qty}${options?`<small class="checkout-options">${options}</small>`:''}</span><span>${productMoney(p,i.qty)}</span></div>`}).join('')}
+    <div class="sum-row strong"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
+    <div class="sum-row"><span class="k">${T('Service fee')}</span><span>${currencyMoney(fee)}</span></div>
     <div class="sum-row"><span class="k">${T('Shipping')}</span><span>Quoted separately</span></div>
-    <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply')}</small></div></div>
+    <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${currencyMoney(total)}<small>${T('Taxes may apply')}</small></div></div>
     <div class="secure-note" style="margin-top:14px"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
   </section></aside>`;
 
@@ -103,13 +112,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     <h2>Review &amp; place order</h2><p class="ph">Check everything is right before you place the order.</p>
     <div class="co-review">
       <div class="co-rev-block"><div class="rt"><b>Items (${cart.length})</b></div>
-        ${cart.map(i=>{const p=M[i.id];return `<div class="rl" style="display:flex;justify-content:space-between"><span>${p.name} × ${i.qty} · ${p.seller}</span><span>${money(p.price*i.qty)}</span></div>`}).join('')}</div>
+        ${cart.map(i=>{const p=M[i.id],options=optionSummary(i);return `<div class="rl" style="display:flex;justify-content:space-between"><span>${text(p.name)} × ${i.qty} · ${text(p.seller)}${options?`<small class="checkout-options">${options}</small>`:''}</span><span>${productMoney(p,i.qty)}</span></div>`}).join('')}</div>
       <div class="co-rev-block"><div class="rt"><b>Shipping &amp; terms</b><button class="edit" type="button" data-goto="1">Edit</button></div>
         <div class="rl">${terms.name||'—'}, ${terms.company||'—'}<br>${terms.addr||'—'}, ${terms.city||''} ${terms.country}<br>Incoterms: ${terms.incoterm}${terms.po?` · PO ${terms.po}`:''}</div></div>
       <div class="co-rev-block"><div class="rt"><b>Payment</b></div>
         <div class="rl">Verified payment instructions will appear on the order page when they are available. Do not transfer funds using details received through an unverified message.</div></div>
     </div>
-    <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${money(total)}</button></div>`;
+    <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${currencyMoney(total)}</button></div>`;
 
   async function placeOrder(){
     const place=root.querySelector('[data-place]');
@@ -117,7 +126,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(place){ place.disabled=true; place.textContent='Placing order…'; }
     const shipAddress=[terms.name,terms.company,terms.addr,terms.city].filter(Boolean).join(', ');
     const { orderNo, error } = await window.ARCANA_API.placeOrder({
-      items: cart.map(i=>({ id:i.id, qty:i.qty })),
+      items: cart.map(i=>({id:i.id,qty:i.qty,key:i.key||i.id,options:i.options||{}})),
       shipCountry: terms.country,
       shipAddress,
       incoterms: terms.incoterm,

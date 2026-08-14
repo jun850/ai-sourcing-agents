@@ -12,13 +12,20 @@ const routes = [
   "/categories",
   "/categories/fabrics",
   "/categories/fabrics/denim",
+  "/categories/oem",
+  "/categories/oem/clothing",
+  "/categories/yarns/viscose",
   "/search?q=wool%20suiting",
   "/search",
   "/search?q=zzzz-no-match-9482",
   "/search?q=%3Cimg%20src%3Dx%20onerror%3Dalert(1)%3E",
   "/search?q=YKK%20Corporation&type=factories",
   "/pages/product.html?id=FAB-153",
-  "/pages/product.html?id=FAB-100",
+  "/pages/product.html?id=FAB-100&lang=en",
+  "/pages/product.html?id=FAB-149",
+  "/pages/product.html?id=FAB-149&lang=ja",
+  "/pages/product.html?id=FAB-149&lang=zh",
+  "/pages/product.html?id=FAB-163",
   "/pages/product.html?id=does-not-exist",
   "/pages/factories.html",
   "/pages/supplier.html?id=F-18",
@@ -134,14 +141,14 @@ async function inspect(route, viewport) {
     for (let attempt = 0; attempt < 24; attempt++) {
       const settled = await cdp.send("Runtime.evaluate", {
         returnByValue: true,
-        expression: "document.querySelector('#searchProductGrid')?.getAttribute('aria-busy') === 'false'",
+        expression: "document.querySelector('#searchProductGrid')?.getAttribute('aria-busy') === 'false' && Boolean(document.querySelector('#searchProductGrid .tcard, #searchProductGrid .search-empty'))",
       });
       if (settled.result.value) break;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
   }
   let contactData = null;
-  if (["/pages/product.html?id=FAB-153", "/pages/product.html?id=FAB-100"].includes(route)) {
+  if (route === "/pages/product.html?id=FAB-100&lang=en") {
     const contactResult = await cdp.send("Runtime.evaluate", {
       returnByValue: true,
       expression: `(() => { window.__qaContacts=[]; window.ARCANA_contactEmail=payload=>window.__qaContacts.push(payload); document.getElementById('emailBtn')?.click(); document.getElementById('oemContactBtn')?.click(); return window.__qaContacts; })()`,
@@ -164,7 +171,8 @@ async function inspect(route, viewport) {
       const sentinel=(bodyText.match(/\\b(undefined|null|NaN)\\b|\\[object Object\\]/g)||[]);
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
       const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
-      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart};
+      const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span')].map(button=>Math.round(button.getBoundingClientRect().height))};
+      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
     })()`,
   });
   const data = result.value;
@@ -186,10 +194,20 @@ async function inspect(route, viewport) {
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
     if (!data.cart.quotesShipping) issues.push("cart does not identify shipping as separately quoted");
   }
-  if (["/pages/product.html?id=FAB-153", "/pages/product.html?id=FAB-100"].includes(route)) {
-    if (!contactData?.length || contactData.some((contact) => contact.subjectPrefix !== "Product Request" && contact.subjectPrefix !== "OEM request") || contactData.some((contact) => !contact.bodyLines?.some((line) => /^Specification: /.test(line)))) issues.push("PDP contact CTA did not build a complete email request");
-    if (route.endsWith("FAB-100") && !contactData?.some((contact) => contact.subjectPrefix === "OEM request")) issues.push("PDP OEM Contact us CTA did not trigger email contact");
+  if (route === "/pages/product.html?id=FAB-100&lang=en") {
+    if (!contactData?.length || contactData.some((contact) => contact.subjectPrefix !== "Product request" && contact.subjectPrefix !== "OEM request") || contactData.some((contact) => !contact.bodyLines?.some((line) => /^Specification: /.test(line)))) issues.push("PDP contact CTA did not build a complete email request");
+    if (!contactData?.some((contact) => contact.subjectPrefix === "OEM request")) issues.push("PDP OEM Contact us CTA did not trigger email contact");
   }
+  if (/\/pages\/product\.html\?id=(?:FAB-149|FAB-153)(?:&|$)/.test(route)) {
+    if (!data.pdp.quoteHref.startsWith("mailto:info@arcanawangsa.com?subject=")) issues.push("quote-only PDP does not expose a real email link");
+    if (data.pdp.quantityType !== "number") issues.push("PDP quantity is missing numeric semantics");
+    if (!/^(true|false)$/.test(data.pdp.wishlistPressed)) issues.push("PDP wishlist is missing pressed state");
+    if (viewport.mobile && data.pdp.touchTargets.some((height) => height < 44)) issues.push(`PDP secondary touch target below 44px: ${data.pdp.touchTargets.join(",")}`);
+    if (route.endsWith("lang=ja") && data.pdp.quoteText !== "サプライヤーに問い合わせ") issues.push("Japanese supplier contact CTA was not localized");
+    if (route.endsWith("lang=zh") && data.pdp.quoteText !== "联系供应商") issues.push("Chinese supplier contact CTA was not localized");
+  }
+  if (route === "/pages/product.html?id=FAB-163" && (data.pdp.optionGroups !== 1 || data.pdp.optionValues !== 3 || data.pdp.selectedOptions !== 1 || data.pdp.galleryButtons !== 3)) issues.push("variant PDP did not render one selected color group and the supplied image gallery");
+  if (route === "/pages/product.html?id=FAB-100&lang=en" && (data.pdp.packageRadios !== 4 || data.pdp.selectedPackages !== 1)) issues.push("OEM package radio group is incomplete or lacks one selected option");
   if (route === "/") {
     if (viewport.mobile && (!data.isolation.mobileNav || data.isolation.desktopCategories)) issues.push("mobile marketplace navigation isolation failed");
     if (!viewport.mobile && (data.isolation.mobileNav || !data.isolation.desktopCategories)) issues.push("desktop marketplace navigation isolation failed");
@@ -198,7 +216,7 @@ async function inspect(route, viewport) {
     if (viewport.mobile && (!data.isolation.mobileListTools || data.isolation.desktopFilters)) issues.push("mobile catalog controls are not isolated from desktop filters");
     if (!viewport.mobile && (data.isolation.mobileListTools || !data.isolation.desktopFilters)) issues.push("desktop catalog controls are not isolated from mobile controls");
   }
-  if (["/", "/search?q=wool%20suiting", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
+  if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
     fs.mkdirSync(outputDir, { recursive: true });
     if (route === "/about") {
       await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, document.documentElement.scrollHeight)" });
@@ -206,10 +224,19 @@ async function inspect(route, viewport) {
       await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, 0)" });
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
+    if (route === "/pages/product.html?id=FAB-163") {
+      await cdp.send("Runtime.evaluate", { expression: "document.getElementById('emailBtn')?.scrollIntoView({block:'center'})" });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    if (route === "/pages/product.html?id=FAB-100&lang=en") {
+      await cdp.send("Runtime.evaluate", { expression: "document.querySelector('.oem-packages')?.scrollIntoView({block:'center'})" });
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
     const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: route === "/about" });
     fs.writeFileSync(path.join(outputDir, `${viewport.name}-${route.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")||"home"}.png`), Buffer.from(shot.data, "base64"));
   }
   cdp.close();
+  await fetch(`${debug}/json/close/${target.id}`, { method: "PUT" }).catch(() => {});
   return { route, viewport: viewport.name, issues, data: { ...data, contactData } };
 }
 
@@ -249,6 +276,7 @@ async function inspectSearch(viewport) {
   const recent = await evaluate(`document.querySelector('[data-search-pop]').innerText`);
   if (!/Recent searches/i.test(recent) || !/denim/i.test(recent) || /Popular/i.test(recent)) issues.push("signed-in recent searches did not render correctly");
   cdp.close();
+  await fetch(`${debug}/json/close/${target.id}`, { method: "PUT" }).catch(() => {});
   return { route: "search interactions", viewport: viewport.name, issues, data: { populated, recent } };
 }
 

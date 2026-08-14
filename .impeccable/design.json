@@ -1,11 +1,11 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-12T21:45:00.000Z",
+  "generatedAt": "2026-08-13T06:11:26.000Z",
   "title": "Design System: Atelix",
   "extensions": {
     "colorMeta": {
       "green": { "role": "primary", "displayName": "Forest Green", "canonical": "oklch(38% 0.05 155)", "tonalRamp": ["oklch(18% 0.04 155)","oklch(26% 0.05 155)","oklch(34% 0.05 155)","oklch(42% 0.05 155)","oklch(52% 0.05 155)","oklch(64% 0.04 155)","oklch(80% 0.03 155)","oklch(94% 0.02 155)"] },
-      "brass": { "role": "secondary", "displayName": "Brass", "canonical": "oklch(56% 0.09 78)", "tonalRamp": ["oklch(24% 0.05 78)","oklch(34% 0.07 78)","oklch(44% 0.09 78)","oklch(54% 0.1 78)","oklch(64% 0.1 78)","oklch(74% 0.09 78)","oklch(86% 0.06 78)","oklch(95% 0.03 78)"] },
+      "brass": { "role": "secondary", "displayName": "AAA Brass", "canonical": "#72531d", "tonalRamp": ["#31230c","#4a3512","#654815","#72531d","#96702b","#b8904b","#dcc596","#f6eede"] },
       "info-blue": { "role": "tertiary", "displayName": "Info Blue", "canonical": "oklch(48% 0.09 258)", "tonalRamp": ["oklch(22% 0.05 258)","oklch(30% 0.07 258)","oklch(40% 0.09 258)","oklch(48% 0.09 258)","oklch(58% 0.08 258)","oklch(70% 0.06 258)","oklch(84% 0.04 258)","oklch(94% 0.02 258)"] },
       "danger": { "role": "status", "displayName": "Signal Terracotta", "canonical": "oklch(54% 0.14 32)", "tonalRamp": ["oklch(24% 0.07 32)","oklch(34% 0.1 32)","oklch(44% 0.13 32)","oklch(54% 0.14 32)","oklch(64% 0.12 32)","oklch(76% 0.09 32)","oklch(88% 0.05 32)","oklch(95% 0.02 32)"] },
       "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(22% 0.004 90)", "tonalRamp": ["oklch(18% 0.004 90)","oklch(28% 0.004 90)","oklch(40% 0.004 90)","oklch(52% 0.005 90)","oklch(64% 0.005 90)","oklch(78% 0.006 80)","oklch(90% 0.006 80)","oklch(97% 0.005 80)"] },
@@ -47,7 +47,7 @@
       "refersTo": "button-cta",
       "description": "The one brass action per view that moves toward purchase.",
       "html": "<button class=\"ds-btn-brass\">Proceed to Checkout</button>",
-      "css": ".ds-btn-brass{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#96702b;color:#fff;font-family:Inter,sans-serif;font-weight:600;font-size:14.5px;padding:13px 22px;border:none;border-radius:10px;transition:.15s}.ds-btn-brass:hover{background:#785a20}.ds-btn-brass:focus-visible{outline:2px solid #785a20;outline-offset:2px}"
+      "css": ".ds-btn-brass{display:inline-flex;align-items:center;justify-content:center;gap:9px;background:#72531d;color:#fff;font-family:Inter,sans-serif;font-weight:600;font-size:14.5px;padding:13px 22px;border:none;border-radius:10px;transition:.15s}.ds-btn-brass:hover{background:#654815}.ds-btn-brass:focus-visible{outline:2px solid #654815;outline-offset:2px}"
     },
     {
       "name": "Outline Button",
@@ -87,7 +87,7 @@
       "refersTo": "chip",
       "description": "Load-bearing trust marker used on cards, suppliers, and profiles.",
       "html": "<span class=\"ds-veri\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" width=\"14\" height=\"14\"><path d=\"M12 3 5 6v6c0 4.4 3 7.6 7 9 4-1.4 7-4.6 7-9V6z\"/><path d=\"m9 12 2 2 4-4\"/></svg> Verified Factory</span>",
-      "css": ".ds-veri{display:inline-flex;align-items:center;gap:5px;background:#f6eede;color:#785a20;font-family:Inter,sans-serif;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px}"
+      "css": ".ds-veri{display:inline-flex;align-items:center;gap:5px;background:#f6eede;color:#654815;font-family:Inter,sans-serif;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px}"
     }
   ],
   "narrative": {
@@ -95,7 +95,7 @@
     "overview": "Atelix reads like a calm editorial catalog of textiles, not a transactional wholesale portal. Macro fabric photography does the persuading; the chrome around it stays quiet. A forest-green and brass palette on a warm off-white ground gives the system the composure of a well-kept reference collection. The register is product: design serves the sourcing job, and the dominant feeling is calm control over a complex, high-stakes procurement decision. Inter carries both editorial titles and functional UI, with weight and scale establishing hierarchy. Surfaces are white panels separated by hairline borders rather than heavy shadow; space is generous, density earned only where comparison demands it.",
     "keyCharacteristics": [
       "Macro material photography as the primary visual, framed in quiet chrome",
-      "Serif display + neutral sans, split cleanly by role (editorial vs functional)",
+      "Inter hierarchy split cleanly by weight and scale (editorial vs functional)",
       "Warm off-white ground, white panels, hairline borders; shadow only on hover",
       "Two-signal color system: green (buyer/trust) and brass (money action/seller)",
       "Generous space; density only where comparison requires it"

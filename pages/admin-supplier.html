@@ -90,6 +90,7 @@
         <div class="field-lg"><label>Best for</label><select name="applications"><option value="">Select clothing type</option><option>Blouson</option><option>T-shirt</option><option>Shirt</option><option>Blouse</option><option>Jacket</option><option>Coat</option><option>Pants</option><option>Shorts</option><option>Skirt</option><option>Dress</option><option>Suit</option><option>Knitwear</option><option>Activewear</option><option>Underwear</option><option>Socks</option><option>Bag</option><option>Footwear</option><option>Multiple apparel types</option></select></div>
         <div class="field-lg"><label>Season</label><input name="season" placeholder="e.g. All season"></div>
         <div class="field-lg"><label>Colour family</label><input name="color_family" placeholder="e.g. Solid, custom colours"></div>
+        <div class="field-lg full product-options-field"><div class="product-options-title"><strong>Buyer-selectable options</strong><span>Optional</span></div><div id="productOptionsEditor"></div></div>
         <div class="field-lg"><label>Origin</label><input name="origin_country" placeholder="e.g. Japan"></div>
         <div class="field-lg"><label>Lead time</label><input name="lead_time" placeholder="e.g. 7–14 days"></div>
         <div class="field-lg full"><label for="productHandlingNotes">Handling notes <span class="hint">optional</span></label><div class="rich-editor" data-rich-editor><div class="rich-toolbar" role="toolbar" aria-label="Handling notes formatting"><button type="button" data-rich-command="bold" aria-label="Bold"><strong>B</strong></button><button type="button" data-rich-command="italic" aria-label="Italic"><em>I</em></button><button type="button" data-rich-command="underline" aria-label="Underline"><u>U</u></button><button type="button" data-rich-command="insertUnorderedList" aria-label="Bulleted list">• List</button><button type="button" data-rich-command="insertOrderedList" aria-label="Numbered list">1. List</button><select data-rich-size aria-label="Font size"><option value="3">Normal</option><option value="2">Small</option><option value="4">Large</option></select></div><div id="productHandlingNotes" class="rich-input" contenteditable="true" role="textbox" aria-multiline="true" data-rich-input data-placeholder="Lot, cutting, care or quality notes a buyer should know."></div><textarea name="handling_notes" data-rich-value hidden></textarea></div></div>
@@ -130,6 +131,7 @@
 <div id="ftr"></div>
 <script src="../js/data.js"></script>
 <script src="../js/components.js"></script>
+<script src="../js/product-options.js"></script>
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
@@ -272,6 +274,8 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
     window.ATELIX_setRichEditor(skuForm,'description','');
     window.ATELIX_setRichEditor(skuForm,'handling_notes','');
     skuForm.elements.id.value=product?product.id:'';
+    document.getElementById('productOptionsEditor').innerHTML=window.ATELIX_productOptionEditor(product?.variants||product?.options||[]);
+    window.ATELIX_bindProductOptionEditor(skuForm);
     document.getElementById('skuFormTitle').textContent=product?format('admin.editSku',{sku:product.sku}):T('admin.addSku');
     if(product){
       ['sku','name','category','unit_type','pricing_mode','loc','comp','construction','season','color_family','origin_country','lead_time','gsm','fabric_width','roll_length','style_code'].forEach(k=>skuForm.elements[k].value=product[k]||'');
@@ -296,7 +300,8 @@ window.ARCANA_PAGE=async function({toast,ASSET}){
     e.preventDefault();
     window.ATELIX_syncRichEditors(skuForm);
     const f=skuForm.elements,id=f.id.value;
-    const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),description:f.description.value.trim(),construction:f.construction.value.trim(),applications:f.applications.value.trim(),season:f.season.value.trim(),color_family:f.color_family.value.trim(),origin_country:f.origin_country.value.trim(),lead_time:f.lead_time.value.trim(),handling_notes:f.handling_notes.value.trim(),gsm:f.gsm.value.trim(),fabric_width:f.fabric_width.value.trim(),roll_length:f.roll_length.value.trim(),style_code:f.style_code.value.trim(),listing_status:f.listing_status.value,is_private:f.is_private.checked};
+    let variants;try{variants=window.ATELIX_readProductOptions(skuForm);}catch(error){toast(error.message);return;}
+    const payload={sku:f.sku.value.trim(),name:f.name.value.trim(),category:f.category.value,unit_type:f.unit_type.value,pricing_mode:f.pricing_mode.value,price:Number(f.price.value)||0,moq:f.moq.value?Number(f.moq.value):null,loc:f.loc.value.trim(),comp:f.comp.value.trim(),description:f.description.value.trim(),construction:f.construction.value.trim(),applications:f.applications.value.trim(),season:f.season.value.trim(),color_family:f.color_family.value.trim(),origin_country:f.origin_country.value.trim(),lead_time:f.lead_time.value.trim(),handling_notes:f.handling_notes.value.trim(),gsm:f.gsm.value.trim(),fabric_width:f.fabric_width.value.trim(),roll_length:f.roll_length.value.trim(),style_code:f.style_code.value.trim(),listing_status:f.listing_status.value,is_private:f.is_private.checked,variants};
     if(!payload.sku||!payload.name){toast(T('admin.skuRequired'));return;}
     const breaks=[...priceBreakRows.children].map(row=>({minQty:Number(row.querySelector('[data-bmin]').value)||0,unitPrice:Number(row.querySelector('[data-bprice]').value)||0})).filter(b=>b.minQty>0);
     const emails=f.assigned_emails.value.split(',').map(value=>value.trim()).filter(Boolean);

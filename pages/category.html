@@ -420,7 +420,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     fabrics:[['cotton','Cotton'],['linen','Linen'],['polyester','Polyester'],['viscose','Viscose & Rayon'],['knits','Knits'],['denim','Denim']],
     accessories:[['labels','Labels & Tags'],['hardware','Garment Hardware']],
     trims:[['zippers','Zippers'],['buttons','Buttons'],['interlining','Interlining'],['lining','Lining'],['simple-trims','Tapes & Elastic']],
-    yarns:[['cotton','Cotton yarn'],['polyester','Polyester thread'],['wool','Wool yarn'],['nylon','Nylon yarn']],
+    yarns:[['cotton','Cotton yarn'],['polyester','Polyester thread'],['viscose','Viscose yarn'],['wool','Wool yarn'],['nylon','Nylon yarn']],
     oem:[['clothing','Clothing'],['accessories','Accessories'],['socks','Socks']]
   };
   const subLabel=(SUBCATS[cat]||[]).find(x=>x[0]===l3)?.[1];
@@ -434,7 +434,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // L3 is a real catalog boundary, not only a name search. Suppliers can set
   // `subcategory` directly; the text fallback keeps existing imported SKUs in
   // the correct family until their structured fields are completed.
-  const l3Terms={cotton:['cotton'],linen:['linen'],polyester:['polyester'],viscose:['viscose','rayon','modal'],knits:['knit','jersey','rib','fleece'],denim:['denim','indigo'],zippers:['zipper'],buttons:['button'],labels:['label','tag','patch','badge'],hardware:['hardware','grommet','rivet','buckle','hook','logo plate'],interlining:['interlining'],lining:['lining'],"simple-trims":['tape','ribbon','elastic','lace','bias','cord','piping'],wool:['wool','merino','cashmere'],nylon:['nylon'],clothing:['jacket','shirt','garment','apparel','clothing'],accessories:['bag','accessor','wallet'],socks:['sock','hosiery']};
+  const l3Terms={cotton:['cotton'],linen:['linen'],polyester:['polyester'],viscose:['viscose','rayon','modal','cupro'],knits:['knit','jersey','rib','fleece'],denim:['denim','indigo'],zippers:['zipper'],buttons:['button'],labels:['label','tag','patch','badge'],hardware:['hardware','grommet','rivet','buckle','hook','logo plate'],interlining:['interlining'],lining:['lining'],"simple-trims":['tape','ribbon','elastic','lace','bias','cord','piping'],wool:['wool','merino','cashmere'],nylon:['nylon'],clothing:['jacket','shirt','garment','apparel','clothing'],accessories:['bag','accessor','wallet','glove','hat'],socks:['sock','hosiery']};
   const productSearchText=p=>[p.name,p.comp,p.spec,p.description,p.subcategory,p.construction,p.applications,p.color_family,p.style_code].filter(Boolean).join(' ').toLowerCase();
   // Marketplace search is deliberately plain text: no operators, no hidden
   // intent parser. An exact phrase wins; otherwise useful typed words broaden
@@ -451,6 +451,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   };
   const categoryItems=window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
   const items=categoryItems.filter(p=>matchSub(p,l3));
+  const supplierItems=(window.ARCANA_FACTORIES||[]).filter(factory=>(factory.taxonomy||[]).some(membership=>
+    membership.l2===cat&&(!l3||membership.l3===l3)
+  ));
   const levelNav=document.getElementById('catalogLevelNav');
   const subcats=SUBCATS[cat]||[];
   const isL2=!l3;
@@ -463,7 +466,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const selected=slug===l3;
     return `<a class="${selected?'on':''}" ${selected?'aria-current="page"':''} href="${selected?`/categories/${cat}`:`/categories/${cat}/${slug}`}">${label}${selected?'<span aria-hidden="true">×</span>':''}</a>`;
   }).join('');
-  const supplierCount=new Set(items.map(product=>product.seller)).size;
+  const supplierCount=new Set([...items.map(product=>product.seller).filter(Boolean),...supplierItems.map(factory=>factory.id)]).size;
   levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p><b>${items.length}</b> ${meta.noun} · <b>${supplierCount}</b> verified suppliers</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
   const crumbs=[['Home','/'],['All categories','/categories'],[meta.title,`/categories/${cat}`]];
   if(l3) crumbs.push([heading,`/categories/${cat}/${l3}`]);
@@ -476,16 +479,17 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   // materials facet
   const mats=['Cotton','Polyester','Linen','Nylon','Wool','Viscose','Spandex'];
   document.getElementById('matOpts').innerHTML=mats.map(m=>{
-    const n=items.filter(p=>p.comp.toLowerCase().includes(m.toLowerCase())).length;
+    const n=items.filter(p=>String(p.comp||'').toLowerCase().includes(m.toLowerCase())).length;
     return `<label class="frl-opt"><input type="checkbox" value="${m}" ${n?'':'disabled'}> <span data-mat="${m}">${window.ARCANA_TR(m)}</span> <span class="cnt">${n}</span></label>`;
   }).join('');
-  if(!items.some(p=>mats.some(m=>p.comp.toLowerCase().includes(m.toLowerCase())))) document.getElementById('matOpts').closest('.frl-block').style.display='none';
+  if(!items.some(p=>mats.some(m=>String(p.comp||'').toLowerCase().includes(m.toLowerCase())))) document.getElementById('matOpts').closest('.frl-block').style.display='none';
 
-  const countryOf=p=>p.country||p.loc.split(',').pop().trim();
-  const regionOf=p=>{const parts=p.loc.split(',').map(s=>s.trim().replace(/\s*\(.*?\)/g,''));return parts.length>=3?parts[parts.length-2]:parts[0];};
+  const countryOf=p=>p.country||String(p.loc||'').split(',').pop().trim();
+  const supplierCountry=f=>f.region||String(f.loc||'').split(',').pop().trim();
+  const regionOf=p=>{const parts=String(p.loc||'').split(',').map(s=>s.trim().replace(/\s*\(.*?\)/g,''));return parts.length>=3?parts[parts.length-2]:parts[0];};
 
   // Country facet — show only if >1 country in category
-  const allCountries=[...new Set(items.map(countryOf))].sort();
+  const allCountries=[...new Set([...items.map(countryOf),...supplierItems.map(supplierCountry)].filter(Boolean))].sort();
   const countryBlock=document.getElementById('countryBlock');
   if(allCountries.length<=1){countryBlock.style.display='none';}
   else{
@@ -537,7 +541,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const isOemAvailable=p.badge==='oem';
       if(avail==='oem' && !isOemAvailable) return false;
       if(avail==='nonoem' && isOemAvailable) return false;
-      if(mat.length && !mat.some(m=>p.comp.toLowerCase().includes(m.toLowerCase()))) return false;
+      if(mat.length && !mat.some(m=>String(p.comp||'').toLowerCase().includes(m.toLowerCase()))) return false;
       if(pmin!=null && p.price<pmin) return false;
       if(pmax!=null && p.price>pmax) return false;
       if(country!=='all' && countryOf(p)!==country) return false;
@@ -548,13 +552,33 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     else if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
     else if(sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
     else if(sort==='new') list=[...list].reverse();
-    const countText=`${list.length} ${T(list.length===1?'result':'results')}`;
+    let supplierList=supplierItems.filter(factory=>
+      avail!=='nonoem' && mat.length===0 && pmin==null && pmax==null &&
+      (country==='all'||supplierCountry(factory)===country)
+    );
+    if(sort==='rec'||sort==='new') supplierList=[...supplierList].sort((a,b)=>(b.years||0)-(a.years||0));
+    else supplierList=[...supplierList].sort((a,b)=>window.ATELIX_supplierText(a,'name').localeCompare(window.ATELIX_supplierText(b,'name')));
+    const resultCount=list.length+supplierList.length;
+    const countText=`${resultCount} ${T(resultCount===1?'result':'results')}`;
     resCount.textContent=countText;
     mobileResCount.textContent=countText;
 
-    const emptyForL3=!!l3&&items.length===0;
-    grid.innerHTML = list.length
-      ? list.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id, fabricSpec:isFabric})).join('')
+    const esc=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+    const supplierCard=f=>{
+      const name=window.ATELIX_supplierText(f,'name');
+      const type=window.ATELIX_supplierText(f,'supplierType')||f.type;
+      return `<a class="fcard" href="/pages/supplier.html?id=${encodeURIComponent(f.id)}">
+        <div class="fthumb"><img src="${esc(window.ATELIX_factoryAsset(f))}" alt="${esc(name)}" loading="lazy"><span class="fveric">${IC.shield} ${T('Verified')}</span></div>
+        <div class="fbody"><div class="fname">${esc(name)}</div><span class="ftype">${esc(type)}</span>
+        <div class="floc">${IC.pin}<span>${esc(window.ATELIX_factoryLocation(f)||T('Contact supplier'))}</span></div>
+        <div class="ftags">${(f.tags||[]).slice(0,4).map(tag=>`<span>${esc(TR(tag))}</span>`).join('')}</div>
+        <div class="ffoot"><div>MOQ<b>${esc(window.ATELIX_publicValue(f.moq))}</b></div><div>${T('Lead Time')}<b>${esc(window.ATELIX_publicValue(f.lead))}</b></div></div>
+        <span class="btn btn-out btn-block">${T('View supplier')}</span></div></a>`;
+    };
+    const cardHtml=[...list.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id, fabricSpec:isFabric})),...supplierList.map(supplierCard)].join('');
+    const emptyForL3=!!l3&&items.length===0&&supplierItems.length===0;
+    grid.innerHTML = resultCount
+      ? cardHtml
       : emptyForL3
         ? `<section class="catalog-empty"><span aria-hidden="true">⌁</span><h2>No ${heTitle.toLowerCase()} listed yet</h2><p>Verified suppliers have not listed this material family yet. Browse the wider category or tell us what you need.</p><div><a class="btn btn-out" href="/categories/${cat}">Browse all ${TR(meta.title).toLowerCase()}</a><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent(`Sourcing request: ${heading}`)}">Request sourcing</a></div></section>`
         : `<section class="catalog-empty"><span aria-hidden="true">⌁</span><h2>No matching ${meta.noun}</h2><p>Try a different quick filter to see more verified supplier listings.</p><button class="btn btn-out" type="button" id="reset2">Reset filters</button></section>`;

@@ -669,6 +669,10 @@
                     placeholder="e.g. Solid, custom colours"
                   />
                 </div>
+                <div class="field-lg full product-options-field">
+                  <div class="product-options-title"><strong>Buyer-selectable options</strong><span>Optional</span></div>
+                  <div id="productOptionsEditor"></div>
+                </div>
                 <div class="field-lg">
                   <label>Origin</label
                   ><input name="origin_country" placeholder="e.g. Japan" />
@@ -1172,6 +1176,7 @@
     <script src="../js/data.js"></script>
     <script src="../js/copilot.js"></script>
     <script src="../js/components.js"></script>
+    <script src="../js/product-options.js"></script>
     <script defer src="../js/analytics.bundle.js"></script>
     <script src="../js/supabase-client.bundle.js"></script>
     <script src="../js/api.js"></script>
@@ -1369,6 +1374,8 @@
           window.ATELIX_setRichEditor(skuForm, "description", "");
           window.ATELIX_setRichEditor(skuForm, "handling_notes", "");
           skuForm.elements.id.value = product ? product.id : "";
+          document.getElementById("productOptionsEditor").innerHTML = window.ATELIX_productOptionEditor(product?.variants || product?.options || []);
+          window.ATELIX_bindProductOptionEditor(skuForm);
           priceBreakRows.innerHTML = "";
           if (product) {
             skuForm.elements.sku.value = product.sku;
@@ -1424,6 +1431,13 @@
           window.ATELIX_syncRichEditors(skuForm);
           const f = skuForm.elements;
           const id = f.id.value;
+          let variants;
+          try {
+            variants = window.ATELIX_readProductOptions(skuForm);
+          } catch (error) {
+            toast(error.message);
+            return;
+          }
           const payload = {
             sku: f.sku.value.trim(),
             name: f.name.value.trim(),
@@ -1487,6 +1501,11 @@
             }))
             .filter((b) => b.minQty > 0);
           await api.setPriceBreaks(productId, breaks);
+          const optionResult = await api.setProductOptions(productId, variants);
+          if (optionResult.error) {
+            toast(optionResult.error.message || "SKU saved, but product options could not be updated");
+            return;
+          }
 
           toast(id ? "SKU updated" : "SKU added");
           skuForm.hidden = true;

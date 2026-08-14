@@ -78,9 +78,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       <tr data-row="${p.id}" class="${selected.has(p.id)?'is-selected':''}">
         <td class="wl-check-cell"><input class="wl-check" type="checkbox" data-select="${p.id}" ${selected.has(p.id)?'checked':''} aria-label="${esc(T('Select'))} ${esc(TR(p.name))}"></td>
         <td data-label="${T('Product')}"><div class="wl-prod"><img src="${productAsset(p)}" alt=""><div><h4><a href="product.html?id=${p.id}">${TR(p.name)}</a></h4><div class="m">${TR(p.seller)} · ${TR(p.loc)}</div></div></div></td>
-        <td data-label="${T('Unit price')}">${money(p.price)}<small class="wl-unit"> /${TR(p.unit)}</small></td>
+        <td data-label="${T('Unit price')}">${p.pricingMode==='quote'||!(p.price>0)?T('Contact supplier'):window.ATELIX_productMoney(p)}${p.pricingMode==='quote'||!(p.price>0)?'':`<small class="wl-unit"> /${TR(p.unit)}</small>`}</td>
         <td class="wl-actions">
-          <button class="btn btn-out" data-add-one="${p.id}" type="button">${T('Add to cart')}</button>
+          ${p.pricingMode==='quote'||!(p.price>0)?`<a class="btn btn-out" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent(`Quote request: ${p.name}`)}">${T('Contact supplier')}</a>`:`<button class="btn btn-out" data-add-one="${p.id}" type="button">${T('Add to cart')}</button>`}
           <button class="ci-remove" type="button" data-remove="${p.id}" style="margin-left:12px">${T('Remove')}</button>
         </td>
       </tr>`;}).join('');

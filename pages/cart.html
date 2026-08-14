@@ -31,6 +31,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('cartRoot');
   const productAsset=window.ATELIX_productAsset;
   const money=n=>window.ARCANA_money(n);
+  const productMoney=(p,qty=1)=>window.ATELIX_productMoney(p,qty);
+  const productAmount=(p,qty=1)=>window.ATELIX_productAmount(p,qty);
+  const currencyMoney=n=>window.ATELIX_currencyMoney(n);
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const text=value=>String(TR(value)||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
@@ -53,25 +56,28 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     }
     cart.forEach(i=>{
       const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
-      if(i.qty<minimum){i.qty=minimum;Store.setQty(i.id,minimum);}
+      if(i.qty<minimum){i.qty=minimum;Store.setQty(i.key||i.id,minimum);}
     });
-    const rows=cart.map(i=>{const p=M[i.id];const sub=p.price*i.qty;
+    const hasQuoteOnly=cart.some(i=>M[i.id].pricingMode==='quote'||!(M[i.id].price>0));
+    const rows=cart.map(i=>{const p=M[i.id];const quoteOnly=p.pricingMode==='quote'||!(p.price>0);
       const productMeta=[p.comp,p.spec].filter(Boolean).map(text).join(' · ');
+      const optionMeta=Object.entries(i.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
       const supplierMeta=[p.seller,p.loc].filter(Boolean).map(text).join(' · ');
       return `
-      <div class="cart-line" data-row="${p.id}">
+      <div class="cart-line" data-row="${text(i.key||p.id)}">
         <img src="${productAsset(p)}" alt="${text(p.name)}">
         <div class="cl-info">
           <h4><a href="product.html?id=${encodeURIComponent(p.id)}">${text(p.name)}</a></h4>
           ${productMeta?`<div class="m">${productMeta}</div>`:''}
+          ${optionMeta?`<div class="m cart-options">${optionMeta}</div>`:''}
           ${supplierMeta?`<div class="seller">${IC.factory}${supplierMeta}</div>`:''}
         </div>
-        <div class="qty" data-qty data-id="${p.id}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
-        <div class="cl-price">${money(p.price)}<small>/${text(p.unit)}</small></div>
-        <div style="text-align:right"><div class="cl-price">${money(sub)}</div><button class="ci-remove" type="button" data-remove="${p.id}">${T('Remove')}</button></div>
+        <div class="qty" data-qty data-id="${p.id}" data-key="${text(i.key||p.id)}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
+        <div class="cl-price">${quoteOnly?T('Contact supplier'):productMoney(p)}${quoteOnly?'':`<small>/${text(p.unit)}</small>`}</div>
+        <div style="text-align:right"><div class="cl-price">${quoteOnly?T('Contact supplier'):productMoney(p,i.qty)}</div><button class="ci-remove" type="button" data-remove="${text(i.key||p.id)}">${T('Remove')}</button></div>
       </div>`;}).join('');
 
-    const subtotal=cart.reduce((s,i)=>s+M[i.id].price*i.qty,0);
+    const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
     const fee=+(subtotal*0.05).toFixed(2);
     const total=subtotal+fee;
 
@@ -87,11 +93,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       <aside>
         <section class="panel summary" style="position:sticky;top:88px">
           <h3>${T('Order Summary')}</h3>
-          <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${money(subtotal)}</span></div>
-          <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${money(fee)}</span></div>
+          <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
+          <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
           <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${T('Quoted separately')}</span></div>
-          <div class="total-box"><div class="lbl">${T('Order total before shipping')}</div><div class="amt">${money(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
-          <button class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>
+          <div class="total-box"><div class="lbl">${T('Order total before shipping')}</div><div class="amt">${currencyMoney(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
+          ${hasQuoteOnly?`<a class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a>`:`<button class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>`}
           <div class="secure-note"><span>${IC.shield} ${T('Encrypted order details')}</span></div>
         </section>
       </aside>
@@ -99,16 +105,16 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
 
     // wire dynamic controls
     root.querySelectorAll('[data-qty]').forEach(q=>{
-      const id=q.dataset.id, inp=q.querySelector('input');
+      const id=q.dataset.id,key=q.dataset.key||id,inp=q.querySelector('input');
       const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[id].moq)||1));
       inp.min=minimum;
-      const commit=v=>{Store.setQty(id,v);render();};
+      const commit=v=>{Store.setQty(key,v);render();};
       q.querySelector('[data-dec]').onclick=()=>commit(Math.max(minimum,(+inp.value||minimum)-1));
       q.querySelector('[data-inc]').onclick=()=>commit((+inp.value||minimum)+1);
       inp.onchange=()=>commit(Math.max(minimum,parseInt(inp.value)||minimum));
     });
     root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();Store.remove(a.dataset.remove);toast(T('Item removed'));render();}));
-    root.querySelector('[data-checkout]').addEventListener('click',()=>location.href='checkout.html');
+    const checkout=root.querySelector('[data-checkout]');if(checkout)checkout.addEventListener('click',()=>location.href='checkout.html');
   }
   render();
   window.ARCANA_onLang(render);

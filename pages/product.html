@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Product Details — Atelix</title>
 <meta name="description" content="View composition, GSM, MOQ, lead time and unit pricing for verified apparel materials, then order or email the supplier through Atelix.">
 <link rel="canonical" href="https://marketplace-three-peach.vercel.app/pages/product.html">
@@ -13,6 +13,8 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Product Details — Atelix">
 <meta name="twitter:description" content="Composition, GSM, MOQ, lead time and unit pricing for verified apparel materials on Atelix.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
@@ -20,13 +22,14 @@
 <div id="hdr"></div>
 <main class="wrap"><div id="pdpRoot"></div><div class="page-end-space" aria-hidden="true"></div></main>
 <div id="ftr"></div>
-<script src="../js/data.js"></script>
-<script src="../js/copilot.js"></script>
-<script src="../js/components.js"></script>
+<script defer src="../js/data.js"></script>
+<script defer src="../js/product-options.js"></script>
+<script defer src="../js/copilot.js"></script>
+<script defer src="../js/components.js"></script>
 <script defer src="../js/analytics.bundle.js"></script>
-<script src="../js/supabase-client.bundle.js"></script>
-<script src="../js/api.js"></script>
-<script src="../js/copilot-llm.js"></script>
+<script defer src="../js/supabase-client.bundle.js"></script>
+<script defer src="../js/api.js"></script>
+<script defer src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
@@ -48,6 +51,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     return;
   }
   const isOEM=p.badge==='oem';
+  const productOptions=(window.ATELIX_normalizeProductOptions?.(p.options||p.variants)||[]);
+  const selectedOptions=Object.fromEntries(productOptions.map(option=>[option.name,option.values[0]]));
+  const galleryImages=[...(Array.isArray(p.images)?p.images:[]),p.img].filter(Boolean).filter((image,index,all)=>all.indexOf(image)===index);
   const minimumOrder=Math.max(1,Math.ceil(Number.parseFloat(p.moq)||1));
   const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
   const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
@@ -56,7 +62,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     fabrics:[['cotton','Cotton',['cotton']],['linen','Linen',['linen']],['polyester','Polyester',['polyester']],['viscose','Viscose & Rayon',['viscose','rayon','modal']],['knits','Knits',['knit','jersey','rib','fleece']],['denim','Denim',['denim','indigo']]],
     accessories:[['labels','Labels & Tags',['label','tag','patch','badge']],['hardware','Garment Hardware',['hardware','grommet','rivet','buckle','hook','logo plate']]],
     trims:[['zippers','Zippers',['zipper']],['buttons','Buttons',['button']],['interlining','Interlining',['interlining']],['lining','Lining',['lining']],['simple-trims','Tapes & Elastic',['tape','ribbon','elastic','lace','bias','cord','piping']]],
-    yarns:[['cotton','Cotton yarn',['cotton']],['polyester','Polyester thread',['polyester']],['wool','Wool yarn',['wool','merino','cashmere']],['nylon','Nylon yarn',['nylon']]],
+    yarns:[['cotton','Cotton yarn',['cotton']],['polyester','Polyester thread',['polyester']],['viscose','Viscose yarn',['viscose','rayon','modal','cupro']],['wool','Wool yarn',['wool','merino','cashmere']],['nylon','Nylon yarn',['nylon']]],
     oem:[['clothing','Clothing',['jacket','shirt','garment','apparel','clothing']],['accessories','Accessories',['bag','accessor','wallet']],['socks','Socks',['sock','hosiery']]]
   };
   function productSubcategory(product){
@@ -65,18 +71,21 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
 
   function build(){
-    const TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money;
+    const TR=window.ARCANA_TR, T=window.ARCANA_T, money=window.ARCANA_money, productMoney=window.ATELIX_productMoney;
+    const publicValue=value=>TR((window.ATELIX_publicValue||((item)=>item||T('Contact supplier')))(value));
+    const html=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
     const nm=TR(p.name), comp=TR(p.comp), seller=TR(p.seller), loc=TR(p.loc);
     const certs=(p.certs||[]).map(TR).join(' · ');
     const supplierHighlight=factory&&factory.highlight ? TR(factory.highlight) : '';
-    const requester=Store.session()?.name||'guest';
+    const requester=Store.session()?.name||T('Guest');
     const productLines=(quantity,extra)=>[
-      `Product: ${nm} (SKU: ${p.id})`,
-      `Quantity requested: ${quantity} ${TR(p.unit)}`,
-      `Composition: ${comp}`,
-      `Specification: ${TR(p.spec||p.construction||'Not specified')}`,
-      `MOQ: ${TR(p.moq)}`,
-      `Supplier: ${seller}, ${loc}`,
+      `${T('Product')}: ${nm} (SKU: ${p.id})`,
+      ...Object.entries(selectedOptions).map(([name,value])=>`${name}: ${value}`),
+      `${T('Quantity requested')}: ${quantity} ${TR(p.unit)}`,
+      `${T('Composition')}: ${publicValue(comp)}`,
+      `${T('Specification')}: ${publicValue(p.spec||p.construction)}`,
+      `MOQ: ${publicValue(p.moq)}`,
+      `${T('Supplier')}: ${seller}, ${loc}`,
       ...(extra||[]),
     ];
     const contactHref=(subjectPrefix,quantity,extra)=>{
@@ -104,21 +113,22 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const sanitizeRichText=window.ATELIX_sanitizeRichText||(value=>String(value||''));
     const productSummary=sanitizeRichText(p.description||TR(`A ${comp||catLabel.toLowerCase()} product for considered sourcing and development.`));
     const productSpecs=[
-      [T('Material'),comp],...(p.construction?[[T('Construction'),TR(p.construction)]]:[]),
-      ...(p.gsm?[[T('Weight'),TR(p.gsm)]]:[]),...(p.fabric_width?[[T('Width'),TR(p.fabric_width)]]:[]),
-      ...(p.roll_length?[[T('Roll length'),TR(p.roll_length)]]:[]),...(p.style_code?[[T('Style code'),TR(p.style_code)]]:[]),
+      [T('Material'),publicValue(comp)],[T('Construction'),publicValue(p.construction)],
+      [T('Weight'),publicValue(p.gsm)],[T('Width'),publicValue(p.fabric_width)],
+      [T('Roll length'),publicValue(p.roll_length)],[T('Style code'),publicValue(p.style_code)],
       [T('Category'),catLabel+(p.subcategory?` · ${TR(p.subcategory)}`:'')],
-      ...(p.applications?[[T('Best for'),TR(p.applications)]]:[]),...(p.season?[[T('Season'),TR(p.season)]]:[]),
-      ...(p.color_family?[[T('Colour family'),TR(p.color_family)]]:[]),...(certs?[[T('Certifications'),certs]]:[])
-    ].filter(([,value])=>value);
-    const sourcingSpecs=[[T('Order unit'),TR(p.unit)],['MOQ',TR(p.moq)],['Lead time',TR(p.lead_time||leadMap[p.cat])],['Origin',TR(p.origin_country||p.country||p.loc.split(',').pop().trim())]].filter(([,value])=>value&&value!=='—');
+      [T('Best for'),publicValue(p.applications)],[T('Season'),publicValue(p.season)],
+      [T('Colour family'),publicValue(p.color_family)],[T('Certifications'),publicValue(certs)]
+    ];
+    const sourcingSpecs=[[T('Order unit'),publicValue(p.unit)],['MOQ',publicValue(p.moq)],['Lead time',publicValue(p.lead_time||p.lt)],['Origin',publicValue(p.origin_country||p.country||String(p.loc||'').split(',').pop().trim())]];
     document.getElementById('pdpRoot').innerHTML=`
     <nav class="crumbs" aria-label="Breadcrumb"><ol>${breadcrumbItems.map(([label,href],index)=>`<li>${href?`<a href="${href}">${label}</a>`:`<span aria-current="page">${label}</span>`}</li>`).join('')}</ol></nav>
     <div class="pdp">
       <div class="gallery">
-        <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img src="${productAsset(p)}" alt="${nm}">
+        <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img data-gallery-main src="${productAsset({img:galleryImages[0]||p.img})}" alt="${nm}" loading="eager" decoding="async" fetchpriority="high">
           ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
         </div>
+        ${galleryImages.length>1?`<div class="pdp-thumbnails" aria-label="${T('Product images')}">${galleryImages.map((image,index)=>`<button type="button" data-gallery-image="${productAsset({img:image})}" aria-label="${nm}, ${T('view')} ${index+1}" aria-pressed="${index===0}"><img src="${productAsset({img:image})}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>`:''}
       </div>
       <div class="pdp-info">
         <div class="titlebar">
@@ -138,20 +148,21 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           <section class="pdp-spec-panel pdp-sourcing"><h2>${T('Sourcing')}</h2><dl>${sourcingSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}</section>
         </div>
         <div class="price-box">
-          <div><span class="muted" style="font-size:13px">${p.price>0?`${T('From')} ${T('Unit Price')}`:T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${T('From')} ${money(p.price)} <small>/${TR(p.unit)}</small>`:T('Contact for quote')}</div></div>
+          <div><span class="muted" style="font-size:13px">${p.price>0?`${T('From')} ${T('Unit Price')}`:T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${T('From')} ${productMoney(p)} <small>/${TR(p.unit)}</small>`:T('Contact supplier')}</div></div>
           ${p.price>0?`<p class="pdp-price-note">Price depends on order quantity and requirements. Contact the supplier to confirm the details.</p>`:''}
         </div>
+        ${productOptions.length?`<div class="pdp-options" aria-label="${T('Product options')}">${productOptions.map((option,optionIndex)=>`<fieldset data-product-option="${optionIndex}"><legend><span>${html(option.name)}</span><strong data-option-value>${html(selectedOptions[option.name])}</strong></legend><div class="pdp-option-values">${option.values.map((value,valueIndex)=>`<label><input type="radio" name="product-option-${optionIndex}" value="${html(value)}" ${valueIndex===0?'checked':''}><span>${html(value)}</span></label>`).join('')}</div></fieldset>`).join('')}</div>`:''}
         <div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
-          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="Decrease quantity">−</button><input id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="Increase quantity">+</button></div>
+          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="${T('Decrease quantity')}">−</button><input type="number" id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="${T('Increase quantity')}">+</button></div>
         </div></div>
         <div class="pdp-cta${p.price>0&&!p.isPrivate?'':' pdp-cta--quote'}">
           ${p.price>0&&!p.isPrivate
             ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
-               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} Email supplier</button>`
-            : `<a class="btn btn-gold" id="emailBtn" href="${contactHref('Product quote request',minimumOrder)}">${IC.msg} Contact Atelix for quote</a>`}
+               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} ${T('Contact supplier')}</button>`
+            : `<a class="btn btn-gold" id="emailBtn" href="${contactHref(T('Product quote request'),minimumOrder)}">${IC.msg} ${T('Contact supplier')}</a>`}
         </div>
         <div class="pdp-mini">
-          <button class="fav pdp-save" data-fav-id="${p.id}">${IC.heart} <span>${T('Wishlist')}</span></button>
+          <button class="fav pdp-save" data-fav-id="${p.id}" aria-pressed="${Store.isSaved(p.id)}">${IC.heart} <span>${T('Wishlist')}</span></button>
           <button class="pdp-share" data-share>${IC.share} ${T('Share')}</button>
         </div>
         <a class="pdp-supplier" href="${facId?`supplier.html?id=${facId}`:catUrl}">
@@ -173,27 +184,55 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||minimumOrder)+1;
     qi.addEventListener('change',()=>{qi.value=Math.max(minimumOrder,Math.floor(Number(qi.value)||minimumOrder));});
     const add=document.getElementById('addBtn');
-    if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
+    if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
-    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1));location.href='checkout.html';});
+    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);location.href='checkout.html';});
     const emailBtn=document.getElementById('emailBtn');
     if(emailBtn) emailBtn.addEventListener('click', ()=>{
-      if(emailBtn.tagName==='A') emailBtn.href=contactHref('Product quote request',qi.value);
-      else window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:productLines(qi.value)});
+      if(emailBtn.tagName==='A') emailBtn.href=contactHref(T('Product quote request'),qi.value);
+      else window.ARCANA_contactEmail({subjectPrefix:T('Product request'), bodyLines:productLines(qi.value)});
     });
+    document.querySelectorAll('[data-product-option]').forEach((fieldset,optionIndex)=>{
+      const option=productOptions[optionIndex];
+      fieldset.querySelectorAll('input[type="radio"]').forEach(input=>input.addEventListener('change',()=>{
+        if(!input.checked)return;
+        selectedOptions[option.name]=input.value;
+        fieldset.querySelector('[data-option-value]').textContent=input.value;
+      }));
+    });
+    const galleryMain=document.querySelector('[data-gallery-main]');
+    document.querySelectorAll('[data-gallery-image]').forEach(button=>button.addEventListener('click',()=>{
+      galleryMain.src=button.dataset.galleryImage;
+      document.querySelectorAll('[data-gallery-image]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
+    }));
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
       const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
       const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
-      window.ARCANA_contactEmail({subjectPrefix:'OEM request', bodyLines:productLines(qi.value,[`OEM service selected: ${pkgName}`])});
+      window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi.value,[`${T('OEM service selected')}: ${pkgName}`])});
     });
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
-    sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);toast(on?T('Saved to your list'):T('Removed from list'), on?{href:'wishlist.html',label:T('View wishlist')}:undefined);});
-    document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('Product link copied'));});
+    sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);sv.setAttribute('aria-pressed',String(on));toast(on?T('Saved to your list'):T('Removed from list'), on?{href:'wishlist.html',label:T('View wishlist')}:undefined);});
+    document.querySelector('[data-share]').addEventListener('click',async()=>{
+      try{
+        if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(location.href);
+        else{
+          const copy=document.createElement('textarea');
+          copy.value=location.href;copy.setAttribute('readonly','');copy.style.position='fixed';copy.style.opacity='0';
+          document.body.appendChild(copy);copy.select();
+          const copied=document.execCommand('copy');copy.remove();
+          if(!copied) throw new Error('copy unavailable');
+        }
+        toast(T('Product link copied'));
+      }catch(_){toast(T('Could not copy product link'));}
+    });
     document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();toast(b.dataset.toast);}));
     window.ARCANA_wireCards(document.querySelector('.prod-grid'));
-    document.querySelectorAll('[data-pkg-group] [data-pkg]').forEach(pk=>pk.addEventListener('click',()=>{
-      document.querySelectorAll('[data-pkg]').forEach(x=>x.classList.remove('sel'));pk.classList.add('sel');}));
+    const packageChoices=[...document.querySelectorAll('[data-pkg-group] .pkg-radio')];
+    packageChoices.forEach(choice=>choice.addEventListener('change',()=>{
+      if(!choice.checked)return;
+      packageChoices.forEach(input=>input.closest('[data-pkg]').classList.toggle('sel',input===choice));
+    }));
 
     // Copilot: "why this matched" — only for a product that was ACTUALLY in the
     // most recent Copilot result set (scoped to this tab, see components.js's
@@ -219,16 +258,18 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
 
   function oemSection(T,TR,money){
-    const pk=(n,title,tag,bullets,price)=>`<div class="pkg${n===1?' sel':''}" data-pkg><span class="radio"></span><span class="pnum">${IC.factory}</span><h4>${n}. ${title}</h4><div class="tag">${tag}</div><ul>${bullets.map(b=>`<li>${b}</li>`).join('')}</ul><div class="from">${price}</div></div>`;
+    const pk=(n,title,tag,bullets,price)=>`<label class="pkg${n===1?' sel':''}" data-pkg><input class="pkg-radio" type="radio" name="oem-package" value="${n}" aria-labelledby="oem-package-${n}" ${n===1?'checked':''}><span class="pnum">${IC.factory}</span><h4 id="oem-package-${n}">${n}. ${title}</h4><div class="tag">${tag}</div><ul>${bullets.map(b=>`<li>${b}</li>`).join('')}</ul><div class="from">${price}</div></label>`;
     return `
     <section class="oem-section section" data-pkg-group>
       <div class="oem-intro"><h2>${T('OEM Services')}</h2><span class="badge b-oem-soft" style="margin-top:14px">${T('Built for Your Brand')}</span>
         <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p>
         <button class="btn btn-gold" id="oemContactBtn" style="margin-top:18px">${IC.msg||''} ${T('Contact us')}</button></div>
-      ${pk(1,T('Sampling Package'),T('Validate quality & design'),[T('Up to 3 samples'),T('Swatch & color cards'),T('Lab testing support'),`5–7 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(45)}</b>`)}
-      ${pk(2,T('Private Label'),T('Build your brand identity'),[T('Custom labels & tags'),T('Branded packaging'),T('Care label customization'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(180)}</b>`)}
-      ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(120)}</b>`)}
-      ${pk(4,T('Bulk Production'),T('Scale with confidence'),[T('Bulk production'),T('In-line QC'),T('Final inspection (AQL)'),T('On-time delivery')],`<b>${T('Custom')}</b>`)}
+      <div class="oem-packages" role="radiogroup" aria-label="${T('OEM Services')}">
+        ${pk(1,T('Sampling Package'),T('Validate quality & design'),[T('Up to 3 samples'),T('Swatch & color cards'),T('Lab testing support'),`5–7 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(45)}</b>`)}
+        ${pk(2,T('Private Label'),T('Build your brand identity'),[T('Custom labels & tags'),T('Branded packaging'),T('Care label customization'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(180)}</b>`)}
+        ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`${T('From')} <b>${money(120)}</b>`)}
+        ${pk(4,T('Bulk Production'),T('Scale with confidence'),[T('Bulk production'),T('In-line QC'),T('Final inspection (AQL)'),T('On-time delivery')],`<b>${T('Custom')}</b>`)}
+      </div>
     </section>`;
   }
 

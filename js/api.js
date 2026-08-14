@@ -122,7 +122,7 @@ const PRODUCT_INPUT_FIELDS = [
   'sku','name','category','unit_type','pricing_mode','price','moq','factory_id',
   'loc','comp','description','subcategory','construction','applications','season',
   'color_family','origin_country','lead_time','handling_notes','gsm','fabric_width',
-  'roll_length','style_code','listing_status','is_private','img','badge'
+  'roll_length','style_code','listing_status','is_private','img','images','badge'
 ];
 const PRODUCT_TEXT_FIELDS = new Set(PRODUCT_INPUT_FIELDS.filter(key=>
   !['price','moq','factory_id','is_private'].includes(key)
@@ -170,14 +170,14 @@ async function skuIdMap(skus){
   return { map: Object.fromEntries((prods||[]).map(p=>[p.sku, p.id])) };
 }
 
-/* Replace a cart's contents with items:[{id:sku,qty}]. Unknown SKUs are dropped;
+/* Replace a cart's contents with items:[{id:sku,qty,options,key}]. Unknown SKUs are dropped;
    returns { matched } = how many rows actually got written, so callers can tell
    "cart cleared" apart from "every SKU was invalid". */
 async function writeCartRows(cartId, items){
   const { map: idBySku, error: me } = await skuIdMap((items||[]).map(i=>i.id));
   if(me) return { error: me };
   const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
-    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty }));
+    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty, line_key:i.key||i.id, option_selection:i.options||{} }));
   const del = await sb.from('cart_items').delete().eq('cart_id', cartId);
   if(del.error) return { error: del.error };
   if(rows.length){
@@ -296,14 +296,23 @@ const API = {
   async fetchCatalog(){
     const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
     const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
-    const [prodRes, facRes] = await Promise.all([
+    const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
-        .select('sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,loc,category,listing_status,factories(name,region)')
+        .select('id,sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(name,region)')
         .eq('listing_status','active').eq('is_private',false),
-      sb.from('factories').select('*').eq('verify_state','verified')
+      sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'),
+      sb.rpc('catalog_public_prices',{p_currency:'USD'}),
+      sb.rpc('catalog_public_prices',{p_currency:'JPY'}),
+      sb.rpc('catalog_public_prices',{p_currency:'CNY'})
     ]);
     if(prodRes.error) throw prodRes.error;
     if(facRes.error)  throw facRes.error;
+    for(const result of [usdRes,jpyRes,cnyRes]) if(result.error) throw result.error;
+    const pricesByProduct={};
+    for(const result of [usdRes,jpyRes,cnyRes]) for(const row of (result.data||[])){
+      pricesByProduct[row.product_id] ||= {};
+      pricesByProduct[row.product_id][row.currency]=Number(row.catalog_amount);
+    }
 
     const factories = (facRes.data||[]).map(f=>({
       id: f.slug, name: f.name, type: TYPE_LABEL[f.type] || f.type,
@@ -313,15 +322,21 @@ const API = {
       certs: f.certs || [], tags: f.tags || [], img: f.img,
       logo_img: f.logo_img, page_img: f.page_img,
       sales: f.sales, phone: f.phone, web: f.web, founded: f.founded,
-      employees: f.employees, area: f.area, port: f.port, bio: f.bio
+      employees: f.employees, area: f.area, port: f.port, bio: f.bio,
+      copyI18n: f.copy_i18n || {},
+      taxonomy: (f.supplier_taxonomy_memberships || []).map(item=>({
+        l2:item.l2, l3:item.l3, isPrimary:item.is_primary === true
+      }))
     }));
     const products = (prodRes.data||[]).map(p=>({
-      id: p.sku, name: p.name, img: p.img, description:p.description, comp: p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
+      id: p.sku, name: p.name, img: p.img, images:p.images||[], description:p.description, comp: p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', loc: p.loc,
       country: p.factories ? p.factories.region : '',
-      badge: p.badge || '', cat: p.category
+      badge: p.badge || '', cat: p.category,
+      pricingMode:p.pricing_mode, catalogPrices:pricesByProduct[p.id]||{},
+      options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants)
     }));
     return { products, factories };
   },
@@ -405,14 +420,14 @@ const API = {
       if(!session || !session.user) return [];
       const { data: cart } = await sb.from('carts').select('id').eq('profile_id', session.user.id).maybeSingle();
       if(!cart) return [];
-      const { data: items, error } = await sb.from('cart_items').select('qty, products(sku)').eq('cart_id', cart.id);
+      const { data: items, error } = await sb.from('cart_items').select('qty,line_key,option_selection,products(sku)').eq('cart_id', cart.id);
       if(error || !items) return [];
-      return items.filter(i=>i.products).map(i=>({ id: i.products.sku, qty: Number(i.qty) }));
+      return items.filter(i=>i.products).map(i=>({ id:i.products.sku,qty:Number(i.qty),key:i.line_key||i.products.sku,options:i.option_selection||{} }));
     }catch(_){ return []; }
   },
 
   /* Upsert (or, at qty<=0, delete) one cart line for the signed-in user. */
-  async syncCartItem(sku, qty){
+  async syncCartItem(sku, qty, options={}, lineKey=sku){
     try{
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated' } };
@@ -421,12 +436,12 @@ const API = {
       const { data: prod, error: pe } = await sb.from('products').select('id').eq('sku', sku).single();
       if(pe) return { error: pe };
       if(qty <= 0){
-        const del = await sb.from('cart_items').delete().eq('cart_id', ec.cart.id).eq('product_id', prod.id);
+        const del = await sb.from('cart_items').delete().eq('cart_id', ec.cart.id).eq('line_key', lineKey);
         return { error: del.error || null };
       }
       const up = await sb.from('cart_items').upsert(
-        { cart_id: ec.cart.id, product_id: prod.id, qty },
-        { onConflict: 'cart_id,product_id' }
+        { cart_id:ec.cart.id,product_id:prod.id,qty,line_key:lineKey,option_selection:options||{} },
+        { onConflict:'cart_id,line_key' }
       );
       return { error: up.error || null };
     }catch(error){ return { error }; }
@@ -645,18 +660,18 @@ const API = {
 
   async getMyProducts(factoryId){
     try{
-      const { data, error } = await sb.from('products').select('*').eq('factory_id', factoryId).order('created_at', { ascending:false });
+      const { data, error } = await sb.from('products').select('*,product_variants(option_name,option_value,sort_order)').eq('factory_id', factoryId).order('created_at', { ascending:false });
       if(error) return { error };
-      return { products: data || [] };
+      return { products: (data||[]).map(product=>({...product,variants:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(product.product_variants)})) };
     }catch(error){ return { error }; }
   },
 
   async getMyPrivateProducts(){
     try{
-      const { data, error }=await sb.from('products').select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,loc,category,factories(name,region)').eq('listing_status','active').eq('is_private',true);
+      const { data, error }=await sb.from('products').select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,product_variants(option_name,option_value,sort_order),factories(name,region)').eq('listing_status','active').eq('is_private',true);
       if(error) return { products:[], error };
       const units={pc:'pcs',m:'m',kg:'kg',package:'package',style:'style',order:'order',color:'color'};
-      return { products:(data||[]).map(p=>({id:p.sku,name:p.name,img:p.img,comp:p.comp,spec:p.spec,price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${units[p.unit_type]||p.unit_type}`:'',seller:p.factories?.name||'Atelix Sourcing',loc:p.loc,country:p.factories?.region||'',badge:p.badge||'',cat:p.category,isPrivate:true})), error:null };
+      return { products:(data||[]).map(p=>({id:p.sku,name:p.name,img:p.img,images:p.images||[],comp:p.comp,spec:p.spec,price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${units[p.unit_type]||p.unit_type}`:'',seller:p.factories?.name||'Atelix Sourcing',loc:p.loc,country:p.factories?.region||'',badge:p.badge||'',cat:p.category,isPrivate:true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants)})), error:null };
     }catch(error){ return { products:[], error }; }
   },
 
@@ -698,6 +713,11 @@ const API = {
       const ins = await sb.from('price_breaks').insert(rows);
       return { error: ins.error || null };
     }catch(error){ return { error }; }
+  },
+
+  async setProductOptions(productId, options){
+    try{const {data,error}=await sb.rpc('supplier_set_product_options',{p_product_id:productId,p_options:options||[]});return {options:data||[],error:error||null};}
+    catch(error){return {options:[],error};}
   },
 
   /* ---- Address book (simple, no map/geocoding lookup) ---- */
