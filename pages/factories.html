@@ -72,7 +72,7 @@
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const F=window.ARCANA_FACTORIES;
   const catalogStats=window.ATELIX_catalogStats;
-  const factoryImage=window.ATELIX_factoryAsset;
+  const factoryImage=window.ATELIX_factoryCardAsset;
   const factoryLocation=window.ATELIX_factoryLocation;
   const supplierText=window.ATELIX_supplierText;
   const esc=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -111,7 +111,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <span class="ftype">${esc(f.type)}</span>
           <div class="fmeta">${orderDetail} <span class="dot">·</span> ${ageDetail}</div>
           <div class="floc">${IC.pin}<span>${esc(factoryLocation(f))}</span></div>
-          <div class="ftags">${f.tags.map(t=>`<span>${esc(t)}</span>`).join('')}</div>
           <div class="ffoot"><div>MOQ<b>${esc(window.ATELIX_publicValue(f.moq))}</b></div><div>Lead time<b>${esc(window.ATELIX_publicValue(f.lead))}</b></div></div>
           <span class="btn btn-out btn-block">${T('View factory')}</span>
         </div></a>`;

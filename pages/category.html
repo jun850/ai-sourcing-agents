@@ -568,10 +568,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const name=window.ATELIX_supplierText(f,'name');
       const type=window.ATELIX_supplierText(f,'supplierType')||f.type;
       return `<a class="fcard" href="/pages/supplier.html?id=${encodeURIComponent(f.id)}">
-        <div class="fthumb"><img src="${esc(window.ATELIX_factoryAsset(f))}" alt="${esc(name)}" loading="lazy"><span class="fveric">${IC.shield} ${T('Verified')}</span></div>
+        <div class="fthumb"><img src="${esc(window.ATELIX_factoryCardAsset(f))}" alt="${esc(name)}" loading="lazy"><span class="fveric">${IC.shield} ${T('Verified')}</span></div>
         <div class="fbody"><div class="fname">${esc(name)}</div><span class="ftype">${esc(type)}</span>
         <div class="floc">${IC.pin}<span>${esc(window.ATELIX_factoryLocation(f)||T('Contact supplier'))}</span></div>
-        <div class="ftags">${(f.tags||[]).slice(0,4).map(tag=>`<span>${esc(TR(tag))}</span>`).join('')}</div>
         <div class="ffoot"><div>MOQ<b>${esc(window.ATELIX_publicValue(f.moq))}</b></div><div>${T('Lead Time')}<b>${esc(window.ATELIX_publicValue(f.lead))}</b></div></div>
         <span class="btn btn-out btn-block">${T('View supplier')}</span></div></a>`;
     };

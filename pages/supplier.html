@@ -71,7 +71,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(supplierName)}</span></nav>
   <div class="sup-hero">
     <section class="panel sup-main">
-      ${(f.page_img||f.img)?`<div class="sup-company-image"><img src="${esc(window.ATELIX_factoryPageAsset(f))}" alt="${esc(supplierName)} company"></div>`:''}
+      ${(f.page_img||(!f.logo_img&&f.img))?`<div class="sup-company-image"><img src="${esc(window.ATELIX_factoryPageAsset(f))}" alt="${esc(supplierName)} company"></div>`:''}
       <div class="sup-top">
         <div class="sup-name">
           <div class="sup-identity">${f.logo_img?`<img class="sup-logo" src="${esc(window.ATELIX_factoryAsset(f))}" alt="${esc(supplierName)} logo">`:''}<div><h1>${esc(supplierName)}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>

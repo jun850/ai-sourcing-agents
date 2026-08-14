@@ -196,7 +196,7 @@
 .sup-hero{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;padding-top:6px}
 .sup-main{padding:28px 30px}
 .sup-company-image{height:220px;margin:-28px -30px 26px;overflow:hidden;border-radius:var(--radius) var(--radius) 0 0;background:var(--surface-2)}
-.sup-company-image img{width:100%;height:100%;object-fit:cover;display:block}
+.sup-company-image img{width:100%;height:100%;object-fit:contain;display:block}
 .sup-identity{display:flex;align-items:center;gap:16px}
 .sup-logo{width:72px;height:72px;border:1px solid var(--line);border-radius:12px;object-fit:contain;background:#fff;padding:6px;flex:0 0 auto}
 .sup-top{display:grid;grid-template-columns:1fr auto;gap:26px}
@@ -610,8 +610,6 @@
 .floc{display:flex;align-items:center;gap:5px;font-size:12.5px;color:var(--muted);margin-top:7px}
 .floc svg{width:13px;height:13px;color:var(--green);flex-shrink:0}
 .floc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ftags{display:flex;gap:6px;margin-top:12px;overflow:hidden;height:25px}
-.ftags span{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
 .fcerts{display:flex;gap:6px;margin-top:10px;overflow:hidden;height:22px}
 .fcerts span{font-size:10.5px;font-weight:600;color:var(--gold-d);background:var(--gold-l);border-radius:5px;padding:3px 8px;white-space:nowrap;flex-shrink:0}
 .ffoot{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line-2);font-size:12px;color:var(--muted)}

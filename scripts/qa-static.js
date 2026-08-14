@@ -56,6 +56,9 @@ for(const relative of ['index.html','pages/product.html','pages/supplier.html','
 if(!translations.includes("window.ATELIX_CONTACT_EMAIL = 'info@arcanawangsa.com'"))problems.push('js/data.js: missing canonical Atelix contact address');
 if(!catalogApi.includes('supplier_taxonomy_memberships(l2,l3,is_primary)'))problems.push('js/api.js: verified supplier taxonomy must hydrate with the public catalog');
 if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages/category.html: existing category grid must surface matching verified suppliers');
+if(categoryPage.includes('class="ftags"'))problems.push('pages/category.html: supplier cards must not render capability tags');
+if(fs.readFileSync(path.join(root,'pages/factories.html'),'utf8').includes('class="ftags"'))problems.push('pages/factories.html: supplier cards must not render capability tags');
+if(!/\.sup-company-image img\{[^}]*object-fit:contain/.test(pageStyles))problems.push('css/pages.css: supplier hero images must preserve the full crop');
 for(const contract of ['copy_i18n','supplier_taxonomy_memberships','supplier_source_contacts','catalog_media_records','catalog_calculate_price'])if(!catalogMigration.includes(contract))problems.push(`catalog import migration missing: ${contract}`);
 const gold=(globalStyles.match(/--gold:(#[0-9a-f]{6})/i)||[])[1];
 const luminance=hex=>{const channels=hex.slice(1).match(/../g).map(value=>parseInt(value,16)/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);return .2126*channels[0]+.7152*channels[1]+.0722*channels[2]};

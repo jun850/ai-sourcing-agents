@@ -29,6 +29,7 @@ const routes = [
   "/pages/product.html?id=does-not-exist",
   "/pages/factories.html",
   "/pages/supplier.html?id=F-18",
+  "/pages/supplier.html?id=apparelx-7im",
   "/pages/supplier.html?id=does-not-exist",
   "/pages/cart.html",
   "/pages/cart.html?seed=cart",
@@ -172,7 +173,7 @@ async function inspect(route, viewport) {
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
       const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
       const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span')].map(button=>Math.round(button.getBoundingClientRect().height))};
-      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
+      return {title:document.title, url:location.href, duplicates, brokenImages, deadLinks, unlabeled, sentinel, overflow, h1:document.querySelector('h1')?.textContent.trim()||'', supplierCards:{count:document.querySelectorAll('.fcard').length,tags:document.querySelectorAll('.fcard .ftags').length}, supplierHero:{fit:getComputedStyle(document.querySelector('.sup-company-image img')||document.body).objectFit||'',naturalWidth:document.querySelector('.sup-company-image img')?.naturalWidth||0}, isolation:{mobileNav:visible(document.querySelector('.mobile-nav')),desktopCategories:visible(document.querySelector('.kat-btn')),desktopFilters:visible(document.querySelector('.filter-rail')),mobileListTools:visible(document.querySelector('.mobile-list-tools'))}, search:{empty:Boolean(document.querySelector('.search-empty')),products:document.querySelectorAll('.search-product-grid .tcard').length,factories:document.querySelectorAll('.search-factory-card').length,factoryListVisible:Boolean(document.querySelector('#searchFactoryList:not([hidden])')),injectedImage:Boolean(document.querySelector('img[src="x"]'))},cart,pdp};
     })()`,
   });
   const data = result.value;
@@ -216,7 +217,9 @@ async function inspect(route, viewport) {
     if (viewport.mobile && (!data.isolation.mobileListTools || data.isolation.desktopFilters)) issues.push("mobile catalog controls are not isolated from desktop filters");
     if (!viewport.mobile && (data.isolation.mobileListTools || !data.isolation.desktopFilters)) issues.push("desktop catalog controls are not isolated from mobile controls");
   }
-  if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
+  if (["/categories/oem/clothing", "/pages/factories.html"].includes(route) && data.supplierCards.tags) issues.push("supplier cards still render capability tags");
+  if (route === "/pages/supplier.html?id=apparelx-7im" && (data.supplierHero.fit !== "contain" || data.supplierHero.naturalWidth < 1)) issues.push("supplier hero does not preserve its full image crop");
+  if (["/", "/categories/oem/clothing", "/search?q=wool%20suiting", "/pages/product.html?id=FAB-100&lang=en", "/pages/product.html?id=FAB-163", "/pages/factories.html", "/pages/supplier.html?id=apparelx-7im", "/pages/cart.html?seed=cart", "/about", "/terms", "/privacy", "/trust-safety"].includes(route)) {
     fs.mkdirSync(outputDir, { recursive: true });
     if (route === "/about") {
       await cdp.send("Runtime.evaluate", { expression: "window.scrollTo(0, document.documentElement.scrollHeight)" });
