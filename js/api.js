@@ -298,7 +298,7 @@ const API = {
     const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
-        .select('id,sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(name,region)')
+        .select('id,sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
         .eq('listing_status','active').eq('is_private',false),
       sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'),
       sb.rpc('catalog_public_prices',{p_currency:'USD'}),
@@ -315,7 +315,7 @@ const API = {
     }
 
     const factories = (facRes.data||[]).map(f=>({
-      id: f.slug, name: f.name, type: TYPE_LABEL[f.type] || f.type,
+      id: f.slug, databaseId: f.id, name: f.name, type: TYPE_LABEL[f.type] || f.type,
       region: f.region, loc: f.loc, verified: f.verify_state === 'verified',
       years: f.years, moq: f.moq, lead: f.lead,
       orders: f.orders_label, capacity: f.capacity,
@@ -332,7 +332,7 @@ const API = {
       id: p.sku, name: p.name, img: p.img, images:p.images||[], description:p.description, comp: p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
-      seller: p.factories ? p.factories.name : '', loc: p.loc,
+      seller: p.factories ? p.factories.name : '', factoryId:p.factories?.id||null, factorySlug:p.factories?.slug||null, loc: p.loc,
       country: p.factories ? p.factories.region : '',
       badge: p.badge || '', cat: p.category,
       pricingMode:p.pricing_mode, catalogPrices:pricesByProduct[p.id]||{},

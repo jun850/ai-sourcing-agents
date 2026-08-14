@@ -54,12 +54,15 @@
       "F-12": "Wakayama",
       "F-13": "Nishiwaki",
     };
-    const city =
+    const country = String((factory && (factory.country || factory.region)) || "").trim();
+    const city = String(
+      (factory && factory.city) ||
       cityById[factory && factory.id] ||
       String((factory && factory.loc) || "")
         .split(",")[0]
-        .trim();
-    return [city, factory && factory.region].filter(Boolean).join(", ");
+        .trim(),
+    ).trim();
+    return [country, city].filter((value, index, values) => value && values.indexOf(value) === index).join(", ");
   };
   window.ATELIX_factoryAsset = factoryAsset;
   window.ATELIX_factoryCardAsset = factoryCardAsset;

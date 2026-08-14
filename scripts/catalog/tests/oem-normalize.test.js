@@ -105,6 +105,19 @@ test('represents missing factual fields as null', () => {
   assert.equal(value.price, null);
 });
 
+test('normalizes supplier locations as country then city while retaining source addresses', () => {
+  const result = normalizeManifest(input());
+  assert.equal(supplier(result, '7IM').country, 'Japan');
+  assert.equal(supplier(result, '7IM').city, 'Suita');
+  assert.match(supplier(result, '7IM').address, /大阪府吹田市/u);
+  assert.equal(supplier(result, 'KAORIS').country, 'China');
+  assert.equal(supplier(result, 'KAORIS').city, 'Suzhou');
+  assert.equal(supplier(result, 'NRF8').country, 'Bangladesh');
+  assert.equal(supplier(result, 'NRF8').city, 'Narayanganj');
+  assert.equal(supplier(result, 'TTON').country, null);
+  assert.equal(supplier(result, 'TTON').city, null);
+});
+
 test('CLI supports help, dry-run/report, and separate exclusive output manifests', () => {
   const help = spawnSync(process.execPath, [CLI, '--help'], { encoding: 'utf8' });
   assert.equal(help.status, 0);

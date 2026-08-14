@@ -73,13 +73,13 @@ window.ARCANA_PAGE=async function({IC}){
   const localProduct=hit=>window.ARCANA_PRODUCT_MAP?.[hit.objectID]||null;
   const localFactory=hit=>window.ARCANA_FACTORY_MAP?.[hit.objectID]||null;
   const searchableProduct=product=>[product.id,product.name,product.comp,product.spec,product.seller,product.cat,product.country].filter(Boolean).join(' ').toLowerCase();
-  const searchableFactory=factory=>[factory.name,factory.type,factory.region,factory.loc,...(factory.tags||[]),...(factory.certs||[])].filter(Boolean).join(' ').toLowerCase();
+  const searchableFactory=factory=>[factory.name,factory.type,factory.region,factory.loc].filter(Boolean).join(' ').toLowerCase();
   const localMatch=(text,value)=>!value||text.includes(value.toLowerCase())||value.toLowerCase().split(/\s+/).filter(word=>word.length>2).some(word=>text.includes(word));
 
   function factoryCard(factory){
     const location=window.ATELIX_factoryLocation(factory),image=window.ATELIX_factoryAsset(factory);
     const href=window.ATELIX_factoryRoute(factory.id); if(!href) return '';
-    return `<a class="search-factory-card" href="${href}"><img src="${image}" alt="" loading="lazy"><span class="search-factory-copy"><span class="search-factory-title"><b>${esc(TR(factory.name))}</b><em>${IC.check} ${T('Verified')}</em></span><span>${esc(TR(factory.type||T('Supplier')))} · ${esc(TR(location))}</span><small>${esc(TR((factory.tags||[]).slice(0,4).join(' · ')||factory.bio||T('View sourcing capabilities')))}</small></span><span class="search-factory-action" aria-hidden="true">→</span></a>`;
+    return `<a class="search-factory-card" href="${href}"><img src="${image}" alt="" loading="lazy"><span class="search-factory-copy"><span class="search-factory-title"><b>${esc(TR(factory.name))}</b><em>${IC.check} ${T('Verified')}</em></span><span>${esc(TR(factory.type||T('Supplier')))} · ${esc(TR(location))}</span></span><span class="search-factory-action" aria-hidden="true">→</span></a>`;
   }
   const categoryLabels={fabrics:'Fabrics',accessories:'Accessories',trims:'Trims',yarns:'Yarns & Threads',oem:'OEM Services'};
   function productFilters(){return [{key:'all',label:T('All')},...Object.keys(categoryLabels).map(key=>({key,label:TR(categoryLabels[key])}))];}

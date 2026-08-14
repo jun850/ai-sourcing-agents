@@ -43,10 +43,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   }
   const f=FMAP[id];
   const displayLoc=window.ATELIX_factoryLocation(f);
-  const own=PRODUCTS.filter(p=>p.seller===f.name);
-  const feat=(own.length?own:PRODUCTS.filter(p=>p.cat==='fabrics')).slice(0,5);
+  const belongsToSupplier=p=>p.factorySlug?String(p.factorySlug)===String(f.id):p.factoryId&&f.databaseId?String(p.factoryId)===String(f.databaseId):p.seller===f.name;
+  const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5);
   const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
-  const capIcons=['M4 4h16v16H4zM4 9h16M4 14h16M9 4v16M14 4v16','M12 3s5 6 5 10a5 5 0 0 1-10 0c0-4 5-10 5-10z','M4 7h16v4a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z','M11 4a7 7 0 1 0 0 14'];
   const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
 
   function render(){
@@ -54,21 +53,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const ask=T('Contact supplier');
     const has=v=>Array.isArray(v)?v.length>0:v!=null&&String(v).trim()!=='';
     const value=v=>has(v)?(Array.isArray(v)?v.join(', '):String(v)):ask;
-    const certs=Array.isArray(f.certs)?f.certs:[];
-    const tags=Array.isArray(f.tags)?f.tags:[];
-    const weavingTags=tags.filter(tag=>/knit|woven|weav|jacquard|shirting/i.test(tag));
-    const caps=[
-      ['sp.weaving',value(weavingTags),value(weavingTags.length?f.capacity:null)],
-      ['sp.dyeing',ask,ask],
-      ['sp.finishing',ask,ask],
-      ['sp.inspection',value(certs),value(certs)]
-    ];
     const supplierName=window.ATELIX_supplierText(f,'name');
     const supplierType=window.ATELIX_supplierText(f,'supplierType')||value(f.type);
     const location=value(displayLoc), bio=value(window.ATELIX_supplierText(f,'description')||f.bio);
     document.title = `${supplierName} — Atelix`;
     document.getElementById('supRoot').innerHTML=`
-  <nav class="crumbs"><a href="../index.html">${T('sp.home')}</a>${IC.chevR}<a href="factories.html">${T('sp.factories')}</a>${IC.chevR}<span class="cur">${esc(supplierName)}</span></nav>
   <div class="sup-hero">
     <section class="panel sup-main">
       ${(f.page_img||(!f.logo_img&&f.img))?`<div class="sup-company-image"><img src="${esc(window.ATELIX_factoryPageAsset(f))}" alt="${esc(supplierName)} company"></div>`:''}
@@ -77,7 +66,6 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <div class="sup-identity">${f.logo_img?`<img class="sup-logo" src="${esc(window.ATELIX_factoryAsset(f))}" alt="${esc(supplierName)} logo">`:''}<div><h1>${esc(supplierName)}${f.verified?`<span class="verified-mark" title="${T('sp.verified')}" aria-label="${T('sp.verified')}">${IC.check}</span>`:''}</h1>
           <div class="role">${esc(supplierType)} · ${esc(TR(location))}</div></div></div>
           <p class="bio">${esc(bio)}</p>
-          <div class="sup-tags">${tags.map(tag=>`<span class="pill-tag">${esc(TR(tag))}</span>`).join('')}${certs.map(c=>`<span class="pill-tag">${esc(TR(c))}</span>`).join('')}</div>
         </div>
         <div class="sup-contact" style="min-width:230px">
           <div class="sc-row"><span class="ci">${IC.user}</span><div><span>${T('sp.salesContact')}</span><b>${esc(value(f.sales))}</b><div class="muted" style="font-size:12px">${esc(value(f.phone))}</div></div></div>
@@ -110,15 +98,11 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     </section>
   </div>
 
-  <section class="panel capabilities">
-    ${caps.map((c,i)=>`<div class="cap"><span class="cap-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="${capIcons[i]}"/></svg></span><h4>${T(c[0])}</h4><p>${esc(c[1])}</p><div class="cap-cap">${T('sp.capacity')}<b>${esc(c[2])}</b></div></div>`).join('')}
-  </section>
-
-  <div class="feat-fabrics">
-    <section class="panel" style="padding:26px 28px">
-      <div class="sec-head" style="margin-bottom:20px"><h2 style="font-family:var(--sans);font-size:24px;font-weight:600">${T('sp.productsFrom')}</h2><a class="link-arrow" href="/categories/${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
+  <div class="feat-fabrics${feat.length?'':' no-products'}">
+    ${feat.length?`<section class="panel" style="padding:26px 28px">
+      <div class="sec-head" style="margin-bottom:20px"><h2 class="supplier-products-title">${T('sp.productsFrom')}</h2><a class="link-arrow" href="/categories/${feat[0]?feat[0].cat:'fabrics'}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${feat.map(card).join('')}</div>
-    </section>
+    </section>`:''}
     <aside class="panel overview">
       <h3>${T('sp.overview')}</h3>
       <p>${esc(bio)}</p>
@@ -144,7 +128,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         `${T('sp.emailLead')}: ${value(f.lead)}`,
       ]});
     }));
-    window.ARCANA_wireCards(document.querySelector('.prod-grid'));
+    const productGrid=document.querySelector('.prod-grid');
+    if(productGrid)window.ARCANA_wireCards(productGrid);
   }
   render();
   window.ARCANA_onLang(render);

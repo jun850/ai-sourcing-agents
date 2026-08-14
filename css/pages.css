@@ -242,6 +242,8 @@
 .cap h4{font-size:16px}.cap p{color:var(--muted);font-size:13px;margin-top:6px;flex:1}
 .cap .cap-cap{margin-top:16px;font-size:12px;color:var(--muted)}.cap .cap-cap b{display:block;font-size:14px;color:var(--ink)}
 .feat-fabrics{display:grid;grid-template-columns:1fr 320px;gap:24px;margin-top:20px;align-items:start}
+.feat-fabrics.no-products{grid-template-columns:1fr}
+.supplier-products-title{font-family:var(--sans);font-size:1.25rem;font-weight:600}
 .ff-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 .ff-card img{aspect-ratio:1/1;width:100%;object-fit:cover;border-radius:12px;background:var(--line-2)}
 .ff-card h4{font-size:14px;margin-top:10px}.ff-card .m{font-size:12px;color:var(--muted);margin-top:3px}

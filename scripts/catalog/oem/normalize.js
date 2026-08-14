@@ -2,6 +2,7 @@
 
 const crypto = require('node:crypto');
 const { TAXONOMY, classifySupplier } = require('./taxonomy');
+const { normalizeSupplierLocation } = require('./location');
 
 const SOURCE_NAME = 'apparelx';
 const SOURCE_HOST = 'www.apparel-x.com';
@@ -108,6 +109,7 @@ function buildSupplier(record, crawledAt) {
   const canonicalId = `${SOURCE_NAME}:${sourceId.toLocaleLowerCase('und')}`;
   const sourceUrl = canonicalSourceUrl(record.sourceUrl);
   const classification = classifySupplier(record);
+  const location = normalizeSupplierLocation(record.address);
   const publicMedia = (Array.isArray(record.images) ? record.images : []).map((image, index) => ({
     assetId: `${canonicalId}:media:${String(index + 1).padStart(2, '0')}`,
     kind: nullableText(image.kind),
@@ -122,7 +124,8 @@ function buildSupplier(record, crawledAt) {
     supplierType: nullableText(record.businessType),
     website: canonicalWebsite(record.website),
     address: nullableText(record.address),
-    country: null,
+    country: location.country,
+    city: location.city,
     businessOutline: nullableText(record.businessOutline, { multiline: true }),
     description: nullableText(record.businessDescription, { multiline: true }),
     sellingPoints: nullableText(record.sellingPoints, { multiline: true }),

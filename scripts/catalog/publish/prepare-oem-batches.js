@@ -279,7 +279,7 @@ async function prepareOemBatches(options) {
           name: primarySupplierName(supplier, locales),
           type: factoryTypeFor(supplier),
           region: nullable(supplier.country),
-          loc: nullable(supplier.address),
+          loc: nullable(supplier.city),
           verify_state: 'verified',
           moq: nullable(supplier.moq),
           lead: nullable(supplier.leadTime),
