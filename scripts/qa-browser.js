@@ -194,7 +194,7 @@ async function inspect(route, viewport) {
       const bodyText=document.body.innerText;
       const sentinel=(bodyText.match(/\\b(undefined|null|NaN)\\b|\\[object Object\\]/g)||[]);
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
-      const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),quotesShipping:/Quoted separately/i.test(bodyText)};
+      const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),shippingAtCheckout:/Calculated at checkout|final shipping total/i.test(bodyText)};
       const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,applicationIcons:[...document.querySelectorAll('.application-icon')].map(icon=>({type:icon.dataset.application,label:icon.getAttribute('aria-label'),title:icon.title})),touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span,.application-icon')].map(button=>Math.round(button.getBoundingClientRect().height))};
       const supplierDetailText=[...document.querySelectorAll('.sup-main,.map-panel,.overview')].map(el=>el.innerText).join(' ');
       const website=document.querySelector('.supplier-website');
@@ -218,7 +218,7 @@ async function inspect(route, viewport) {
   if (route.includes("cart.html?seed=cart")) {
     if (!data.cart.quantityInputs.length || data.cart.quantityInputs.some((input) => input.value < input.min)) issues.push("cart quantity is below product MOQ");
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
-    if (!data.cart.quotesShipping) issues.push("cart does not identify shipping as separately quoted");
+    if (!data.cart.shippingAtCheckout) issues.push("cart does not explain that shipping is calculated from the checkout address");
   }
   if (route === "/pages/product.html?id=FAB-100&lang=en") {
     if (!contactData?.length || contactData.some((contact) => contact.subjectPrefix !== "Product request" && contact.subjectPrefix !== "OEM request") || contactData.some((contact) => !contact.bodyLines?.some((line) => /^Specification: /.test(line)))) issues.push("PDP contact CTA did not build a complete email request");

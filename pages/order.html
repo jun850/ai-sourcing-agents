@@ -29,6 +29,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const root=document.getElementById('ordRoot');
   const no=new URLSearchParams(location.search).get('no');
   const API=window.ARCANA_API;
+  const esc=value=>String(value==null?'':value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
   // Require login: orders are RLS-scoped to their buyer.
   const profile = await API.getSessionProfile();
@@ -57,6 +58,8 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       no:o.order_no, placedAt:o.placed_at, status:o.status,
       items:(items||[]).map(it=>({ name:it.name_snapshot, seller:it.seller_snapshot, qty:Number(it.qty), price:Number(it.unit_price) })),
       subtotal:Number(o.subtotal), fee:Number(o.fee), ship:Number(o.ship),
+      shippingService:o.shipping_service||'',shippingEtaMin:o.shipping_eta_min_days,shippingEtaMax:o.shipping_eta_max_days,
+      shipCountry:o.ship_country||'',shipAddress:o.ship_address||'',
       qcFee:Number(o.qc_fee), insFee:Number(o.ins_fee), total:Number(o.total)
     };
   }
@@ -139,7 +142,8 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       <div class="sum-row"><span class="k">Service fee</span><span>${money(o.fee)}</span></div>
       ${o.qcFee?`<div class="sum-row"><span class="k">QC Inspection</span><span>${money(o.qcFee)}</span></div>`:''}
       ${o.insFee?`<div class="sum-row"><span class="k">Insurance</span><span>${money(o.insFee)}</span></div>`:''}
-      <div class="sum-row"><span class="k">Shipping</span><span>${money(o.ship)}</span></div>
+      <div class="sum-row"><span class="k">Shipping${o.shippingService?`<small class="checkout-options">${esc(o.shippingService)}${o.shippingEtaMin!=null?` · ${esc(o.shippingEtaMin)}–${esc(o.shippingEtaMax)} business days`:''}</small>`:''}</span><span>${money(o.ship)}</span></div>
+      ${o.shipAddress?`<div class="co-rev-block"><div class="rt"><b>Deliver to ${esc(o.shipCountry)}</b></div><div class="rl">${esc(o.shipAddress)}</div></div>`:''}
       <div class="total-box" style="margin-top:10px"><div class="lbl">Total</div><div class="amt">${money(o.total)}</div></div>
     </section>`;
   }

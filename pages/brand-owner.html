@@ -54,29 +54,12 @@
       </section>
 
       <section class="panel acct-panel" id="address" role="tabpanel" aria-labelledby="tab-address" hidden>
-        <div class="acct-panel-head"><h2>Address Book</h2><p class="st-sub">Shipping addresses for your orders — entered manually, no map lookup needed.</p></div>
-        <div id="addrList"></div>
-        <button class="btn btn-out acct-add-address" type="button" id="btnAddAddress">+ Add address</button>
-
-        <form id="addressForm" class="acct-address-form" hidden>
-          <input type="hidden" name="id">
-          <div class="addr-form-grid">
-            <div class="field-lg full"><label>Label <span class="hint">optional, e.g. Warehouse</span></label><input name="label" type="text"></div>
-            <div class="field-lg"><label>Recipient name</label><input name="recipient_name" type="text" required></div>
-            <div class="field-lg"><label>Phone</label><input name="phone" type="tel"></div>
-            <div class="field-lg full"><label>Address line 1</label><input name="line1" type="text" required placeholder="Street, building, unit"></div>
-            <div class="field-lg full"><label>Address line 2 <span class="hint">optional</span></label><input name="line2" type="text"></div>
-            <div class="field-lg"><label>City</label><input name="city" type="text" required></div>
-            <div class="field-lg"><label>Province / State</label><input name="province" type="text"></div>
-            <div class="field-lg"><label>Postal code</label><input name="postal_code" type="text"></div>
-            <div class="field-lg"><label>Country</label><input name="country" type="text" required></div>
-          </div>
-          <label class="acct-default-address"><input type="checkbox" name="is_default"> Set as default address</label>
-          <div class="acct-form-actions">
-            <button class="btn btn-out" type="button" id="btnCancelAddress">Cancel</button>
-            <button class="btn btn-green acct-primary-action" type="submit">Save address</button>
-          </div>
-        </form>
+        <div class="acct-address-head">
+          <div class="acct-panel-head"><h2>Address Book</h2><p class="st-sub">Keep delivery details ready for checkout and choose one default address.</p></div>
+          <button class="btn btn-green acct-add-address" type="button" id="btnAddAddress">+ Add address</button>
+        </div>
+        <label class="address-search"><span class="sr-only">Search saved addresses</span><input id="addressSearch" type="search" placeholder="Search by label, city, or country"></label>
+        <div id="addrList" class="address-list" aria-live="polite"></div>
       </section>
 
       <section class="panel acct-panel orders" id="orders" role="tabpanel" aria-labelledby="tab-orders" hidden>
@@ -96,6 +79,7 @@
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/address-book.js"></script>
 <script src="../js/copilot-llm.js"></script>
 <script>
 window.ARCANA_PAGE=async function({toast}){
@@ -198,79 +182,15 @@ window.ARCANA_PAGE=async function({toast}){
     renderProfile(profile);
   });
 
-  // ---- Address book ----
-  let addresses=[];
-  const addrList=document.getElementById('addrList');
-  const addressForm=document.getElementById('addressForm');
-
-  async function loadAddresses(){
-    addresses=await api.getAddresses();
-    renderAddresses();
-  }
-  function renderAddresses(){
-    addrList.innerHTML=addresses.length ? addresses.map(a=>`
-      <div class="addr-card">
-        <div style="flex:1;min-width:200px">
-          <b>${esc(a.label||a.recipient_name)}${a.is_default?'<span class="addr-badge">Default</span>':''}</b>
-          <p>${esc(a.recipient_name)}${a.phone?' · '+esc(a.phone):''}<br>${esc([a.line1,a.line2,a.city,a.province,a.postal_code,a.country].filter(Boolean).join(', '))}</p>
-        </div>
-        <div class="addr-actions">
-          ${a.is_default?'':`<button class="btn btn-out" type="button" data-default="${a.id}">Set default</button>`}
-          <button class="btn btn-out" type="button" data-edit-addr="${a.id}">Edit</button>
-          <button class="btn btn-out" type="button" data-del-addr="${a.id}">Delete</button>
-        </div>
-      </div>
-    `).join('') : '<p class="muted" style="font-size:13px">No saved addresses yet.</p>';
-    addrList.querySelectorAll('[data-default]').forEach(b=>b.addEventListener('click', async()=>{
-      await api.setDefaultAddress(b.dataset.default); toast('Default address updated'); loadAddresses();
-    }));
-    addrList.querySelectorAll('[data-edit-addr]').forEach(b=>b.addEventListener('click',()=>openAddressForm(addresses.find(a=>a.id===b.dataset.editAddr))));
-    addrList.querySelectorAll('[data-del-addr]').forEach(b=>b.addEventListener('click', async()=>{
-      if(!confirm('Delete this address?')) return;
-      await api.deleteAddress(b.dataset.delAddr); toast('Address deleted'); loadAddresses();
-    }));
-  }
-  function openAddressForm(addr){
-    addressForm.hidden=false;
-    addressForm.reset();
-    const f=addressForm.elements;
-    f.id.value=addr ? addr.id : '';
-    if(addr){
-      f.label.value=addr.label||''; f.recipient_name.value=addr.recipient_name||''; f.phone.value=addr.phone||'';
-      f.line1.value=addr.line1||''; f.line2.value=addr.line2||''; f.city.value=addr.city||'';
-      f.province.value=addr.province||''; f.postal_code.value=addr.postal_code||''; f.country.value=addr.country||'';
-      f.is_default.checked=!!addr.is_default;
-    }
-    addressForm.scrollIntoView({behavior:'smooth', block:'center'});
-  }
-  document.getElementById('btnAddAddress').addEventListener('click',()=>openAddressForm(null));
-  document.getElementById('btnCancelAddress').addEventListener('click',()=>{ addressForm.hidden=true; });
-  addressForm.addEventListener('submit', async e=>{
-    e.preventDefault();
-    const f=addressForm.elements;
-    const id=f.id.value;
-    const wantDefault=f.is_default.checked;
-    const payload={
-      label: f.label.value.trim()||null, recipient_name: f.recipient_name.value.trim(), phone: f.phone.value.trim()||null,
-      line1: f.line1.value.trim(), line2: f.line2.value.trim()||null, city: f.city.value.trim(),
-      province: f.province.value.trim()||null, postal_code: f.postal_code.value.trim()||null, country: f.country.value.trim()
-    };
-    if(!payload.recipient_name || !payload.line1 || !payload.city || !payload.country){ toast('Please fill in the required fields'); return; }
-    let targetId=id;
-    if(id){
-      const { error }=await api.updateAddress(id, payload);
-      if(error){ toast(error.message||'Could not save address'); return; }
-    } else {
-      const { address, error }=await api.createAddress(payload);
-      if(error){ toast(error.message||'Could not save address'); return; }
-      targetId=address.id;
-    }
-    if(wantDefault) await api.setDefaultAddress(targetId);
-    toast(id?'Address updated':'Address added');
-    addressForm.hidden=true;
-    loadAddresses();
+  // ---- Address book: shared with checkout so add/edit/default/delete stay consistent. ----
+  const addressBook=window.ATELIX_createAddressBook({
+    api,
+    list:document.getElementById('addrList'),
+    addButton:document.getElementById('btnAddAddress'),
+    searchInput:document.getElementById('addressSearch'),
+    toast
   });
-  loadAddresses();
+  addressBook.load();
 
   // recent orders — status drives the pill colour
   const money=n=>window.ARCANA_money(n);

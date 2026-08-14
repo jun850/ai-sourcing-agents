@@ -30,7 +30,6 @@
 window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('cartRoot');
   const productAsset=window.ATELIX_productAsset;
-  const money=n=>window.ARCANA_money(n);
   const productMoney=(p,qty=1)=>window.ATELIX_productMoney(p,qty);
   const productAmount=(p,qty=1)=>window.ATELIX_productAmount(p,qty);
   const currencyMoney=n=>window.ATELIX_currencyMoney(n);
@@ -59,45 +58,55 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       if(i.qty<minimum){i.qty=minimum;Store.setQty(i.key||i.id,minimum);}
     });
     const hasQuoteOnly=cart.some(i=>M[i.id].pricingMode==='quote'||!(M[i.id].price>0));
-    const rows=cart.map(i=>{const p=M[i.id];const quoteOnly=p.pricingMode==='quote'||!(p.price>0);
-      const productMeta=[p.comp,p.spec].filter(Boolean).map(text).join(' · ');
-      const optionMeta=Object.entries(i.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
-      const supplierMeta=[p.seller,p.loc].filter(Boolean).map(text).join(' · ');
-      return `
-      <div class="cart-line" data-row="${text(i.key||p.id)}">
-        <img src="${productAsset(p)}" alt="${text(p.name)}">
-        <div class="cl-info">
-          <h4><a href="product.html?id=${encodeURIComponent(p.id)}">${text(p.name)}</a></h4>
-          ${productMeta?`<div class="m">${productMeta}</div>`:''}
-          ${optionMeta?`<div class="m cart-options">${optionMeta}</div>`:''}
-          ${supplierMeta?`<div class="seller">${IC.factory}${supplierMeta}</div>`:''}
-        </div>
-        <div class="qty" data-qty data-id="${p.id}" data-key="${text(i.key||p.id)}"><button data-dec aria-label="Decrease">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"><button data-inc aria-label="Increase">+</button></div>
-        <div class="cl-price">${quoteOnly?T('Contact supplier'):productMoney(p)}${quoteOnly?'':`<small>/${text(p.unit)}</small>`}</div>
-        <div style="text-align:right"><div class="cl-price">${quoteOnly?T('Contact supplier'):productMoney(p,i.qty)}</div><button class="ci-remove" type="button" data-remove="${text(i.key||p.id)}">${T('Remove')}</button></div>
-      </div>`;}).join('');
+    const groups=[];
+    cart.forEach(item=>{
+      const product=M[item.id];
+      const key=product.factoryId||product.seller||'supplier';
+      let group=groups.find(entry=>String(entry.key)===String(key));
+      if(!group){group={key,name:product.seller||T('Supplier'),location:product.loc||'',items:[]};groups.push(group);}
+      group.items.push(item);
+    });
+    const groupMarkup=groups.map(group=>`<section class="cart-supplier-group panel">
+      <header class="cart-supplier-head">
+        <span class="cart-supplier-icon" aria-hidden="true">${IC.factory}</span>
+        <div><h2>${text(group.name)}</h2>${group.location?`<p>${text(group.location)}</p>`:''}</div>
+      </header>
+      <div class="cart-supplier-items">${group.items.map(i=>{
+        const p=M[i.id],quoteOnly=p.pricingMode==='quote'||!(p.price>0);
+        const productMeta=[p.comp,p.spec].filter(Boolean).map(text).join(' · ');
+        const optionMeta=Object.entries(i.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
+        return `<article class="cart-product" data-row="${text(i.key||p.id)}">
+          <a class="cart-product-image" href="product.html?id=${encodeURIComponent(p.id)}"><img src="${productAsset(p)}" alt="${text(p.name)}"></a>
+          <div class="cart-product-body">
+            <h3><a href="product.html?id=${encodeURIComponent(p.id)}">${text(p.name)}</a></h3>
+            ${productMeta?`<p class="cart-product-meta">${productMeta}</p>`:''}
+            ${optionMeta?`<p class="cart-variant">${optionMeta}</p>`:''}
+            <div class="cart-product-unit">${quoteOnly?T('Contact supplier'):`${productMoney(p)} <small>/${text(p.unit)}</small>`}</div>
+          </div>
+          <div class="cart-product-controls">
+            <div class="qty" data-qty data-id="${p.id}" data-key="${text(i.key||p.id)}"><button type="button" data-dec aria-label="Decrease ${text(p.name)} quantity">−</button><input value="${i.qty}" inputmode="numeric" aria-label="${T('Quantity')}"/><button type="button" data-inc aria-label="Increase ${text(p.name)} quantity">+</button></div>
+            <button class="ci-remove" type="button" data-remove="${text(i.key||p.id)}">${T('Remove')}</button>
+          </div>
+          <div class="cart-product-total"><span>${T('Line total')}</span><strong>${quoteOnly?T('Contact supplier'):productMoney(p,i.qty)}</strong></div>
+        </article>`;
+      }).join('')}</div>
+    </section>`).join('');
 
     const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
     const fee=+(subtotal*0.05).toFixed(2);
     const total=subtotal+fee;
 
-    root.innerHTML=`<div class="cart-wrap">
-      <div>
-        <section class="panel" style="padding:24px 26px">
-          <h1 class="cart-title">${T('Your Cart')} <span class="muted">(${cart.length} ${T(cart.length===1?'item':'items')})</span></h1>
-          <div style="margin-top:8px">${rows}</div>
-          <div class="cart-actions"><a class="add-pkg" href="category.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg> ${T('Continue shopping')}</a></div>
-        </section>
-
-      </div>
+    root.innerHTML=`<header class="cart-page-head"><div><h1>${T('Your Cart')}</h1><p>${cart.length} ${T(cart.length===1?'item':'items')} from ${groups.length} ${T(groups.length===1?'supplier':'suppliers')}</p></div><a class="btn btn-out" href="category.html">${T('Continue shopping')}</a></header>
+    <div class="cart-wrap">
+      <div class="cart-groups">${groupMarkup}</div>
       <aside>
-        <section class="panel summary" style="position:sticky;top:88px">
+        <section class="panel summary cart-summary">
           <h3>${T('Order Summary')}</h3>
           <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
           <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
-          <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${T('Quoted separately')}</span></div>
-          <div class="total-box"><div class="lbl">${T('Order total before shipping')}</div><div class="amt">${currencyMoney(total)}<small>${T('Taxes may apply at checkout')}</small></div></div>
-          ${hasQuoteOnly?`<a class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a>`:`<button class="btn btn-gold btn-block" style="margin-top:16px;padding:15px" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>`}
+          <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${T('Calculated at checkout')}</span></div>
+          <div class="cart-summary-total"><span>${T('Total before shipping')}</span><strong>${currencyMoney(total)}</strong></div>
+          ${hasQuoteOnly?`<a class="btn btn-gold btn-block cart-summary-action" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><p class="cart-summary-help">${T('Remove quote-only items to place the remaining order online.')}</p>`:`<button class="btn btn-gold btn-block cart-summary-action" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button><p class="cart-summary-help">${T('Choose a saved address to see the final shipping total.')}</p>`}
           <div class="secure-note"><span>${IC.shield} ${T('Encrypted order details')}</span></div>
         </section>
       </aside>

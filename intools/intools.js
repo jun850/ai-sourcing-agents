@@ -14,7 +14,7 @@
   let currentProfile=null;
   let currentView='dashboard';
   let editorLanguage='en';
-  let cache={pages:[],widgets:[],products:[],suppliers:[],media:[],history:[]};
+  let cache={pages:[],widgets:[],products:[],suppliers:[],shipping:[],media:[],history:[]};
   let methodWarnings=new Set();
   let drawerReturnFocus=null;
 
@@ -138,19 +138,20 @@
     const widgets=[{id:'widget-1',key:'supplier-discount',name:'New supplier discount',type:'discount',zone:'managed_page_before_content',status:'draft',style_preset:'brass',target_type:'route',target_value:'/privacy',current_revision:3,starts_at:'2026-08-14T00:00',content:{en:{headline:'Supplier offer',body:'Review this supplier.'},ja:{headline:'サプライヤーオファー',body:'このサプライヤーをご覧ください。'},zh:{headline:'供应商优惠',body:'查看此供应商。'}}}];
     const products=[{id:'p1',sku:'ATL-COT-104',name:'Organic Cotton Twill',factory_id:'f1',supplier_name:'Mori Textile',category:'fabrics',price:8.4,moq:120,listing_status:'active',unit_type:'kg',pricing_mode:'quote',applications:'Dress',img:'https://example.com/cotton-twill.jpg',images:['https://example.com/cotton-twill.jpg','https://example.com/cotton-twill-detail.jpg'],variants:[{name:'Color',values:['Natural','Black']},{name:'Length',values:['25 m','50 m']}],brand_emails:['buyer@example.com'],updated_at:'2026-08-13T02:00:00Z'}];
     const suppliers=[{id:'f1',slug:'mori-textile',name:'Mori Textile',type:'trim_supplier',region:'Osaka, Japan',verify_state:'pending',bio:'Specialist textile supplier.',sales:'sales@example.com',web:'https://example.com',tags:['Weaving'],certs:['GOTS'],logo_img:'https://example.com/mori-logo.png',page_img:'https://example.com/mori-company.jpg',product_count:18,updated_at:'2026-08-11T09:00:00Z'}];
+    const shipping=[{id:'ship-id',country_code:'ID',country_name:'Indonesia',service_name:'Tracked delivery',flat_rate_usd:18,eta_min_days:3,eta_max_days:6,is_active:true,updated_at:'2026-08-14T09:00:00Z'}];
     const media=[{id:'m1',name:'cotton-twill.jpg',url:'../assets/atelix-beta-source-box.webp',alt_text:{en:'Folded cotton twill fabric'},mime_type:'image/webp',updated_at:'2026-08-13T04:00:00Z'}];
     const history=[{id:'h1',entity_type:'page',entity_name:'Privacy policy',action:'published',actor_email:'jun@arcanawangsa.com',created_at:'2026-08-12T10:30:00Z',revision:4}];
     return {
-      adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,
+      adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListShippingRates:async()=>({shipping}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,
       adminSaveContentPage:async(payload)=>({page:{...payload,updated_at:new Date().toISOString()}}),adminPublishContentPage:async()=>({}),adminRollbackContentPage:async()=>({}),
-      adminSaveWidget:async(payload)=>({widget:payload}),adminArchiveWidget:async()=>({}),adminSaveProduct:async(payload)=>{window.__qaSavedProduct=payload;return {product:payload};},adminArchiveProduct:async()=>({}),adminRestoreProduct:async()=>({}),adminSaveSupplier:async(payload)=>{const supplier={...payload,id:payload.id||`f${suppliers.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedSupplier=supplier;if(!payload.id)suppliers.push(supplier);return {supplier};},adminArchiveSupplier:async()=>({}),adminRestoreSupplier:async()=>({}),adminUploadMedia:async()=>({}),adminArchiveMedia:async()=>({}),uploadImage:async(file,folder)=>({url:`https://storage.example.com/${folder}/${file.name}`,path:`qa/${folder}/${file.name}`}),signOut:async()=>({})
+      adminSaveWidget:async(payload)=>({widget:payload}),adminArchiveWidget:async()=>({}),adminSaveProduct:async(payload)=>{window.__qaSavedProduct=payload;return {product:payload};},adminArchiveProduct:async()=>({}),adminRestoreProduct:async()=>({}),adminSaveSupplier:async(payload)=>{const supplier={...payload,id:payload.id||`f${suppliers.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedSupplier=supplier;if(!payload.id)suppliers.push(supplier);return {supplier};},adminArchiveSupplier:async()=>({}),adminRestoreSupplier:async()=>({}),adminSaveShippingRate:async payload=>{const saved={...payload,id:payload.id||`ship-${shipping.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedShippingRate=saved;return {rate:saved};},adminArchiveShippingRate:async()=>({}),adminUploadMedia:async()=>({}),adminArchiveMedia:async()=>({}),uploadImage:async(file,folder)=>({url:`https://storage.example.com/${folder}/${file.name}`,path:`qa/${folder}/${file.name}`}),signOut:async()=>({})
     };
   }
 
   function decorateApi(source){
     if(!source)return source;
     const alias=(legacy,modern,transform=(...args)=>args)=>{if(typeof source[legacy]!=='function'&&typeof source[modern]==='function')source[legacy]=(...args)=>source[modern](...transform(...args));};
-    alias('adminListContentPages','intoolsListPages');alias('adminListWidgets','intoolsListWidgets');alias('adminListProducts','intoolsListProducts');alias('adminListSuppliers','intoolsListSuppliers');alias('adminListMedia','intoolsListMedia');alias('adminListContentAudit','intoolsListAudit',()=>[{}]);
+    alias('adminListContentPages','intoolsListPages');alias('adminListWidgets','intoolsListWidgets');alias('adminListProducts','intoolsListProducts');alias('adminListSuppliers','intoolsListSuppliers');alias('adminListShippingRates','intoolsListShippingRates');alias('adminListMedia','intoolsListMedia');alias('adminListContentAudit','intoolsListAudit',()=>[{}]);
     alias('adminSaveContentPage','intoolsSavePage',payload=>[{route:payload.route,title:payload.content?.en?.title||'',template:payload.template,document:{locales:payload.content,seo:{en:{title:payload.seo_title,description:payload.seo_description},ja:{title:payload.seo_title,description:payload.seo_description},zh:{title:payload.seo_title,description:payload.seo_description}}},expectedRevision:payload.expected_revision}]);
     alias('adminPublishContentPage','intoolsPublishPage');alias('adminRollbackContentPage','intoolsRollbackPage',(id,revision)=>[id,Math.max(1,Number(revision||2)-1),revision]);
     if(typeof source.adminSaveWidget!=='function'&&typeof source.intoolsSaveWidget==='function')source.adminSaveWidget=async payload=>{const saved=await source.intoolsSaveWidget({key:payload.key||payload.id||payload.name.toLowerCase().replace(/[^a-z0-9]+/g,'-'),type:payload.type,zone:payload.zone,document:{locales:payload.content,settings:{name:payload.name,style_preset:payload.style_preset,image_url:payload.image_url,alt_text:payload.alt_text,order:0},targeting:{type:'route',value:payload.target_value,routes:[payload.target_value]},schedule:{starts_at:payload.starts_at,ends_at:payload.ends_at}},expectedRevision:payload.expected_revision});if(!saved.error&&payload.status==='published')return source.intoolsPublishWidget(saved.widget?.id||payload.id,saved.widget?.current_revision||payload.expected_revision);return saved;};
@@ -158,6 +159,8 @@
     alias('adminArchiveProduct','intoolsArchiveProduct',(id,updatedAt)=>[id,updatedAt||null,false]);alias('adminRestoreProduct','intoolsArchiveProduct',(id,updatedAt)=>[id,updatedAt||null,true]);
     alias('adminSaveSupplier','intoolsSaveSupplier',payload=>[{id:payload.id||null,payload:Object.fromEntries(Object.entries(payload).filter(([key])=>!['id','updated_at'].includes(key))),expectedUpdatedAt:payload.updated_at||null}]);
     alias('adminArchiveSupplier','intoolsArchiveSupplier',(id,updatedAt)=>[id,updatedAt||null,false]);alias('adminRestoreSupplier','intoolsArchiveSupplier',(id,updatedAt)=>[id,updatedAt||null,true]);
+    alias('adminSaveShippingRate','intoolsSaveShippingRate',payload=>[{id:payload.id||null,payload:Object.fromEntries(Object.entries(payload).filter(([key])=>!['id','updated_at'].includes(key))),expectedUpdatedAt:payload.updated_at||null}]);
+    alias('adminArchiveShippingRate','intoolsArchiveShippingRate',(id,updatedAt,restore=false)=>[id,updatedAt||null,restore]);
     alias('adminArchiveMedia','intoolsArchiveMedia',(id,updatedAt,restore=false)=>[id,updatedAt||null,restore]);
     if(typeof source.adminUploadMedia!=='function'&&typeof source.intoolsSaveMedia==='function')source.adminUploadMedia=async(file,meta)=>{const uploaded=typeof source.uploadImage==='function'?await source.uploadImage(file,'intools'):{};if(uploaded?.error)return uploaded;return source.intoolsSaveMedia({id:null,name:meta.name,path:uploaded?.path||`intools/${file.name}`,publicUrl:uploaded?.url||'',mimeType:file.type,bytes:file.size,width:null,height:null,altText:{en:meta.alt_text,ja:'',zh:''},expectedUpdatedAt:null});};
     return source;
@@ -167,7 +170,7 @@
     state('desktop');
     root.innerHTML=`<div class="intools" data-intools-shell>
       <header class="topbar"><div class="brand"><span class="brand-mark">A</span><span>Atelix <small>Intools</small></span></div><div class="crumb">Intools <span aria-hidden="true">/</span> <strong data-crumb>Dashboard</strong></div><div class="top-actions"><span class="environment">ADMIN</span><span class="admin-name">${esc(currentProfile?.email||'Administrator')}</span><button class="btn btn-quiet" data-signout>Sign out</button></div></header>
-      <aside class="sidebar"><nav class="nav" aria-label="Intools"><button data-view="dashboard"><span class="nav-symbol">⌂</span>Dashboard</button><button data-view="pages"><span class="nav-symbol">▤</span>Pages</button><button data-view="widgets"><span class="nav-symbol">▦</span>Widgets</button><button data-view="products"><span class="nav-symbol">◇</span>Products</button><button data-view="suppliers"><span class="nav-symbol">⌘</span>Suppliers</button><button data-view="media"><span class="nav-symbol">▧</span>Media</button><button data-view="history"><span class="nav-symbol">↺</span>History</button></nav><div class="sidebar-foot">Desktop administration workspace<br>Atelix marketplace</div></aside>
+      <aside class="sidebar"><nav class="nav" aria-label="Intools"><button data-view="dashboard"><span class="nav-symbol">⌂</span>Dashboard</button><button data-view="pages"><span class="nav-symbol">▤</span>Pages</button><button data-view="widgets"><span class="nav-symbol">▦</span>Widgets</button><button data-view="products"><span class="nav-symbol">◇</span>Products</button><button data-view="suppliers"><span class="nav-symbol">⌘</span>Suppliers</button><button data-view="shipping"><span class="nav-symbol">⌁</span>Shipping</button><button data-view="media"><span class="nav-symbol">▧</span>Media</button><button data-view="history"><span class="nav-symbol">↺</span>History</button></nav><div class="sidebar-foot">Desktop administration workspace<br>Atelix marketplace</div></aside>
       <main class="workspace"><div class="workspace-inner" data-workspace></div></main>
       <div class="toast-region" aria-live="polite" data-toasts></div>
       <dialog class="confirm" data-confirm><div class="confirm-body"><h2 data-confirm-title>Confirm action</h2><p data-confirm-copy></p></div><div class="confirm-actions"><button class="btn btn-secondary" value="cancel">Cancel</button><button class="btn btn-primary" value="confirm" data-confirm-action>Confirm</button></div></dialog>
@@ -197,6 +200,7 @@
     if(view==='widgets')return renderWidgets();
     if(view==='products')return renderProducts();
     if(view==='suppliers')return renderSuppliers();
+    if(view==='shipping')return renderShipping();
     if(view==='media')return renderMedia();
     if(view==='history')return renderHistory();
   }
@@ -290,10 +294,27 @@
     const mediaSection=sections.find(section=>section.querySelector('h2')?.textContent==='Media and access');
     if(!mediaSection)return;
     mediaSection.insertAdjacentHTML('beforebegin',`<div class="form-section"><h2>Buyer-selectable options</h2>${window.ATELIX_productOptionEditor?.(product.variants||product.options)||''}</div>`);
-    const currentImages=Array.isArray(product.images)?product.images.join('\n'):'';
-    mediaSection.querySelector('.form-grid')?.insertAdjacentHTML('afterbegin',`<label class="field field-wide"><span>Gallery image URLs</span><textarea name="images" placeholder="One image URL per line">${esc(currentImages)}</textarea><small>The first gallery image becomes the product card and main PDP image.</small></label>`);
-    const primaryUrl=form.elements.img;if(primaryUrl)primaryUrl.type='text';
+    [form.elements.img,form.elements.image_upload,form.elements.remove_image].filter(Boolean).forEach(control=>control.closest('label')?.remove());
+    mediaSection.querySelector('.form-grid')?.insertAdjacentHTML('afterbegin',`<div class="product-media-editor field-wide" data-product-media>
+      <div class="product-media-head"><div><strong>PDP image order</strong><p>The first image is the main catalog thumbnail and the first PDP image.</p></div><span data-media-count></span></div>
+      <input type="hidden" name="img"><textarea name="images" hidden></textarea>
+      <div class="product-media-list" data-product-media-list></div>
+      <div class="product-media-add"><label class="field"><span>Add image URL</span><input name="image_url_add" type="text" placeholder="https://… or catalog/products/…"></label><button class="btn btn-secondary" type="button" data-product-image-add>Add URL</button></div>
+      <label class="field product-media-upload"><span>Or upload an image</span><input name="gallery_upload" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><small data-product-upload-status>JPG, PNG, WebP, or AVIF up to 10 MB. New images are added last, then can be moved.</small></label>
+    </div>`);
+    bindProductMediaEditor(form,product);
     window.ATELIX_bindProductOptionEditor?.(form);
+  }
+  function bindProductMediaEditor(form,product){
+    let images=[...(Array.isArray(product.images)?product.images:[]),product.img].map(value=>String(value||'').trim()).filter((value,index,all)=>value&&all.indexOf(value)===index);
+    const editor=form.querySelector('[data-product-media]'),list=editor.querySelector('[data-product-media-list]'),count=editor.querySelector('[data-media-count]');
+    const sync=()=>{form.elements.images.value=images.join('\n');form.elements.img.value=images[0]||'';count.textContent=`${images.length} image${images.length===1?'':'s'}`;};
+    const render=()=>{sync();list.innerHTML=images.length?images.map((url,index)=>`<article class="product-media-row" data-media-index="${index}" tabindex="-1"><div class="product-media-preview"><img src="${esc(url)}" alt=""><span>${index===0?'Main':index+1}</span></div><div class="product-media-url" title="${esc(url)}">${esc(url)}</div><div class="product-media-actions"><button class="icon-btn" type="button" data-media-up aria-label="Move image ${index+1} earlier"${index===0?' disabled':''}>↑</button><button class="icon-btn" type="button" data-media-down aria-label="Move image ${index+1} later"${index===images.length-1?' disabled':''}>↓</button><button class="btn btn-quiet" type="button" data-media-remove>Remove</button></div></article>`).join(''):'<div class="product-media-empty"><strong>No product images</strong><p>Add a URL or upload an image. Active listings should have at least one image.</p></div>';bind();};
+    const move=(index,next)=>{const [image]=images.splice(index,1);images.splice(next,0,image);render();list.querySelector(`[data-media-index="${next}"]`)?.focus?.();};
+    const bind=()=>list.querySelectorAll('[data-media-index]').forEach(row=>{const index=Number(row.dataset.mediaIndex);row.querySelector('[data-media-up]').onclick=()=>move(index,index-1);row.querySelector('[data-media-down]').onclick=()=>move(index,index+1);row.querySelector('[data-media-remove]').onclick=()=>{images.splice(index,1);render();};});
+    editor.querySelector('[data-product-image-add]').onclick=()=>{const input=form.elements.image_url_add,url=input.value.trim();if(!url){input.setCustomValidity('Enter an image URL or asset path.');input.reportValidity();input.setCustomValidity('');return;}if(images.includes(url)){input.setCustomValidity('This image is already in the gallery.');input.reportValidity();input.setCustomValidity('');return;}images.push(url);input.value='';render();};
+    form.elements.gallery_upload.addEventListener('change',async event=>{const file=event.target.files?.[0],status=editor.querySelector('[data-product-upload-status]');if(!file)return;if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)||file.size>10*1024*1024){status.textContent='Choose a JPG, PNG, WebP, or AVIF image no larger than 10 MB.';event.target.value='';return;}event.target.disabled=true;status.textContent='Uploading image…';const uploaded=await api.uploadImage(file,'products');event.target.disabled=false;event.target.value='';if(uploaded?.error||!uploaded?.url){status.textContent=uploaded?.error?.message||'Upload failed. Try again.';return;}if(!images.includes(uploaded.url))images.push(uploaded.url);status.textContent='Image uploaded and added last. Move it to set its PDP position.';render();});
+    render();
   }
   function entityForm(type,item){
     if(type==='product'){
@@ -353,15 +374,13 @@
     if(type==='product'){
       let variants;
       try{variants=window.ATELIX_readProductOptions?.(form)||[];}catch(error){handleMutationError(error);return;}
-      try{values.img=await resolveEditorImage(form,{urlName:'img',fileName:'image_upload',removeName:'remove_image',folder:'products',label:'Product image'});}catch(error){handleMutationError(error);return;}
       const brandEmails=values.private_assignments.split(',').map(x=>x.trim()).filter(Boolean);
-      const images=String(values.images||'').split(/[\n,]/).map(x=>x.trim()).filter(Boolean);
-      if(values.img&&!images.includes(values.img))images.unshift(values.img);
-      if(!values.img&&images.length)values.img=images[0];
+      const images=String(values.images||'').split('\n').map(x=>x.trim()).filter(Boolean);
+      values.img=images[0]||null;
       payload={...values,id:item.id||null,updated_at:item.updated_at||null,price:values.price===''?0:Number(values.price),moq:values.moq===''?null:Number(values.moq),gsm:values.gsm||'',images,variants,brand_emails:brandEmails,is_private:brandEmails.length>0};
       delete payload.private_assignments;
-      delete payload.image_upload;
-      delete payload.remove_image;
+      delete payload.image_url_add;
+      delete payload.gallery_upload;
       delete payload.new_supplier_name;
       delete payload.new_supplier_type;
       delete payload.new_supplier_loc;
@@ -380,6 +399,40 @@
   async function renderSuppliers(){const r=await callFirst(['adminListSuppliers','adminListFactories']);cache.suppliers=valueOf(r.result,'suppliers');workspace().innerHTML=`${listHead('Suppliers','Manage identity, verification, capabilities, certifications, media, and linked SKUs.',true,'New supplier')}<div class="toolbar"><label class="search"><input data-filter placeholder="Search suppliers" aria-label="Search suppliers"></label><select data-status aria-label="Filter status"><option value="">All states</option><option value="verified">verified</option><option value="pending">pending</option><option value="unverified">unverified</option><option value="archived">archived</option></select></div>${unavailableNotice()}<section class="panel" data-list>${suppliersTable(cache.suppliers)}</section>`;bindListFilters('suppliers',suppliersTable,['name','region','loc']);workspace().querySelector('[data-primary-action]').onclick=()=>openSupplierEditor();bindRowActions('supplier',openSupplierEditor);}
   function suppliersTable(rows){return rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Supplier</th><th>Location</th><th>Verification</th><th>Products</th><th>Updated</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows.map(s=>`<tr><td class="table-primary">${esc(s.name)}</td><td>${esc(s.loc||s.region||'—')}</td><td>${statusBadge(isArchived(s)?'archived':s.verify_state||s.status)}</td><td>${esc(s.product_count??'—')}</td><td>${esc(fmtDate(s.updated_at))}</td><td><div class="row-actions"><button class="btn btn-quiet" data-edit-id="${esc(s.id)}">Edit</button></div></td></tr>`).join('')}</tbody></table></div>`:tableEmpty('⌘','No suppliers found','Add a supplier profile and connect its catalog.','New supplier');}
   function openSupplierEditor(supplier={}){openDrawer('Edit supplier',supplier.name||'New supplier',entityForm('supplier',supplier),entityActions(supplier));bindEntityActions('supplier',supplier);}
+
+  async function renderShipping(){
+    const result=await callFirst(['adminListShippingRates']);
+    cache.shipping=valueOf(result.result,'shipping');
+    workspace().innerHTML=`${listHead('Shipping','Configure one flat USD delivery rate and estimate for each destination country.',true,'Add country rate')}
+      <div class="toolbar"><label class="search"><input data-shipping-filter placeholder="Search country or service" aria-label="Search shipping rates"></label><select data-shipping-status aria-label="Filter shipping status"><option value="">All states</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select></div>
+      ${unavailableNotice()}<div class="notice notice-info"><span>i</span><div><strong>Checkout uses these rates directly</strong><p>Customers cannot place an order to a country until an active rate exists. Prices are verified again by the server at order placement.</p></div></div>
+      <section class="panel" data-shipping-list>${shippingTable(cache.shipping)}</section>`;
+    const filter=()=>{
+      const query=workspace().querySelector('[data-shipping-filter]').value.trim().toLowerCase(),status=workspace().querySelector('[data-shipping-status]').value;
+      const rows=cache.shipping.filter(rate=>{
+        const state=isArchived(rate)?'archived':rate.is_active?'active':'inactive';
+        return (!query||[rate.country_code,rate.country_name,rate.service_name].some(value=>String(value||'').toLowerCase().includes(query)))&&(!status||state===status);
+      });
+      workspace().querySelector('[data-shipping-list]').innerHTML=shippingTable(rows);bindShippingRows();
+    };
+    workspace().querySelector('[data-shipping-filter]').addEventListener('input',filter);workspace().querySelector('[data-shipping-status]').addEventListener('change',filter);
+    workspace().querySelector('[data-primary-action]').onclick=()=>openShippingEditor();bindShippingRows();
+  }
+  function shippingTable(rows){return rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Destination</th><th>Service</th><th>Flat rate</th><th>Estimate</th><th>Status</th><th>Updated</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows.map(rate=>`<tr><td><span class="table-primary">${esc(rate.country_name)}</span><span class="table-secondary">${esc(rate.country_code)}</span></td><td>${esc(rate.service_name)}</td><td>$${esc(Number(rate.flat_rate_usd||0).toFixed(2))}</td><td>${esc(rate.eta_min_days)}–${esc(rate.eta_max_days)} business days</td><td>${statusBadge(isArchived(rate)?'archived':rate.is_active?'active':'inactive')}</td><td>${esc(fmtDate(rate.updated_at))}</td><td><div class="row-actions"><button class="btn btn-quiet" data-shipping-edit="${esc(rate.id)}">Edit</button></div></td></tr>`).join('')}</tbody></table></div>`:tableEmpty('⌁','No shipping rates found','Add a destination rate before accepting checkout orders.','Add country rate');}
+  function bindShippingRows(){workspace().querySelectorAll('[data-shipping-edit]').forEach(button=>button.onclick=()=>openShippingEditor(cache.shipping.find(rate=>String(rate.id)===button.dataset.shippingEdit)||{}));workspace().querySelector('[data-empty-action]')?.addEventListener('click',()=>openShippingEditor());}
+  function openShippingEditor(rate={}){
+    const archived=isArchived(rate);
+    openDrawer(rate.id?'Edit shipping rate':'Add shipping rate',rate.id?rate.country_name:'Configure a checkout destination',`<form data-shipping-form><div class="panel"><div class="form-section"><h2>Destination and service</h2><div class="form-grid"><label class="field"><span>Country code</span><input name="country_code" value="${esc(rate.country_code||'')}" minlength="2" maxlength="2" pattern="[A-Za-z]{2}" placeholder="ID" required><small>Two-letter ISO country code.</small></label><label class="field"><span>Country name</span><input name="country_name" value="${esc(rate.country_name||'')}" placeholder="Indonesia" required></label><label class="field field-wide"><span>Service name</span><input name="service_name" value="${esc(rate.service_name||'')}" placeholder="Tracked delivery" required></label></div></div><div class="form-section"><h2>Checkout quote</h2><div class="form-grid"><label class="field"><span>Flat rate (USD)</span><input name="flat_rate_usd" type="number" min="0" step="0.01" value="${esc(rate.flat_rate_usd??'')}" required></label><label class="field"><span>Minimum business days</span><input name="eta_min_days" type="number" min="0" step="1" value="${esc(rate.eta_min_days??'')}" required></label><label class="field"><span>Maximum business days</span><input name="eta_max_days" type="number" min="0" step="1" value="${esc(rate.eta_max_days??'')}" required></label><label class="check"><input name="is_active" type="checkbox"${rate.id?(rate.is_active?' checked':''):' checked'}> Available at checkout</label></div></div></div></form>`,`<div><button class="btn btn-secondary" data-close>Cancel</button>${rate.id?`<button class="btn ${archived?'btn-secondary':'btn-danger'}" data-shipping-archive>${archived?'Restore':'Archive'}</button>`:''}</div><div><button class="btn btn-primary" data-shipping-save>Save rate</button></div>`);
+    root.querySelector('[data-shipping-save]').onclick=()=>saveShippingRate(rate);
+    root.querySelector('[data-shipping-archive]')?.addEventListener('click',()=>confirmAction(`${archived?'Restore':'Archive'} this rate?`,archived?'The destination will return to checkout as active.':'Customers will no longer be able to check out to this country. Data and history are retained.',archived?'Restore':'Archive',()=>archiveShippingRate(rate,archived)));
+  }
+  async function saveShippingRate(rate){
+    const form=root.querySelector('[data-shipping-form]');if(!form.reportValidity())return;
+    const payload={id:rate.id||null,updated_at:rate.updated_at||null,country_code:form.country_code.value.trim().toUpperCase(),country_name:form.country_name.value.trim(),service_name:form.service_name.value.trim(),flat_rate_usd:Number(form.flat_rate_usd.value),eta_min_days:Number(form.eta_min_days.value),eta_max_days:Number(form.eta_max_days.value),is_active:form.is_active.checked};
+    if(payload.eta_max_days<payload.eta_min_days){form.eta_max_days.setCustomValidity('Maximum days must be equal to or greater than minimum days.');form.eta_max_days.reportValidity();form.eta_max_days.setCustomValidity('');return;}
+    try{const result=await callFirst(['adminSaveShippingRate'],payload);if(!result.available){toast('Shipping rate saving is not available.',true);return;}closeDrawer();toast('Shipping rate saved.');navigate('shipping');}catch(error){handleMutationError(error);}
+  }
+  async function archiveShippingRate(rate,restore){try{await callFirst(['adminArchiveShippingRate'],rate.id,rate.updated_at,restore);closeDrawer();toast(`Shipping rate ${restore?'restored':'archived'}.`);navigate('shipping');}catch(error){handleMutationError(error);}}
 
   async function renderMedia(){const r=await callFirst(['adminListMedia','adminListMediaAssets']);cache.media=valueOf(r.result,'media');workspace().innerHTML=`${listHead('Media','Upload reusable images with descriptive alt text for pages, widgets, and catalog records.',true,'Upload image')}${unavailableNotice()}<section class="panel">${cache.media.length?`<div class="media-grid">${cache.media.map(m=>`<article class="media-item"><img src="${esc(m.url||m.public_url||'')}" alt="${esc(altTextValue(m.alt_text))}" loading="lazy"><b title="${esc(m.name||m.filename)}">${esc(m.name||m.filename||'Untitled asset')}</b><small>${esc(m.size||m.mime_type||'Image')} · ${isArchived(m)?'Archived':'Active'}</small><button class="btn btn-quiet" data-media-archive="${esc(m.id)}">${isArchived(m)?'Restore':'Archive'}</button></article>`).join('')}</div>`:tableEmpty('▧','No media uploaded','Upload an image and add meaningful alternative text.','Upload image')}</section>`;workspace().querySelector('[data-primary-action]').onclick=openMediaUpload;workspace().querySelector('[data-empty-action]')?.addEventListener('click',openMediaUpload);workspace().querySelectorAll('[data-media-archive]').forEach(button=>button.onclick=()=>{const item=cache.media.find(media=>String(media.id)===button.dataset.mediaArchive);confirmAction(`${isArchived(item)?'Restore':'Archive'} this image?`,'The stored file remains recoverable and its history is retained.',isArchived(item)?'Restore':'Archive',async()=>{await callFirst(['adminArchiveMedia'],item.id,item.updated_at,isArchived(item));toast(`Image ${isArchived(item)?'restored':'archived'}.`);navigate('media');});});}
   function openMediaUpload(){openDrawer('Upload image','Add a reusable Intools media asset.',`<form data-editor-form><div class="panel"><div class="form-section"><label class="field"><span>Image file</span><input name="file" type="file" accept="image/jpeg,image/png,image/webp" required></label><label class="field"><span>Asset name</span><input name="name" required></label><label class="field"><span>Alternative text</span><textarea name="alt_text" required></textarea></label></div></div></form>`,`<div><button class="btn btn-secondary" data-close>Cancel</button></div><div><button class="btn btn-primary" data-save>Upload image</button></div>`);root.querySelector('[data-save]').onclick=uploadMedia;}

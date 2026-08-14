@@ -60,6 +60,8 @@ if(!sb || !sb.auth){
     updateAddress(){ return Promise.resolve({ error: err }); },
     deleteAddress(){ return Promise.resolve({ error: err }); },
     setDefaultAddress(){ return Promise.resolve({ error: err }); },
+    getShippingRates(){ return Promise.resolve([]); },
+    getShippingQuote(){ return Promise.resolve({ quote:null, error:err }); },
     getMyConversations(){ return Promise.resolve([]); },
     getOrCreateConversation(){ return Promise.resolve({ error: err }); },
     getMessages(){ return Promise.resolve([]); },
@@ -91,6 +93,9 @@ if(!sb || !sb.auth){
     intoolsListSuppliers(){ return Promise.resolve({ items:[], error:err }); },
     intoolsSaveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
     intoolsArchiveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
+    intoolsListShippingRates(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsSaveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
+    intoolsArchiveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
     intoolsListAudit(){ return Promise.resolve({ items:[], error:err }); }
   };
   return;
@@ -329,7 +334,7 @@ const API = {
       }))
     }));
     const products = (prodRes.data||[]).map(p=>({
-      id: p.sku, name: p.name, img: p.img, images:p.images||[], description:p.description, comp: p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
+      id: p.sku, name: p.name, img:(p.images&&p.images[0])||p.img, images:p.images||[], description:p.description, comp:p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', factoryId:p.factories?.id||null, factorySlug:p.factories?.slug||null, loc: p.loc,
@@ -671,7 +676,7 @@ const API = {
       const { data, error }=await sb.from('products').select('sku,name,comp,spec,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,product_variants(option_name,option_value,sort_order),factories(name,region)').eq('listing_status','active').eq('is_private',true);
       if(error) return { products:[], error };
       const units={pc:'pcs',m:'m',kg:'kg',package:'package',style:'style',order:'order',color:'color'};
-      return { products:(data||[]).map(p=>({id:p.sku,name:p.name,img:p.img,images:p.images||[],comp:p.comp,spec:p.spec,price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${units[p.unit_type]||p.unit_type}`:'',seller:p.factories?.name||'Atelix Sourcing',loc:p.loc,country:p.factories?.region||'',badge:p.badge||'',cat:p.category,isPrivate:true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants)})), error:null };
+      return { products:(data||[]).map(p=>({id:p.sku,name:p.name,img:(p.images&&p.images[0])||p.img,images:p.images||[],comp:p.comp,spec:p.spec,price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${units[p.unit_type]||p.unit_type}`:'',seller:p.factories?.name||'Atelix Sourcing',loc:p.loc,country:p.factories?.region||'',badge:p.badge||'',cat:p.category,isPrivate:true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants)})), error:null };
     }catch(error){ return { products:[], error }; }
   },
 
@@ -718,6 +723,20 @@ const API = {
   async setProductOptions(productId, options){
     try{const {data,error}=await sb.rpc('supplier_set_product_options',{p_product_id:productId,p_options:options||[]});return {options:data||[],error:error||null};}
     catch(error){return {options:[],error};}
+  },
+
+  /* ---- Destination shipping (configured by administrators, priced server-side) ---- */
+  async getShippingRates(){
+    try{const {data,error}=await sb.rpc('public_list_shipping_rates');return error?[]:(data||[]);}
+    catch(_){return [];}
+  },
+
+  async getShippingQuote(country){
+    try{
+      const {data,error}=await sb.rpc('public_shipping_quote',{p_country:country});
+      if(error)return {quote:null,error};
+      return {quote:Array.isArray(data)?data[0]||null:data||null,error:null};
+    }catch(error){return {quote:null,error};}
   },
 
   /* ---- Address book (simple, no map/geocoding lookup) ---- */
@@ -893,7 +912,7 @@ const API = {
     catch(error){return {items:[],error};}
   },
   async intoolsSaveProduct({id=null,payload,expectedUpdatedAt=null}){
-    try{const {data,error}=await sb.rpc('intools_save_product',{p_product_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {product:data||null,error:error||null};}
+    try{const {data,error}=await sb.rpc('intools_save_product_with_images',{p_product_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {product:data||null,error:error||null};}
     catch(error){return {product:null,error};}
   },
   async intoolsArchiveProduct(id,expectedUpdatedAt,restore=false){
@@ -912,6 +931,18 @@ const API = {
   async intoolsArchiveSupplier(id,expectedUpdatedAt,restore=false){
     try{const {data,error}=await sb.rpc('intools_archive_supplier',{p_supplier_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {supplier:data||null,error:error||null};}
     catch(error){return {supplier:null,error};}
+  },
+  async intoolsListShippingRates(){
+    try{const {data,error}=await sb.rpc('intools_list_shipping_rates');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsSaveShippingRate({id=null,payload,expectedUpdatedAt=null}){
+    try{const {data,error}=await sb.rpc('intools_save_shipping_rate',{p_rate_id:id,p_payload:payload,p_expected_updated_at:expectedUpdatedAt});return {rate:data||null,error:error||null};}
+    catch(error){return {rate:null,error};}
+  },
+  async intoolsArchiveShippingRate(id,expectedUpdatedAt,restore=false){
+    try{const {data,error}=await sb.rpc('intools_archive_shipping_rate',{p_rate_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {rate:data||null,error:error||null};}
+    catch(error){return {rate:null,error};}
   },
   async intoolsListAudit({targetType=null,targetId=null,limit=100}={}){
     try{const {data,error}=await sb.rpc('intools_list_audit',{p_target_type:targetType,p_target_id:targetId,p_limit:limit});return {items:data||[],error:error||null};}

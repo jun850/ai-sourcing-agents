@@ -23,10 +23,10 @@
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
+<script src="../js/address-book.js"></script>
 <script>
 window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const M=window.ARCANA_PRODUCT_MAP, root=document.getElementById('coRoot');
-  const money=n=>window.ARCANA_money(n);
   const productMoney=(p,qty=1)=>window.ATELIX_productMoney(p,qty);
   const productAmount=(p,qty=1)=>window.ATELIX_productAmount(p,qty);
   const currencyMoney=n=>window.ATELIX_currencyMoney(n);
@@ -40,9 +40,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   });
   const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
   const fee=+(subtotal*0.05).toFixed(2);
-  const total=subtotal+fee;
-  let step=1;
-  const terms={name:'',company:'',addr:'',city:'',country:''};
+  const baseTotal=subtotal+fee;
+  let selectedAddress=null;
+  let shippingQuote=null;
+  let quoteLoading=false;
+  let addressBook=null;
 
   if(!cart.length){
     root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`;
@@ -65,63 +67,117 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     </div>`;
     return;
   }
-  if(!terms.company && profile.name) terms.company = profile.name;
+  const rates=await window.ARCANA_API.getShippingRates();
+  const groups=[];
+  cart.forEach(item=>{
+    const product=M[item.id],key=product.factoryId||product.seller||'supplier';
+    let group=groups.find(entry=>String(entry.key)===String(key));
+    if(!group){group={key,name:product.seller||'Supplier',items:[]};groups.push(group);}
+    group.items.push(item);
+  });
+  const supplierItems=groups.map(group=>`<div class="checkout-supplier">
+    <header><span aria-hidden="true">${IC.factory}</span><strong>${text(group.name)}</strong></header>
+    ${group.items.map(item=>{const product=M[item.id],options=optionSummary(item);return `<div class="checkout-item">
+      <img src="${window.ATELIX_productAsset(product)}" alt="${text(product.name)}">
+      <div><a href="product.html?id=${encodeURIComponent(product.id)}">${text(TR(product.name))}</a>${options?`<p>${options}</p>`:''}<p>${item.qty} × ${productMoney(product)}</p></div>
+      <strong>${productMoney(product,item.qty)}</strong>
+    </div>`;}).join('')}
+  </div>`).join('');
 
-  const summaryRail=()=>`<aside><section class="panel summary" style="position:sticky;top:88px">
-    <h3>${T('Order Summary')}</h3>
-    ${cart.map(i=>{const p=M[i.id],options=optionSummary(i);return `<div class="sum-row"><span class="k">${text(TR(p.name))} × ${i.qty}${options?`<small class="checkout-options">${options}</small>`:''}</span><span>${productMoney(p,i.qty)}</span></div>`}).join('')}
-    <div class="sum-row strong"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
-    <div class="sum-row"><span class="k">${T('Service fee')}</span><span>${currencyMoney(fee)}</span></div>
-    <div class="sum-row"><span class="k">${T('Shipping')}</span><span>Quoted separately</span></div>
-    <div class="total-box"><div class="lbl">${T('Total')}</div><div class="amt">${currencyMoney(total)}<small>${T('Taxes may apply')}</small></div></div>
-    <div class="secure-note" style="margin-top:14px"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
-  </section></aside>`;
+  root.innerHTML=`<header class="checkout-page-head"><h1>Checkout</h1><p>Confirm delivery and review the final total before placing your order.</p></header>
+    <div class="co-wrap">
+      <div class="checkout-flow">
+        <section class="panel checkout-block" aria-labelledby="deliveryTitle">
+          <header class="checkout-block-head"><div><span class="checkout-step">1</span><h2 id="deliveryTitle">Delivery address</h2></div><button class="btn btn-out" type="button" data-address-picker>Change</button></header>
+          <div id="selectedAddress" class="checkout-address"></div>
+        </section>
+        <section class="panel checkout-block" aria-labelledby="shippingTitle">
+          <header class="checkout-block-head"><div><span class="checkout-step">2</span><h2 id="shippingTitle">Delivery service</h2></div></header>
+          <div id="shippingStatus" class="checkout-shipping" role="status" aria-live="polite"></div>
+        </section>
+        <section class="panel checkout-block" aria-labelledby="itemsTitle">
+          <header class="checkout-block-head"><div><span class="checkout-step">3</span><h2 id="itemsTitle">Items (${cart.length})</h2></div><a href="cart.html">Edit cart</a></header>
+          <div class="checkout-suppliers">${supplierItems}</div>
+        </section>
+        <section class="panel checkout-block" aria-labelledby="noteTitle">
+          <header class="checkout-block-head"><div><span class="checkout-step">4</span><h2 id="noteTitle">Order note</h2></div><span>Optional</span></header>
+          <label class="checkout-note"><span class="sr-only">Order note for suppliers</span><textarea id="orderNote" maxlength="500" placeholder="Add delivery access details or instructions for your suppliers."></textarea><small><span id="noteCount">0</span>/500</small></label>
+        </section>
+        <section class="checkout-payment-note" aria-label="Payment information">${IC.shield}<p><strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span></p></section>
+      </div>
+      <aside><section class="panel summary checkout-summary">
+        <h3>${T('Order Summary')}</h3>
+        <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
+        <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
+        <div class="sum-row"><span class="k">${T('Shipping')}</span><span id="summaryShipping">—</span></div>
+        <div class="cart-summary-total"><span>${T('Total')}</span><strong id="summaryTotal">${currencyMoney(baseTotal)}</strong></div>
+        <button class="btn btn-gold btn-block cart-summary-action" type="button" data-place disabled>Place order</button>
+        <p class="checkout-place-help" id="placeHelp">Select an address to continue.</p>
+        <div class="secure-note"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
+      </section></aside>
+    </div>
+    <dialog class="address-picker" aria-labelledby="addressPickerTitle">
+      <div class="address-picker-shell">
+        <header class="address-picker-head"><div><h2 id="addressPickerTitle">Choose a delivery address</h2><p>Select, add, or update a saved address.</p></div><button type="button" data-picker-close aria-label="Close address list">×</button></header>
+        <div class="address-picker-tools"><label class="address-search"><span class="sr-only">Search saved addresses</span><input id="checkoutAddressSearch" type="search" placeholder="Search by label, city, or country"></label><button class="btn btn-green" type="button" id="checkoutAddAddress">+ Add address</button></div>
+        <div id="checkoutAddressList" class="address-list address-picker-list"></div>
+      </div>
+    </dialog>`;
 
-  const stepper=()=>{const items=[['Shipping',1],['Review & Place',2]];
-    return `<div class="stepper">${items.map((it,idx)=>{const n=it[1];const cls=step>n?'done':step===n?'active':'';
-      return `<div class="step ${cls}"><span class="sn">${step>n?'✓':n}</span>${it[0]}</div>${idx<items.length-1?'<span class="step-line"></span>':''}`;}).join('')}</div>`;}
+  const picker=root.querySelector('.address-picker');
+  const pickerTrigger=root.querySelector('[data-address-picker]');
+  const shippingAmount=()=>{
+    if(!shippingQuote) return 0;
+    const lang=document.documentElement.lang||'en',fx=window.ARCANA_FX[lang]||window.ARCANA_FX.en;
+    const raw=Number(shippingQuote.flat_rate_usd||0)*fx.rate,increment=Number(fx.increment)||.01;
+    return Math.ceil((raw-Number.EPSILON)/increment)*increment;
+  };
 
-  function view(){
-    root.innerHTML=`${stepper()}<div class="co-wrap"><div class="panel co-panel" id="stepPanel"></div>${summaryRail()}</div>`;
-    const panel=document.getElementById('stepPanel');
-    if(step===1) panel.innerHTML=stepShipping();
-    if(step===2) panel.innerHTML=stepReview();
-    bind();
+  function updateAddress(){
+    const target=document.getElementById('selectedAddress');
+    if(!selectedAddress){
+      target.innerHTML=`<div class="checkout-empty-address"><div><strong>No delivery address selected</strong><p>Add an address so Atelix can calculate shipping.</p></div><button class="btn btn-green" type="button" data-empty-address>Add address</button></div>`;
+      target.querySelector('[data-empty-address]').onclick=()=>addressBook.openForm();
+      pickerTrigger.textContent='Add address';
+      return;
+    }
+    pickerTrigger.textContent='Change';
+    target.innerHTML=`<div class="checkout-address-title"><strong>${text(selectedAddress.label||'Delivery address')}</strong>${selectedAddress.is_default?'<span class="address-badge">Default</span>':''}</div><p><b>${text(selectedAddress.recipient_name)}</b>${selectedAddress.phone?` · ${text(selectedAddress.phone)}`:''}</p><p>${text(window.ATELIX_formatAddress(selectedAddress))}</p>`;
   }
 
-  const stepShipping=()=>`
-    <h2>Shipping</h2><p class="ph">Where should this order ship?</p>
-    <div class="co-grid">
-      <div class="field-lg full" data-field><label>Contact name</label><input data-t="name" value="${terms.name}" placeholder="Jessica Smith"><span class="err">Required.</span></div>
-      <div class="field-lg full" data-field><label>Company</label><input data-t="company" value="${terms.company}" placeholder="Luxe Apparel Co."><span class="err">Required.</span></div>
-      <div class="field-lg full" data-field><label>Ship-to address</label><input data-t="addr" value="${terms.addr}" placeholder="Street, building, unit"><span class="err">Required.</span></div>
-      <div class="field-lg" data-field><label>City</label><input data-t="city" value="${terms.city}" placeholder="New York"><span class="err">Required.</span></div>
-      <div class="field-lg" data-field><label>Country</label><input data-t="country" value="${terms.country}" autocomplete="country-name" placeholder="Destination country"><span class="err">Required.</span></div>
-    </div>
-    <div class="co-nav"><a class="btn btn-out" href="cart.html">Back to cart</a><button class="btn btn-green" data-next>Continue to review</button></div>`;
-
-  const stepReview=()=>`
-    <h2>Review &amp; place order</h2><p class="ph">Check everything is right before you place the order.</p>
-    <div class="co-review">
-      <div class="co-rev-block"><div class="rt"><b>Items (${cart.length})</b></div>
-        ${cart.map(i=>{const p=M[i.id],options=optionSummary(i);return `<div class="rl" style="display:flex;justify-content:space-between"><span>${text(p.name)} × ${i.qty} · ${text(p.seller)}${options?`<small class="checkout-options">${options}</small>`:''}</span><span>${productMoney(p,i.qty)}</span></div>`}).join('')}</div>
-      <div class="co-rev-block"><div class="rt"><b>Shipping</b><button class="edit" type="button" data-goto="1">Edit</button></div>
-        <div class="rl">${terms.name||'—'}, ${terms.company||'—'}<br>${terms.addr||'—'}, ${terms.city||''} ${terms.country}</div></div>
-      <div class="co-rev-block"><div class="rt"><b>Payment</b></div>
-        <div class="rl">Verified payment instructions will appear on the order page when they are available. Do not transfer funds using details received through an unverified message.</div></div>
-    </div>
-    <div class="co-nav"><button class="btn btn-out" data-back>Back</button><button class="btn btn-gold" data-place><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Place order · ${currencyMoney(total)}</button></div>`;
+  async function updateShipping(){
+    const status=document.getElementById('shippingStatus'),place=root.querySelector('[data-place]'),help=document.getElementById('placeHelp');
+    shippingQuote=null;
+    if(!selectedAddress){
+      status.innerHTML='<div class="shipping-state"><strong>Address needed</strong><p>Choose a delivery address to see the available service and final total.</p></div>';
+      document.getElementById('summaryShipping').textContent='—';document.getElementById('summaryTotal').textContent=currencyMoney(baseTotal);place.disabled=true;help.textContent='Select an address to continue.';return;
+    }
+    quoteLoading=true;place.disabled=true;help.textContent='Calculating shipping…';status.setAttribute('aria-busy','true');status.innerHTML='<div class="shipping-state"><strong>Calculating shipping…</strong><p>Checking the configured service for this destination.</p></div>';
+    const result=await window.ARCANA_API.getShippingQuote(selectedAddress.country);
+    quoteLoading=false;status.removeAttribute('aria-busy');
+    if(result?.error||!result?.quote){
+      const message=result?.error?.message||`Shipping to ${selectedAddress.country} is not configured yet.`;
+      status.innerHTML=`<div class="shipping-state is-error"><strong>Shipping unavailable</strong><p>${text(message)}</p><button class="btn btn-out" type="button" data-change-country>Choose another address</button></div>`;
+      status.querySelector('[data-change-country]').onclick=()=>picker.showModal();
+      document.getElementById('summaryShipping').textContent='Unavailable';document.getElementById('summaryTotal').textContent=currencyMoney(baseTotal);place.disabled=true;help.textContent='Choose an address in a supported destination.';return;
+    }
+    shippingQuote=result.quote;
+    const displayShipping=shippingAmount(),total=baseTotal+displayShipping;
+    status.innerHTML=`<div class="shipping-service"><div><strong>${text(shippingQuote.service_name)}</strong><p>${text(shippingQuote.country_name)} · Estimated ${Number(shippingQuote.eta_min_days)}–${Number(shippingQuote.eta_max_days)} business days</p></div><b>${window.ARCANA_money(Number(shippingQuote.flat_rate_usd))}</b></div>`;
+    document.getElementById('summaryShipping').textContent=window.ARCANA_money(Number(shippingQuote.flat_rate_usd));document.getElementById('summaryTotal').textContent=currencyMoney(total);place.disabled=false;help.textContent='Shipping and item totals are verified again when you place the order.';
+  }
 
   async function placeOrder(){
     const place=root.querySelector('[data-place]');
+    if(!selectedAddress||!shippingQuote||quoteLoading) return;
     const orig = place ? place.innerHTML : '';
     if(place){ place.disabled=true; place.textContent='Placing order…'; }
-    const shipAddress=[terms.name,terms.company,terms.addr,terms.city].filter(Boolean).join(', ');
+    const shipAddress=[selectedAddress.recipient_name,selectedAddress.phone,window.ATELIX_formatAddress(selectedAddress)].filter(Boolean).join(' · ');
     const { orderNo, error } = await window.ARCANA_API.placeOrder({
       items: cart.map(i=>({id:i.id,qty:i.qty,key:i.key||i.id,options:i.options||{}})),
-      shipCountry: terms.country,
+      shipCountry: selectedAddress.country,
       shipAddress,
-      notes: null,
+      notes: document.getElementById('orderNote').value.trim()||null,
       qc: false, insurance: false
     });
     if(error || !orderNo){
@@ -135,21 +191,23 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     location.href='order.html?no='+encodeURIComponent(orderNo);
   }
 
-  function bind(){
-    root.querySelectorAll('[data-t]').forEach(el=>el.addEventListener('input',()=>terms[el.dataset.t]=el.value));
-    const nextBtn=root.querySelector('[data-next]');
-    if(nextBtn) nextBtn.addEventListener('click',()=>{
-      if(step===1){ let ok=true;
-        root.querySelectorAll('[data-field]').forEach(f=>{const inp=f.querySelector('[data-t]');if(!inp)return;const req=['name','company','addr','city','country'].includes(inp.dataset.t);const bad=req&&!inp.value.trim();f.classList.toggle('invalid',bad);if(bad)ok=false;});
-        if(!ok){toast('Please complete the required fields');return;}
-      }
-      step++; view();
-    });
-    const backBtn=root.querySelector('[data-back]'); if(backBtn) backBtn.addEventListener('click',()=>{step--;view();});
-    root.querySelectorAll('[data-goto]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();step=+a.dataset.goto;view();}));
-    const place=root.querySelector('[data-place]'); if(place) place.addEventListener('click',placeOrder);
-  }
-  view();
+  pickerTrigger.addEventListener('click',()=>picker.showModal());
+  picker.querySelector('[data-picker-close]').addEventListener('click',()=>picker.close());
+  picker.addEventListener('click',event=>{if(event.target===picker)picker.close();});
+  root.querySelector('[data-place]').addEventListener('click',placeOrder);
+  const note=document.getElementById('orderNote');note.addEventListener('input',()=>document.getElementById('noteCount').textContent=note.value.length);
+  addressBook=window.ATELIX_createAddressBook({
+    api:window.ARCANA_API,
+    list:document.getElementById('checkoutAddressList'),
+    addButton:document.getElementById('checkoutAddAddress'),
+    searchInput:document.getElementById('checkoutAddressSearch'),
+    toast,
+    selectable:true,
+    countries:rates,
+    onSelect:address=>{selectedAddress=address;updateAddress();updateShipping();if(picker.open)picker.close();}
+  });
+  updateAddress();
+  await addressBook.load();
 };
 </script>
 </body>
