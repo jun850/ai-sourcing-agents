@@ -49,6 +49,7 @@ async function pruneIndex(index: string, validIds: Set<string>) {
 }
 
 function plain(value: unknown) { return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim(); }
+function compact(value: unknown, max = 1200) { const text = plain(value); return text.length > max ? text.slice(0, max).trimEnd() : text; }
 function publicRecord(product: any) {
   const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
   const city = plain(product.loc).split(",")[0];
@@ -86,13 +87,13 @@ function factoryRecord(factory: any) {
     country: factory.region || "",
     city: plain(factory.loc).split(",")[0],
     location: factory.loc || "",
-    certifications: factory.certs || [],
-    capabilities: factory.tags || [],
+    certifications: (factory.certs || []).slice(0, 40).map((value: unknown) => compact(value, 120)),
+    capabilities: (factory.tags || []).slice(0, 40).map((value: unknown) => compact(value, 120)),
     moq: factory.moq || "",
     lead_time: factory.lead || "",
-    description: factory.bio || "",
-    localized_names: localized.map(copy => plain(copy?.name)).filter(Boolean),
-    localized_descriptions: localized.map(copy => plain(copy?.description)).filter(Boolean),
+    description: compact(factory.bio),
+    localized_names: localized.map(copy => compact(copy?.name, 200)).filter(Boolean),
+    localized_descriptions: localized.map(copy => compact(copy?.description)).filter(Boolean),
     taxonomy,
     image: factory.img || "",
     verified: factory.verify_state === "verified",
