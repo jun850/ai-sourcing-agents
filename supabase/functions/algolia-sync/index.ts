@@ -9,6 +9,16 @@ const PRIVATE_WISHLIST_INDEX = "atelix_private_wishlist";
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-algolia-sync-secret", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 
+function verifiedGatewayRole(authorization: string) {
+  const token = authorization.replace(/^Bearer\s+/i, "");
+  const encoded = token.split(".")[1];
+  if (!encoded) return "";
+  try {
+    const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+    return String(JSON.parse(atob(base64))?.role || "");
+  } catch { return ""; }
+}
+
 function algoliaUrl(index: string, suffix = "") { return `https://${Deno.env.get("ALGOLIA_APP_ID")}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}${suffix}`; }
 async function algolia(index: string, body: unknown, suffix = "/batch", admin = false, method = "POST") {
   const key = Deno.env.get(admin ? "ALGOLIA_ADMIN_API_KEY" : "ALGOLIA_WRITE_API_KEY");
@@ -122,7 +132,8 @@ Deno.serve(async (req) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const authorization = req.headers.get("Authorization") || "";
   const internal = (!!Deno.env.get("ALGOLIA_SYNC_SECRET") && req.headers.get("x-algolia-sync-secret") === Deno.env.get("ALGOLIA_SYNC_SECRET")) ||
-    (!!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && authorization === `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`);
+    (!!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && authorization === `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`) ||
+    verifiedGatewayRole(authorization) === "service_role";
   let requester: any = null;
   if (!internal) {
     const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");

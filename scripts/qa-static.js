@@ -27,8 +27,10 @@ const categoryPage=fs.readFileSync(path.join(root,"pages/category.html"),"utf8")
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
+const algoliaSync=fs.readFileSync(path.join(root,"supabase/functions/algolia-sync/index.ts"),"utf8");
 const vercelIgnore=fs.readFileSync(path.join(root,".vercelignore"),"utf8");
 for(const privatePath of ['.env*','data/','research/','scripts/','supabase/'])if(!vercelIgnore.split(/\r?\n/).includes(privatePath))problems.push(`.vercelignore: missing private deployment boundary ${privatePath}`);
+if(!/verifiedGatewayRole\(authorization\) === "service_role"/.test(algoliaSync))problems.push('algolia-sync: service-role publisher must pass the verified gateway boundary');
 if(!/return `mailto:info@arcanawangsa\.com\?subject=/.test(quotePage))problems.push("pages/product.html: quote contact must use a real mailto link to info@arcanawangsa.com");
 if(!/<a class="btn btn-gold" id="emailBtn" href="\$\{contactHref\([^}]+\}\">\$\{IC\.msg\} \$\{T\('Contact supplier'\)\}<\/a>/.test(quotePage))problems.push("pages/product.html: quote-only products must render the localized Contact supplier email anchor");
 if(!/\.pdp-cta--quote\{position:static;/.test(pageStyles))problems.push("css/pages.css: mobile quote contact action must remain in the product page flow");
