@@ -272,6 +272,22 @@
       key: item.key || cartLineKey(item.id, item.options),
       options: normalizeSelection(item.options),
     }));
+  const readCartPending = () => LS.get("cart_pending", {});
+  const clearSyncedCartPending = (synced) => {
+    const current = readCartPending();
+    Object.entries(synced || {}).forEach(([key, operation]) => {
+      if (current[key] && current[key].token === operation.token)
+        delete current[key];
+    });
+    LS.set("cart_pending", current);
+  };
+  const sameCartItems = (left, right) => {
+    const comparable = (items) =>
+      normalizeCartItems(items)
+        .map(({ id, qty, key, options }) => ({ id, qty, key, options }))
+        .sort((a, b) => a.key.localeCompare(b.key));
+    return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
+  };
   const Store = {
     session() {
       return LS.get("session", null);
@@ -356,6 +372,7 @@
     clearCart() {
       localStorage.removeItem("arcana_cart");
       localStorage.removeItem("arcana_addons");
+      localStorage.removeItem("arcana_cart_pending");
       try {
         sessionStorage.removeItem(checkoutCartKey);
       } catch (_) {}
@@ -1044,8 +1061,27 @@
   /* Fire-and-forget DB write-through for a cart line, only when signed in. */
   function pushCartItem(sku, qty, options, lineKey) {
     const api = window.ARCANA_API;
-    if (!api || api.unavailable || !Store.session()) return;
-    api.syncCartItem(sku, qty, options, lineKey).catch(() => {});
+    const signedIn = !!Store.session();
+    const operation = {
+      id: sku,
+      qty,
+      key: lineKey,
+      options: normalizeSelection(options),
+      token: `${Date.now()}-${Math.random()}`,
+    };
+    if (signedIn) {
+      const pending = readCartPending();
+      pending[lineKey] = operation;
+      LS.set("cart_pending", pending);
+    }
+    if (!api || api.unavailable || !signedIn) return;
+    api
+      .syncCartItem(sku, qty, operation.options, lineKey)
+      .then((result) => {
+        if (!result || !result.error)
+          clearSyncedCartPending({ [lineKey]: operation });
+      })
+      .catch(() => {});
   }
 
   /* Fire-and-forget DB write-through for a wishlist line, only when signed in. */
@@ -2363,9 +2399,32 @@
     const api = window.ARCANA_API;
     if (!api || !api.getCart) return;
     const flag = "arcana_cart_merged_" + uid;
-    const dbItems = await api.getCart();
+    const dbItems = normalizeCartItems(await api.getCart());
     if (localStorage.getItem(flag)) {
-      LS.set("cart", dbItems);
+      const localItems = Store.cart();
+      const pending = readCartPending();
+      const map = new Map(
+        dbItems.map((item) => [item.key, { ...item }]),
+      );
+      // Browser state is the latest buyer-visible cart. Keep its exact
+      // quantities while retaining lines added from another signed-in device.
+      localItems.forEach((item) => map.set(item.key, { ...item }));
+      Object.values(pending).forEach((operation) => {
+        if (operation.qty <= 0) map.delete(operation.key);
+        else
+          map.set(operation.key, {
+            id: operation.id,
+            qty: operation.qty,
+            key: operation.key,
+            options: operation.options || {},
+          });
+      });
+      const merged = Array.from(map.values());
+      LS.set("cart", merged);
+      if (Object.keys(pending).length || !sameCartItems(dbItems, merged)) {
+        const result = await api.replaceCart(merged);
+        if (!result || !result.error) clearSyncedCartPending(pending);
+      }
       syncBadges();
       return;
     }

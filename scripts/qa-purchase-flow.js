@@ -52,7 +52,7 @@ const mockApi = `(() => {
   ];
   const decorate=api=>Object.assign(api,{
     getSessionProfile:async()=>profile,getMyProfile:async()=>profile,onChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>localStorage.getItem('qa_force_empty_db')==='1'?[]:[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
+    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>localStorage.getItem('qa_force_empty_db')==='1'||location.search.includes('qa-persist-empty-db')?[]:[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
     getWishlist:async()=>[],replaceWishlist:async()=>({error:null}),getMyOrders:async()=>[],
     getAddresses:async()=>location.search.includes('qa-empty-address')?[]:addresses.map(address=>({...address})),
     createAddress:async payload=>{const address={...payload,id:'addr-new',is_default:false};addresses.push(address);return {address,error:null};},
@@ -179,6 +179,22 @@ async function checkoutHandoffScenario() {
   return issues;
 }
 
+async function cartRefreshPersistenceScenario() {
+  const browser = await open("/pages/cart.html?qa-persist-empty-db=1", 1440, 900);
+  const { cdp } = browser;
+  if (!await waitFor(cdp, "document.querySelector('[data-checkout]')")) throw new Error("Persisted cart did not render before account reconciliation");
+  await new Promise(resolve=>setTimeout(resolve,500));
+  const beforeReload = await evaluate(cdp, `JSON.parse(localStorage.getItem('arcana_cart')||'[]').length`);
+  await cdp.send('Page.reload');
+  if (!await waitFor(cdp, "document.querySelector('[data-checkout]')")) throw new Error("Cart disappeared after refresh with a stale account cart");
+  await new Promise(resolve=>setTimeout(resolve,500));
+  const afterReload = await evaluate(cdp, `JSON.parse(localStorage.getItem('arcana_cart')||'[]').length`);
+  cdp.close();
+  const issues = [...browser.errors, ...browser.failures].filter(issue=>!issue.includes('AbortError: Transition was skipped'));
+  if (beforeReload < 1 || afterReload < 1) issues.push("browser cart was overwritten by an empty account cart during refresh");
+  return issues;
+}
+
 async function profileScenario() {
   const browser = await open("/pages/brand-owner.html#address", 1440, 900);
   const { cdp } = browser;
@@ -221,6 +237,7 @@ async function emptyAddressScenario() {
 
 (async () => {
   const scenarios = [
+    ["cart persists across refresh with stale account cart", cartRefreshPersistenceScenario],
     ["cart to checkout handoff with stale account cart", checkoutHandoffScenario],
     ["checkout desktop", () => checkoutScenario(1440, 900)],
     ["checkout mobile", () => checkoutScenario(390, 844)],

@@ -25,7 +25,7 @@
 <script defer src="../js/data.js"></script>
 <script defer src="../js/product-options.js"></script>
 <script defer src="../js/copilot.js"></script>
-<script defer src="../js/components.js"></script>
+<script defer src="../js/components.js?v=20260814-checkout-hotfix"></script>
 <script defer src="../js/analytics.bundle.js"></script>
 <script defer src="../js/supabase-client.bundle.js"></script>
 <script defer src="../js/api.js"></script>
@@ -227,7 +227,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const add=document.getElementById('addBtn');
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
-    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);Store.beginCheckout();location.href='checkout.html';});
+    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);Store.beginCheckout?.();location.href='checkout.html';});
     const emailBtn=document.getElementById('emailBtn');
     if(emailBtn) emailBtn.addEventListener('click', ()=>{
       if(emailBtn.tagName==='A') emailBtn.href=contactHref(T('Product quote request'),null);
