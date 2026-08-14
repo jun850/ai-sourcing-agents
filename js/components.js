@@ -265,6 +265,13 @@
     return suffix ? `${id}::${suffix}` : id;
   };
   window.ATELIX_cartLineKey = cartLineKey;
+  const checkoutCartKey = "arcana_checkout_cart";
+  const normalizeCartItems = (items) =>
+    (Array.isArray(items) ? items : []).map((item) => ({
+      ...item,
+      key: item.key || cartLineKey(item.id, item.options),
+      options: normalizeSelection(item.options),
+    }));
   const Store = {
     session() {
       return LS.get("session", null);
@@ -287,11 +294,27 @@
       return Promise.resolve();
     },
     cart() {
-      return LS.get("cart", []).map((item) => ({
-        ...item,
-        key: item.key || cartLineKey(item.id, item.options),
-        options: normalizeSelection(item.options),
-      }));
+      return normalizeCartItems(LS.get("cart", []));
+    },
+    beginCheckout() {
+      try {
+        sessionStorage.setItem(
+          checkoutCartKey,
+          JSON.stringify({ createdAt: Date.now(), items: Store.cart() }),
+        );
+      } catch (_) {}
+    },
+    checkoutCart() {
+      try {
+        const snapshot = JSON.parse(sessionStorage.getItem(checkoutCartKey));
+        const isFresh =
+          snapshot &&
+          Array.isArray(snapshot.items) &&
+          Date.now() - Number(snapshot.createdAt || 0) < 30 * 60 * 1000;
+        if (isFresh) return normalizeCartItems(snapshot.items);
+        sessionStorage.removeItem(checkoutCartKey);
+      } catch (_) {}
+      return Store.cart();
     },
     cartCount() {
       return Store.cart().length;
@@ -333,6 +356,9 @@
     clearCart() {
       localStorage.removeItem("arcana_cart");
       localStorage.removeItem("arcana_addons");
+      try {
+        sessionStorage.removeItem(checkoutCartKey);
+      } catch (_) {}
       syncBadges();
     },
     addons() {
@@ -514,7 +540,7 @@
     p = p || {};
     const tr = window.ARCANA_TR || ((s) => s),
       t = window.ARCANA_T || ((s) => s),
-      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2)),
+      money = window.ARCANA_money || ((n) => "$" + n.toFixed(2)),
       productMoney = window.ATELIX_productMoney || ((product) => money(product.price));
     const esc = (s) =>
       String(s == null ? "" : s).replace(
@@ -546,7 +572,7 @@
     const title = titleParts.filter(Boolean).join(" — ");
     const priceLine =
       p.price > 0
-        ? `${esc(t("From"))} ${esc(productMoney(p))}${p.unit ? `<small>/${esc(translated(p.unit))}</small>` : ""}`
+        ? `${esc(productMoney(p))}${p.unit ? `<small>/${esc(translated(p.unit))}</small>` : ""}`
         : `<span class="tquote">${t("Contact supplier")}</span>`;
     const meta = isService
       ? `<div class="tmeta">${IC.truck} ${esc(spec)} ${t("lead")} <span class="dot">·</span> ${t("MOQ")} ${esc(translated(p.moq))}</div>`
@@ -1645,7 +1671,7 @@
     if (!input || !pop) return;
     const t = window.ARCANA_T || ((s) => s),
       tr = window.ARCANA_TR || ((s) => s),
-      money = window.ARCANA_money || ((n) => "US$" + n.toFixed(2)),
+      money = window.ARCANA_money || ((n) => "$" + n.toFixed(2)),
       productMoney = window.ATELIX_productMoney || ((product) => money(product.price));
     const PROD = window.ARCANA_PRODUCTS || [],
       FACT = window.ARCANA_FACTORIES || [];
@@ -1780,9 +1806,7 @@
       opts.push(1);
       const price =
         p.price > 0
-          ? t("From") +
-            " " +
-            productMoney(p) +
+          ? productMoney(p) +
             "<small>/" +
             esc(tr(p.unit)) +
             "</small>"
@@ -2480,7 +2504,7 @@
       "cat.oemAvailable": "OEM available",
       "cat.nonoem": "Non-OEM",
       "cat.material": "Material",
-      "cat.price": "Price (US$ / unit)",
+      "cat.price": "Price ($ / unit)",
       "cat.certs": "Certifications",
       "cat.sort": "Sort",
       "cat.verified": "verified suppliers",

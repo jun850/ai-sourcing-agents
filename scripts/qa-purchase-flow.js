@@ -52,7 +52,7 @@ const mockApi = `(() => {
   ];
   const decorate=api=>Object.assign(api,{
     getSessionProfile:async()=>profile,getMyProfile:async()=>profile,onChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
+    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>localStorage.getItem('qa_force_empty_db')==='1'?[]:[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
     getWishlist:async()=>[],replaceWishlist:async()=>({error:null}),getMyOrders:async()=>[],
     getAddresses:async()=>location.search.includes('qa-empty-address')?[]:addresses.map(address=>({...address})),
     createAddress:async payload=>{const address={...payload,id:'addr-new',is_default:false};addresses.push(address);return {address,error:null};},
@@ -154,6 +154,31 @@ async function checkoutScenario(width, height) {
   return issues;
 }
 
+async function checkoutHandoffScenario() {
+  const browser = await open("/pages/cart.html?seed=cart", 1440, 900);
+  const { cdp } = browser;
+  if (!await waitFor(cdp, "document.querySelector('[data-checkout]')")) throw new Error("Seeded cart did not expose checkout");
+  await evaluate(cdp, `(() => {
+    localStorage.setItem('qa_force_empty_db','1');
+    document.querySelector('[data-checkout]').click();
+    return true;
+  })()`);
+  if (!await waitFor(cdp, "location.pathname.endsWith('/pages/checkout.html') && document.querySelector('[data-place]')")) throw new Error("Checkout handoff lost the cart while account data was stale");
+  const data = await evaluate(cdp, `(() => {
+    const result={
+      heading:document.querySelector('h1')?.textContent.trim(),
+      items:document.querySelectorAll('.checkout-item').length,
+      snapshot:Boolean(sessionStorage.getItem('arcana_checkout_cart'))
+    };
+    localStorage.removeItem('qa_force_empty_db');
+    return result;
+  })()`);
+  cdp.close();
+  const issues = [...browser.errors, ...browser.failures].filter(issue=>!issue.includes('AbortError: Transition was skipped'));
+  if (data.heading !== "Checkout" || data.items < 1 || !data.snapshot) issues.push("checkout intent snapshot was not preserved across navigation");
+  return issues;
+}
+
 async function profileScenario() {
   const browser = await open("/pages/brand-owner.html#address", 1440, 900);
   const { cdp } = browser;
@@ -196,6 +221,7 @@ async function emptyAddressScenario() {
 
 (async () => {
   const scenarios = [
+    ["cart to checkout handoff with stale account cart", checkoutHandoffScenario],
     ["checkout desktop", () => checkoutScenario(1440, 900)],
     ["checkout mobile", () => checkoutScenario(390, 844)],
     ["checkout empty address", emptyAddressScenario],

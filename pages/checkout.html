@@ -32,7 +32,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const text=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const optionSummary=item=>Object.entries(item.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
-  const cart=Store.cart().filter(i=>M[i.id]);
+  // Read the cart captured at checkout intent so an in-flight account sync
+  // cannot replace the buyer's local selection during page navigation.
+  const cart=Store.checkoutCart().filter(i=>M[i.id]);
   cart.forEach(i=>{
     const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
     if(i.qty<minimum){i.qty=minimum;Store.setQty(i.key||i.id,minimum);}

@@ -290,7 +290,7 @@ window.ARCANA_TERMS = {
 };
 /* currency: fixed demo FX + symbol + locale */
 window.ARCANA_FX = {
-  en:{rate:1, sym:'US$', loc:'en-US', dec:2, increment:0.1},
+  en:{rate:1, sym:'$', loc:'en-US', dec:2, increment:0.1},
   ja:{rate:150, sym:'¥', loc:'ja-JP', dec:0, increment:100},
   zh:{rate:7.2, sym:'¥', loc:'zh-CN', dec:1, increment:0.1}
 };

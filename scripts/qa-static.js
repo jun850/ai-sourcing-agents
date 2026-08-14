@@ -25,6 +25,7 @@ const translations=fs.readFileSync(path.join(root,"js/data.js"),"utf8");
 const catalogApi=fs.readFileSync(path.join(root,"js/api.js"),"utf8");
 const categoryPage=fs.readFileSync(path.join(root,"pages/category.html"),"utf8");
 const checkoutPage=fs.readFileSync(path.join(root,"pages/checkout.html"),"utf8");
+const componentsSource=fs.readFileSync(path.join(root,"js/components.js"),"utf8");
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
@@ -61,6 +62,10 @@ if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages
 if(/Incoterms|PO number|data-t="(?:incoterm|po)"/.test(checkoutPage))problems.push('pages/checkout.html: Incoterms and PO number must stay out of the customer checkout flow');
 if(/id="orderNote"|Order note for suppliers/.test(checkoutPage)||!checkoutPage.includes('data-item-note'))problems.push('pages/checkout.html: supplier notes must be captured per item, never as a global order note');
 if(checkoutPage.includes('data-empty-address')||!checkoutPage.includes("pickerTrigger.textContent='Add address'"))problems.push('pages/checkout.html: empty delivery state must expose one slim address action');
+if(!checkoutPage.includes('Store.checkoutCart()')||!componentsSource.includes('beginCheckout()')||!componentsSource.includes('checkoutCart()'))problems.push('cart/checkout: checkout intent must preserve an authoritative cart snapshot across navigation');
+if(/esc\(t\("From"\)\)|t\("From"\)\s*\+/.test(componentsSource)||/\$\{T\('From'\)\}/.test(quotePage))problems.push('catalog pricing: public product prices must not use From wording');
+if(!/en:\{rate:1, sym:'\$'/.test(translations))problems.push('js/data.js: English public prices must use the $ symbol without a US prefix');
+if(!/\$\{purchasable\?`<div class="buy-row">/.test(quotePage))problems.push('pages/product.html: quote-only products must not render quantity controls');
 if(!/p_incoterms:\s*null/.test(catalogApi))problems.push('js/api.js: checkout must submit a null internal Incoterms value');
 for(const contract of ['cart_items','order_items','buyer_note','snapshot_order_item_buyer_note'])if(!itemNotesMigration.includes(contract))problems.push(`item note migration missing: ${contract}`);
 if(categoryPage.includes('class="ftags"'))problems.push('pages/category.html: supplier cards must not render capability tags');

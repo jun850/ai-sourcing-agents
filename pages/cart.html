@@ -121,7 +121,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       inp.onchange=()=>commit(Math.max(minimum,parseInt(inp.value)||minimum));
     });
     root.querySelectorAll('[data-remove]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();Store.remove(a.dataset.remove);toast(T('Item removed'));render();}));
-    const checkout=root.querySelector('[data-checkout]');if(checkout)checkout.addEventListener('click',()=>location.href='checkout.html');
+    const checkout=root.querySelector('[data-checkout]');if(checkout)checkout.addEventListener('click',()=>{Store.beginCheckout();location.href='checkout.html';});
   }
   render();
   window.ARCANA_onLang(render);

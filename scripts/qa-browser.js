@@ -226,7 +226,7 @@ async function inspect(route, viewport) {
   }
   if (/\/pages\/product\.html\?id=(?:FAB-149|FAB-153)(?:&|$)/.test(route)) {
     if (!data.pdp.quoteHref.startsWith("mailto:info@arcanawangsa.com?subject=")) issues.push("quote-only PDP does not expose a real email link");
-    if (data.pdp.quantityType !== "number") issues.push("PDP quantity is missing numeric semantics");
+    if (data.pdp.quantityType) issues.push("quote-only PDP must not expose quantity controls");
     if (!/^(true|false)$/.test(data.pdp.wishlistPressed)) issues.push("PDP wishlist is missing pressed state");
     if (viewport.mobile && data.pdp.touchTargets.some((height) => height < 44)) issues.push(`PDP secondary touch target below 44px: ${data.pdp.touchTargets.join(",")}`);
     if (route.endsWith("lang=ja") && data.pdp.quoteText !== "サプライヤーに問い合わせ") issues.push("Japanese supplier contact CTA was not localized");
