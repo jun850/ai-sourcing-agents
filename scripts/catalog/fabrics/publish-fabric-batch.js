@@ -6,7 +6,7 @@ function arg(flag,fallback=null){const index=process.argv.indexOf(flag);return i
 function stable(value){if(Array.isArray(value))return value.map(stable);if(!value||typeof value!=='object')return value;return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]));}
 function sha(value){return crypto.createHash('sha256').update(Buffer.isBuffer(value)?value:JSON.stringify(stable(value))).digest('hex');}
 function config(){const url=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');const key=process.env.SUPABASE_SERVICE_ROLE_KEY,storageBudgetBytes=Number(process.env.ATELIX_CATALOG_STORAGE_BUDGET_BYTES);if(!/^https:\/\/[a-z0-9-]+[.]supabase[.]co$/.test(url)||!key)throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for --apply');if(!Number.isSafeInteger(storageBudgetBytes)||storageBudgetBytes<=0)throw new Error('ATELIX_CATALOG_STORAGE_BUDGET_BYTES must be a positive safe integer for --apply');return {url,key,storageBudgetBytes};}
-async function request(cfg,route,options={}){const response=await fetch(`${cfg.url}${route}`,{...options,headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,...options.headers}});const text=await response.text();if(!response.ok)throw new Error(`${route} failed ${response.status}: ${text.slice(0,800)}`);return text?JSON.parse(text):null;}
+async function request(cfg,route,options={}){const response=await fetch(`${cfg.url}${route}`,{...options,signal:options.signal||AbortSignal.timeout(30000),headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,...options.headers}});const text=await response.text();if(!response.ok)throw new Error(`${route} failed ${response.status}: ${text.slice(0,800)}`);return text?JSON.parse(text):null;}
 function mediaFile(manifestFile,storagePath){return path.join(path.dirname(path.resolve(manifestFile)),'media',storagePath);}
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});const results=await Promise.allSettled(runners),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;}
@@ -15,7 +15,7 @@ function isMissingStorageObject(status){return status===400||status===404;}
 async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sleep,attempts=10}){
   let status=0;
   for(let attempt=0;attempt<attempts;attempt+=1){
-    const response=await fetchImpl(url,{headers,cache:'no-store'});status=response.status;
+    const response=await fetchImpl(url,{headers,cache:'no-store',signal:AbortSignal.timeout(30000)});status=response.status;
     if(response.ok)return;
     if(attempt+1<attempts)await wait(Math.min(500*(2**attempt),4000));
   }
@@ -60,9 +60,9 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
   }
   await mapLimit(objects,4,async object=>{
       const body=fs.readFileSync(mediaFile(manifestFile,object.storagePath));
-      const existed=await withRetries(`storage preflight ${object.storagePath}`,async()=>{const response=await fetch(`${origin}/${object.storagePath}`,{method:'HEAD',cache:'no-store'});if(response.ok)return true;if(isMissingStorageObject(response.status))return false;throw new Error(`status ${response.status}`);});
-      if(!existed){await withRetries(`storage upload ${object.storagePath}`,async()=>{const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body});if(!response.ok&&response.status!==409)throw new Error(`status ${response.status}: ${(await response.text()).slice(0,300)}`);});uploaded.push(object.storagePath);}
-      await withRetries(`live media verification ${object.storagePath}`,async()=>{const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store'}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`status ${live.status} or content mismatch`);});
+      const existed=await withRetries(`storage preflight ${object.storagePath}`,async()=>{const response=await fetch(`${origin}/${object.storagePath}`,{method:'HEAD',cache:'no-store',signal:AbortSignal.timeout(30000)});if(response.ok)return true;if(isMissingStorageObject(response.status))return false;throw new Error(`status ${response.status}`);});
+      if(!existed){await withRetries(`storage upload ${object.storagePath}`,async()=>{const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body,signal:AbortSignal.timeout(30000)});if(!response.ok&&response.status!==409)throw new Error(`status ${response.status}: ${(await response.text()).slice(0,300)}`);});uploaded.push(object.storagePath);}
+      await withRetries(`live media verification ${object.storagePath}`,async()=>{const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store',signal:AbortSignal.timeout(30000)}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`status ${live.status} or content mismatch`);});
   });
   return uploaded;
 }
