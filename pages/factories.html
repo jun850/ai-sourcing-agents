@@ -76,7 +76,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const factoryLocation=window.ATELIX_factoryLocation;
   const supplierText=window.ATELIX_supplierText;
   const esc=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-  const uniq=(k)=>[...new Set(F.map(f=>f[k]))];
+  const uniq=(k)=>[...new Set(F.map(f=>f[k]).filter(value=>value!=null&&String(value).trim()!==''))];
   const types=uniq('type'), regions=uniq('region');
   const certs=[...new Set(F.flatMap(f=>f.certs))];
   const optRow=(name,val,n)=>`<label class="frl-opt"><input type="checkbox" name="${name}" value="${val}"> ${val} <span class="cnt">${n}</span></label>`;
@@ -104,7 +104,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const ageDetail=f.years?`${f.years} ${T('sp.years')}`:(f.founded?`${T('sp.established')} ${f.founded}`:T('Established supplier'));
       const supplierName=supplierText(f,'name');
       return `
-      <a class="fcard" href="supplier.html?id=${encodeURIComponent(f.id)}">
+      <a class="fcard" data-factory-type="${esc(f.type)}" href="supplier.html?id=${encodeURIComponent(f.id)}">
         <div class="fthumb"><img src="${esc(factoryImage(f))}" alt="${esc(supplierName)}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} ${T('Verified Factory')}</span>`:''}${isNewFactory?`<span class="fnew">${T('Recently listed')}</span>`:''}</div>
         <div class="fbody">
           <div class="fname">${esc(supplierName)}</div>

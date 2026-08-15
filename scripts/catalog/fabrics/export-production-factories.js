@@ -13,7 +13,7 @@ async function main(){
   const fallback=publicConfig(),url=String(process.env.SUPABASE_URL||fallback.url||'').replace(/\/$/,''),serviceKey=process.env.SUPABASE_SERVICE_ROLE_KEY,key=serviceKey||process.env.SUPABASE_PUBLISHABLE_KEY||fallback.key,output=path.resolve(arg('--output','data/catalog-runs/apparelx-fabrics-10000/production-factories.json'));
   if(!/^https:\/\/[a-z0-9-]+[.]supabase[.]co$/.test(url)||!key)throw new Error('Supabase URL and API key are required');
   if(process.argv.includes('--require-privileged')&&!serviceKey)throw new Error('--require-privileged needs SUPABASE_SERVICE_ROLE_KEY');
-  const select='id,slug,name,type,region,loc,verify_state,copy_i18n,logo_img,page_img,archived_at',factories=[];
+  const select='id,slug,name,type,region,loc,verify_state,years,moq,lead,orders_label,capacity,certs,tags,img,logo_img,page_img,sales,phone,web,founded,employees,area,port,bio,copy_i18n,archived_at,supplier_taxonomy_memberships(l2,l3,is_primary)',factories=[];
   for(let offset=0;;offset+=1000){
     const response=await fetch(`${url}/rest/v1/factories?select=${encodeURIComponent(select)}&order=name.asc`,{headers:{apikey:key,authorization:`Bearer ${key}`,range:`${offset}-${offset+999}`}});
     if(!response.ok)throw new Error(`Factory snapshot failed ${response.status}: ${(await response.text()).slice(0,500)}`);

@@ -52,6 +52,12 @@ class LocalFabricPreview{
     if(this.cache)return this.cache;
     const productsDir=path.join(this.runDir,'products');
     const readiness=readJson(path.join(this.runDir,'prepared-source-free/readiness-report.json'));
+    const assignmentReport=readJson(path.join(this.runDir,'prepared-source-free/supplier-assignment-report.json'));
+    const assignmentByMaker=new Map((assignmentReport.assignments||[]).map(item=>[item.maker_key,item]));
+    const productionFile=path.join(this.runDir,'production-factories-privileged.json');
+    const productionFactories=fs.existsSync(productionFile)?(readJson(productionFile).factories||[]).filter(item=>item.verify_state==='verified'&&!item.archived_at):[];
+    const productionBySlug=new Map(productionFactories.map(item=>[item.slug,item]));
+    const selectedTarget=Number(readiness.report?.selected||readiness.report?.target||0);
     const excluded=new Set((readiness.excluded||[]).map(item=>item.local_key));
     const products=[],mediaByKey=new Map(),skipped=[];
     for(const entry of fs.readdirSync(productsDir,{withFileTypes:true}).filter(item=>item.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name,'en',{numeric:true}))){
@@ -61,12 +67,23 @@ class LocalFabricPreview{
       try{
         const product=readJson(productPath),media=readJson(mediaPath);
         if(contract.invalidReason(product,media))continue;
-        const preview=previewProduct(product,media);
+        const preview=previewProduct(product,media),assignment=assignmentByMaker.get(contract.normalizeMaker(product.makerName));
+        if(assignment){
+          const production=productionBySlug.get(assignment.slug);
+          preview.factory_id=assignment.factory_id;preview.supplier_slug=assignment.slug;preview.supplier_name=assignment.name;preview.supplier_verified=true;
+          preview.supplier_region=production?.region||null;preview.supplier_city=production?.loc||null;
+        }
         products.push(preview);
         (media.images||[]).slice(0,4).forEach((image,position)=>mediaByKey.set(`${preview.sku}:${position}`,path.resolve(this.runDir,image.localPath)));
+        if(selectedTarget&&products.length===selectedTarget)break;
       }catch(error){skipped.push({local_key:entry.name,error:error.message});}
     }
-    const factories=[...new Map(products.map(item=>[item.supplier_slug,{id:item.factory_id,slug:item.supplier_slug,name:item.supplier_name,type:'fabric_mill',region:null,loc:null,verify_state:'pending',copy_i18n:{en:{name:item.supplier_name,description:''}},product_count:products.filter(product=>product.factory_id===item.factory_id).length,supplier_taxonomy_memberships:[{l2:'fabrics',l3:null,is_primary:true}]}])).values()];
+    const factoryMap=new Map(productionFactories.map(item=>[item.slug,item]));
+    for(const item of products){
+      const existing=factoryMap.get(item.supplier_slug),productCount=products.filter(product=>product.factory_id===item.factory_id).length;
+      factoryMap.set(item.supplier_slug,existing?{...existing,product_count:productCount}:{id:item.factory_id,slug:item.supplier_slug,name:item.supplier_name,type:'fabric_mill',region:null,loc:null,verify_state:'verified',copy_i18n:{en:{name:item.supplier_name,description:''}},product_count:productCount,supplier_taxonomy_memberships:[{l2:'fabrics',l3:null,is_primary:true}]});
+    }
+    const factories=[...factoryMap.values()];
     const supplierTotal=factories.length;
     this.cache={products,bySku:new Map(products.map(item=>[item.sku,item])),factories,byFactorySlug:new Map(factories.map(item=>[item.slug,item])),mediaByKey,supplierTotal,skipped};
     return this.cache;

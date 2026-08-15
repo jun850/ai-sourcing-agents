@@ -461,7 +461,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
   let categoryItems=remotePage?remotePage.products:window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
   let items=categoryItems.filter(p=>matchSub(p,l3));
-  const supplierItems=(window.ARCANA_FACTORIES||[]).filter(factory=>(factory.taxonomy||[]).some(membership=>
+  const supplierItems=isFabric?[]:(window.ARCANA_FACTORIES||[]).filter(factory=>(factory.taxonomy||[]).some(membership=>
     membership.l2===cat&&(!l3||membership.l3===l3)
   ));
   const levelNav=document.getElementById('catalogLevelNav');
@@ -480,7 +480,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   let resultTotal=remotePage?Number(remotePage.total||0):items.length;
   let resultSupplierTotal=remotePage?.supplier_total??supplierCount;
   const supplierStatus=remotePage?.preview?'supplier candidates':'verified suppliers';
-  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p><b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
+  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p>${isFabric?`<b>${resultTotal}</b> ${meta.noun}`:`<b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}`}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
   const crumbs=[['Home','/'],['All categories','/categories'],[meta.title,`/categories/${cat}`]];
   if(l3) crumbs.push([heading,`/categories/${cat}/${l3}`]);
   document.querySelector('#catalogCrumbs ol').innerHTML=crumbs.map(([label,href],index)=>{
@@ -571,7 +571,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const heTitle = TR(l3 ? subLabel : meta.title);
     document.title = `${heTitle} — Atelix`;
     levelNav.querySelector('h1').textContent=heTitle;
-    levelNav.querySelector('.catalog-level-copy p').innerHTML=`<b>${resultTotal}</b> ${T('noun.'+cat)} · <b>${resultSupplierTotal}</b> ${remotePage?.preview?supplierStatus:T('cat.verified')}`;
+    levelNav.querySelector('.catalog-level-copy p').innerHTML=isFabric?`<b>${resultTotal}</b> ${T('noun.'+cat)}`:`<b>${resultTotal}</b> ${T('noun.'+cat)} · <b>${resultSupplierTotal}</b> ${remotePage?.preview?supplierStatus:T('cat.verified')}`;
     levelNav.querySelectorAll('nav a').forEach((link,index)=>{const suffix=link.querySelector('span');link.childNodes[0].nodeValue=TR(subcats[index][1]);if(suffix)suffix.textContent='×';});
     const crumbItems=document.querySelectorAll('#catalogCrumbs li');
     if(crumbItems[0])crumbItems[0].querySelector('a,span').textContent=T('Home');

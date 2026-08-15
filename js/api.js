@@ -183,6 +183,16 @@ function mapPublicProduct(p){
   };
 }
 function mapPublicFactory(f){return {id:f.slug,databaseId:f.id,name:localizedCopy(f.copy_i18n,'name',f.name),type:TYPE_LABEL[f.type]||f.type,region:f.region,loc:f.loc,verified:f.verify_state==='verified',years:f.years,moq:f.moq,lead:f.lead,orders:f.orders_label,capacity:f.capacity,certs:f.certs||[],tags:f.tags||[],img:f.img,logo_img:f.logo_img,page_img:f.page_img,sales:f.sales,phone:f.phone,web:f.web,founded:f.founded,employees:f.employees,area:f.area,port:f.port,bio:localizedCopy(f.copy_i18n,'description',f.bio),copyI18n:f.copy_i18n||{},productCount:Number(f.product_count||0),taxonomy:(f.supplier_taxonomy_memberships||[]).map(item=>({l2:item.l2,l3:item.l3,isPrimary:item.is_primary===true}))};}
+function localFactoryTaxonomy(factory){
+  if(factory.taxonomy?.length)return factory;
+  const type=String(factory.type||'').toLowerCase();let taxonomy=[];
+  if(type.includes('oem'))taxonomy=[{l2:'oem',l3:'clothing',isPrimary:true}];
+  else if(type.includes('fabric')||type.includes('textile')||type.includes('material'))taxonomy=[{l2:'fabrics',l3:null,isPrimary:true}];
+  else if(type.includes('yarn'))taxonomy=[{l2:'yarns',l3:null,isPrimary:true}];
+  else if(type.includes('trim'))taxonomy=[{l2:'trims',l3:null,isPrimary:true}];
+  else if(type.includes('accessor'))taxonomy=[{l2:'accessories',l3:null,isPrimary:true}];
+  return {...factory,taxonomy};
+}
 async function webpVariant(bitmap,maxDimension,quality){
   const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale));
   const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -348,7 +358,7 @@ const API = {
     return {...(data||{}),products:(data?.products||[]).map(mapPublicProduct)};
   },
   async fetchCatalogFactories({locale=catalogLocale()}={}){
-    if(LOCAL_CATALOG_PREVIEW){const data=await localCatalogRequest('/factories'),merged=new Map(Object.values(BUNDLED_PUBLIC_FACTORY_MAP).map(factory=>[factory.id,factory]));for(const factory of (data||[]).map(mapPublicFactory))merged.set(factory.id,factory);return [...merged.values()];}
+    if(LOCAL_CATALOG_PREVIEW){const data=await localCatalogRequest('/factories'),merged=new Map(Object.values(BUNDLED_PUBLIC_FACTORY_MAP).map(localFactoryTaxonomy).map(factory=>[factory.id,factory]));for(const factory of (data||[]).map(mapPublicFactory).map(localFactoryTaxonomy))merged.set(factory.id,factory);return [...merged.values()];}
     const {data,error}=await sb.rpc('public_list_catalog_factories',{p_locale:locale});
     if(error) throw error;
     return (data||[]).map(mapPublicFactory);
@@ -365,17 +375,9 @@ const API = {
   },
   async fetchCatalog(){
     if(LOCAL_CATALOG_PREVIEW){
-      const [localFactories,remoteFactories]=await Promise.all([
-        this.fetchCatalogFactories({locale:catalogLocale()}),
-        sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'),
-      ]);
-      const factories=new Map(localFactories.map(factory=>[factory.id,factory]));
-      if(!remoteFactories.error){
-        for(const factory of (remoteFactories.data||[]).map(mapPublicFactory))factories.set(factory.id,factory);
-      }
       return {
         products:window.ARCANA_PRODUCTS||[],
-        factories:[...factories.values()],
+        factories:await this.fetchCatalogFactories({locale:catalogLocale()}),
       };
     }
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
