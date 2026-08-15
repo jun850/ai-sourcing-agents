@@ -11,6 +11,7 @@ function mediaFile(manifestFile,storagePath){return path.join(path.dirname(path.
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});const results=await Promise.allSettled(runners),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;}
 async function withRetries(label,worker,{attempts=6,wait=sleep}={}){let lastError;for(let attempt=0;attempt<attempts;attempt+=1){try{return await worker(attempt);}catch(error){lastError=error;if(attempt+1<attempts)await wait(Math.min(500*(2**attempt),4000));}}throw new Error(`${label} failed after ${attempts} attempts: ${lastError?.message||lastError}`);}
+function isMissingStorageObject(status){return status===400||status===404;}
 async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sleep,attempts=10}){
   let status=0;
   for(let attempt=0;attempt<attempts;attempt+=1){
@@ -59,7 +60,7 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
   }
   await mapLimit(objects,4,async object=>{
       const body=fs.readFileSync(mediaFile(manifestFile,object.storagePath));
-      const existed=await withRetries(`storage preflight ${object.storagePath}`,async()=>{const response=await fetch(`${origin}/${object.storagePath}`,{method:'HEAD',cache:'no-store'});if(response.ok)return true;if(response.status===404)return false;throw new Error(`status ${response.status}`);});
+      const existed=await withRetries(`storage preflight ${object.storagePath}`,async()=>{const response=await fetch(`${origin}/${object.storagePath}`,{method:'HEAD',cache:'no-store'});if(response.ok)return true;if(isMissingStorageObject(response.status))return false;throw new Error(`status ${response.status}`);});
       if(!existed){await withRetries(`storage upload ${object.storagePath}`,async()=>{const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body});if(!response.ok&&response.status!==409)throw new Error(`status ${response.status}: ${(await response.text()).slice(0,300)}`);});uploaded.push(object.storagePath);}
       await withRetries(`live media verification ${object.storagePath}`,async()=>{const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store'}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`status ${live.status} or content mismatch`);});
   });
@@ -94,4 +95,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={validate,verifyAlgoliaObject,withRetries};
+module.exports={validate,verifyAlgoliaObject,withRetries,isMissingStorageObject};

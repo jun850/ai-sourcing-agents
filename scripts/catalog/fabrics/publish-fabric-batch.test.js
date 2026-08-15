@@ -6,7 +6,7 @@ const crypto=require('node:crypto');
 const fs=require('node:fs');
 const os=require('node:os');
 const path=require('node:path');
-const {validate,verifyAlgoliaObject,withRetries}=require('./publish-fabric-batch');
+const {validate,verifyAlgoliaObject,withRetries,isMissingStorageObject}=require('./publish-fabric-batch');
 
 function stable(value){if(Array.isArray(value))return value.map(stable);if(!value||typeof value!=='object')return value;return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]));}
 function sha(value){return crypto.createHash('sha256').update(Buffer.isBuffer(value)?value:JSON.stringify(stable(value))).digest('hex');}
@@ -27,3 +27,4 @@ test('batch validation rejects an unverified thumbnail byte count',()=>{const va
 test('Algolia read-back tolerates bounded indexing delay',async()=>{let calls=0,waits=0;await verifyAlgoliaObject({url:'https://example.test/object',headers:{},objectId:'FAB-TEST',attempts:4,fetchImpl:async()=>({ok:++calls===3,status:calls===3?200:404}),wait:async()=>{waits+=1;}});assert.equal(calls,3);assert.equal(waits,2);});
 test('Algolia read-back still fails after the retry bound',async()=>{await assert.rejects(verifyAlgoliaObject({url:'https://example.test/object',headers:{},objectId:'FAB-MISSING',attempts:3,fetchImpl:async()=>({ok:false,status:404}),wait:async()=>{}}),/after 3 attempts \(status 404\)/);});
 test('transient network work retries without sleeping in tests',async()=>{let calls=0;const value=await withRetries('network fixture',async()=>{calls+=1;if(calls<3)throw new Error('fetch failed');return 'ok';},{attempts:4,wait:async()=>{}});assert.equal(value,'ok');assert.equal(calls,3);});
+test('Supabase public storage missing-object statuses are explicit',()=>{assert.equal(isMissingStorageObject(400),true);assert.equal(isMissingStorageObject(404),true);assert.equal(isMissingStorageObject(403),false);assert.equal(isMissingStorageObject(500),false);});
