@@ -81,7 +81,16 @@ BEGIN
     AND lower(btrim(p_country)) IN (lower(rate.country_code),lower(btrim(rate.country_name)))
   LIMIT 1;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Shipping to % is not configured yet',p_country USING ERRCODE='P0001';
+    RETURN jsonb_build_object(
+      'id',NULL,
+      'country_code',NULL,
+      'country_name',btrim(p_country),
+      'service_name','Standard shipping',
+      'flat_rate_usd',10.00,
+      'eta_min_days',NULL,
+      'eta_max_days',NULL,
+      'is_default',true
+    );
   END IF;
   RETURN jsonb_build_object(
     'id',v_rate.id,
@@ -90,7 +99,8 @@ BEGIN
     'service_name',v_rate.service_name,
     'flat_rate_usd',v_rate.flat_rate_usd,
     'eta_min_days',v_rate.eta_min_days,
-    'eta_max_days',v_rate.eta_max_days
+    'eta_max_days',v_rate.eta_max_days,
+    'is_default',false
   );
 END;
 $$;
@@ -251,7 +261,7 @@ DECLARE
   v_cart_id uuid;
   v_subtotal numeric(12,2) := 0;
   v_fee numeric(12,2) := 0;
-  v_ship numeric(12,2) := 0;
+  v_ship numeric(12,2) := 10.00;
   v_qc_fee numeric(12,2) := 0;
   v_ins_fee numeric(12,2) := 0;
   v_qc_rate numeric;
@@ -267,8 +277,7 @@ BEGIN
   WHERE rate.is_active AND rate.archived_at IS NULL
     AND lower(btrim(p_ship_country)) IN (lower(rate.country_code),lower(btrim(rate.country_name)))
   LIMIT 1;
-  IF NOT FOUND THEN RAISE EXCEPTION 'shipping to % is not configured yet',p_ship_country; END IF;
-  v_ship:=v_rate.flat_rate_usd;
+  IF FOUND THEN v_ship:=v_rate.flat_rate_usd; END IF;
 
   SELECT id INTO v_cart_id FROM public.carts WHERE profile_id=v_buyer;
   IF v_cart_id IS NULL OR NOT EXISTS (SELECT 1 FROM public.cart_items WHERE cart_id=v_cart_id) THEN RAISE EXCEPTION 'cart is empty'; END IF;
@@ -286,7 +295,7 @@ BEGIN
   v_order_no:='ARC-'||to_char(now(),'YYMMDD')||'-'||lpad(nextval('public.order_no_seq')::text,4,'0');
 
   INSERT INTO public.orders(order_no,buyer_profile_id,status,subtotal,fee,ship,qc_fee,ins_fee,total,ship_country,ship_address,incoterms,notes,placed_at,shipping_rate_id,shipping_service,shipping_eta_min_days,shipping_eta_max_days)
-  VALUES(v_order_no,v_buyer,'awaiting_payment',v_subtotal,v_fee,v_ship,v_qc_fee,v_ins_fee,v_total,v_rate.country_name,p_ship_address,p_incoterms,p_notes,now(),v_rate.id,v_rate.service_name,v_rate.eta_min_days,v_rate.eta_max_days)
+  VALUES(v_order_no,v_buyer,'awaiting_payment',v_subtotal,v_fee,v_ship,v_qc_fee,v_ins_fee,v_total,COALESCE(v_rate.country_name,btrim(p_ship_country)),p_ship_address,p_incoterms,p_notes,now(),v_rate.id,COALESCE(v_rate.service_name,'Standard shipping'),v_rate.eta_min_days,v_rate.eta_max_days)
   RETURNING id INTO v_order_id;
 
   INSERT INTO public.order_items(order_id,product_id,factory_id,sku_snapshot,name_snapshot,seller_snapshot,unit_price,qty,line_total,option_selection)

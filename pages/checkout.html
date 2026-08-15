@@ -42,8 +42,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
   const fee=+(subtotal*0.05).toFixed(2);
   const baseTotal=subtotal+fee;
+  const defaultShippingQuote=country=>({id:null,country_code:null,country_name:country||'',service_name:'Standard shipping',flat_rate_usd:10,eta_min_days:null,eta_max_days:null,is_default:true});
   let selectedAddress=null;
-  let shippingQuote=null;
+  let shippingQuote=defaultShippingQuote();
   let quoteLoading=false;
   let addressBook=null;
 
@@ -85,6 +86,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       <label class="checkout-item-note"><span>Note for supplier <small>Optional</small></span><textarea maxlength="300" data-item-note="${itemIndex}" aria-label="Note for ${text(TR(product.name))}" placeholder="Color matching, packaging, or handling instructions for this item"></textarea><small><span data-item-note-count>0</span>/300</small></label>
     </div>`;}).join('')}
   </div>`).join('');
+  const shippingAmount=()=>{
+    const lang=document.documentElement.lang||'en',fx=window.ARCANA_FX[lang]||window.ARCANA_FX.en;
+    const raw=Number(shippingQuote.flat_rate_usd||0)*fx.rate,increment=Number(fx.increment)||.01;
+    return Math.ceil((raw-Number.EPSILON)/increment)*increment;
+  };
 
   root.innerHTML=`<header class="checkout-page-head"><h1>Checkout</h1><p>Confirm delivery and review the final total before placing your order.</p></header>
     <div class="co-wrap">
@@ -93,12 +99,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           <header class="checkout-block-head"><div><span class="checkout-step">1</span><h2 id="deliveryTitle">Delivery address</h2></div><button class="btn btn-out" type="button" data-address-picker>Change</button></header>
           <div id="selectedAddress" class="checkout-address"></div>
         </section>
-        <section class="panel checkout-block" aria-labelledby="shippingTitle">
-          <header class="checkout-block-head"><div><span class="checkout-step">2</span><h2 id="shippingTitle">Delivery service</h2></div></header>
-          <div id="shippingStatus" class="checkout-shipping" role="status" aria-live="polite"></div>
-        </section>
         <section class="panel checkout-block" aria-labelledby="itemsTitle">
-          <header class="checkout-block-head"><div><span class="checkout-step">3</span><h2 id="itemsTitle">Items (${cart.length})</h2></div><a href="cart.html">Edit cart</a></header>
+          <header class="checkout-block-head"><div><span class="checkout-step">2</span><h2 id="itemsTitle">Items (${cart.length})</h2></div><a href="cart.html">Edit cart</a></header>
           <div class="checkout-suppliers">${supplierItems}</div>
         </section>
         <section class="checkout-payment-note" aria-label="Payment information">${IC.shield}<p><strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span></p></section>
@@ -107,8 +109,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <h3>${T('Order Summary')}</h3>
         <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
         <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
-        <div class="sum-row"><span class="k">${T('Shipping')}</span><span id="summaryShipping">—</span></div>
-        <div class="cart-summary-total"><span>${T('Total')}</span><strong id="summaryTotal">${currencyMoney(baseTotal)}</strong></div>
+        <div class="sum-row"><span class="k">${T('Shipping')}</span><span id="summaryShipping">${window.ARCANA_money(10)}</span></div>
+        <div class="cart-summary-total"><span>${T('Total')}</span><strong id="summaryTotal">${currencyMoney(baseTotal+shippingAmount())}</strong></div>
         <button class="btn btn-gold btn-block cart-summary-action" type="button" data-place disabled>Place order</button>
         <p class="checkout-place-help" id="placeHelp">Select an address to continue.</p>
         <div class="secure-note"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
@@ -124,19 +126,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   const picker=root.querySelector('.address-picker');
   const pickerTrigger=root.querySelector('[data-address-picker]');
-  const shippingAmount=()=>{
-    if(!shippingQuote) return 0;
-    const lang=document.documentElement.lang||'en',fx=window.ARCANA_FX[lang]||window.ARCANA_FX.en;
-    const raw=Number(shippingQuote.flat_rate_usd||0)*fx.rate,increment=Number(fx.increment)||.01;
-    return Math.ceil((raw-Number.EPSILON)/increment)*increment;
-  };
 
   function updateAddress(){
     const target=document.getElementById('selectedAddress');
     if(!selectedAddress){
       pickerTrigger.hidden=false;
       pickerTrigger.textContent='Add address';
-      target.innerHTML=`<div class="checkout-empty-address"><div><strong>No delivery address selected</strong><p>Add an address so Atelix can calculate shipping.</p></div></div>`;
+      target.innerHTML=`<div class="checkout-empty-address"><div><strong>No delivery address selected</strong><p>Add an address to continue with the $10 default shipping rate.</p></div></div>`;
       return;
     }
     pickerTrigger.hidden=false;
@@ -145,30 +141,22 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
 
   async function updateShipping(){
-    const status=document.getElementById('shippingStatus'),place=root.querySelector('[data-place]'),help=document.getElementById('placeHelp');
-    shippingQuote=null;
+    const place=root.querySelector('[data-place]'),help=document.getElementById('placeHelp');
+    shippingQuote=defaultShippingQuote(selectedAddress?.country);
     if(!selectedAddress){
-      status.innerHTML='<div class="shipping-state"><strong>Address needed</strong><p>Choose a delivery address to see the available service and final total.</p></div>';
-      document.getElementById('summaryShipping').textContent='—';document.getElementById('summaryTotal').textContent=currencyMoney(baseTotal);place.disabled=true;help.textContent='Select an address to continue.';return;
+      document.getElementById('summaryShipping').textContent=window.ARCANA_money(10);document.getElementById('summaryTotal').textContent=currencyMoney(baseTotal+shippingAmount());place.disabled=true;help.textContent='Select an address to continue.';return;
     }
-    quoteLoading=true;place.disabled=true;help.textContent='Calculating shipping…';status.setAttribute('aria-busy','true');status.innerHTML='<div class="shipping-state"><strong>Calculating shipping…</strong><p>Checking the configured service for this destination.</p></div>';
+    quoteLoading=true;place.disabled=true;help.textContent='Checking the destination shipping rate…';
     const result=await window.ARCANA_API.getShippingQuote(selectedAddress.country);
-    quoteLoading=false;status.removeAttribute('aria-busy');
-    if(result?.error||!result?.quote){
-      const message=result?.error?.message||`Shipping to ${selectedAddress.country} is not configured yet.`;
-      status.innerHTML=`<div class="shipping-state is-error"><strong>Shipping unavailable</strong><p>${text(message)}</p><button class="btn btn-out" type="button" data-change-country>Choose another address</button></div>`;
-      status.querySelector('[data-change-country]').onclick=()=>picker.showModal();
-      document.getElementById('summaryShipping').textContent='Unavailable';document.getElementById('summaryTotal').textContent=currencyMoney(baseTotal);place.disabled=true;help.textContent='Choose an address in a supported destination.';return;
-    }
-    shippingQuote=result.quote;
+    quoteLoading=false;
+    shippingQuote=result?.quote||defaultShippingQuote(selectedAddress.country);
     const displayShipping=shippingAmount(),total=baseTotal+displayShipping;
-    status.innerHTML=`<div class="shipping-service"><div><strong>${text(shippingQuote.service_name)}</strong><p>${text(shippingQuote.country_name)} · Estimated ${Number(shippingQuote.eta_min_days)}–${Number(shippingQuote.eta_max_days)} business days</p></div><b>${window.ARCANA_money(Number(shippingQuote.flat_rate_usd))}</b></div>`;
-    document.getElementById('summaryShipping').textContent=window.ARCANA_money(Number(shippingQuote.flat_rate_usd));document.getElementById('summaryTotal').textContent=currencyMoney(total);place.disabled=false;help.textContent='Shipping and item totals are verified again when you place the order.';
+    document.getElementById('summaryShipping').textContent=window.ARCANA_money(Number(shippingQuote.flat_rate_usd));document.getElementById('summaryTotal').textContent=currencyMoney(total);place.disabled=false;help.textContent=shippingQuote.is_default?'Default shipping applied. An active Intools destination rate overrides it automatically.':'Your configured destination shipping rate was applied automatically.';
   }
 
   async function placeOrder(){
     const place=root.querySelector('[data-place]');
-    if(!selectedAddress||!shippingQuote||quoteLoading) return;
+    if(!selectedAddress||quoteLoading) return;
     const orig = place ? place.innerHTML : '';
     if(place){ place.disabled=true; place.textContent='Placing order…'; }
     const shipAddress=[selectedAddress.recipient_name,selectedAddress.phone,window.ATELIX_formatAddress(selectedAddress)].filter(Boolean).join(' · ');

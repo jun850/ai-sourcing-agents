@@ -48,7 +48,8 @@ const mockApi = `(() => {
   const profile={id:'qa-user',email:'buyer@example.com',name:'Jun Buyer',full_name:'Jun Buyer',company_name:'Atelix QA',country:'Indonesia',role:'buyer',handle:'jun-buyer'};
   let addresses=[
     {id:'addr-id',label:'Bali office',recipient_name:'Jun Buyer',phone:'+62 812 0000 0000',line1:'Jalan Sunset Road 88',line2:'Unit 4',city:'Denpasar',province:'Bali',postal_code:'80221',country:'Indonesia',is_default:true},
-    {id:'addr-jp',label:'Tokyo showroom',recipient_name:'Jun Buyer',phone:'+81 3 0000 0000',line1:'2-1 Marunouchi',line2:null,city:'Chiyoda',province:'Tokyo',postal_code:'100-0005',country:'Japan',is_default:false}
+    {id:'addr-jp',label:'Tokyo showroom',recipient_name:'Jun Buyer',phone:'+81 3 0000 0000',line1:'2-1 Marunouchi',line2:null,city:'Chiyoda',province:'Tokyo',postal_code:'100-0005',country:'Japan',is_default:false},
+    {id:'addr-us',label:'New York office',recipient_name:'Jun Buyer',phone:'+1 212 000 0000',line1:'11 Broadway',line2:null,city:'New York',province:'New York',postal_code:'10004',country:'United States',is_default:false}
   ];
   const decorate=api=>Object.assign(api,{
     getSessionProfile:async()=>profile,getMyProfile:async()=>profile,onChange:()=>({data:{subscription:{unsubscribe(){}}}}),
@@ -63,7 +64,7 @@ const mockApi = `(() => {
       {id:'ship-id',country_code:'ID',country_name:'Indonesia',service_name:'Tracked freight',flat_rate_usd:42,eta_min_days:4,eta_max_days:7,is_active:true},
       {id:'ship-jp',country_code:'JP',country_name:'Japan',service_name:'Air freight',flat_rate_usd:65,eta_min_days:3,eta_max_days:6,is_active:true}
     ],
-    getShippingQuote:async country=>({quote:country==='Indonesia'?{id:'ship-id',country_code:'ID',country_name:'Indonesia',service_name:'Tracked freight',flat_rate_usd:42,eta_min_days:4,eta_max_days:7}:country==='Japan'?{id:'ship-jp',country_code:'JP',country_name:'Japan',service_name:'Air freight',flat_rate_usd:65,eta_min_days:3,eta_max_days:6}:null,error:null}),
+    getShippingQuote:async country=>({quote:country==='Indonesia'?{id:'ship-id',country_code:'ID',country_name:'Indonesia',service_name:'Tracked freight',flat_rate_usd:42,eta_min_days:4,eta_max_days:7,is_default:false}:country==='Japan'?{id:'ship-jp',country_code:'JP',country_name:'Japan',service_name:'Air freight',flat_rate_usd:65,eta_min_days:3,eta_max_days:6,is_default:false}:{id:null,country_code:null,country_name:country,service_name:'Standard shipping',flat_rate_usd:10,eta_min_days:null,eta_max_days:null,is_default:true},error:null}),
     updateProfile:async()=>({error:null}),updateEmail:async()=>({error:null}),uploadImage:async()=>({error:{message:'Upload not used in QA'}}),
     placeOrder:async payload=>{window.__qaOrderPayload=payload;return {orderNo:null,error:{message:'QA stops before persistence'}};}
   });
@@ -134,7 +135,7 @@ async function checkoutScenario(width, height) {
       place.click();
       setTimeout(()=>resolve({
         h1:document.querySelector('h1')?.textContent.trim(),pickerOpened,pickerClosed:!picker.open,
-        selected:document.getElementById('selectedAddress')?.innerText,shipping:document.getElementById('shippingStatus')?.innerText,
+        selected:document.getElementById('selectedAddress')?.innerText,hasDeliveryService:Boolean(document.getElementById('shippingStatus')||document.getElementById('shippingTitle')),
         summary:document.getElementById('summaryShipping')?.textContent,placeEnabled:!place.disabled,
         noteFields:document.querySelectorAll('[data-item-note]').length,noteCount:document.querySelector('[data-item-note-count]')?.textContent,
         globalNote:Boolean(document.getElementById('orderNote')),orderPayload:window.__qaOrderPayload,
@@ -147,7 +148,7 @@ async function checkoutScenario(width, height) {
   const issues = [...browser.errors, ...browser.failures];
   if (data.h1 !== "Checkout") issues.push("missing checkout heading");
   if (!data.pickerOpened || !data.pickerClosed) issues.push("address picker open/select/close flow failed");
-  if (!/Tokyo showroom/.test(data.selected) || !/Air freight/.test(data.shipping) || data.summary === "—" || !data.placeEnabled) issues.push("address selection did not update shipping and summary");
+  if (!/Tokyo showroom/.test(data.selected) || data.hasDeliveryService || data.summary !== "$65.00" || !data.placeEnabled) issues.push("address selection did not apply the configured shipping rate without a delivery-service step");
   if (data.noteFields !== 1 || data.globalNote || data.noteCount !== "38" || data.orderPayload?.items?.[0]?.note !== "Match the approved Light Gray lab dip." || data.orderPayload?.notes) issues.push("item-level supplier note did not replace the global order note contract");
   if (data.dialogs !== 1) issues.push("shared address editor was not created exactly once");
   if (data.overflow > 2) issues.push(`horizontal overflow: ${data.overflow}px`);
@@ -179,6 +180,28 @@ async function checkoutHandoffScenario() {
   return issues;
 }
 
+async function checkoutDefaultShippingScenario() {
+  const browser = await open("/pages/checkout.html", 1440, 900);
+  const { cdp } = browser;
+  if (!await waitFor(cdp, "document.querySelector('[data-place]') && !document.querySelector('[data-place]').disabled")) throw new Error("Checkout did not resolve the initial shipping rate");
+  const data = await evaluate(cdp, `(() => {
+    document.querySelector('[data-address-picker]').click();
+    document.querySelector('[data-address-select="addr-us"]')?.click();
+    return new Promise(resolve=>setTimeout(()=>resolve({
+      selected:document.getElementById('selectedAddress')?.innerText,
+      shipping:document.getElementById('summaryShipping')?.textContent,
+      total:document.getElementById('summaryTotal')?.textContent,
+      enabled:!document.querySelector('[data-place]').disabled,
+      help:document.getElementById('placeHelp')?.textContent,
+      hasDeliveryService:Boolean(document.getElementById('shippingStatus')||document.getElementById('shippingTitle'))
+    }),250));
+  })()`);
+  cdp.close();
+  const issues = [...browser.errors, ...browser.failures];
+  if (!/New York office/.test(data.selected) || data.shipping !== "$10.00" || !data.enabled || data.hasDeliveryService || !/Default shipping applied/.test(data.help)) issues.push("unconfigured destination did not use the automatic $10 shipping fallback");
+  return issues;
+}
+
 async function cartRefreshPersistenceScenario() {
   const browser = await open("/pages/cart.html?qa-persist-empty-db=1", 1440, 900);
   const { cdp } = browser;
@@ -198,7 +221,7 @@ async function cartRefreshPersistenceScenario() {
 async function profileScenario() {
   const browser = await open("/pages/brand-owner.html#address", 1440, 900);
   const { cdp } = browser;
-  if (!await waitFor(cdp, "document.querySelectorAll('#addrList .address-card').length === 2")) throw new Error("Profile address list did not load");
+  if (!await waitFor(cdp, "document.querySelectorAll('#addrList .address-card').length === 3")) throw new Error("Profile address list did not load");
   const data = await evaluate(cdp, `(() => {
     document.getElementById('btnAddAddress').click();
     const editor=document.querySelector('dialog.address-dialog');
@@ -210,7 +233,7 @@ async function profileScenario() {
   })()`);
   cdp.close();
   const issues = [...browser.errors, ...browser.failures];
-  if (data.cards !== 2 || data.activeTab !== "true") issues.push("profile address tab/list failed");
+  if (data.cards !== 3 || data.activeTab !== "true") issues.push("profile address tab/list failed");
   if (!data.addOpen || !data.focused || !data.editOpen || data.editValue !== "Jun Buyer") issues.push("profile add/edit address dialog flow failed");
   if (data.overflow > 2) issues.push(`horizontal overflow: ${data.overflow}px`);
   return issues;
@@ -226,11 +249,12 @@ async function emptyAddressScenario() {
     const action=document.querySelector('[data-address-picker]');
     const height=Math.round(action.getBoundingClientRect().height),width=Math.round(action.getBoundingClientRect().width);
     action.click();
-    return {buttons:buttons.length,height,width,pickerOpen:document.querySelector('.address-picker').open,hasBodyAction:Boolean(document.querySelector('[data-empty-address]'))};
+    return {buttons:buttons.length,height,width,pickerOpen:document.querySelector('.address-picker').open,hasBodyAction:Boolean(document.querySelector('[data-empty-address]')),shipping:document.getElementById('summaryShipping')?.textContent,total:document.getElementById('summaryTotal')?.textContent,placeDisabled:document.querySelector('[data-place]')?.disabled,hasDeliveryService:Boolean(document.getElementById('shippingStatus')||document.getElementById('shippingTitle'))};
   })()`);
   cdp.close();
   const issues = [...browser.errors, ...browser.failures];
   if (data.buttons !== 1 || data.hasBodyAction || !data.pickerOpen) issues.push("empty delivery state has duplicate or nonfunctional address actions");
+  if (data.shipping !== "$10.00" || !data.placeDisabled || data.hasDeliveryService) issues.push("empty delivery state did not preserve the automatic $10 default while requiring an address");
   if (data.height > 38 || data.width > 120) issues.push(`desktop address action is not slim (${data.width}×${data.height})`);
   return issues;
 }
@@ -241,6 +265,7 @@ async function emptyAddressScenario() {
     ["cart to checkout handoff with stale account cart", checkoutHandoffScenario],
     ["checkout desktop", () => checkoutScenario(1440, 900)],
     ["checkout mobile", () => checkoutScenario(390, 844)],
+    ["checkout default shipping fallback", checkoutDefaultShippingScenario],
     ["checkout empty address", emptyAddressScenario],
     ["profile addresses", profileScenario],
   ];

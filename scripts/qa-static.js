@@ -30,6 +30,7 @@ const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
 const itemNotesMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814223000_item_level_order_notes.sql"),"utf8");
+const shippingMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814220000_country_shipping_and_product_media.sql"),"utf8");
 const algoliaSync=fs.readFileSync(path.join(root,"supabase/functions/algolia-sync/index.ts"),"utf8");
 const vercelIgnore=fs.readFileSync(path.join(root,".vercelignore"),"utf8");
 for(const privatePath of ['.env*','data/','research/','scripts/','supabase/'])if(!vercelIgnore.split(/\r?\n/).includes(privatePath))problems.push(`.vercelignore: missing private deployment boundary ${privatePath}`);
@@ -62,6 +63,8 @@ if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages
 if(/Incoterms|PO number|data-t="(?:incoterm|po)"/.test(checkoutPage))problems.push('pages/checkout.html: Incoterms and PO number must stay out of the customer checkout flow');
 if(/id="orderNote"|Order note for suppliers/.test(checkoutPage)||!checkoutPage.includes('data-item-note'))problems.push('pages/checkout.html: supplier notes must be captured per item, never as a global order note');
 if(checkoutPage.includes('data-empty-address')||!checkoutPage.includes("pickerTrigger.textContent='Add address'"))problems.push('pages/checkout.html: empty delivery state must expose one slim address action');
+if(/Delivery service|shippingStatus|Shipping unavailable/.test(checkoutPage))problems.push('pages/checkout.html: checkout must apply shipping automatically without a delivery-service step');
+for(const contract of ["flat_rate_usd',10.00","v_ship numeric(12,2) := 10.00","IF FOUND THEN v_ship:=v_rate.flat_rate_usd","'is_default',true"])if(!shippingMigration.includes(contract))problems.push(`shipping migration: missing automatic default contract ${contract}`);
 if(!checkoutPage.includes('Store.checkoutCart?Store.checkoutCart():Store.cart()')||!componentsSource.includes('beginCheckout()')||!componentsSource.includes('checkoutCart()'))problems.push('cart/checkout: checkout intent must preserve an authoritative cart snapshot across navigation with a backward-compatible fallback');
 for(const cartSyncContract of ['cart_pending','clearSyncedCartPending','sameCartItems','localItems.forEach((item) => map.set(item.key'])if(!componentsSource.includes(cartSyncContract))problems.push(`js/components.js: durable cart reconciliation is missing ${cartSyncContract}`);
 for(const commercePage of ['pages/cart.html','pages/checkout.html','pages/product.html'])if(!fs.readFileSync(path.join(root,commercePage),'utf8').includes('components.js?v=20260814-checkout-hotfix'))problems.push(`${commercePage}: commerce flow must cache-bust the checkout-compatible component store`);
