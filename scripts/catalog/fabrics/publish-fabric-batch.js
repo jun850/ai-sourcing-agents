@@ -8,8 +8,9 @@ function sha(value){return crypto.createHash('sha256').update(Buffer.isBuffer(va
 function config(){const url=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');const key=process.env.SUPABASE_SERVICE_ROLE_KEY,storageBudgetBytes=Number(process.env.ATELIX_CATALOG_STORAGE_BUDGET_BYTES);if(!/^https:\/\/[a-z0-9-]+[.]supabase[.]co$/.test(url)||!key)throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required for --apply');if(!Number.isSafeInteger(storageBudgetBytes)||storageBudgetBytes<=0)throw new Error('ATELIX_CATALOG_STORAGE_BUDGET_BYTES must be a positive safe integer for --apply');return {url,key,storageBudgetBytes};}
 async function request(cfg,route,options={}){const response=await fetch(`${cfg.url}${route}`,{...options,headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,...options.headers}});const text=await response.text();if(!response.ok)throw new Error(`${route} failed ${response.status}: ${text.slice(0,800)}`);return text?JSON.parse(text):null;}
 function mediaFile(manifestFile,storagePath){return path.join(path.dirname(path.resolve(manifestFile)),'media',storagePath);}
-async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});await Promise.all(runners);}
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});const results=await Promise.allSettled(runners),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;}
+async function withRetries(label,worker,{attempts=6,wait=sleep}={}){let lastError;for(let attempt=0;attempt<attempts;attempt+=1){try{return await worker(attempt);}catch(error){lastError=error;if(attempt+1<attempts)await wait(Math.min(500*(2**attempt),4000));}}throw new Error(`${label} failed after ${attempts} attempts: ${lastError?.message||lastError}`);}
 async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sleep,attempts=10}){
   let status=0;
   for(let attempt=0;attempt<attempts;attempt+=1){
@@ -56,13 +57,11 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
     if(media.public_url!==`${origin}/${media.storage_path}`||media.thumb_url!==`${origin}/${media.thumb_storage_path}`)throw new Error(`manifest media URL does not match production project: ${media.storage_path}`);
     objects.push({storagePath:media.storage_path,hash:media.sha256,bytes:media.bytes},{storagePath:media.thumb_storage_path,hash:media.thumb_sha256,bytes:media.thumb_bytes});
   }
-  await mapLimit(objects,8,async object=>{
+  await mapLimit(objects,4,async object=>{
       const body=fs.readFileSync(mediaFile(manifestFile,object.storagePath));
-      const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body});
-      if(!response.ok&&response.status!==409)throw new Error(`storage upload failed ${response.status}: ${object.storagePath}`);
-      if(response.ok)uploaded.push(object.storagePath);
-      const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store'}),liveBytes=Buffer.from(await live.arrayBuffer());
-      if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`live media verification failed: ${object.storagePath}`);
+      const existed=await withRetries(`storage preflight ${object.storagePath}`,async()=>{const response=await fetch(`${origin}/${object.storagePath}`,{method:'HEAD',cache:'no-store'});if(response.ok)return true;if(response.status===404)return false;throw new Error(`status ${response.status}`);});
+      if(!existed){await withRetries(`storage upload ${object.storagePath}`,async()=>{const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body});if(!response.ok&&response.status!==409)throw new Error(`status ${response.status}: ${(await response.text()).slice(0,300)}`);});uploaded.push(object.storagePath);}
+      await withRetries(`live media verification ${object.storagePath}`,async()=>{const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store'}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`status ${live.status} or content mismatch`);});
   });
   return uploaded;
 }
@@ -95,4 +94,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={validate,verifyAlgoliaObject};
+module.exports={validate,verifyAlgoliaObject,withRetries};
