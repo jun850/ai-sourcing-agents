@@ -31,7 +31,7 @@ function publicPricing(product,{usdJpy=DEFAULT_USD_JPY,fxSnapshotId='atelix-stat
   return {pricing_mode:'fixed',usd,jpy:estimated.jpy,cny:null,origin:'atelix_band',band:estimated.band,gsm:estimated.gsm,fx_snapshot_id:fxSnapshotId,usd_jpy:usdJpy};
 }
 function catalogPriceRows(value){
-  return [['USD',value.usd,.1],['JPY',value.jpy,100]].map(([currency,amount,increment])=>({currency,base_amount:Number((amount/1.2).toFixed(6)),fx_rate:1,fx_snapshot_id:value.fx_snapshot_id,markup_bps:2000,rounding_increment:increment,catalog_amount:amount,calculation_version:value.origin==='verified_input'?'atelix-verified-public-v1':'atelix-fabric-band-v1'}));
+  return [['USD',value.usd,.1],['JPY',value.jpy,100]].map(([currency,amount,increment])=>({currency,base_amount:Math.floor((amount/1.2)*1e6)/1e6,fx_rate:1,fx_snapshot_id:value.fx_snapshot_id,markup_bps:2000,rounding_increment:increment,catalog_amount:amount,calculation_version:value.origin==='verified_input'?'atelix-verified-public-v1':'atelix-fabric-band-v1'}));
 }
 
 module.exports={DEFAULT_USD_JPY,catalogPriceRows,heuristicJpy,publicPricing,roundUp};
