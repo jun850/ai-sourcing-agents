@@ -9,6 +9,16 @@ function config(){const url=String(process.env.SUPABASE_URL||'').replace(/\/$/,'
 async function request(cfg,route,options={}){const response=await fetch(`${cfg.url}${route}`,{...options,headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,...options.headers}});const text=await response.text();if(!response.ok)throw new Error(`${route} failed ${response.status}: ${text.slice(0,800)}`);return text?JSON.parse(text):null;}
 function mediaFile(manifestFile,storagePath){return path.join(path.dirname(path.resolve(manifestFile)),'media',storagePath);}
 async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});await Promise.all(runners);}
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sleep,attempts=10}){
+  let status=0;
+  for(let attempt=0;attempt<attempts;attempt+=1){
+    const response=await fetchImpl(url,{headers,cache:'no-store'});status=response.status;
+    if(response.ok)return;
+    if(attempt+1<attempts)await wait(Math.min(500*(2**attempt),4000));
+  }
+  throw new Error(`Algolia read-back failed for ${objectId} after ${attempts} attempts (status ${status})`);
+}
 function validate(document,manifestFile){
   if(document.version!==1||!['supplier','product'].includes(document.kind)||!Number.isInteger(document.sequence_no)||document.sequence_no<1||!/^[0-9a-f-]{36}$/.test(document.release_id||''))throw new Error('invalid source-free batch header');
   if(!Array.isArray(document.entities)||document.entities.length<1||document.entities.length>50)throw new Error('batch must contain 1..50 entities');
@@ -60,7 +70,7 @@ async function syncSearch(cfg,document){
   const sync=await request(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit:500})});if(!sync?.ok||Number(sync.failed||0)>0)throw new Error(`Algolia sync failed: ${JSON.stringify(sync)}`);
   if(document.kind==='supplier')return;
   const publicConfig=await request(cfg,'/functions/v1/algolia-public-config'),index=document.kind==='supplier'?publicConfig?.indices?.factories:publicConfig?.indices?.products;if(!publicConfig?.appId||!publicConfig?.apiKey||!index)throw new Error('Algolia public configuration incomplete');
-  await mapLimit(document.entities,12,async entity=>{const objectId=document.kind==='supplier'?entity.slug:entity.product.sku;const response=await fetch(`https://${publicConfig.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/${encodeURIComponent(objectId)}`,{headers:{'X-Algolia-Application-Id':publicConfig.appId,'X-Algolia-API-Key':publicConfig.apiKey},cache:'no-store'});if(!response.ok)throw new Error(`Algolia read-back failed for ${objectId}`);});
+  await mapLimit(document.entities,12,async entity=>{const objectId=document.kind==='supplier'?entity.slug:entity.product.sku;await verifyAlgoliaObject({url:`https://${publicConfig.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/${encodeURIComponent(objectId)}`,headers:{'X-Algolia-Application-Id':publicConfig.appId,'X-Algolia-API-Key':publicConfig.apiKey},objectId});});
 }
 async function liveReadback(cfg,document){if(document.kind==='supplier'){const ids=document.entities.map(entity=>entity.id).join(','),rows=await request(cfg,`/rest/v1/factories?id=in.(${ids})&select=id,slug,verify_state,archived_at`),byId=new Map((rows||[]).map(row=>[row.id,row]));for(const entity of document.entities){const row=byId.get(entity.id);if(!row||row.slug!==entity.slug||row.verify_state!=='verified'||row.archived_at)throw new Error(`supplier database read-back failed: ${entity.slug}`);}}else await mapLimit(document.entities,12,async entity=>{const row=await request(cfg,'/rest/v1/rpc/public_get_product',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_sku:entity.product.sku,p_locale:'en'})});if(!row||row.sku!==entity.product.sku||!row.media?.length)throw new Error(`public product read-back failed: ${entity.product.sku}`);});}
 async function main(){
@@ -85,4 +95,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={validate};
+module.exports={validate,verifyAlgoliaObject};
