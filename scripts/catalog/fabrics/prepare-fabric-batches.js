@@ -12,7 +12,7 @@ const DEFAULT_RUN='data/catalog-runs/apparelx-fabrics-10000';
 function arg(flag,fallback=null){const index=process.argv.indexOf(flag);return index<0?fallback:process.argv[index+1];}
 function readJson(file){return JSON.parse(fs.readFileSync(file,'utf8'));}
 function stable(value){if(Array.isArray(value))return value.map(stable);if(!value||typeof value!=='object')return value;return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]));}
-function digest(value){return crypto.createHash('sha256').update(typeof value==='string'?value:JSON.stringify(stable(value))).digest('hex');}
+function digest(value){return crypto.createHash('sha256').update(Buffer.isBuffer(value)||typeof value==='string'?value:JSON.stringify(stable(value))).digest('hex');}
 function translations(file){if(!file||!fs.existsSync(file))return {products:{},suppliers:{},faqs:{}};const value=readJson(file);return {products:value.products||{},suppliers:value.suppliers||{},faqs:value.faqs||{}};}
 function productDirs(runDir){return fs.readdirSync(path.join(runDir,'products'),{withFileTypes:true}).filter(item=>item.isDirectory()).map(item=>path.join(runDir,'products',item.name)).sort();}
 function existingFactoryMap(file){
@@ -157,4 +157,4 @@ async function prepare(options={}){
 
 async function main(){const report=await prepare({runDir:arg('--run-dir',DEFAULT_RUN),output:arg('--output'),translations:arg('--translations'),factories:arg('--factories'),supplierAliases:arg('--supplier-aliases',path.join(__dirname,'supplier-aliases.json')),gitCommitSha:arg('--git-commit-sha'),supabaseUrl:arg('--supabase-url'),storageBudgetMb:arg('--storage-budget-mb'),maxImages:arg('--max-images',4),target:arg('--target',4736),usdJpy:arg('--usd-jpy',pricing.DEFAULT_USD_JPY),fxSnapshotId:arg('--fx-snapshot-id','atelix-static-jpy-150'),build:process.argv.includes('--build')});process.stdout.write(`${JSON.stringify(report,null,2)}\n`);}
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={prepare};
+module.exports={prepare,digest};
