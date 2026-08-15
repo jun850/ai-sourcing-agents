@@ -15,6 +15,7 @@ const FAQ_REJECT=[
   /trademark|hangtag|woven label|pertex|sojitz/i
 ];
 const FAQ_RELEVANT=/wash|clean|care|shrink|color|colour|lot|print|dye|stain|glue|curl|finish|width|weight|composition|use|application|sample|test data/i;
+const PRODUCT_APPLICATIONS=new Set(['Blouson','T-shirt','Shirt','Blouse','Jacket','Coat','Pants','Shorts','Skirt','Dress','Suit','Knitwear','Activewear','Underwear','Socks','Bag','Footwear','Multiple apparel types']);
 
 function normalizeMaker(value){return String(value||'').normalize('NFKC').trim().replace(/\s+/g,' ').toLowerCase();}
 function makerSlug(value){return normalizeMaker(value).replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,64);}
@@ -88,6 +89,7 @@ function catalogPrice(sourcePrice,markupBps=2000){
   if(!Number.isFinite(amount)||amount<=0||currency!=='USD'||!Number.isInteger(markupBps)||markupBps<2000)return null;
   return Number((Math.ceil((amount*(1+markupBps/10000))/0.1)*0.1).toFixed(2));
 }
+function normalizeApplications(value){const text=String(value||'').trim();return text?(PRODUCT_APPLICATIONS.has(text)?text:'Multiple apparel types'):null;}
 function publicProduct(product,copy,media,pricing=null){
   const sku=skuFromKey(product.sourceId),constructionSlug=taxonomy.classify(product);
   const price=pricing?.usd??catalogPrice(product.sourcePrice);
@@ -95,11 +97,11 @@ function publicProduct(product,copy,media,pricing=null){
     sku,name:copy.en.name,description:copy.en.description,copy_i18n:copy,category:'fabrics',construction_slug:constructionSlug,
     construction:taxonomy.label(constructionSlug,'en'),subcategory:String(product.subcategory||'').trim()||null,
     comp:String(product.material||'').trim()||null,spec:String(product.specification||'').trim()||null,gsm:parseMetric(product.specification,'weight'),
-    applications:String(product.useApplications||'').trim()||null,season:String(product.season||'').trim()||null,handling_notes:String(product.handling||'').trim()||null,
+    applications:normalizeApplications(product.useApplications),season:String(product.season||'').trim()||null,handling_notes:String(product.handling||'').trim()||null,
     pricing_mode:price==null?'quote':'fixed',price:price??0,unit_type:'m',moq:null,listing_status:'active',is_private:false,
     images:media.map(item=>item.public_url),img:media[0]?.thumb_url||media[0]?.public_url||null
   };
   return assertSourceFree(fields,'product payload');
 }
 
-module.exports={FAQ_REJECT,PUBLIC_FORBIDDEN,assertSourceFree,catalogPrice,invalidReason,isDiscontinued,localeComplete,localeCopy,localizedAlt,makerSlug,normalizeMaker,publicProduct,publicSupplier,selectRelevantFaqs,skuFromKey,uuidFromText};
+module.exports={FAQ_REJECT,PRODUCT_APPLICATIONS,PUBLIC_FORBIDDEN,assertSourceFree,catalogPrice,invalidReason,isDiscontinued,localeComplete,localeCopy,localizedAlt,makerSlug,normalizeApplications,normalizeMaker,publicProduct,publicSupplier,selectRelevantFaqs,skuFromKey,uuidFromText};

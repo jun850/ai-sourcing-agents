@@ -38,7 +38,7 @@ function previewProduct(product,mediaManifest){
     construction:taxonomy.label(constructionSlug,'en'),subcategory:String(product.subcategory||'').trim()||null,
     comp:String(product.material||'').trim()||null,spec:String(product.specification||'').trim()||null,
     gsm:firstMetric(product.specification,/(?:industry )?weight[^0-9]{0,12}([0-9]+(?:[.]?[0-9]+)?)/i),
-    applications:String(product.useApplications||'').trim()||null,season:String(product.season||'').trim()||null,
+    applications:contract.normalizeApplications(product.useApplications),season:String(product.season||'').trim()||null,
     handling_notes:String(product.handling||'').trim()||null,pricing_mode:'fixed',price:publicPrice.usd,catalog_prices:{USD:publicPrice.usd,JPY:publicPrice.jpy},unit_type:'m',moq:null,
     listing_status:'active',is_private:false,media:images,images:images.map(item=>item.public_url),img:images[0]?.thumb_url||null,
     faqs,factory_id:factoryId,supplier_slug:supplierSlug,supplier_name:String(product.makerName||'').trim(),supplier_verified:false
