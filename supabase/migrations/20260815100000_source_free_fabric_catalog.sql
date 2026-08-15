@@ -547,24 +547,24 @@ GRANT SELECT ON public.catalog_constructions,public.product_media,public.catalog
 -- manage every object; supplier accounts are limited to products they own.
 DROP POLICY IF EXISTS catalog_media_product_owner_insert ON storage.objects;
 CREATE POLICY catalog_media_product_owner_insert ON storage.objects FOR INSERT TO authenticated WITH CHECK (
-  bucket_id='catalog-media' AND name ~ '^products/[0-9a-f-]{36}/[0-9a-f]{64}-(640|1600)[.]webp$' AND (
+  storage.objects.bucket_id='catalog-media' AND storage.objects.name ~ '^products/[0-9a-f-]{36}/[0-9a-f]{64}-(640|1600)[.]webp$' AND (
     (SELECT public.is_admin()) OR EXISTS (
       SELECT 1 FROM public.products p JOIN public.factories f ON f.id=p.factory_id
-      WHERE p.id=CASE WHEN name ~ '^products/[0-9a-f-]{36}/' THEN split_part(name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
+      WHERE p.id=CASE WHEN storage.objects.name ~ '^products/[0-9a-f-]{36}/' THEN split_part(storage.objects.name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
     )
   )
 );
 DROP POLICY IF EXISTS catalog_media_product_owner_update ON storage.objects;
 CREATE POLICY catalog_media_product_owner_update ON storage.objects FOR UPDATE TO authenticated USING (
-  bucket_id='catalog-media' AND ((SELECT public.is_admin()) OR EXISTS (
+  storage.objects.bucket_id='catalog-media' AND ((SELECT public.is_admin()) OR EXISTS (
     SELECT 1 FROM public.products p JOIN public.factories f ON f.id=p.factory_id
-    WHERE p.id=CASE WHEN name ~ '^products/[0-9a-f-]{36}/' THEN split_part(name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
+    WHERE p.id=CASE WHEN storage.objects.name ~ '^products/[0-9a-f-]{36}/' THEN split_part(storage.objects.name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
   ))
-) WITH CHECK (bucket_id='catalog-media');
+) WITH CHECK (storage.objects.bucket_id='catalog-media');
 DROP POLICY IF EXISTS catalog_media_product_owner_delete ON storage.objects;
 CREATE POLICY catalog_media_product_owner_delete ON storage.objects FOR DELETE TO authenticated USING (
-  bucket_id='catalog-media' AND ((SELECT public.is_admin()) OR EXISTS (
+  storage.objects.bucket_id='catalog-media' AND ((SELECT public.is_admin()) OR EXISTS (
     SELECT 1 FROM public.products p JOIN public.factories f ON f.id=p.factory_id
-    WHERE p.id=CASE WHEN name ~ '^products/[0-9a-f-]{36}/' THEN split_part(name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
+    WHERE p.id=CASE WHEN storage.objects.name ~ '^products/[0-9a-f-]{36}/' THEN split_part(storage.objects.name,'/',2)::uuid ELSE NULL END AND f.owner_profile_id=(SELECT auth.uid()) AND f.archived_at IS NULL
   ))
 );
