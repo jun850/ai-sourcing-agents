@@ -67,8 +67,8 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
   return uploaded;
 }
 async function syncSearch(cfg,document){
-  const sync=await request(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit:500})});if(!sync?.ok||Number(sync.failed||0)>0)throw new Error(`Algolia sync failed: ${JSON.stringify(sync)}`);
   if(document.kind==='supplier')return;
+  const sync=await request(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit:500})});if(!sync?.ok||Number(sync.failed||0)>0)throw new Error(`Algolia sync failed: ${JSON.stringify(sync)}`);
   const publicConfig=await request(cfg,'/functions/v1/algolia-public-config'),index=document.kind==='supplier'?publicConfig?.indices?.factories:publicConfig?.indices?.products;if(!publicConfig?.appId||!publicConfig?.apiKey||!index)throw new Error('Algolia public configuration incomplete');
   await mapLimit(document.entities,12,async entity=>{const objectId=document.kind==='supplier'?entity.slug:entity.product.sku;await verifyAlgoliaObject({url:`https://${publicConfig.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/${encodeURIComponent(objectId)}`,headers:{'X-Algolia-Application-Id':publicConfig.appId,'X-Algolia-API-Key':publicConfig.apiKey},objectId});});
 }
