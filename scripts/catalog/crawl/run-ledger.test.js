@@ -39,3 +39,34 @@ test("rejects production-capable run modes", async (context) => {
   context.after(() => ledger.close());
   assert.throws(() => ledger.createRun({ source: "apparelx", scope: "oem", mode: "publish" }), /only supports crawl-only/);
 });
+
+test("explicitly requeues terminal failures for repair", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "atelix-ledger-retry-"));
+  context.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const ledger = new RunLedger(path.join(directory, "run.sqlite"));
+  context.after(() => ledger.close());
+  ledger.createRun({ id: "run-retry", source: "apparelx", scope: "fabrics" });
+  ledger.enqueue("run-retry", [{ kind: "product", sourceId: "P1", url: "https://www.apparel-x.com/product/P1" }]);
+  const item = ledger.claimNext("run-retry", "worker");
+  ledger.fail(item.id, "worker", new Error("missing"), { retryable: false });
+  assert.equal(ledger.retryPermanentErrors("run-retry"), 1);
+  assert.equal(ledger.claimNext("run-retry", "repair").source_id, "P1");
+});
+
+test("reserves an exact completed limit across concurrent workers", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "atelix-ledger-limit-"));
+  context.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const ledger = new RunLedger(path.join(directory, "run.sqlite"));
+  context.after(() => ledger.close());
+  ledger.createRun({ id: "run-limit", source: "apparelx", scope: "fabrics" });
+  ledger.enqueue("run-limit", ["P1", "P2", "P3"].map((sourceId) => ({
+    kind: "product", sourceId, url: `https://www.apparel-x.com/product/${sourceId}`,
+  })));
+  const first = ledger.claimNext("run-limit", "worker-a", { completedLimit: 2 });
+  const second = ledger.claimNext("run-limit", "worker-b", { completedLimit: 2 });
+  assert.equal(ledger.claimNext("run-limit", "worker-c", { completedLimit: 2 }), null);
+  ledger.complete(first.id, "worker-a");
+  assert.equal(ledger.claimNext("run-limit", "worker-a", { completedLimit: 2 }), null);
+  ledger.fail(second.id, "worker-b", new Error("offline"), { retryable: false });
+  assert.equal(ledger.claimNext("run-limit", "worker-a", { completedLimit: 2 }).source_id, "P3");
+});

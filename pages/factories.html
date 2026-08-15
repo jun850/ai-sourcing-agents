@@ -93,19 +93,19 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.getElementById('factoryDirectorySummary').innerHTML=`<b style="color:var(--ink)">${catalogStats.factories}</b> ${T('verified material and production companies across')} <b style="color:var(--ink)">${catalogStats.countries}</b> ${T('countries')}`;
     const ty=sel('type'), rg=sel('region'), ct=sel('cert');
     let list=F.filter(f=>(!ty.length||ty.includes(f.type))&&(!rg.length||rg.includes(f.region))&&(!ct.length||ct.some(c=>f.certs.includes(c))));
-    const isNewFactory=f=>+String(f.id).split('-')[1]>=14;
-    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewFactory(b))-Number(isNewFactory(a)) || (b.years||0)-(a.years||0));
+    const isRecentlyListed=f=>(f.productCount>0&&f.orders==='New')||+String(f.id).split('-')[1]>=14;
+    if(sort==='rec') list=[...list].sort((a,b)=>Number(isRecentlyListed(b))-Number(isRecentlyListed(a)) || (b.years||0)-(a.years||0));
     else if(sort==='orders') list=[...list].sort((a,b)=>parseInt(b.orders)-parseInt(a.orders));
     else if(sort==='years') list=[...list].sort((a,b)=>b.years-a.years);
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;
     grid.innerHTML=list.map(f=>{
-      const isNewFactory=+String(f.id).split('-')[1]>=14;
+      const isNewFactory=isRecentlyListed(f);
       const orderDetail=f.orders==='New'?T('Recently listed'):(f.orders?`${f.orders} ${T('orders')}`:T('Contact supplier'));
       const ageDetail=f.years?`${f.years} ${T('sp.years')}`:(f.founded?`${T('sp.established')} ${f.founded}`:T('Established supplier'));
       const supplierName=supplierText(f,'name');
       return `
       <a class="fcard" href="supplier.html?id=${encodeURIComponent(f.id)}">
-        <div class="fthumb"><img src="${esc(factoryImage(f))}" alt="${esc(supplierName)}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} ${T('Verified Factory')}</span>`:''}${isNewFactory?`<span class="fnew">${T('New source')}</span>`:''}</div>
+        <div class="fthumb"><img src="${esc(factoryImage(f))}" alt="${esc(supplierName)}" loading="lazy">${f.verified?`<span class="fveric">${IC.shield} ${T('Verified Factory')}</span>`:''}${isNewFactory?`<span class="fnew">${T('Recently listed')}</span>`:''}</div>
         <div class="fbody">
           <div class="fname">${esc(supplierName)}</div>
           <span class="ftype">${esc(f.type)}</span>

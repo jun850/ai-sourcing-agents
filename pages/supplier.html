@@ -29,13 +29,14 @@
 <script src="../js/api.js"></script>
 <script src="../js/copilot-llm.js"></script>
 <script>
-window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const FMAP=window.ARCANA_FACTORY_MAP, PRODUCTS=window.ARCANA_PRODUCTS;
   const api=window.ARCANA_API;
   const T=window.ARCANA_T||(x=>x), TR=window.ARCANA_TR||(x=>x);
   const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
   const id=new URLSearchParams(location.search).get('id');
+  if(id&&!FMAP[id]&&api?.getPublicFactory){const remoteFactory=await api.getPublicFactory(id).catch(()=>null);if(remoteFactory){FMAP[id]=remoteFactory;window.ARCANA_FACTORIES.push(remoteFactory);}}
   if(!id || !FMAP[id]){
     document.title='Supplier not found — Atelix';
     document.getElementById('supRoot').innerHTML='<section class="panel empty-state"><h1>Supplier not found</h1><p>This supplier may have been removed or the link may be incorrect.</p><a class="btn btn-green" href="factories.html">Browse factories</a></section>';
@@ -43,8 +44,9 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   }
   const f=FMAP[id];
   const displayLoc=window.ATELIX_factoryLocation(f);
-  const belongsToSupplier=p=>p.factorySlug?String(p.factorySlug)===String(f.id):p.factoryId&&f.databaseId?String(p.factoryId)===String(f.databaseId):/^F-\d+$/.test(String(f.id))&&p.seller===f.name;
-  const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5);
+  const belongsToSupplier=p=>String(p.factorySlug||'')===String(f.id)||Boolean(p.factoryId&&f.databaseId&&String(p.factoryId)===String(f.databaseId));
+  let feat=PRODUCTS.filter(belongsToSupplier).slice(0,5);
+  if(api?.fetchCatalogPage){const supplierProducts=await api.fetchCatalogPage({supplierSlug:f.id,pageSize:5}).catch(()=>null);if(supplierProducts)feat=supplierProducts.products||[];}
   const card=x=>window.ARCANA_card(x,{href:'product.html?id='+x.id, shop:false});
   const format=(key,vars)=>T(key).replace(/\{(\w+)\}/g,(_,name)=>vars&&vars[name]!=null?vars[name]:'');
   const websiteHref=value=>{try{const url=new URL(String(value||''));return /^(?:https?:)$/.test(url.protocol)?url.href:null;}catch(_){return null;}};

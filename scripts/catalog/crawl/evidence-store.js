@@ -51,7 +51,8 @@ class EvidenceStore {
     try { contents = await fs.readFile(this.canonicalPath, "utf8"); } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }
-    const records = contents.split("\n").filter(Boolean).map(JSON.parse);
+    const parsedRecords = contents.split("\n").filter(Boolean).map(JSON.parse);
+    const records = [...new Map(parsedRecords.map((record) => [`${record.source || ""}:${record.sourceId || ""}`, record])).values()];
     const targetPath = path.join(this.rootDir, "canonical.json");
     const temporaryPath = `${targetPath}.${process.pid}.tmp`;
     await fs.writeFile(temporaryPath, `${JSON.stringify({ metadata: { ...metadata, recordCount: records.length }, records }, null, 2)}\n`, "utf8");

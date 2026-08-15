@@ -597,7 +597,7 @@
     const shopRow =
       opts.shop === false
         ? ""
-        : `<div class="tshop"><span class="tnm">${esc(translated(p.seller))}</span><span class="tvf">${IC.check}</span></div>`;
+        : `<div class="tshop"><span class="tnm">${esc(translated(p.seller))}</span>${p.supplierVerified===false?'':`<span class="tvf">${IC.check}</span>`}</div>`;
     return `<a class="tcard" href="${esc(href)}">
     <div class="tthumb">${badge}<img src="${esc(productAsset(p))}" alt="${esc(nm)}" loading="lazy"></div>
     <div class="tbody">
@@ -2942,7 +2942,7 @@
     if (document.body.hasAttribute("data-catalog")) await hydrateCatalog();
     if (window.ARCANA_PAGE)
       try {
-        window.ARCANA_PAGE({ P, ASSET, Store, IC, toast });
+        await window.ARCANA_PAGE({ P, ASSET, Store, IC, toast });
       } catch (err) {
         console.error(err);
       }

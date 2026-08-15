@@ -42,3 +42,26 @@ test("crawl-only pipeline persists evidence and canonical JSON without a publish
   assert.deepEqual(output.records, [{ source: "fixture", sourceId: "P1", scope: "fabrics" }]);
   await assert.rejects(fs.access(path.join(directory, "publish.json")));
 });
+
+test("inventory-all records excluded products without crawling beyond the selection limit", async (context) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "atelix-pipeline-inventory-"));
+  context.after(() => fs.rm(directory, { recursive: true, force: true }));
+  const ledger = new RunLedger(path.join(directory, "run.sqlite"));
+  context.after(() => ledger.close());
+  ledger.createRun({ id: "run-inventory", source: "fixture", scope: "fabrics", options: { maxItems: 2 } });
+  const stored = new EvidenceStore(directory);
+  let inventory = null;
+  stored.writeInventory = async (records) => { inventory = records; };
+  const adapter = new FixtureAdapter();
+  adapter.discover = async function* (_client, { onEvidence }) {
+    await onEvidence({ kind: "discovery", sourceId: "page-1", url: "https://www.apparel-x.com/search", body: "fixture" });
+    for (const sourceId of ["P1", "P2", "P3"]) yield { kind: "product", sourceId, url: `https://www.apparel-x.com/product/${sourceId}` };
+  };
+  const result = await runCrawlOnly({
+    adapter, client: {}, ledger, evidenceStore: stored, scope: "fabrics", runId: "run-inventory",
+    maxItems: 2, inventoryAll: true, logger: { warn() {} },
+  });
+  assert.equal(result.canonical.recordCount, 2);
+  assert.deepEqual(inventory.map((record) => [record.sourceId, record.selected]), [["P1", true], ["P2", true], ["P3", false]]);
+  assert.equal(ledger.items("run-inventory").length, 2);
+});

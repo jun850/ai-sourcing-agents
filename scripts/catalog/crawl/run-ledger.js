@@ -92,12 +92,30 @@ class RunLedger {
     `).run(now, runId, now).changes);
   }
 
-  claimNext(runId, owner, { leaseMs = 60_000 } = {}) {
+  retryPermanentErrors(runId) {
+    const now = isoNow(this.now());
+    return Number(this.db.prepare(`
+      UPDATE crawl_queue SET state='retryable_error', lease_owner=NULL, lease_expires_at=NULL,
+        heartbeat_at=NULL, updated_at=? WHERE run_id=? AND state='permanent_error'
+    `).run(now, runId).changes);
+  }
+
+  claimNext(runId, owner, { leaseMs = 60_000, completedLimit = null } = {}) {
     const nowMs = this.now();
     const now = isoNow(nowMs);
     const expiry = isoNow(nowMs + leaseMs);
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      if (completedLimit !== null) {
+        const reserved = this.db.prepare(`
+          SELECT count(*) AS count FROM crawl_queue
+          WHERE run_id=? AND state IN ('completed','crawling')
+        `).get(runId);
+        if (Number(reserved.count) >= completedLimit) {
+          this.db.exec("COMMIT");
+          return null;
+        }
+      }
       const row = this.db.prepare(`
         SELECT * FROM crawl_queue
         WHERE run_id=? AND state IN ('discovered','retryable_error')
@@ -163,6 +181,13 @@ class RunLedger {
   stats(runId) {
     const rows = this.db.prepare("SELECT state, count(*) AS count FROM crawl_queue WHERE run_id=? GROUP BY state ORDER BY state").all(runId);
     return Object.fromEntries(rows.map((row) => [row.state, Number(row.count)]));
+  }
+
+  items(runId) {
+    return this.db.prepare(`
+      SELECT id,run_id,entity_kind,source_id,url,state,attempt_count,output_path,output_hash,
+        last_error,discovered_at,updated_at FROM crawl_queue WHERE run_id=? ORDER BY id
+    `).all(runId).map((row) => ({ ...row, attempt_count: Number(row.attempt_count) }));
   }
 
   close() { this.db.close(); }

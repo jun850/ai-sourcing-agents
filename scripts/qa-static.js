@@ -31,6 +31,7 @@ const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"ut
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
 const itemNotesMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814223000_item_level_order_notes.sql"),"utf8");
 const shippingMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814220000_country_shipping_and_product_media.sql"),"utf8");
+const sourceFreeMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260815100000_source_free_fabric_catalog.sql"),"utf8");
 const algoliaSync=fs.readFileSync(path.join(root,"supabase/functions/algolia-sync/index.ts"),"utf8");
 const vercelIgnore=fs.readFileSync(path.join(root,".vercelignore"),"utf8");
 for(const privatePath of ['.env*','data/','research/','scripts/','supabase/'])if(!vercelIgnore.split(/\r?\n/).includes(privatePath))problems.push(`.vercelignore: missing private deployment boundary ${privatePath}`);
@@ -58,7 +59,7 @@ for(const relative of ['index.html','pages/product.html','pages/supplier.html','
   for(const mailto of source.matchAll(/mailto:([^?"'`$\s]+)/gi))if(mailto[1].toLowerCase()!=='info@arcanawangsa.com')problems.push(`${relative}: public mailto must use info@arcanawangsa.com`);
 }
 if(!translations.includes("window.ATELIX_CONTACT_EMAIL = 'info@arcanawangsa.com'"))problems.push('js/data.js: missing canonical Atelix contact address');
-if(!catalogApi.includes('supplier_taxonomy_memberships(l2,l3,is_primary)'))problems.push('js/api.js: verified supplier taxonomy must hydrate with the public catalog');
+if(!catalogApi.includes('supplier_taxonomy_memberships(l2,l3,is_primary)')&&!catalogApi.includes("public_list_catalog_factories"))problems.push('js/api.js: verified supplier taxonomy must hydrate with the public catalog');
 if(!categoryPage.includes('supplierList.map(supplierCard)'))problems.push('pages/category.html: existing category grid must surface matching verified suppliers');
 if(/Incoterms|PO number|data-t="(?:incoterm|po)"/.test(checkoutPage))problems.push('pages/checkout.html: Incoterms and PO number must stay out of the customer checkout flow');
 if(/id="orderNote"|Order note for suppliers/.test(checkoutPage)||!checkoutPage.includes('data-item-note'))problems.push('pages/checkout.html: supplier notes must be captured per item, never as a global order note');
@@ -82,10 +83,12 @@ if(supplierPage.includes('class="sup-tags"')||supplierPage.includes('class="pane
 if(supplierPage.includes('class="crumbs"'))problems.push('pages/supplier.html: supplier profiles must not render the broken factory breadcrumb');
 if(supplierPage.includes('class="panel overview"'))problems.push('pages/supplier.html: supplier profiles must not render a company overview section');
 if(!supplierPage.includes('class="supplier-website"')||!supplierPage.includes('rel="noopener noreferrer"'))problems.push('pages/supplier.html: supplier websites must render as safe clickable links');
-if(!supplierPage.includes("const feat=PRODUCTS.filter(belongsToSupplier).slice(0,5)")||supplierPage.includes('own.length?own')||!supplierPage.includes("/^F-\\d+$/.test(String(f.id))"))problems.push('pages/supplier.html: public products must use exact supplier linkage without imported-name or category fallback');
+if(!supplierPage.includes("let feat=PRODUCTS.filter(belongsToSupplier).slice(0,5)")||!supplierPage.includes('supplierSlug:f.id')||supplierPage.includes('own.length?own')||supplierPage.includes('p.seller===f.name')||!supplierPage.includes('p.factorySlug')||!supplierPage.includes('p.factoryId&&f.databaseId'))problems.push('pages/supplier.html: public products must use exact supplier linkage without imported-name or category fallback');
 if(!supplierPage.includes('supplier-products-empty'))problems.push('pages/supplier.html: suppliers without exact linked products must render an empty state');
 if(fs.readFileSync(path.join(root,'pages/search.html'),'utf8').includes('(factory.tags||[])'))problems.push('pages/search.html: supplier tags must not render or drive public browser search');
 for(const contract of ['copy_i18n','supplier_taxonomy_memberships','supplier_source_contacts','catalog_media_records','catalog_calculate_price'])if(!catalogMigration.includes(contract))problems.push(`catalog import migration missing: ${contract}`);
+for(const contract of ['product_media','catalog_faqs','public_list_catalog_products','public_get_product','public_list_catalog_factories','catalog_finalize_source_free_batch','catalog_verify_source_free_batch','catalog_rollback_source_free_batch','catalog_guard_order_item','catalog_locale_complete'])if(!sourceFreeMigration.includes(contract))problems.push(`source-free catalog migration missing: ${contract}`);
+if(/www[.]apparel-x[.]com|apparelx\//i.test(sourceFreeMigration))problems.push('source-free catalog migration must not retain crawl-provider provenance');
 const gold=(globalStyles.match(/--gold:(#[0-9a-f]{6})/i)||[])[1];
 const luminance=hex=>{const channels=hex.slice(1).match(/../g).map(value=>parseInt(value,16)/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);return .2126*channels[0]+.7152*channels[1]+.0722*channels[2]};
 if(!gold||1.05/(luminance(gold)+.05)<7)problems.push("css/styles.css: brass CTA must maintain 7:1 contrast with white text");

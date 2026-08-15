@@ -93,6 +93,44 @@ test("product mapping excludes chrome icons and converts gallery thumbnails to f
   ]);
 });
 
+test("product mapping extracts fabric details and ignores video media", () => {
+  const adapter = new ApparelXAdapter();
+  const html = `<div id="itemcontainer" maker="189"></div>
+    <div class="itemheadarea_itemname">Cloth One</div>
+    <div class="itemheadarea_itemheaddescription">Soft cloth.</div>
+    <div class="itemheadarea_makerarea_value">Maker One</div>
+    <div class="itemcolorbox skubox"><div class="itemcolorbox_colorcode">01</div><div class="itemcolorbox_colorname">Red</div></div>
+    <table><tr class="detailinfobox" type="searchitemtype1"><th class="detailinfo_caption">Subcategory</th><td class="detailinfo_value">Twill</td></tr>
+    <tr class="detailinfobox" type="material"><th class="detailinfo_caption">Material</th><td class="detailinfo_value">100% Cotton</td></tr></table>
+    <video poster="videos/M/thumb.jpg"><source src="videos/M/item.mp4" type="video/mp4"></video>
+    <img class="itemmainphoto" src="img/item/M/123.jpg">`;
+  const record = adapter.mapToCanonical({ kind: "product", sourceId: "123", url: "https://www.apparel-x.com/item.php?itemid=123", html, discovery: { ItemCode: "F-1", Company: "SUP", CompanyCode: "S1", ECommerceItemCategoryCode: "FABRIC" } }, { scope: "fabrics" });
+  assert.equal(record.sourceLocale, "en");
+  assert.equal(record.name, "Cloth One");
+  assert.equal(record.subcategory, "Twill");
+  assert.equal(record.material, "100% Cotton");
+  assert.deepEqual(record.colors, [{ code: "01", name: "Red" }]);
+  assert.equal(record.images.length, 1);
+  assert.equal(JSON.stringify(record).includes("mp4"), false);
+  assert.equal(JSON.stringify(record).includes("videos/"), false);
+});
+
+test("product lifecycle excludes exact discontinuation tags but not color-only prose", () => {
+  const adapter = new ApparelXAdapter();
+  const tagged = adapter.mapToCanonical({
+    kind: "product", sourceId: "301", url: "https://www.apparel-x.com/item.php?itemid=301",
+    html: `<div class="itemheadarea_itemname">Old Fabric</div><table><tr class="detailinfobox" type="tags"><th class="detailinfo_caption">Tag</th><td class="detailinfo_value">Scheduled To Be Discontinued</td></tr></table>`,
+    discovery: { ItemCode: "OLD", ECommerceItemCategoryCode: "FABRIC" },
+  }, { scope: "fabrics" });
+  const colorOnly = adapter.mapToCanonical({
+    kind: "product", sourceId: "302", url: "https://www.apparel-x.com/item.php?itemid=302",
+    html: `<div class="itemheadarea_itemname">Active Fabric</div><div class="itemheadarea_itemheaddescription">One pearl color will be discontinued after stock runs out.</div>`,
+    discovery: { ItemCode: "ACTIVE", ECommerceItemCategoryCode: "FABRIC" },
+  }, { scope: "fabrics" });
+  assert.deepEqual(tagged.lifecycle, { status: "scheduled_for_discontinuation", sourceTag: "Scheduled To Be Discontinued", excludeAfterCrawl: true });
+  assert.deepEqual(colorOnly.lifecycle, { status: "active", sourceTag: "", excludeAfterCrawl: false });
+});
+
 test("maps the cached OEM profile and keeps its email explicitly private", async () => {
   const adapter = new ApparelXAdapter();
   const html = await fs.readFile(path.resolve(__dirname, "../../../data/apparel-x-oem/raw/profiles/PANAA.html"), "utf8");

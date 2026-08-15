@@ -122,6 +122,79 @@ function firstText(html, className) {
   return htmlToText(String(html || "").match(pattern)?.[1] || "");
 }
 
+function extractAttribute(html, id, attribute) {
+  const escapedId = String(id).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const tag = String(html || "").match(new RegExp(`<[^>]+\\bid=["']${escapedId}["'][^>]*>`, "i"))?.[0] || "";
+  return decodeHtml(tag.match(new RegExp(`\\b${attribute}=["']([^"']*)["']`, "i"))?.[1] || "").trim();
+}
+
+function extractDetailTable(html) {
+  const fields = {};
+  const rows = String(html || "").match(/<tr\b[^>]*class=["'][^"']*\bdetailinfobox\b[^"']*["'][^>]*>[\s\S]*?<\/tr>/gi) || [];
+  for (const row of rows) {
+    const label = htmlToText(row.match(/<th\b[^>]*class=["'][^"']*\bdetailinfo_caption\b[^"']*["'][^>]*>([\s\S]*?)<\/th>/i)?.[1] || "");
+    const value = htmlToText(row.match(/<td\b[^>]*class=["'][^"']*\bdetailinfo_value\b[^"']*["'][^>]*>([\s\S]*?)<\/td>/i)?.[1] || "");
+    const type = row.match(/\btype=["']([^"']+)["']/i)?.[1] || "";
+    if (!label || !value) continue;
+    const key = ({
+      Category: "category", Subcategory: "subcategory", Gender: "gender",
+      "Use Applications": "useApplications", Season: "season", Organization: "organization",
+      "Color Pattern": "colorPattern", Style: "style", Specification: "specification",
+      Material: "material", Handling: "handling", Maker: "maker",
+    })[label] || type || label;
+    fields[key] = value;
+  }
+  return fields;
+}
+
+function extractCodeNamePairs(html, prefix) {
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `class=["'][^"']*\\b${escaped}box_${escaped === "itemcolor" ? "color" : escaped.replace(/^item/, "")}code\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/div>[\\s\\S]*?class=["'][^"']*\\b${escaped}box_${escaped === "itemcolor" ? "color" : escaped.replace(/^item/, "")}name\\b[^"']*["'][^>]*>([\\s\\S]*?)<\\/div>`,
+    "gi",
+  );
+  const values = [];
+  let match;
+  while ((match = pattern.exec(String(html || "")))) {
+    values.push({ code: htmlToText(match[1]), name: htmlToText(match[2]) });
+  }
+  return values;
+}
+
+function extractSimpleOptions(html, type) {
+  const values = [];
+  const pattern = new RegExp(
+    `<div[^>]+class=["'][^"']*\\bitem${type}box\\b[^"']*\\bskubox\\b[^"']*["'][^>]*>([\\s\\S]*?)(?=<div[^>]+class=["'][^"']*\\bitem${type}box\\b|<\\/div>\\s*<\\/div>)`,
+    "gi",
+  );
+  let match;
+  while ((match = pattern.exec(String(html || "")))) {
+    const text = htmlToText(match[1]);
+    if (text) values.push(text);
+  }
+  return [...new Set(values)];
+}
+
+function extractCodes(html, attribute) {
+  const values = [];
+  const pattern = new RegExp(`\\b${attribute}=["']([^"']+)["']`, "gi");
+  let match;
+  while ((match = pattern.exec(String(html || "")))) values.push(decodeHtml(match[1]).trim());
+  return [...new Set(values.filter(Boolean))];
+}
+
+function extractFaqs(html) {
+  const values = [];
+  const pattern = /<div[^>]+itemprop=["']name["'][^>]*>([\s\S]*?)<\/div>[\s\S]*?<div[^>]+itemprop=["']text["'][^>]*>([\s\S]*?)<\/div>/gi;
+  let match;
+  while ((match = pattern.exec(String(html || "")))) {
+    const question = htmlToText(match[1]);
+    const answer = htmlToText(match[2]);
+    if (question && answer) values.push({ question, answer });
+  }
+  return values;
+}
+
 function extractProfileDetails(html) {
   const labels = new Map([
     ["事業内容", "businessDescription"], ["セールスポイント", "sellingPoints"],
@@ -297,25 +370,60 @@ class ApparelXAdapter extends SourceAdapter {
 
     const jsonLd = extractJsonLdProducts(raw.html)[0] || {};
     const discovery = raw.discovery || {};
+    const detailFields = extractDetailTable(raw.html);
+    const lifecycleTag = String(detailFields.tags || "").trim();
+    const discontinued = /\bdiscontinuedinfoarea\b/i.test(raw.html) || /^discontinued(?:\s+products?)?$/i.test(lifecycleTag);
+    const scheduledForDiscontinuation = !discontinued && /\bdiscontinued\b/i.test(lifecycleTag);
     const title = jsonLd.name || discovery.ECommerceItemName || discovery.ItemName || extractMeta(raw.html, "og:title") || htmlToText(raw.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "");
     const imageValues = Array.isArray(jsonLd.image) ? jsonLd.image : jsonLd.image ? [jsonLd.image] : [];
     const images = [...imageValues.map((value) => { try { return { sourceUrl: this.canonicalizeUrl(value), kind: "product" }; } catch { return null; } }).filter(Boolean), ...extractImages(raw.html, raw.url, { entityType: "product" })];
     return {
-      entityType: "product", source: SOURCE_ID, sourceId: raw.sourceId, sourceUrl: this.canonicalizeUrl(raw.url), sourceLocale: "ja", scope,
-      name: title, description: jsonLd.description || extractMeta(raw.html, "description"),
+      entityType: "product", source: SOURCE_ID, sourceId: raw.sourceId, sourceUrl: this.canonicalizeUrl(raw.url), sourceLocale: "en", scope,
+      name: firstText(raw.html, "itemheadarea_itemname") || title,
+      sourceItemName: discovery.ItemName || "",
+      description: firstText(raw.html, "itemheadarea_itemheaddescription") || jsonLd.description || extractMeta(raw.html, "description"),
       sku: jsonLd.sku || discovery.ItemCode || jsonLd.productID || raw.sourceId,
       supplierSourceId: discovery.Company || "",
       supplierCode: discovery.CompanyCode || "",
       sourceCategory: discovery.ECommerceItemCategoryCode || PRODUCT_SCOPE_CONFIG[scope]?.category || "",
       sourceUnit: discovery.StandardUnitCode || "",
       sourcePrice: jsonLd.offers?.price || discovery.Price1 ? { amount: String(jsonLd.offers?.price || discovery.Price1), currency: jsonLd.offers?.priceCurrency || "USD" } : null,
+      makerId: extractAttribute(raw.html, "itemcontainer", "maker"),
+      makerName: firstText(raw.html, "itemheadarea_makerarea_value") || detailFields.maker || "",
+      supplierName: firstText(raw.html, "itemheadarea_supplierarea_value"),
+      category: detailFields.category || "",
+      subcategory: detailFields.subcategory || "",
+      gender: detailFields.gender || "",
+      useApplications: detailFields.useApplications || "",
+      season: detailFields.season || "",
+      organization: detailFields.organization || "",
+      colorPattern: detailFields.colorPattern || "",
+      style: detailFields.style || "",
+      specification: detailFields.specification || "",
+      material: detailFields.material || "",
+      handling: detailFields.handling || "",
+      styleTags: extractCodes(raw.html, "searchitemtagcode"),
+      materialTags: extractCodes(raw.html, "materialtagcode"),
+      colors: extractCodeNamePairs(raw.html, "itemcolor"),
+      units: extractSimpleOptions(raw.html, "unit"),
+      sizes: extractSimpleOptions(raw.html, "spec"),
+      extensionKeys: extractSimpleOptions(raw.html, "extensionkey"),
+      faqs: extractFaqs(raw.html),
+      detailFields,
+      lifecycle: {
+        status: discontinued ? "discontinued" : scheduledForDiscontinuation ? "scheduled_for_discontinuation" : "active",
+        sourceTag: lifecycleTag,
+        excludeAfterCrawl: discontinued || scheduledForDiscontinuation,
+      },
       images: [...new Map(images.map((image) => [image.sourceUrl, image])).values()],
       rawStructuredData: jsonLd,
+      sourceListingMetadata: discovery,
+      crawledAt: new Date().toISOString(),
     };
   }
 }
 
 module.exports = {
   ApparelXAdapter, CANONICAL_HOST, CANONICAL_ORIGIN, ITEM_LIST_ENDPOINT, PRODUCT_SCOPE_CONFIG, SCOPES, SOURCE_ID,
-  canonicalizeApparelXUrl, extractJsonLdProducts, extractNextPageUrl, extractProductLinks,
+  canonicalizeApparelXUrl, extractDetailTable, extractJsonLdProducts, extractNextPageUrl, extractProductLinks,
 };

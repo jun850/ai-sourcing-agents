@@ -321,6 +321,11 @@
                   <label>About</label
                   ><input name="bio" placeholder="A short factory overview" />
                 </div>
+                <div class="field-lg"><label>Japanese name</label><input name="name_ja" /></div>
+                <div class="field-lg"><label>Japanese description</label><textarea name="bio_ja"></textarea></div>
+                <div class="field-lg"><label>Chinese name</label><input name="name_zh" /></div>
+                <div class="field-lg"><label>Chinese description</label><textarea name="bio_zh"></textarea></div>
+                <div class="field-lg"><label>Supplier FAQ</label><div id="factoryFaqEditor"></div><button class="btn btn-out" id="factoryAddFaq" type="button">+ Add FAQ</button></div>
                 <div class="field-lg">
                   <label>Photo</label
                   ><input name="imgFile" type="file" accept="image/*" />
@@ -669,6 +674,15 @@
                     placeholder="e.g. Solid, custom colours"
                   />
                 </div>
+                <div class="field-lg">
+                  <label>Construction taxonomy</label><select name="construction_slug" id="dashboardConstruction"></select>
+                </div>
+                <div class="field-lg"><label>Japanese name</label><input name="name_ja" /></div>
+                <div class="field-lg full"><label>Japanese description</label><textarea name="description_ja"></textarea></div>
+                <div class="field-lg"><label>Chinese name</label><input name="name_zh" /></div>
+                <div class="field-lg full"><label>Chinese description</label><textarea name="description_zh"></textarea></div>
+                <div class="field-lg full"><label>Product gallery</label><div id="dashboardMediaEditor" class="product-media-list"></div><p class="hint">Maximum four images. The first must be a flat swatch or sample card. Use the arrow controls to change PDP order.</p></div>
+                <div class="field-lg full"><label>Important to read FAQ</label><div id="dashboardFaqEditor"></div><button class="btn btn-out" id="dashboardAddFaq" type="button">+ Add FAQ</button></div>
                 <div class="field-lg full product-options-field">
                   <div class="product-options-title"><strong>Buyer-selectable options</strong><span>Optional</span></div>
                   <div id="productOptionsEditor"></div>
@@ -752,7 +766,7 @@
                 </div>
                 <div class="field-lg">
                   <label>Photo</label
-                  ><input name="imgFile" type="file" accept="image/*" />
+                  ><input name="imgFile" type="file" accept="image/jpeg,image/png,image/webp,image/avif" />
                 </div>
               </div>
 
@@ -1174,6 +1188,7 @@
 
     <div id="ftr"></div>
     <script src="../js/data.js"></script>
+    <script src="../js/catalog-taxonomy.js"></script>
     <script src="../js/copilot.js"></script>
     <script src="../js/components.js"></script>
     <script src="../js/product-options.js"></script>
@@ -1330,6 +1345,20 @@
 
         const skuManager = document.getElementById("skuManager");
         const skuForm = document.getElementById("skuForm");
+        const constructionSelect = document.getElementById("dashboardConstruction");
+        constructionSelect.innerHTML=(window.ATELIX_CATALOG_TAXONOMY?.CONSTRUCTIONS||[]).map(item=>`<option value="${esc(item.slug)}">${esc(item.label.en)}</option>`).join("");
+        let dashboardMedia=[],dashboardFaqs=[];
+        function renderDashboardMedia(){
+          const root=document.getElementById("dashboardMediaEditor");
+          root.innerHTML=dashboardMedia.length?dashboardMedia.map((item,index)=>`<div class="product-media-row" data-dashboard-media="${index}" tabindex="-1"><div class="product-media-preview"><img src="${esc(item.thumb_url||item.public_url)}" alt=""><span>${index===0?'Main':index+1}</span></div><label class="field-lg"><span class="sr-only">Image role</span><select data-dashboard-media-role><option value="flat_swatch"${item.role==='flat_swatch'?' selected':''}>Flat swatch</option><option value="sample_card"${item.role==='sample_card'?' selected':''}>Sample card</option><option value="texture"${item.role==='texture'?' selected':''}>Texture</option><option value="drape"${item.role==='drape'?' selected':''}>Drape</option><option value="detail"${item.role==='detail'?' selected':''}>Detail</option></select></label><div><button class="btn btn-out" type="button" data-media-up${index===0?' disabled':''}>↑</button><button class="btn btn-out" type="button" data-media-down${index===dashboardMedia.length-1?' disabled':''}>↓</button><button class="btn btn-out" type="button" data-media-remove>Remove</button></div></div>`).join(''):'<p class="muted">No optimized catalogue images yet.</p>';
+          root.querySelectorAll('[data-dashboard-media]').forEach(row=>{const index=Number(row.dataset.dashboardMedia);row.querySelector('[data-dashboard-media-role]').onchange=event=>dashboardMedia[index].role=event.target.value;row.querySelector('[data-media-up]').onclick=()=>{const [item]=dashboardMedia.splice(index,1);dashboardMedia.splice(index-1,0,item);renderDashboardMedia();};row.querySelector('[data-media-down]').onclick=()=>{const [item]=dashboardMedia.splice(index,1);dashboardMedia.splice(index+1,0,item);renderDashboardMedia();};row.querySelector('[data-media-remove]').onclick=()=>{dashboardMedia.splice(index,1);renderDashboardMedia();};});
+        }
+        function renderDashboardFaqs(){
+          const root=document.getElementById('dashboardFaqEditor');
+          root.innerHTML=dashboardFaqs.map((item,index)=>`<fieldset class="dashboard-faq" data-dashboard-faq="${index}"><legend>FAQ ${index+1}</legend>${['en','ja','zh'].map(locale=>`<label>${locale.toUpperCase()} question<input data-faq-question="${locale}" value="${esc(item.question_i18n?.[locale]||'')}" required></label><label>${locale.toUpperCase()} answer<textarea data-faq-answer="${locale}" required>${esc(item.answer_i18n?.[locale]||'')}</textarea></label>`).join('')}<button class="btn btn-out" type="button" data-faq-remove>Remove FAQ</button></fieldset>`).join('');
+          root.querySelectorAll('[data-dashboard-faq]').forEach(fieldset=>{const index=Number(fieldset.dataset.dashboardFaq);fieldset.querySelector('[data-faq-remove]').onclick=()=>{dashboardFaqs.splice(index,1);renderDashboardFaqs();};fieldset.querySelectorAll('[data-faq-question]').forEach(input=>input.oninput=()=>dashboardFaqs[index].question_i18n[input.dataset.faqQuestion]=input.value);fieldset.querySelectorAll('[data-faq-answer]').forEach(input=>input.oninput=()=>dashboardFaqs[index].answer_i18n[input.dataset.faqAnswer]=input.value);});
+        }
+        document.getElementById('dashboardAddFaq').onclick=()=>{dashboardFaqs.push({question_i18n:{en:'',ja:'',zh:''},answer_i18n:{en:'',ja:'',zh:''},active:true});renderDashboardFaqs();};
         const priceBreakRows = document.getElementById("priceBreakRows");
         window.ATELIX_initRichEditors(skuForm);
 
@@ -1371,6 +1400,7 @@
             ? `Edit ${product.sku}`
             : "Add SKU";
           skuForm.reset();
+          dashboardMedia=(product?.media||[]).map(item=>({...item}));dashboardFaqs=(product?.faqs||[]).map(item=>structuredClone(item));renderDashboardMedia();renderDashboardFaqs();
           window.ATELIX_setRichEditor(skuForm, "description", "");
           window.ATELIX_setRichEditor(skuForm, "handling_notes", "");
           skuForm.elements.id.value = product ? product.id : "";
@@ -1420,6 +1450,9 @@
               product.listing_status === "archived"
                 ? "draft"
                 : product.listing_status;
+            skuForm.elements.construction_slug.value=product.construction_slug||'specialty-other';
+            skuForm.elements.name_ja.value=product.copy_i18n?.ja?.name||'';skuForm.elements.description_ja.value=product.copy_i18n?.ja?.description||'';
+            skuForm.elements.name_zh.value=product.copy_i18n?.zh?.name||'';skuForm.elements.description_zh.value=product.copy_i18n?.zh?.description||'';
             const breaks = await api.getPriceBreaks(product.id);
             breaks.forEach((b) => addBreakRow(b.minQty, b.unitPrice));
           }
@@ -1467,14 +1500,18 @@
             return;
           }
 
+          const copyI18n={en:{name:payload.name,description:payload.description},ja:{name:f.name_ja.value.trim(),description:f.description_ja.value.trim()},zh:{name:f.name_zh.value.trim(),description:f.description_zh.value.trim()}};
+          const completeCopy=['en','ja','zh'].every(locale=>copyI18n[locale].name&&copyI18n[locale].description);
+          if(payload.category==='fabrics'&&payload.listing_status==='active'&&!completeCopy){toast('Complete English, Japanese, and Chinese product copy before activating this fabric.');return;}
+
           const file = f.imgFile.files[0];
           if (file) {
-            const up = await api.uploadImage(file, "products");
+            const up = id?await api.uploadCatalogProductImage(file,id):await api.uploadImage(file, "products");
             if (up.error) {
               toast(up.error.message || "Image upload failed");
               return;
             }
-            payload.img = up.url;
+            if(up.media){if(dashboardMedia.length>=4){toast('Remove an image before uploading another.');return;}dashboardMedia.push(up.media);payload.img=dashboardMedia[0]?.thumb_url||dashboardMedia[0]?.public_url;}else payload.img = up.url;
           }
 
           let productId = id;
@@ -1506,6 +1543,10 @@
             toast(optionResult.error.message || "SKU saved, but product options could not be updated");
             return;
           }
+          if(payload.category==='fabrics'&&completeCopy){
+            const contentResult=await api.saveProductCatalogContent({productId,copyI18n,constructionSlug:f.construction_slug.value,media:dashboardMedia.length?dashboardMedia:null,faqs:dashboardFaqs.map((item,index)=>({...item,sort_order:index}))});
+            if(contentResult.error){toast(contentResult.error.message||'SKU saved, but localized media and FAQ could not be updated');return;}
+          }
 
           toast(id ? "SKU updated" : "SKU added");
           skuForm.hidden = true;
@@ -1514,10 +1555,15 @@
 
         // ---- Factory profile ----
         const factoryForm = document.getElementById("factoryForm");
+        let factoryFaqs=(factory.faqs||[]).map(item=>structuredClone(item));
+        function renderFactoryFaqs(){const root=document.getElementById('factoryFaqEditor');root.innerHTML=factoryFaqs.map((item,index)=>`<fieldset data-factory-faq="${index}"><legend>FAQ ${index+1}</legend>${['en','ja','zh'].map(locale=>`<label>${locale.toUpperCase()} question<input data-factory-question="${locale}" value="${esc(item.question_i18n?.[locale]||'')}" required></label><label>${locale.toUpperCase()} answer<textarea data-factory-answer="${locale}" required>${esc(item.answer_i18n?.[locale]||'')}</textarea></label>`).join('')}<button class="btn btn-out" type="button" data-factory-faq-remove>Remove FAQ</button></fieldset>`).join('');root.querySelectorAll('[data-factory-faq]').forEach(fieldset=>{const index=Number(fieldset.dataset.factoryFaq);fieldset.querySelector('[data-factory-faq-remove]').onclick=()=>{factoryFaqs.splice(index,1);renderFactoryFaqs();};fieldset.querySelectorAll('[data-factory-question]').forEach(input=>input.oninput=()=>factoryFaqs[index].question_i18n[input.dataset.factoryQuestion]=input.value);fieldset.querySelectorAll('[data-factory-answer]').forEach(input=>input.oninput=()=>factoryFaqs[index].answer_i18n[input.dataset.factoryAnswer]=input.value);});}
+        document.getElementById('factoryAddFaq').onclick=()=>{factoryFaqs.push({question_i18n:{en:'',ja:'',zh:''},answer_i18n:{en:'',ja:'',zh:''},active:true});renderFactoryFaqs();};renderFactoryFaqs();
         factoryForm.elements.name.value = factory.name || "";
         factoryForm.elements.region.value = factory.region || "";
         factoryForm.elements.loc.value = factory.loc || "";
         factoryForm.elements.bio.value = factory.bio || "";
+        factoryForm.elements.name_ja.value=factory.copy_i18n?.ja?.name||'';factoryForm.elements.bio_ja.value=factory.copy_i18n?.ja?.description||'';
+        factoryForm.elements.name_zh.value=factory.copy_i18n?.zh?.name||'';factoryForm.elements.bio_zh.value=factory.copy_i18n?.zh?.description||'';
         factoryForm.addEventListener("submit", async (e) => {
           e.preventDefault();
           const f = factoryForm.elements;
@@ -1527,6 +1573,9 @@
             loc: f.loc.value.trim(),
             bio: f.bio.value.trim(),
           };
+          const copyI18n={en:{name:patch.name,description:patch.bio},ja:{name:f.name_ja.value.trim(),description:f.bio_ja.value.trim()},zh:{name:f.name_zh.value.trim(),description:f.bio_zh.value.trim()}};
+          const completeCopy=['en','ja','zh'].every(locale=>copyI18n[locale].name&&copyI18n[locale].description);
+          if(factory.verify_state==='verified'&&!completeCopy){toast('Complete English, Japanese, and Chinese supplier copy before saving this verified profile.');return;}
           const file = f.imgFile.files[0];
           if (file) {
             const up = await api.uploadImage(file, "factories");
@@ -1541,6 +1590,7 @@
             toast(error.message || "Could not save profile");
             return;
           }
+          if(completeCopy){const contentResult=await api.saveSupplierCatalogContent({factoryId:factory.id,copyI18n,faqs:factoryFaqs.map((item,index)=>({...item,sort_order:index}))});if(contentResult.error){toast(contentResult.error.message||'Profile saved, but localized FAQ could not be updated');return;}}
           Object.assign(factory, patch);
           document.getElementById("welcomeName").textContent =
             `Welcome, ${factory.name}`;

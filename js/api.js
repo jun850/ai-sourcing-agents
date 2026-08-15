@@ -23,6 +23,10 @@ if(!sb || !sb.auth){
     getSessionProfile(){ return Promise.resolve(null); },
     onChange(){ return { data:{ subscription:{ unsubscribe(){} } } }; },
     fetchCatalog(){ return Promise.reject(err); },
+    fetchCatalogPage(){ return Promise.reject(err); },
+    fetchCatalogFactories(){ return Promise.reject(err); },
+    getPublicProduct(){ return Promise.resolve(null); },
+    getPublicFactory(){ return Promise.resolve(null); },
     placeOrder(){ return Promise.resolve({ error: err }); },
     declarePayment(){ return Promise.resolve({ error: err }); },
     getOrder(){ return Promise.resolve({ error: err }); },
@@ -42,6 +46,7 @@ if(!sb || !sb.auth){
     updateProfile(){ return Promise.resolve({ error: err }); },
     updateEmail(){ return Promise.resolve({ error: err }); },
     uploadImage(){ return Promise.resolve({ error: err }); },
+    uploadCatalogProductImage(){ return Promise.resolve({ error: err }); },
     analyzeDesign(){ return Promise.resolve({ data:null, error: err }); },
     rematchDesign(){ return Promise.resolve({ data:null, error: err }); },
     getMyFactory(){ return Promise.resolve(null); },
@@ -90,9 +95,12 @@ if(!sb || !sb.auth){
     intoolsListProducts(){ return Promise.resolve({ items:[], error:err }); },
     intoolsSaveProduct(){ return Promise.resolve({ product:null, error:err }); },
     intoolsArchiveProduct(){ return Promise.resolve({ product:null, error:err }); },
+    saveProductCatalogContent(){ return Promise.resolve({ product:null, error:err }); },
     intoolsListSuppliers(){ return Promise.resolve({ items:[], error:err }); },
     intoolsSaveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
     intoolsArchiveSupplier(){ return Promise.resolve({ supplier:null, error:err }); },
+    saveSupplierFaqs(){ return Promise.resolve({ faqs:[], error:err }); },
+    saveSupplierCatalogContent(){ return Promise.resolve({ supplier:null, error:err }); },
     intoolsListShippingRates(){ return Promise.resolve({ items:[], error:err }); },
     intoolsSaveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
     intoolsArchiveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
@@ -154,6 +162,36 @@ function productInput(input, { create=false }={}){
   }
   return payload;
 }
+
+const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
+const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
+const BUNDLED_PUBLIC_FACTORY_MAP={...(window.ARCANA_FACTORY_MAP||{})};
+function catalogLocale(){const value=String(window.ARCANA_LANG||document.documentElement.lang||'en').toLowerCase();return value.startsWith('ja')?'ja':value.startsWith('zh')?'zh':'en';}
+function localizedCopy(copy,field,fallback){const locale=catalogLocale();return copy?.[locale]?.[field]||copy?.en?.[field]||fallback||'';}
+const LOCAL_CATALOG_PREVIEW=['localhost','127.0.0.1','::1'].includes(window.location.hostname);
+async function localCatalogRequest(route){const response=await fetch(`/__local_catalog${route}`,{headers:{accept:'application/json'}});if(!response.ok)throw new Error(`Local catalogue preview failed (${response.status})`);return response.json();}
+function mapPublicProduct(p){
+  const supplier=p.supplier||{},media=Array.isArray(p.media)?p.media:[],images=media.length?media.map(item=>item.public_url):p.images||[];
+  return {
+    id:p.sku,databaseId:p.id,name:localizedCopy(p.copy_i18n,'name',p.name),description:localizedCopy(p.copy_i18n,'description',p.description),copyI18n:p.copy_i18n||{},
+    img:media[0]?.thumb_url||media[0]?.public_url||images[0]||p.img,images,media,faqs:p.faqs||[],
+    comp:p.comp,spec:p.spec||p.specification,subcategory:p.subcategory,construction:p.construction,constructionSlug:p.construction_slug,applications:p.applications,season:p.season,color_family:p.color_family,
+    origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,
+    price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${UNIT_LABEL[p.unit_type]||p.unit_type}`:'',seller:p.supplier_name||supplier.name||'',
+    factoryId:p.factory_id||supplier.id||null,factorySlug:p.supplier_slug||supplier.slug||null,supplierVerified:p.supplier_verified??supplier.verify_state==='verified',loc:p.supplier_city||supplier.loc||p.loc,country:p.supplier_region||supplier.region||'',badge:p.badge||'',cat:p.category,
+    pricingMode:p.pricing_mode,catalogPrices:p.catalog_prices||{},isPrivate:p.is_private===true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants||[])
+  };
+}
+function mapPublicFactory(f){return {id:f.slug,databaseId:f.id,name:localizedCopy(f.copy_i18n,'name',f.name),type:TYPE_LABEL[f.type]||f.type,region:f.region,loc:f.loc,verified:f.verify_state==='verified',years:f.years,moq:f.moq,lead:f.lead,orders:f.orders_label,capacity:f.capacity,certs:f.certs||[],tags:f.tags||[],img:f.img,logo_img:f.logo_img,page_img:f.page_img,sales:f.sales,phone:f.phone,web:f.web,founded:f.founded,employees:f.employees,area:f.area,port:f.port,bio:localizedCopy(f.copy_i18n,'description',f.bio),copyI18n:f.copy_i18n||{},productCount:Number(f.product_count||0),taxonomy:(f.supplier_taxonomy_memberships||[]).map(item=>({l2:item.l2,l3:item.l3,isPrimary:item.is_primary===true}))};}
+async function webpVariant(bitmap,maxDimension,quality){
+  const scale=Math.min(1,maxDimension/Math.max(bitmap.width,bitmap.height)),width=Math.max(1,Math.round(bitmap.width*scale)),height=Math.max(1,Math.round(bitmap.height*scale));
+  const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+  const context=canvas.getContext('2d',{alpha:true});context.drawImage(bitmap,0,0,width,height);
+  const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',quality));
+  if(!blob||blob.type!=='image/webp')throw new Error('This browser could not create the required WebP image.');
+  return {blob,width,height};
+}
+async function sha256Blob(blob){const bytes=await blob.arrayBuffer(),hash=await crypto.subtle.digest('SHA-256',bytes);return [...new Uint8Array(hash)].map(value=>value.toString(16).padStart(2,'0')).join('');}
 
 /* ---- Shared cart helpers (used by placeOrder + the cart-sync methods) ---- */
 async function ensureCart(uid){
@@ -298,14 +336,53 @@ const API = {
   /* ---- Catalog reads (public, RLS: anyone can select) ----
      Returns products + factories mapped to the legacy js/data.js shape so all
      existing render code keeps working. Throws on error (caller falls back). */
+  async fetchCatalogPage({category=null,construction=null,page=1,pageSize=24,locale=catalogLocale(),materials=[],country=null,regions=[],availability='all',minPrice=null,maxPrice=null,sort='recommended',supplierSlug=null}={}){
+    if(LOCAL_CATALOG_PREVIEW&&(category==='fabrics'||supplierSlug)){
+      const query=new URLSearchParams({category:category||'',page:String(page),page_size:String(pageSize),availability,sort});if(construction)query.set('construction',construction);if(supplierSlug)query.set('supplier',supplierSlug);
+      (materials||[]).forEach(value=>query.append('material',value));if(country)query.set('country',country);(regions||[]).forEach(value=>query.append('region',value));
+      if(minPrice!=null)query.set('min_price',String(minPrice));if(maxPrice!=null)query.set('max_price',String(maxPrice));
+      const data=await localCatalogRequest(`/products?${query}`);return {...data,products:(data.products||[]).map(mapPublicProduct)};
+    }
+    const {data,error}=await sb.rpc('public_list_catalog_products',{p_category:category,p_construction_slug:construction,p_page:page,p_page_size:pageSize,p_locale:locale,p_materials:materials?.length?materials:null,p_country:country||null,p_regions:regions?.length?regions:null,p_availability:availability,p_min_price:minPrice,p_max_price:maxPrice,p_sort:sort,p_supplier_slug:supplierSlug});
+    if(error) throw error;
+    return {...(data||{}),products:(data?.products||[]).map(mapPublicProduct)};
+  },
+  async fetchCatalogFactories({locale=catalogLocale()}={}){
+    if(LOCAL_CATALOG_PREVIEW){const data=await localCatalogRequest('/factories'),merged=new Map(Object.values(BUNDLED_PUBLIC_FACTORY_MAP).map(factory=>[factory.id,factory]));for(const factory of (data||[]).map(mapPublicFactory))merged.set(factory.id,factory);return [...merged.values()];}
+    const {data,error}=await sb.rpc('public_list_catalog_factories',{p_locale:locale});
+    if(error) throw error;
+    return (data||[]).map(mapPublicFactory);
+  },
+  async getPublicProduct(sku,{locale=catalogLocale()}={}){
+    if(LOCAL_CATALOG_PREVIEW&&/^FAB-[A-HJ-NP-Z2-9]{10}$/.test(String(sku||''))){const data=await localCatalogRequest(`/products/${encodeURIComponent(sku)}`);return mapPublicProduct(data);}
+    const {data,error}=await sb.rpc('public_get_product',{p_sku:sku,p_locale:locale});
+    if(error) throw error;
+    return data?mapPublicProduct(data):null;
+  },
+  async getPublicFactory(slug,{locale=catalogLocale()}={}){
+    if(LOCAL_CATALOG_PREVIEW){const data=await localCatalogRequest('/factories'),factory=(data||[]).find(item=>item.slug===slug);return factory?mapPublicFactory(factory):(BUNDLED_PUBLIC_FACTORY_MAP[slug]||null);}
+    const factories=await this.fetchCatalogFactories({locale});return factories.find(factory=>factory.id===slug)||null;
+  },
   async fetchCatalog(){
-    const UNIT_LABEL = { pc:'pcs', m:'m', kg:'kg', package:'package', style:'style', order:'order', color:'color' };
-    const TYPE_LABEL = { fabric_mill:'Fabric Mill', garment_manufacturer:'Garment Manufacturer', trim_supplier:'Trim Supplier', accessories_supplier:'Accessories Supplier', yarn_supplier:'Yarn Supplier', textile_trading_company:'Textile Trading Company', material_innovator:'Material Innovator' };
+    if(LOCAL_CATALOG_PREVIEW){
+      const [localFactories,remoteFactories]=await Promise.all([
+        this.fetchCatalogFactories({locale:catalogLocale()}),
+        sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'),
+      ]);
+      const factories=new Map(localFactories.map(factory=>[factory.id,factory]));
+      if(!remoteFactories.error){
+        for(const factory of (remoteFactories.data||[]).map(mapPublicFactory))factories.set(factory.id,factory);
+      }
+      return {
+        products:window.ARCANA_PRODUCTS||[],
+        factories:[...factories.values()],
+      };
+    }
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
-        .select('id,sku,name,description,comp,subcategory,construction,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
+        .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
         .eq('listing_status','active').eq('is_private',false),
-      sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'),
+      (async()=>{const result=await sb.rpc('public_list_catalog_factories',{p_locale:catalogLocale()});return result.error?sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'):result;})(),
       sb.rpc('catalog_public_prices',{p_currency:'USD'}),
       sb.rpc('catalog_public_prices',{p_currency:'JPY'}),
       sb.rpc('catalog_public_prices',{p_currency:'CNY'})
@@ -319,22 +396,9 @@ const API = {
       pricesByProduct[row.product_id][row.currency]=Number(row.catalog_amount);
     }
 
-    const factories = (facRes.data||[]).map(f=>({
-      id: f.slug, databaseId: f.id, name: f.name, type: TYPE_LABEL[f.type] || f.type,
-      region: f.region, loc: f.loc, verified: f.verify_state === 'verified',
-      years: f.years, moq: f.moq, lead: f.lead,
-      orders: f.orders_label, capacity: f.capacity,
-      certs: f.certs || [], tags: f.tags || [], img: f.img,
-      logo_img: f.logo_img, page_img: f.page_img,
-      sales: f.sales, phone: f.phone, web: f.web, founded: f.founded,
-      employees: f.employees, area: f.area, port: f.port, bio: f.bio,
-      copyI18n: f.copy_i18n || {},
-      taxonomy: (f.supplier_taxonomy_memberships || []).map(item=>({
-        l2:item.l2, l3:item.l3, isPrimary:item.is_primary === true
-      }))
-    }));
+    const factories = (facRes.data||[]).map(mapPublicFactory);
     const products = (prodRes.data||[]).map(p=>({
-      id: p.sku, name: p.name, img:(p.images&&p.images[0])||p.img, images:p.images||[], description:p.description, comp:p.comp, subcategory:p.subcategory, construction:p.construction, applications:p.applications, season:p.season, color_family:p.color_family, origin_country:p.origin_country, lead_time:p.lead_time, handling_notes:p.handling_notes, gsm:p.gsm, fabric_width:p.fabric_width, roll_length:p.roll_length, style_code:p.style_code,
+      id:p.sku,databaseId:p.id,name:localizedCopy(p.copy_i18n,'name',p.name),img:(p.images&&p.images[0])||p.img,images:p.images||[],description:localizedCopy(p.copy_i18n,'description',p.description),copyI18n:p.copy_i18n||{},comp:p.comp,subcategory:p.subcategory,construction:p.construction,constructionSlug:p.construction_slug,applications:p.applications,season:p.season,color_family:p.color_family,origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', factoryId:p.factories?.id||null, factorySlug:p.factories?.slug||null, loc: p.loc,
@@ -591,6 +655,21 @@ const API = {
       return { url: data.publicUrl, path };
     }catch(error){ return { error }; }
   },
+  async uploadCatalogProductImage(file,productId){
+    try{
+      if(!/^[0-9a-f-]{36}$/i.test(String(productId||'')))return {error:{message:'Save the product before adding catalogue media.'}};
+      if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file?.type)||file.size>10*1024*1024)return {error:{message:'Choose a JPG, PNG, WebP, or AVIF image no larger than 10 MB.'}};
+      const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'}),full=await webpVariant(bitmap,1600,.80),thumb=await webpVariant(bitmap,640,.76);bitmap.close?.();
+      const hash=await sha256Blob(full.blob),thumbHash=await sha256Blob(thumb.blob),base=`products/${productId}`,fullPath=`${base}/${hash}-1600.webp`,thumbPath=`${base}/${thumbHash}-640.webp`;
+      const [fullUpload,thumbUpload]=await Promise.all([
+        sb.storage.from('catalog-media').upload(fullPath,full.blob,{contentType:'image/webp',cacheControl:'31536000',upsert:false}),
+        sb.storage.from('catalog-media').upload(thumbPath,thumb.blob,{contentType:'image/webp',cacheControl:'31536000',upsert:false})
+      ]);
+      for(const result of [fullUpload,thumbUpload])if(result.error&&result.error.statusCode!==409&&result.error.status!==409)return {error:result.error};
+      const fullUrl=sb.storage.from('catalog-media').getPublicUrl(fullPath).data.publicUrl,thumbUrl=sb.storage.from('catalog-media').getPublicUrl(thumbPath).data.publicUrl;
+      return {media:{role:'detail',public_url:fullUrl,thumb_url:thumbUrl,storage_path:fullPath,thumb_storage_path:thumbPath,width:full.width,height:full.height,bytes:full.blob.size,sha256:hash,thumb_bytes:thumb.blob.size,thumb_sha256:thumbHash,alt_i18n:{}},error:null};
+    }catch(error){return {error};}
+  },
 
   /* Design Match uploads are sent directly to the authenticated Edge Function.
      They are intentionally NOT put in the public uploads bucket: the function
@@ -622,7 +701,9 @@ const API = {
       if(!session || !session.user) return null;
       const { data, error } = await sb.from('factories').select('*').eq('owner_profile_id', session.user.id).maybeSingle();
       if(error) return null;
-      return data || null;
+      if(!data)return null;
+      const faqs=await sb.from('catalog_faqs').select('*').eq('factory_id',data.id).order('sort_order');
+      return {...data,faqs:faqs.data||[]};
     }catch(_){ return null; }
   },
 
@@ -668,7 +749,10 @@ const API = {
     try{
       const { data, error } = await sb.from('products').select('*,product_variants(option_name,option_value,sort_order)').eq('factory_id', factoryId).order('created_at', { ascending:false });
       if(error) return { error };
-      return { products: (data||[]).map(product=>({...product,variants:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(product.product_variants)})) };
+      const products=data||[],ids=products.map(product=>product.id);
+      const [mediaResult,faqResult]=ids.length?await Promise.all([sb.from('product_media').select('*').in('product_id',ids).order('position'),sb.from('catalog_faqs').select('*').in('product_id',ids).order('sort_order')]):[{data:[]},{data:[]}];
+      if(mediaResult.error||faqResult.error)return {error:mediaResult.error||faqResult.error};
+      return { products:products.map(product=>({...product,media:(mediaResult.data||[]).filter(media=>media.product_id===product.id),faqs:(faqResult.data||[]).filter(faq=>faq.product_id===product.id),variants:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(product.product_variants)})) };
     }catch(error){ return { error }; }
   },
 
@@ -909,7 +993,14 @@ const API = {
   },
 
   async intoolsListProducts(){
-    try{const {data,error}=await sb.rpc('intools_list_products');return {items:data||[],error:error||null};}
+    try{
+      const {data,error}=await sb.rpc('intools_list_products');if(error)return {items:[],error};
+      const items=data||[],ids=items.map(item=>item.id);
+      if(!ids.length)return {items,error:null};
+      const [mediaResult,faqResult]=await Promise.all([sb.from('product_media').select('*').in('product_id',ids).order('position'),sb.from('catalog_faqs').select('*').in('product_id',ids).order('sort_order')]);
+      if(mediaResult.error||faqResult.error)return {items,error:mediaResult.error||faqResult.error};
+      return {items:items.map(item=>({...item,media:(mediaResult.data||[]).filter(media=>media.product_id===item.id),faqs:(faqResult.data||[]).filter(faq=>faq.product_id===item.id)})),error:null};
+    }
     catch(error){return {items:[],error};}
   },
   async intoolsSaveProduct({id=null,payload,expectedUpdatedAt=null}){
@@ -920,9 +1011,19 @@ const API = {
     try{const {data,error}=await sb.rpc('intools_archive_product',{p_product_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {product:data||null,error:error||null};}
     catch(error){return {product:null,error};}
   },
+  async saveProductCatalogContent({productId,copyI18n,constructionSlug,media=[],faqs=[]}){
+    try{const {data,error}=await sb.rpc('catalog_save_product_content',{p_product_id:productId,p_copy_i18n:copyI18n,p_construction_slug:constructionSlug,p_media:media,p_faqs:faqs});return {product:data||null,error:error||null};}
+    catch(error){return {product:null,error};}
+  },
 
   async intoolsListSuppliers(){
-    try{const {data,error}=await sb.rpc('intools_list_suppliers');return {items:data||[],error:error||null};}
+    try{
+      const {data,error}=await sb.rpc('intools_list_suppliers');if(error)return {items:[],error};
+      const items=data||[],ids=items.map(item=>item.id);if(!ids.length)return {items,error:null};
+      const faqs=await sb.from('catalog_faqs').select('*').in('factory_id',ids).order('sort_order');
+      if(faqs.error)return {items,error:faqs.error};
+      return {items:items.map(item=>({...item,faqs:(faqs.data||[]).filter(faq=>faq.factory_id===item.id)})),error:null};
+    }
     catch(error){return {items:[],error};}
   },
   async intoolsSaveSupplier({id=null,payload,expectedUpdatedAt=null}){
@@ -931,6 +1032,14 @@ const API = {
   },
   async intoolsArchiveSupplier(id,expectedUpdatedAt,restore=false){
     try{const {data,error}=await sb.rpc('intools_archive_supplier',{p_supplier_id:id,p_expected_updated_at:expectedUpdatedAt,p_restore:restore});return {supplier:data||null,error:error||null};}
+    catch(error){return {supplier:null,error};}
+  },
+  async saveSupplierFaqs({factoryId,faqs=[]}){
+    try{const {data,error}=await sb.rpc('catalog_save_supplier_faqs',{p_factory_id:factoryId,p_faqs:faqs});return {faqs:data||[],error:error||null};}
+    catch(error){return {faqs:[],error};}
+  },
+  async saveSupplierCatalogContent({factoryId,copyI18n,faqs=[]}){
+    try{const {data,error}=await sb.rpc('catalog_save_supplier_content',{p_factory_id:factoryId,p_copy_i18n:copyI18n,p_faqs:faqs});return {supplier:data||null,error:error||null};}
     catch(error){return {supplier:null,error};}
   },
   async intoolsListShippingRates(){

@@ -23,6 +23,7 @@
 <main class="wrap"><div id="pdpRoot"></div><div class="page-end-space" aria-hidden="true"></div></main>
 <div id="ftr"></div>
 <script defer src="../js/data.js"></script>
+<script defer src="../js/catalog-taxonomy.js"></script>
 <script defer src="../js/product-options.js"></script>
 <script defer src="../js/copilot.js"></script>
 <script defer src="../js/components.js?v=20260814-checkout-hotfix"></script>
@@ -40,6 +41,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   // always shows the real unit price, whichever surface the shopper arrived from.
   const id=new URLSearchParams(location.search).get('id');
   let p=id?M[id]:null;
+  if(!p&&id&&window.ARCANA_API?.getPublicProduct){
+    p=await window.ARCANA_API.getPublicProduct(id).catch(()=>null);
+    if(p){M[id]=p;PRODUCTS.push(p);}
+  }
   if(!p && id && window.ARCANA_API?.getMyPrivateProducts){
     const result=await window.ARCANA_API.getMyPrivateProducts().catch(()=>({products:[]}));
     p=(result.products||[]).find(product=>product.id===id)||null;
@@ -56,8 +61,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const galleryImages=[...(Array.isArray(p.images)?p.images:[]),p.img].filter(Boolean).filter((image,index,all)=>all.indexOf(image)===index);
   const minimumOrder=Math.max(1,Math.ceil(Number.parseFloat(p.moq)||1));
   const purchasable=p.price>0&&!p.isPrivate;
-  const facId=window.ARCANA_FACTORY_BY_NAME[p.seller];
-  const factory=facId ? window.ARCANA_FACTORY_MAP[facId] : null;
+  const facId=p.factorySlug||Object.values(window.ARCANA_FACTORY_MAP||{}).find(item=>item.databaseId===p.factoryId)?.id||null;
+  const factory=facId?window.ARCANA_FACTORY_MAP[facId]:null;
   const catUrl='/categories/'+p.cat;
   const productSubcategories={
     fabrics:[['cotton','Cotton',['cotton']],['linen','Linen',['linen']],['polyester','Polyester',['polyester']],['viscose','Viscose & Rayon',['viscose','rayon','modal']],['knits','Knits',['knit','jersey','rib','fleece']],['denim','Denim',['denim','indigo']]],
@@ -151,6 +156,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const supplierParts=[seller,supplierCountry,supplierCity].filter((value,index,all)=>value&&all.indexOf(value)===index);
     const sanitizeRichText=window.ATELIX_sanitizeRichText||(value=>String(value||''));
     const productSummary=sanitizeRichText(p.description||TR(`A ${comp||catLabel.toLowerCase()} product for considered sourcing and development.`));
+    const fallbackFaqs=[
+      {question:T('How should I confirm colour and hand feel?'),answer:T('Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.')},
+      {question:T('What should I confirm before ordering?'),answer:T('Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.')}
+    ];
+    const productFaqs=(Array.isArray(p.faqs)&&p.faqs.length?p.faqs:fallbackFaqs).filter(item=>item&&item.question&&item.answer);
     const productSpecs=[
       [T('Material'),publicValue(comp)],[T('Construction'),publicValue(p.construction)],
       [T('Weight'),publicValue(p.gsm)],[T('Width'),publicValue(p.fabric_width)],
@@ -184,7 +194,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="pdp-details">
           <section class="pdp-about"><h2>${T('About this product')}</h2><div class="rich-content">${productSummary}</div></section>
           <section class="pdp-spec-panel"><h2>${T('Specifications')}</h2><dl>${productSpecs.map(([label,value,isHtml])=>`<div><dt>${label}</dt><dd>${isHtml?value:html(value)}</dd></div>`).join('')}</dl></section>
-          <section class="pdp-spec-panel pdp-sourcing"><h2>${T('Sourcing')}</h2><dl>${sourcingSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}</section>
+          <section class="pdp-spec-panel pdp-sourcing"><h2>${T('Sourcing')}</h2><dl>${sourcingSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}${productFaqs.length?`<div class="pdp-handling"><b>${T('Important to read')}</b><div class="help-faqs">${productFaqs.map((item,index)=>`<details${index===0?' open':''}><summary>${html(item.question)}<span aria-hidden="true">+</span></summary><div><p>${html(item.answer)}</p></div></details>`).join('')}</div></div>`:''}</section>
         </div>
         <div class="price-box">
           <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${productMoney(p)} <small>/${TR(p.unit)}</small>`:T('Contact supplier')}</div></div>
@@ -206,7 +216,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         </div>
         <a class="pdp-supplier" href="${facId?`supplier.html?id=${facId}`:catUrl}">
           <span class="ps-logo">${IC.factory}</span>
-          <span class="ps-info"><b>${seller}</b><span>${loc} · ${T('Verified supplier')}</span></span>
+          <span class="ps-info"><b>${seller}</b><span>${[loc,p.supplierVerified===false?T('Supplier candidate'):T('Verified supplier')].filter(Boolean).join(' · ')}</span></span>
           <span class="ps-view">${facId?T('View factory'):T('View supplier')} ${IC.chevR}</span>
         </a>
       </div>

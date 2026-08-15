@@ -85,6 +85,7 @@
         <button class="sheet-close" type="button" data-close-sort aria-label="Close sort">×</button>
       </div>
       <div class="prod-grid" id="grid"></div>
+      <nav class="catalog-pagination" id="catalogPagination" aria-label="Catalogue pages" hidden></nav>
       <section class="oem-material-sources" id="oemMaterialSources" hidden aria-labelledby="oem-material-sources-title"></section>
     </div>
   </div>
@@ -93,6 +94,7 @@
 
 <div id="ftr"></div>
 <script src="/js/data.js"></script>
+<script src="/js/catalog-taxonomy.js"></script>
 <script src="/js/copilot.js"></script>
 <script src="/js/components.js"></script>
 <script defer src="/js/analytics.bundle.js"></script>
@@ -100,7 +102,7 @@
 <script src="/js/api.js"></script>
 <script src="/js/copilot-llm.js"></script>
 <script>
-window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
+window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   // This file renders category browsing and the two explicit assisted modes.
   // Plain keyword search has its own neutral /search route.
   // keep them straight when touching filters, sort, badges or pricing below:
@@ -415,9 +417,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const routeL2=categoriesAt>=0 ? routeParts[categoriesAt+1] : '';
   const routeL3=categoriesAt>=0 ? routeParts[categoriesAt+2] : '';
   let cat=(qsAll.get('l2')||qsAll.get('cat')||routeL2||'').toLowerCase(); if(!META[cat])cat='fabrics';
-  const l3=(qsAll.get('l3')||routeL3||'').toLowerCase();
+  const requestedL3=(qsAll.get('l3')||routeL3||'').toLowerCase();
+  const l3=cat==='fabrics'&&requestedL3?window.ATELIX_CATALOG_TAXONOMY.normalizeSlug(requestedL3):requestedL3;
   const SUBCATS={
-    fabrics:[['cotton','Cotton'],['linen','Linen'],['polyester','Polyester'],['viscose','Viscose & Rayon'],['knits','Knits'],['denim','Denim']],
+    fabrics:(window.ATELIX_CATALOG_TAXONOMY?.CONSTRUCTIONS||[]).map(item=>[item.slug,item.label.en]),
     accessories:[['labels','Labels & Tags'],['hardware','Garment Hardware']],
     trims:[['zippers','Zippers'],['buttons','Buttons'],['interlining','Interlining'],['lining','Lining'],['simple-trims','Tapes & Elastic']],
     yarns:[['cotton','Cotton yarn'],['polyester','Polyester thread'],['viscose','Viscose yarn'],['wool','Wool yarn'],['nylon','Nylon yarn']],
@@ -445,12 +448,19 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   };
   const matchSub=(p,slug)=>{
     if(!slug) return true;
+    if(cat==='fabrics')return (p.constructionSlug||window.ATELIX_CATALOG_TAXONOMY?.classify(p))===slug;
     const structured=String(p.subcategory||'').trim().toLowerCase();
     if(structured) return structured===slug||structured===subLabel?.toLowerCase();
     return inferredSubcategory(p)===slug;
   };
-  const categoryItems=window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
-  const items=categoryItems.filter(p=>matchSub(p,l3));
+  const requestedPage=Math.max(1,Number(qsAll.get('page'))||1);
+  let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[], currentPage=requestedPage;
+  let remotePage=null;
+  if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage){
+    remotePage=await window.ARCANA_API.fetchCatalogPage({category:cat,construction:cat==='fabrics'&&l3?l3:null,page:currentPage,pageSize:24}).catch(()=>null);
+  }
+  let categoryItems=remotePage?remotePage.products:window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
+  let items=categoryItems.filter(p=>matchSub(p,l3));
   const supplierItems=(window.ARCANA_FACTORIES||[]).filter(factory=>(factory.taxonomy||[]).some(membership=>
     membership.l2===cat&&(!l3||membership.l3===l3)
   ));
@@ -467,7 +477,10 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     return `<a class="${selected?'on':''}" ${selected?'aria-current="page"':''} href="${selected?`/categories/${cat}`:`/categories/${cat}/${slug}`}">${label}${selected?'<span aria-hidden="true">×</span>':''}</a>`;
   }).join('');
   const supplierCount=new Set([...items.map(product=>product.seller).filter(Boolean),...supplierItems.map(factory=>factory.id)]).size;
-  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p><b>${items.length}</b> ${meta.noun} · <b>${supplierCount}</b> verified suppliers</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
+  let resultTotal=remotePage?Number(remotePage.total||0):items.length;
+  let resultSupplierTotal=remotePage?.supplier_total??supplierCount;
+  const supplierStatus=remotePage?.preview?'supplier candidates':'verified suppliers';
+  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p><b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
   const crumbs=[['Home','/'],['All categories','/categories'],[meta.title,`/categories/${cat}`]];
   if(l3) crumbs.push([heading,`/categories/${cat}/${l3}`]);
   document.querySelector('#catalogCrumbs ol').innerHTML=crumbs.map(([label,href],index)=>{
@@ -475,56 +488,90 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     if(href&&(!isCurrent||l3)) return `<li><a href="${href}"${isCurrent?' aria-current="page"':''}>${label}</a></li>`;
     return `<li><span aria-current="page">${label}</span></li>`;
   }).join('');
-  const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
+  const isRecentlyListed=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
   // materials facet
   const mats=['Cotton','Polyester','Linen','Nylon','Wool','Viscose','Spandex'];
-  document.getElementById('matOpts').innerHTML=mats.map(m=>{
-    const n=items.filter(p=>String(p.comp||'').toLowerCase().includes(m.toLowerCase())).length;
-    return `<label class="frl-opt"><input type="checkbox" value="${m}" ${n?'':'disabled'}> <span data-mat="${m}">${window.ARCANA_TR(m)}</span> <span class="cnt">${n}</span></label>`;
-  }).join('');
-  if(!items.some(p=>mats.some(m=>String(p.comp||'').toLowerCase().includes(m.toLowerCase())))) document.getElementById('matOpts').closest('.frl-block').style.display='none';
+  function renderMaterialFacets(){
+    const counts=remotePage?.facets?.materials||Object.fromEntries(mats.map(m=>[m,items.filter(p=>String(p.comp||'').toLowerCase().includes(m.toLowerCase())).length]));
+    document.getElementById('matOpts').innerHTML=mats.map(m=>{
+      const n=Number(counts[m]||0);
+      return `<label class="frl-opt"><input type="checkbox" value="${m}" ${mat.includes(m)?'checked ':''}${n?'':'disabled'}> <span data-mat="${m}">${window.ARCANA_TR(m)}</span> <span class="cnt">${n}</span></label>`;
+    }).join('');
+    document.getElementById('matOpts').closest('.frl-block').style.display=Object.values(counts).some(Number)?'':'none';
+  }
+  renderMaterialFacets();
 
   const countryOf=p=>p.country||String(p.loc||'').split(',').pop().trim();
   const supplierCountry=f=>f.region||String(f.loc||'').split(',').pop().trim();
   const regionOf=p=>{const parts=String(p.loc||'').split(',').map(s=>s.trim().replace(/\s*\(.*?\)/g,''));return parts.length>=3?parts[parts.length-2]:parts[0];};
 
   // Country facet — show only if >1 country in category
-  const allCountries=[...new Set([...items.map(countryOf),...supplierItems.map(supplierCountry)].filter(Boolean))].sort();
+  let allCountries=[...new Set([...Object.keys(remotePage?.facets?.countries||{}),...items.map(countryOf),...supplierItems.map(supplierCountry)].filter(Boolean))].sort();
   const countryBlock=document.getElementById('countryBlock');
-  if(allCountries.length<=1){countryBlock.style.display='none';}
-  else{
+  function renderCountryFacets(){
+    allCountries=[...new Set([...Object.keys(remotePage?.facets?.countries||{}),...items.map(countryOf),...supplierItems.map(supplierCountry)].filter(Boolean))].sort();
+    countryBlock.style.display=allCountries.length<=1?'none':'';
+    if(allCountries.length>1){
     document.getElementById('countryOpts').innerHTML=
-      `<label class="frl-opt"><input type="radio" name="ctry" value="all" checked> <span>All</span></label>`+
-      allCountries.map(c=>`<label class="frl-opt"><input type="radio" name="ctry" value="${c}"> <span>${c}</span></label>`).join('');
+      `<label class="frl-opt"><input type="radio" name="ctry" value="all" ${country==='all'?'checked':''}> <span>All</span></label>`+
+      allCountries.map(c=>`<label class="frl-opt"><input type="radio" name="ctry" value="${c}" ${country===c?'checked':''}> <span>${c}</span></label>`).join('');
+    }
   }
+  renderCountryFacets();
 
-  let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[];
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount'), oemMaterialSources=document.getElementById('oemMaterialSources');
+  const pagination=document.getElementById('catalogPagination');
+  function renderPagination(){
+    if(!remotePage||resultTotal<=remotePage.page_size){pagination.hidden=true;pagination.innerHTML='';return;}
+    const totalPages=Math.ceil(resultTotal/remotePage.page_size);
+    pagination.hidden=false;
+    pagination.innerHTML=`<button class="btn btn-out" type="button" data-catalog-page="${currentPage-1}" ${currentPage<=1?'disabled':''}>Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="btn btn-out" type="button" data-catalog-page="${currentPage+1}" ${currentPage>=totalPages?'disabled':''}>Next</button>`;
+  }
+  renderPagination();
 
   function populateRegions(){
-    const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country);
-    const regions=[...new Set(ctryItems.map(regionOf))].sort();
+    const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country),remoteRegions=remotePage?.facets?.regions||{};
+    const remoteCounts=country==='all'
+      ? Object.values(remoteRegions).reduce((counts,cities)=>{Object.entries(cities||{}).forEach(([city,count])=>{counts[city]=(counts[city]||0)+Number(count||0);});return counts;},{})
+      : (remoteRegions[country]||{});
+    const regions=[...new Set([...Object.keys(remoteCounts),...ctryItems.map(regionOf)].filter(Boolean))].sort();
     const rb=document.getElementById('regionBlock');
     regionSel=[];
     if(regions.length<=1){rb.style.display='none';return;}
     rb.style.display='';
     document.getElementById('regionOpts').innerHTML=regions.map(r=>{
-      const n=ctryItems.filter(p=>regionOf(p)===r).length;
+      const n=Number(remoteCounts[r]||ctryItems.filter(p=>regionOf(p)===r).length);
       return `<label class="frl-opt"><input type="checkbox" value="${r}"> <span>${r}</span> <span class="cnt">${n}</span></label>`;
     }).join('');
-    document.getElementById('regionOpts').addEventListener('change',()=>{
-      regionSel=[...document.querySelectorAll('#regionOpts input:checked')].map(c=>c.value);render();
-    });
   }
   populateRegions();
+
+  let remoteRequest=0;
+  async function refreshRemote(page=1){
+    if(pageMode!=='category'||!window.ARCANA_API?.fetchCatalogPage){render();return;}
+    const request=++remoteRequest;
+    try{
+      const next=await window.ARCANA_API.fetchCatalogPage({
+        category:cat,construction:cat==='fabrics'&&l3?l3:null,page,pageSize:24,materials:mat,country:country==='all'?null:country,
+        regions:regionSel,availability:avail,minPrice:pmin,maxPrice:pmax,sort:sort==='rec'?'recommended':sort
+      });
+      if(request!==remoteRequest)return;
+      const totalPages=Math.max(1,Math.ceil(Number(next.total||0)/Number(next.page_size||24)));
+      if(page>totalPages){await refreshRemote(totalPages);return;}
+      remotePage=next;currentPage=page;categoryItems=next.products||[];items=categoryItems.filter(product=>matchSub(product,l3));
+      resultTotal=Number(next.total||0);resultSupplierTotal=Number(next.supplier_total||0);
+      const url=new URL(location.href);if(currentPage>1)url.searchParams.set('page',String(currentPage));else url.searchParams.delete('page');history.replaceState(null,'',url);
+      renderMaterialFacets();renderCountryFacets();renderPagination();render();
+    }catch(error){console.error('Catalogue filter refresh failed',error);}
+  }
 
   function render(){
     const TR=window.ARCANA_TR, T=window.ARCANA_T;
     const heTitle = TR(l3 ? subLabel : meta.title);
     document.title = `${heTitle} — Atelix`;
     levelNav.querySelector('h1').textContent=heTitle;
-    levelNav.querySelector('.catalog-level-copy p').innerHTML=`<b>${items.length}</b> ${T('noun.'+cat)} · <b>${supplierCount}</b> ${T('cat.verified')}`;
+    levelNav.querySelector('.catalog-level-copy p').innerHTML=`<b>${resultTotal}</b> ${T('noun.'+cat)} · <b>${resultSupplierTotal}</b> ${remotePage?.preview?supplierStatus:T('cat.verified')}`;
     levelNav.querySelectorAll('nav a').forEach((link,index)=>{const suffix=link.querySelector('span');link.childNodes[0].nodeValue=TR(subcats[index][1]);if(suffix)suffix.textContent='×';});
     const crumbItems=document.querySelectorAll('#catalogCrumbs li');
     if(crumbItems[0])crumbItems[0].querySelector('a,span').textContent=T('Home');
@@ -537,7 +584,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     mobileBack.setAttribute('aria-label',`Back to ${mobileBackLabel}`);
     // Material facet labels re-translate on language switch.
     document.querySelectorAll('#matOpts [data-mat]').forEach(el=>{ el.textContent = TR(el.dataset.mat); });
-    let list=items.filter(p=>{
+    let list=remotePage?[...items]:items.filter(p=>{
       const isOemAvailable=p.badge==='oem';
       if(avail==='oem' && !isOemAvailable) return false;
       if(avail==='nonoem' && isOemAvailable) return false;
@@ -548,17 +595,17 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       if(regionSel.length && !regionSel.includes(regionOf(p))) return false;
       return true;
     });
-    if(sort==='rec') list=[...list].sort((a,b)=>Number(isNewSource(b))-Number(isNewSource(a)));
-    else if(sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
-    else if(sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
-    else if(sort==='new') list=[...list].reverse();
+    if(!remotePage&&sort==='rec') list=[...list].sort((a,b)=>Number(isRecentlyListed(b))-Number(isRecentlyListed(a)));
+    else if(!remotePage&&sort==='price') list=[...list].sort((a,b)=>a.price-b.price);
+    else if(!remotePage&&sort==='moq') list=[...list].sort((a,b)=>moqNum(a.moq)-moqNum(b.moq));
+    else if(!remotePage&&sort==='new') list=[...list].reverse();
     let supplierList=supplierItems.filter(factory=>
       avail!=='nonoem' && mat.length===0 && pmin==null && pmax==null &&
       (country==='all'||supplierCountry(factory)===country)
     );
     if(sort==='rec'||sort==='new') supplierList=[...supplierList].sort((a,b)=>(b.years||0)-(a.years||0));
     else supplierList=[...supplierList].sort((a,b)=>window.ATELIX_supplierText(a,'name').localeCompare(window.ATELIX_supplierText(b,'name')));
-    const resultCount=list.length+supplierList.length;
+    const resultCount=(remotePage?resultTotal:list.length)+supplierList.length;
     const countText=`${resultCount} ${T(resultCount===1?'result':'results')}`;
     resCount.textContent=countText;
     mobileResCount.textContent=countText;
@@ -581,7 +628,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
         <span class="btn btn-out btn-block">${T('View supplier')}</span></div></a>`;
     };
     const cardHtml=[...list.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id, fabricSpec:isFabric})),...supplierList.map(supplierCard)].join('');
-    const emptyForL3=!!l3&&items.length===0&&supplierItems.length===0;
+    const emptyForL3=!!l3&&(remotePage?resultTotal===0:items.length===0)&&supplierItems.length===0;
     grid.innerHTML = resultCount
       ? cardHtml
       : emptyForL3
@@ -593,7 +640,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
       const showMaterials=cat==='oem'&&!l3;
       oemMaterialSources.hidden=!showMaterials;
       if(showMaterials){
-        const materialList=window.ARCANA_PRODUCTS.filter(isNewSource).slice(0,6);
+        const materialList=window.ARCANA_PRODUCTS.filter(isRecentlyListed).slice(0,6);
         oemMaterialSources.innerHTML=`<div class="sec-head"><div><h2 id="oem-material-sources-title">Material partners for OEM projects</h2><p class="muted" style="margin-top:5px">Source fabrics and components separately from your finished-goods manufacturer.</p></div><a class="link-arrow" href="/categories/fabrics">Browse all materials ${IC.chevR}</a></div><div class="prod-grid">${materialList.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id})).join('')}</div>`;
         window.ARCANA_wireCards(oemMaterialSources);
       }
@@ -608,24 +655,28 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(c=>c.classList.toggle('on',(c.dataset.sort||c.dataset.quickSort)==='rec'));
     const allCtry=document.querySelector('[name=ctry][value=all]'); if(allCtry) allCtry.checked=true;
     populateRegions();
-    render();
+    refreshRemote(1);
   }
 
-  document.querySelectorAll('[name=avail]').forEach(r=>r.addEventListener('change',()=>{avail=r.value;render();}));
+  document.querySelectorAll('[name=avail]').forEach(r=>r.addEventListener('change',()=>{avail=r.value;refreshRemote(1);}));
   document.querySelectorAll('[data-quick-avail]').forEach(chip=>chip.addEventListener('click',()=>{
     avail=chip.dataset.quickAvail;
     const radio=document.querySelector(`[name=avail][value="${avail}"]`);
     if(radio) radio.checked=true;
     document.querySelectorAll('[data-quick-avail]').forEach(item=>item.classList.toggle('on',item===chip));
-    render();
+    refreshRemote(1);
   }));
-  document.getElementById('matOpts').addEventListener('change',()=>{mat=[...document.querySelectorAll('#matOpts input:checked')].map(c=>c.value);render();});
+  document.getElementById('matOpts').addEventListener('change',()=>{mat=[...document.querySelectorAll('#matOpts input:checked')].map(c=>c.value);refreshRemote(1);});
   document.getElementById('countryOpts').addEventListener('change',e=>{
-    const r=e.target; if(r.name==='ctry'){country=r.value;populateRegions();render();}
+    const r=e.target; if(r.name==='ctry'){country=r.value;populateRegions();refreshRemote(1);}
   });
-  document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;render();});
-  document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;render();});
-  document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(c=>c.addEventListener('click',()=>{sort=c.dataset.sort||c.dataset.quickSort;document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(x=>x.classList.toggle('on',(x.dataset.sort||x.dataset.quickSort)===sort));render();}));
+  document.getElementById('regionOpts').addEventListener('change',()=>{regionSel=[...document.querySelectorAll('#regionOpts input:checked')].map(c=>c.value);refreshRemote(1);});
+  let priceTimer=null;
+  const refreshPrice=()=>{clearTimeout(priceTimer);priceTimer=setTimeout(()=>refreshRemote(1),250);};
+  document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;refreshPrice();});
+  document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;refreshPrice();});
+  document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(c=>c.addEventListener('click',()=>{sort=c.dataset.sort||c.dataset.quickSort;document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(x=>x.classList.toggle('on',(x.dataset.sort||x.dataset.quickSort)===sort));refreshRemote(1);}));
+  pagination.addEventListener('click',event=>{const button=event.target.closest('[data-catalog-page]');if(button&&!button.disabled)refreshRemote(Number(button.dataset.catalogPage));});
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
   render();
   window.ARCANA_onLang(render);

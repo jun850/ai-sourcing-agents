@@ -144,7 +144,7 @@
     return {
       adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListShippingRates:async()=>({shipping}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,
       adminSaveContentPage:async(payload)=>({page:{...payload,updated_at:new Date().toISOString()}}),adminPublishContentPage:async()=>({}),adminRollbackContentPage:async()=>({}),
-      adminSaveWidget:async(payload)=>({widget:payload}),adminArchiveWidget:async()=>({}),adminSaveProduct:async(payload)=>{window.__qaSavedProduct=payload;return {product:payload};},adminArchiveProduct:async()=>({}),adminRestoreProduct:async()=>({}),adminSaveSupplier:async(payload)=>{const supplier={...payload,id:payload.id||`f${suppliers.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedSupplier=supplier;if(!payload.id)suppliers.push(supplier);return {supplier};},adminArchiveSupplier:async()=>({}),adminRestoreSupplier:async()=>({}),adminSaveShippingRate:async payload=>{const saved={...payload,id:payload.id||`ship-${shipping.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedShippingRate=saved;return {rate:saved};},adminArchiveShippingRate:async()=>({}),adminUploadMedia:async()=>({}),adminArchiveMedia:async()=>({}),uploadImage:async(file,folder)=>({url:`https://storage.example.com/${folder}/${file.name}`,path:`qa/${folder}/${file.name}`}),signOut:async()=>({})
+      adminSaveWidget:async(payload)=>({widget:payload}),adminArchiveWidget:async()=>({}),adminSaveProduct:async(payload)=>{window.__qaSavedProduct=payload;return {product:payload};},adminArchiveProduct:async()=>({}),adminRestoreProduct:async()=>({}),adminSaveSupplier:async(payload)=>{const supplier={...payload,id:payload.id||`f${suppliers.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedSupplier=supplier;if(!payload.id)suppliers.push(supplier);return {supplier};},adminArchiveSupplier:async()=>({}),adminRestoreSupplier:async()=>({}),adminSaveShippingRate:async payload=>{const saved={...payload,id:payload.id||`ship-${shipping.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedShippingRate=saved;return {rate:saved};},adminArchiveShippingRate:async()=>({}),adminUploadMedia:async()=>({}),adminArchiveMedia:async()=>({}),uploadImage:async(file,folder)=>({url:`https://storage.example.com/${folder}/${file.name}`,path:`qa/${folder}/${file.name}`}),uploadCatalogProductImage:async(file)=>({media:{role:'detail',public_url:`https://storage.example.com/products/${file.name}`,thumb_url:`https://storage.example.com/products/${file.name}`,storage_path:`products/00000000-0000-4000-8000-000000000000/${'a'.repeat(64)}-1600.webp`,thumb_storage_path:`products/00000000-0000-4000-8000-000000000000/${'b'.repeat(64)}-640.webp`,width:1,height:1,bytes:file.size,sha256:'a'.repeat(64),thumb_bytes:file.size,thumb_sha256:'b'.repeat(64),alt_i18n:{}}}),signOut:async()=>({})
     };
   }
 
@@ -293,7 +293,9 @@
     const form=root.querySelector('[data-editor-form]'),sections=[...form.querySelectorAll('.form-section')];
     const mediaSection=sections.find(section=>section.querySelector('h2')?.textContent==='Media and access');
     if(!mediaSection)return;
-    mediaSection.insertAdjacentHTML('beforebegin',`<div class="form-section"><h2>Buyer-selectable options</h2>${window.ATELIX_productOptionEditor?.(product.variants||product.options)||''}</div>`);
+    const copy=product.copy_i18n||{};
+    const constructions=window.ATELIX_CATALOG_TAXONOMY?.CONSTRUCTIONS||[];
+    mediaSection.insertAdjacentHTML('beforebegin',`<div class="form-section"><h2>Localized catalogue copy</h2><div class="form-grid"><label class="field"><span>Construction</span><select name="construction_slug">${options(constructions.map(item=>[item.slug,item.label.en]),product.construction_slug||'specialty-other')}</select></label><label class="field"><span>Japanese name</span><input name="name_ja" value="${esc(copy.ja?.name||'')}"></label><label class="field field-wide"><span>Japanese description</span><textarea name="description_ja">${esc(copy.ja?.description||'')}</textarea></label><label class="field"><span>Chinese name</span><input name="name_zh" value="${esc(copy.zh?.name||'')}"></label><label class="field field-wide"><span>Chinese description</span><textarea name="description_zh">${esc(copy.zh?.description||'')}</textarea></label></div><p class="field-help">English uses the product name and description above. All three languages are required before an active fabric listing can be saved.</p></div><div class="form-section"><h2>Important to read FAQ</h2><div data-catalog-faq-editor></div></div><div class="form-section"><h2>Buyer-selectable options</h2>${window.ATELIX_productOptionEditor?.(product.variants||product.options)||''}</div>`);
     [form.elements.img,form.elements.image_upload,form.elements.remove_image].filter(Boolean).forEach(control=>control.closest('label')?.remove());
     mediaSection.querySelector('.form-grid')?.insertAdjacentHTML('afterbegin',`<div class="product-media-editor field-wide" data-product-media>
       <div class="product-media-head"><div><strong>PDP image order</strong><p>The first image is the main catalog thumbnail and the first PDP image.</p></div><span data-media-count></span></div>
@@ -303,18 +305,26 @@
       <label class="field product-media-upload"><span>Or upload an image</span><input name="gallery_upload" type="file" accept="image/jpeg,image/png,image/webp,image/avif"><small data-product-upload-status>JPG, PNG, WebP, or AVIF up to 10 MB. New images are added last, then can be moved.</small></label>
     </div>`);
     bindProductMediaEditor(form,product);
+    bindFaqEditor(form,product.faqs||[]);
     window.ATELIX_bindProductOptionEditor?.(form);
   }
   function bindProductMediaEditor(form,product){
-    let images=[...(Array.isArray(product.images)?product.images:[]),product.img].map(value=>String(value||'').trim()).filter((value,index,all)=>value&&all.indexOf(value)===index);
+    let catalogMedia=(product.media||[]).map(item=>({...item}));
+    let images=(catalogMedia.length?catalogMedia.map(item=>item.public_url):[...(Array.isArray(product.images)?product.images:[]),product.img]).map(value=>String(value||'').trim()).filter((value,index,all)=>value&&all.indexOf(value)===index);
+    if(!catalogMedia.length)catalogMedia=images.map(()=>null);
     const editor=form.querySelector('[data-product-media]'),list=editor.querySelector('[data-product-media-list]'),count=editor.querySelector('[data-media-count]');
-    const sync=()=>{form.elements.images.value=images.join('\n');form.elements.img.value=images[0]||'';count.textContent=`${images.length} image${images.length===1?'':'s'}`;};
-    const render=()=>{sync();list.innerHTML=images.length?images.map((url,index)=>`<article class="product-media-row" data-media-index="${index}" tabindex="-1"><div class="product-media-preview"><img src="${esc(url)}" alt=""><span>${index===0?'Main':index+1}</span></div><div class="product-media-url" title="${esc(url)}">${esc(url)}</div><div class="product-media-actions"><button class="icon-btn" type="button" data-media-up aria-label="Move image ${index+1} earlier"${index===0?' disabled':''}>↑</button><button class="icon-btn" type="button" data-media-down aria-label="Move image ${index+1} later"${index===images.length-1?' disabled':''}>↓</button><button class="btn btn-quiet" type="button" data-media-remove>Remove</button></div></article>`).join(''):'<div class="product-media-empty"><strong>No product images</strong><p>Add a URL or upload an image. Active listings should have at least one image.</p></div>';bind();};
-    const move=(index,next)=>{const [image]=images.splice(index,1);images.splice(next,0,image);render();list.querySelector(`[data-media-index="${next}"]`)?.focus?.();};
-    const bind=()=>list.querySelectorAll('[data-media-index]').forEach(row=>{const index=Number(row.dataset.mediaIndex);row.querySelector('[data-media-up]').onclick=()=>move(index,index-1);row.querySelector('[data-media-down]').onclick=()=>move(index,index+1);row.querySelector('[data-media-remove]').onclick=()=>{images.splice(index,1);render();};});
-    editor.querySelector('[data-product-image-add]').onclick=()=>{const input=form.elements.image_url_add,url=input.value.trim();if(!url){input.setCustomValidity('Enter an image URL or asset path.');input.reportValidity();input.setCustomValidity('');return;}if(images.includes(url)){input.setCustomValidity('This image is already in the gallery.');input.reportValidity();input.setCustomValidity('');return;}images.push(url);input.value='';render();};
-    form.elements.gallery_upload.addEventListener('change',async event=>{const file=event.target.files?.[0],status=editor.querySelector('[data-product-upload-status]');if(!file)return;if(!['image/jpeg','image/png','image/webp','image/avif'].includes(file.type)||file.size>10*1024*1024){status.textContent='Choose a JPG, PNG, WebP, or AVIF image no larger than 10 MB.';event.target.value='';return;}event.target.disabled=true;status.textContent='Uploading image…';const uploaded=await api.uploadImage(file,'products');event.target.disabled=false;event.target.value='';if(uploaded?.error||!uploaded?.url){status.textContent=uploaded?.error?.message||'Upload failed. Try again.';return;}if(!images.includes(uploaded.url))images.push(uploaded.url);status.textContent='Image uploaded and added last. Move it to set its PDP position.';render();});
+    const sync=()=>{catalogMedia.forEach((item,index)=>{if(item)item.position=index;});form.elements.images.value=images.join('\n');form.elements.img.value=catalogMedia[0]?.thumb_url||images[0]||'';if(catalogMedia.length===images.length&&catalogMedia.every(item=>item?.storage_path))form.dataset.catalogMedia=JSON.stringify(catalogMedia);else delete form.dataset.catalogMedia;count.textContent=`${images.length} of 4 images`;};
+    const render=()=>{sync();list.innerHTML=images.length?images.map((url,index)=>`<article class="product-media-row" data-media-index="${index}" tabindex="-1"><div class="product-media-preview"><img src="${esc(catalogMedia[index]?.thumb_url||url)}" alt=""><span>${index===0?'Main':index+1}</span></div><div class="product-media-url"><label class="field"><span>Image role</span><select data-media-role>${options([['flat_swatch','Flat swatch'],['sample_card','Sample card'],['texture','Texture'],['drape','Drape'],['detail','Detail']],catalogMedia[index]?.role||(index===0?'sample_card':'detail'))}</select></label></div><div class="product-media-actions"><button class="icon-btn" type="button" data-media-up aria-label="Move image ${index+1} earlier"${index===0?' disabled':''}>↑</button><button class="icon-btn" type="button" data-media-down aria-label="Move image ${index+1} later"${index===images.length-1?' disabled':''}>↓</button><button class="btn btn-quiet" type="button" data-media-remove>Remove</button></div></article>`).join(''):'<div class="product-media-empty"><strong>No product images</strong><p>Add an optimized image. Active listings require a flat swatch or sample card first.</p></div>';bind();};
+    const move=(index,next)=>{const [image]=images.splice(index,1);images.splice(next,0,image);if(catalogMedia.length){const [media]=catalogMedia.splice(index,1);catalogMedia.splice(next,0,media);}render();list.querySelector(`[data-media-index="${next}"]`)?.focus?.();};
+    const bind=()=>list.querySelectorAll('[data-media-index]').forEach(row=>{const index=Number(row.dataset.mediaIndex);row.querySelector('[data-media-up]').onclick=()=>move(index,index-1);row.querySelector('[data-media-down]').onclick=()=>move(index,index+1);row.querySelector('[data-media-remove]').onclick=()=>{images.splice(index,1);if(catalogMedia.length)catalogMedia.splice(index,1);render();};row.querySelector('[data-media-role]').onchange=event=>{if(catalogMedia[index])catalogMedia[index].role=event.target.value;sync();};});
+    editor.querySelector('[data-product-image-add]').onclick=()=>{const input=form.elements.image_url_add,url=input.value.trim();if(!url){input.setCustomValidity('Enter an image URL or asset path.');input.reportValidity();input.setCustomValidity('');return;}if(images.length>=4){input.setCustomValidity('A product can have at most four images.');input.reportValidity();input.setCustomValidity('');return;}if(images.includes(url)){input.setCustomValidity('This image is already in the gallery.');input.reportValidity();input.setCustomValidity('');return;}images.push(url);input.value='';render();};
+    form.elements.gallery_upload.addEventListener('change',async event=>{const file=event.target.files?.[0],status=editor.querySelector('[data-product-upload-status]');if(!file)return;if(images.length>=4){status.textContent='Remove an image before uploading another. Products can have at most four.';event.target.value='';return;}event.target.disabled=true;status.textContent='Optimizing and uploading two WebP sizes…';const uploaded=await api.uploadCatalogProductImage(file,product.id);event.target.disabled=false;event.target.value='';if(uploaded?.error||!uploaded?.media){status.textContent=uploaded?.error?.message||'Upload failed. Try again.';return;}catalogMedia.push(uploaded.media);images.push(uploaded.media.public_url);status.textContent='Image optimized and added last. Set its role and move it into position.';render();});
     render();
+  }
+  function bindFaqEditor(form,initial){
+    const root=form.querySelector('[data-catalog-faq-editor]');let rows=(initial||[]).map(item=>({question_i18n:item.question_i18n||{},answer_i18n:item.answer_i18n||{},active:item.active!==false}));
+    const sync=()=>{form.dataset.catalogFaqs=JSON.stringify(rows.map((item,index)=>({...item,sort_order:index})));};
+    const render=()=>{root.innerHTML=`<div data-faq-rows>${rows.map((item,index)=>`<fieldset class="inline-form" data-faq-index="${index}"><legend>FAQ ${index+1}</legend>${['en','ja','zh'].map(locale=>`<label class="field"><span>${locale.toUpperCase()} question</span><input data-faq-question="${locale}" value="${esc(item.question_i18n?.[locale]||'')}" required></label><label class="field field-wide"><span>${locale.toUpperCase()} answer</span><textarea data-faq-answer="${locale}" required>${esc(item.answer_i18n?.[locale]||'')}</textarea></label>`).join('')}<button class="btn btn-quiet" type="button" data-remove-faq>Remove FAQ</button></fieldset>`).join('')}</div><button class="btn btn-secondary" type="button" data-add-faq>Add FAQ</button>`;root.querySelector('[data-add-faq]').onclick=()=>{rows.push({question_i18n:{},answer_i18n:{},active:true});render();};root.querySelectorAll('[data-faq-index]').forEach(fieldset=>{const index=Number(fieldset.dataset.faqIndex);fieldset.querySelector('[data-remove-faq]').onclick=()=>{rows.splice(index,1);render();};fieldset.querySelectorAll('[data-faq-question]').forEach(input=>input.oninput=()=>{rows[index].question_i18n[input.dataset.faqQuestion]=input.value;sync();});fieldset.querySelectorAll('[data-faq-answer]').forEach(input=>input.oninput=()=>{rows[index].answer_i18n[input.dataset.faqAnswer]=input.value;sync();});});sync();};render();
   }
   function entityForm(type,item){
     if(type==='product'){
@@ -370,13 +380,20 @@
     const form=root.querySelector('[data-editor-form]');
     if(!form.reportValidity())return;
     const values=Object.fromEntries(new FormData(form).entries());
-    let payload;
+    let payload,catalogContent=null;
     if(type==='product'){
       let variants;
       try{variants=window.ATELIX_readProductOptions?.(form)||[];}catch(error){handleMutationError(error);return;}
       const brandEmails=values.private_assignments.split(',').map(x=>x.trim()).filter(Boolean);
       const images=String(values.images||'').split('\n').map(x=>x.trim()).filter(Boolean);
       values.img=images[0]||null;
+      const copyI18n={en:{name:values.name.trim(),description:values.description.trim()},ja:{name:values.name_ja.trim(),description:values.description_ja.trim()},zh:{name:values.name_zh.trim(),description:values.description_zh.trim()}};
+      const completeCopy=['en','ja','zh'].every(locale=>copyI18n[locale].name&&copyI18n[locale].description);
+      const requiresLocalizedCopy=!item.id||Object.keys(item.copy_i18n||{}).length>0||/^FAB-[A-HJ-NP-Z2-9]{10}$/.test(values.sku);
+      if(requiresLocalizedCopy&&values.category==='fabrics'&&values.listing_status==='active'&&!completeCopy){toast('English, Japanese, and Chinese name and description are required before activating a fabric.',true);return;}
+      const mediaAlt=(role,locale)=>`${copyI18n[locale].name} ${{en:role==='flat_swatch'?'fabric swatch':'fabric sample',ja:role==='flat_swatch'?'生地スワッチ':'生地サンプル',zh:role==='flat_swatch'?'面料色样':'面料样品'}[locale]}`.trim();
+      const catalogMedia=form.dataset.catalogMedia?JSON.parse(form.dataset.catalogMedia).map((media,index)=>({...media,position:index,alt_i18n:Object.fromEntries(['en','ja','zh'].map(locale=>[locale,mediaAlt(media.role,locale)]))})):null;
+      catalogContent=values.category==='fabrics'&&completeCopy?{copyI18n,constructionSlug:values.construction_slug,media:catalogMedia,faqs:form.dataset.catalogFaqs?JSON.parse(form.dataset.catalogFaqs):[]}:null;
       payload={...values,id:item.id||null,updated_at:item.updated_at||null,price:values.price===''?0:Number(values.price),moq:values.moq===''?null:Number(values.moq),gsm:values.gsm||'',images,variants,brand_emails:brandEmails,is_private:brandEmails.length>0};
       delete payload.private_assignments;
       delete payload.image_url_add;
@@ -384,21 +401,50 @@
       delete payload.new_supplier_name;
       delete payload.new_supplier_type;
       delete payload.new_supplier_loc;
+      delete payload.name_ja;
+      delete payload.name_zh;
+      delete payload.description_ja;
+      delete payload.description_zh;
+      delete payload.construction_slug;
     }else{
       let logoImg,pageImg;
       try{
         logoImg=await resolveEditorImage(form,{urlName:'logo_url',fileName:'logo_upload',removeName:'remove_logo',folder:'supplier-logos',label:'Supplier logo'});
         pageImg=await resolveEditorImage(form,{urlName:'page_image_url',fileName:'page_image_upload',removeName:'remove_page_image',folder:'supplier-pages',label:'Company page image'});
       }catch(error){handleMutationError(error);return;}
+      const copyI18n={en:{name:values.name.trim(),description:values.description.trim()},ja:{name:values.supplier_name_ja.trim(),description:values.supplier_description_ja.trim()},zh:{name:values.supplier_name_zh.trim(),description:values.supplier_description_zh.trim()}};
+      const completeCopy=['en','ja','zh'].every(locale=>copyI18n[locale].name&&copyI18n[locale].description);
+      if(values.verify_state==='verified'&&!completeCopy){toast('English, Japanese, and Chinese name and description are required before verifying a supplier.',true);return;}
+      catalogContent=completeCopy?{copyI18n,faqs:form.dataset.catalogFaqs?JSON.parse(form.dataset.catalogFaqs):[]}:null;
       payload={id:item.id||null,updated_at:item.updated_at||null,slug:values.slug,name:values.name,type:values.type,loc:values.loc,region:values.loc,verify_state:values.verify_state,bio:values.description,web:values.website,sales:values.contact_email,tags:values.capabilities.split(',').map(x=>x.trim()).filter(Boolean),certs:values.certifications.split(',').map(x=>x.trim()).filter(Boolean),logo_img:logoImg,page_img:pageImg,img:pageImg};
     }
-    try{const names=type==='product'?['adminSaveProduct','adminUpsertProduct']:['adminSaveSupplier','adminUpsertSupplier','adminSaveFactory'];const r=await callFirst(names,payload);if(!r.available){toast(`${titleCase(type)} saving is not available.`,true);return;}closeDrawer();toast(`${titleCase(type)} saved.`);navigate(type==='product'?'products':'suppliers');}catch(error){handleMutationError(error);}
+    try{
+      const names=type==='product'?['adminSaveProduct','adminUpsertProduct']:['adminSaveSupplier','adminUpsertSupplier','adminSaveFactory'];const r=await callFirst(names,payload);
+      if(!r.available){toast(`${titleCase(type)} saving is not available.`,true);return;}
+      if(type==='product'&&catalogContent&&typeof api.saveProductCatalogContent==='function'){
+        const saved=r.result?.product||r.result?.data||r.result,productId=saved?.id||item.id;
+        const contentResult=await api.saveProductCatalogContent({productId,...catalogContent});
+        if(contentResult?.error)throw contentResult.error;
+      }
+      if(type==='supplier'&&catalogContent&&typeof api.saveSupplierCatalogContent==='function'){
+        const saved=r.result?.supplier||r.result?.data||r.result,factoryId=saved?.id||item.id;
+        const contentResult=await api.saveSupplierCatalogContent({factoryId,...catalogContent});
+        if(contentResult?.error)throw contentResult.error;
+      }
+      closeDrawer();toast(`${titleCase(type)} saved.`);navigate(type==='product'?'products':'suppliers');
+    }catch(error){handleMutationError(error);}
   }
   async function archiveEntity(type,record,restore=false){try{const item=typeof record==='object'?record:(type==='widget'?cache.widgets.find(x=>String(x.id)===String(record)):{id:record});const names=type==='widget'?['intoolsArchiveWidget','adminArchiveWidget']:type==='product'?(restore?['adminRestoreProduct']:['adminArchiveProduct']):(restore?['adminRestoreSupplier','adminRestoreFactory']:['adminArchiveSupplier','adminArchiveFactory']);const args=type==='widget'?[item.id,item.current_revision||item.revision_no||item.revision||null,restore]:[item.id,item.updated_at||null];const r=await callFirst(names,...args);if(!r.available){toast('This action is not available.',true);return;}closeDrawer();toast(`${titleCase(type)} ${restore?'restored':'archived'}.`);navigate(type==='widget'?'widgets':`${type}s`);}catch(error){handleMutationError(error);}}
 
   async function renderSuppliers(){const r=await callFirst(['adminListSuppliers','adminListFactories']);cache.suppliers=valueOf(r.result,'suppliers');workspace().innerHTML=`${listHead('Suppliers','Manage identity, verification, capabilities, certifications, media, and linked SKUs.',true,'New supplier')}<div class="toolbar"><label class="search"><input data-filter placeholder="Search suppliers" aria-label="Search suppliers"></label><select data-status aria-label="Filter status"><option value="">All states</option><option value="verified">verified</option><option value="pending">pending</option><option value="unverified">unverified</option><option value="archived">archived</option></select></div>${unavailableNotice()}<section class="panel" data-list>${suppliersTable(cache.suppliers)}</section>`;bindListFilters('suppliers',suppliersTable,['name','region','loc']);workspace().querySelector('[data-primary-action]').onclick=()=>openSupplierEditor();bindRowActions('supplier',openSupplierEditor);}
   function suppliersTable(rows){return rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Supplier</th><th>Location</th><th>Verification</th><th>Products</th><th>Updated</th><th><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows.map(s=>`<tr><td class="table-primary">${esc(s.name)}</td><td>${esc(s.loc||s.region||'—')}</td><td>${statusBadge(isArchived(s)?'archived':s.verify_state||s.status)}</td><td>${esc(s.product_count??'—')}</td><td>${esc(fmtDate(s.updated_at))}</td><td><div class="row-actions"><button class="btn btn-quiet" data-edit-id="${esc(s.id)}">Edit</button></div></td></tr>`).join('')}</tbody></table></div>`:tableEmpty('⌘','No suppliers found','Add a supplier profile and connect its catalog.','New supplier');}
-  function openSupplierEditor(supplier={}){openDrawer('Edit supplier',supplier.name||'New supplier',entityForm('supplier',supplier),entityActions(supplier));bindEntityActions('supplier',supplier);}
+  function openSupplierEditor(supplier={}){openDrawer('Edit supplier',supplier.name||'New supplier',entityForm('supplier',supplier),entityActions(supplier));bindEntityActions('supplier',supplier);enhanceSupplierEditor(supplier);}
+  function enhanceSupplierEditor(supplier){
+    const form=root.querySelector('[data-editor-form]'),imageSection=[...form.querySelectorAll('.form-section')].find(section=>section.querySelector('h2')?.textContent==='Supplier images');if(!imageSection)return;
+    const copy=supplier.copy_i18n||{};
+    imageSection.insertAdjacentHTML('beforebegin',`<div class="form-section"><h2>Localized supplier copy</h2><div class="form-grid"><label class="field"><span>Japanese name</span><input name="supplier_name_ja" value="${esc(copy.ja?.name||'')}"></label><label class="field field-wide"><span>Japanese description</span><textarea name="supplier_description_ja">${esc(copy.ja?.description||'')}</textarea></label><label class="field"><span>Chinese name</span><input name="supplier_name_zh" value="${esc(copy.zh?.name||'')}"></label><label class="field field-wide"><span>Chinese description</span><textarea name="supplier_description_zh">${esc(copy.zh?.description||'')}</textarea></label></div><p class="field-help">English uses the supplier name and profile description above. Complete all languages before verification.</p></div><div class="form-section"><h2>Supplier FAQ</h2><div data-catalog-faq-editor></div></div>`);
+    bindFaqEditor(form,supplier.faqs||[]);
+  }
 
   async function renderShipping(){
     const result=await callFirst(['adminListShippingRates']);
