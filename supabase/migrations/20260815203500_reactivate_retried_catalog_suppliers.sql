@@ -1,6 +1,6 @@
 -- Allow a source-free supplier batch to retry deterministic factory IDs that a
 -- previous failed release archived, while preserving exact rollback state.
-DO $$
+DO $migration$
 DECLARE
   v_definition text;
   v_patched text;
@@ -30,9 +30,9 @@ BEGIN
 
   EXECUTE v_patched;
 END;
-$$;
+$migration$;
 
-DO $$
+DO $migration$
 DECLARE
   v_definition text;
   v_patched text;
@@ -52,4 +52,4 @@ BEGIN
 
   EXECUTE v_patched;
 END;
-$$;
+$migration$;
