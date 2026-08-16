@@ -13,7 +13,6 @@
 <div id="hdr"></div>
 
 <main class="wrap" style="padding-bottom:40px">
-  <span id="ordCrumb" hidden></span>
   <div id="ordRoot"></div>
 </main>
 
@@ -180,7 +179,6 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.box}</span><h3>Order not found</h3><p>We couldn't find that order. Check the link or view your order history.</p><a class="btn btn-green" href="orders.html">View my orders</a></div>`;
       return;
     }
-    document.getElementById('ordCrumb').textContent=order.no;
     const meta=STATUS_META[order.status]||STATUS_META.awaiting_payment;
     root.innerHTML=`
       <section class="panel ord-hd">
