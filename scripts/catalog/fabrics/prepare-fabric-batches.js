@@ -12,6 +12,7 @@ const DEFAULT_RUN='data/catalog-runs/apparelx-fabrics-10000';
 function arg(flag,fallback=null){const index=process.argv.indexOf(flag);return index<0?fallback:process.argv[index+1];}
 function readJson(file){return JSON.parse(fs.readFileSync(file,'utf8'));}
 function removeBatchManifests(output,kind){if(!fs.existsSync(output))return 0;let removed=0;for(const name of fs.readdirSync(output)){if(new RegExp(`^${kind}-batch-\\d+[.]json$`).test(name)){fs.unlinkSync(path.join(output,name));removed+=1;}}return removed;}
+function transformedThumbUrl(mediaOrigin,storagePath){return `${mediaOrigin.replace('/storage/v1/object/public/','/storage/v1/render/image/public/')}/${storagePath}?width=640&quality=76&resize=contain`;}
 function stable(value){if(Array.isArray(value))return value.map(stable);if(!value||typeof value!=='object')return value;return Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])]));}
 function digest(value){return crypto.createHash('sha256').update(Buffer.isBuffer(value)||typeof value==='string'?value:JSON.stringify(stable(value))).digest('hex');}
 function translations(file){if(!file||!fs.existsSync(file))return {products:{},suppliers:{},faqs:{}};const value=readJson(file);return {products:value.products||{},suppliers:value.suppliers||{},faqs:value.faqs||{}};}
@@ -46,7 +47,7 @@ function writeImmutable(file,buffer,expectedHash){
   }
   fs.writeFileSync(file,buffer,{flag:'wx'});
 }
-async function optimizeMedia(dir,productId,manifest,outputDir,build,mediaOrigin,copy,maxImages){
+async function optimizeMedia(dir,productId,manifest,outputDir,build,mediaOrigin,copy,maxImages,thumbnailMode){
   const sourceHashes=new Set(),selected=[];
   for(const image of manifest.images||[]){
     const key=String(image.sha256||image.localPath||'');
@@ -63,10 +64,16 @@ async function optimizeMedia(dir,productId,manifest,outputDir,build,mediaOrigin,
     const fullHash=digest(full.data);
     if(optimizedHashes.has(fullHash)){deduplicated+=1;continue;}
     optimizedHashes.add(fullHash);
-    const thumb=await sharp(input,{failOn:'error'}).rotate().toColourspace('srgb').resize({width:640,height:640,fit:'inside',withoutEnlargement:true}).webp({quality:76,effort:6,smartSubsample:true}).toBuffer({resolveWithObject:true});
-    const thumbHash=digest(thumb.data),productPath=`products/${productId}`,fullPath=`${productPath}/${fullHash}-1600.webp`,thumbPath=`${productPath}/${thumbHash}-640.webp`;
-    writeImmutable(path.join(outputDir,'media',fullPath),full.data,fullHash);writeImmutable(path.join(outputDir,'media',thumbPath),thumb.data,thumbHash);
-    values.push({...base,position:values.length,public_url:`${mediaOrigin}/${fullPath}`,thumb_url:`${mediaOrigin}/${thumbPath}`,storage_path:fullPath,thumb_storage_path:thumbPath,width:full.info.width,height:full.info.height,bytes:full.data.length,sha256:fullHash,thumb_bytes:thumb.data.length,thumb_sha256:thumbHash,alt_i18n:contract.localizedAlt(copy,base.role)});
+    const productPath=`products/${productId}`,fullPath=`${productPath}/${fullHash}-1600.webp`;
+    writeImmutable(path.join(outputDir,'media',fullPath),full.data,fullHash);
+    if(thumbnailMode==='transform'){
+      values.push({...base,position:values.length,public_url:`${mediaOrigin}/${fullPath}`,thumb_url:transformedThumbUrl(mediaOrigin,fullPath),storage_path:fullPath,thumb_storage_path:null,width:full.info.width,height:full.info.height,bytes:full.data.length,sha256:fullHash,thumb_bytes:null,thumb_sha256:null,alt_i18n:contract.localizedAlt(copy,base.role)});
+    }else{
+      const thumb=await sharp(input,{failOn:'error'}).rotate().toColourspace('srgb').resize({width:640,height:640,fit:'inside',withoutEnlargement:true}).webp({quality:76,effort:6,smartSubsample:true}).toBuffer({resolveWithObject:true});
+      const thumbHash=digest(thumb.data),thumbPath=`${productPath}/${thumbHash}-640.webp`;
+      writeImmutable(path.join(outputDir,'media',thumbPath),thumb.data,thumbHash);
+      values.push({...base,position:values.length,public_url:`${mediaOrigin}/${fullPath}`,thumb_url:`${mediaOrigin}/${thumbPath}`,storage_path:fullPath,thumb_storage_path:thumbPath,width:full.info.width,height:full.info.height,bytes:full.data.length,sha256:fullHash,thumb_bytes:thumb.data.length,thumb_sha256:thumbHash,alt_i18n:contract.localizedAlt(copy,base.role)});
+    }
   }
   return {values,deduplicated};
 }
@@ -80,6 +87,7 @@ async function prepare(options={}){
   const storageBudgetMb=Number(options.storageBudgetMb);
   const maxImages=Number(options.maxImages||4);
   const productBatchSize=Number(options.batchSize||50);
+  const thumbnailMode=String(options.thumbnailMode||'stored');
   const target=Number(options.target||4736),usdJpy=Number(options.usdJpy||pricing.DEFAULT_USD_JPY),fxSnapshotId=String(options.fxSnapshotId||'atelix-static-jpy-150');
   const supabaseUrl=String(options.supabaseUrl||process.env.SUPABASE_URL||'').replace(/\/$/,'');
   if(build&&!/^https:\/\/[a-z0-9-]+[.]supabase[.]co$/.test(supabaseUrl))throw new Error('--supabase-url must be the production Supabase project URL');
@@ -88,6 +96,7 @@ async function prepare(options={}){
   if(build&&(!Number.isFinite(storageBudgetMb)||storageBudgetMb<=0))throw new Error('--build requires a positive --storage-budget-mb');
   if(!Number.isInteger(maxImages)||maxImages<1||maxImages>4)throw new Error('--max-images must be an integer from 1 to 4');
   if(!Number.isInteger(productBatchSize)||productBatchSize<1||productBatchSize>50)throw new Error('--batch-size must be an integer from 1 to 50');
+  if(!['stored','transform'].includes(thumbnailMode))throw new Error('--thumbnail-mode must be stored or transform');
   if(!Number.isInteger(target)||target<1)throw new Error('--target must be a positive integer');
   const mediaOrigin=build?`${supabaseUrl}/storage/v1/object/public/catalog-media`:'';
   const eligible=[],excluded=[],supplierByName=new Map(),missingTranslations=[],supplierConflicts=[];
@@ -143,21 +152,21 @@ async function prepare(options={}){
     const releaseId=contract.uuidFromText(`source-free-release:${gitCommitSha}:${digest(planned.map(item=>item.productId))}`);
     const accepted=[];let deduplicatedImages=0;
     for(const item of planned){
-      const optimized=await optimizeMedia(item.dir,item.productId,item.mediaManifest,output,true,mediaOrigin,item.productCopy,maxImages);deduplicatedImages+=optimized.deduplicated;
+      const optimized=await optimizeMedia(item.dir,item.productId,item.mediaManifest,output,true,mediaOrigin,item.productCopy,maxImages,thumbnailMode);deduplicatedImages+=optimized.deduplicated;
       accepted.push({id:item.productId,factory_id:supplierByName.get(item.makerKey).id,product:contract.publicProduct(item.product,item.productCopy,optimized.values,item.pricing),prices:pricing.catalogPriceRows(item.pricing),media:optimized.values,faqs:item.faqs});
     }
-    const mediaItems=accepted.flatMap(item=>item.media),fullBytes=mediaItems.reduce((sum,item)=>sum+item.bytes,0),thumbnailBytes=mediaItems.reduce((sum,item)=>sum+item.thumb_bytes,0),storageBytes=fullBytes+thumbnailBytes,storageBudgetBytes=Math.floor(storageBudgetMb*1024*1024);
-    Object.assign(report,{max_images_per_product:maxImages,optimized_media_objects:mediaItems.length*2,optimized_full_bytes:fullBytes,optimized_thumbnail_bytes:thumbnailBytes,optimized_storage_bytes:storageBytes,storage_budget_bytes:storageBudgetBytes,storage_budget_remaining_bytes:storageBudgetBytes-storageBytes,deduplicated_images:deduplicatedImages,ready_for_active_publication:storageBytes<=storageBudgetBytes});writeReadiness();
+    const mediaItems=accepted.flatMap(item=>item.media),fullBytes=mediaItems.reduce((sum,item)=>sum+item.bytes,0),thumbnailBytes=mediaItems.reduce((sum,item)=>sum+Number(item.thumb_bytes||0),0),storageBytes=fullBytes+thumbnailBytes,storageBudgetBytes=Math.floor(storageBudgetMb*1024*1024);
+    Object.assign(report,{max_images_per_product:maxImages,thumbnail_mode:thumbnailMode,optimized_media_objects:mediaItems.length*(thumbnailMode==='stored'?2:1),optimized_full_bytes:fullBytes,optimized_thumbnail_bytes:thumbnailBytes,optimized_storage_bytes:storageBytes,storage_budget_bytes:storageBudgetBytes,storage_budget_remaining_bytes:storageBudgetBytes-storageBytes,deduplicated_images:deduplicatedImages,ready_for_active_publication:storageBytes<=storageBudgetBytes});writeReadiness();
     if(storageBytes>storageBudgetBytes)throw new Error(`Optimized media requires ${storageBytes} bytes, exceeding the ${storageBudgetBytes}-byte storage budget`);
     const suppliers=[...supplierByName.values()].filter(item=>item.publish).map(({match,publish,publish_new,...supplier})=>supplier);
     contract.assertSourceFree({suppliers,products:accepted});
-    const writeBatches=(kind,items,batchSize)=>{removeBatchManifests(output,kind);for(let offset=0;offset<items.length;offset+=batchSize){const entities=items.slice(offset,offset+batchSize),storage_bytes=kind==='product'?entities.flatMap(entity=>entity.media).reduce((sum,item)=>sum+item.bytes+item.thumb_bytes,0):0,document={version:1,release_id:releaseId,kind,sequence_no:offset/batchSize+1,deployed_git_sha:gitCommitSha,storage_bytes,entities};document.manifest_sha256=digest(document);document.batch_id=contract.uuidFromText(`source-free-batch:${document.manifest_sha256}`);contract.assertSourceFree(document);fs.writeFileSync(path.join(output,`${kind}-batch-${String(document.sequence_no).padStart(3,'0')}.json`),`${JSON.stringify(document,null,2)}\n`);}};
+    const writeBatches=(kind,items,batchSize)=>{removeBatchManifests(output,kind);for(let offset=0;offset<items.length;offset+=batchSize){const entities=items.slice(offset,offset+batchSize),storage_bytes=kind==='product'?entities.flatMap(entity=>entity.media).reduce((sum,item)=>sum+item.bytes+Number(item.thumb_bytes||0),0):0,document={version:1,release_id:releaseId,kind,sequence_no:offset/batchSize+1,deployed_git_sha:gitCommitSha,storage_bytes,entities};document.manifest_sha256=digest(document);document.batch_id=contract.uuidFromText(`source-free-batch:${document.manifest_sha256}`);contract.assertSourceFree(document);fs.writeFileSync(path.join(output,`${kind}-batch-${String(document.sequence_no).padStart(3,'0')}.json`),`${JSON.stringify(document,null,2)}\n`);}};
     writeBatches('supplier',suppliers,50);writeBatches('product',accepted,productBatchSize);
-    fs.writeFileSync(path.join(output,'release-plan.json'),`${JSON.stringify({version:1,release_id:releaseId,deployed_git_sha:gitCommitSha,target_products:target,product_batch_size:productBatchSize,pricing:{fx_snapshot_id:fxSnapshotId,usd_jpy:usdJpy,verified_input_prices:report.verified_input_prices,estimated_band_prices:report.estimated_band_prices},existing_supplier_assignments:report.existing_supplier_assignments,new_suppliers:report.new_suppliers,product_batches:Math.ceil(accepted.length/productBatchSize),supplier_batches:Math.ceil(suppliers.length/50),storage:{objects:report.optimized_media_objects,full_bytes:fullBytes,thumbnail_bytes:thumbnailBytes,total_bytes:storageBytes,budget_bytes:storageBudgetBytes,remaining_bytes:storageBudgetBytes-storageBytes}},null,2)}\n`);
+    fs.writeFileSync(path.join(output,'release-plan.json'),`${JSON.stringify({version:1,release_id:releaseId,deployed_git_sha:gitCommitSha,target_products:target,product_batch_size:productBatchSize,thumbnail_mode:thumbnailMode,pricing:{fx_snapshot_id:fxSnapshotId,usd_jpy:usdJpy,verified_input_prices:report.verified_input_prices,estimated_band_prices:report.estimated_band_prices},existing_supplier_assignments:report.existing_supplier_assignments,new_suppliers:report.new_suppliers,product_batches:Math.ceil(accepted.length/productBatchSize),supplier_batches:Math.ceil(suppliers.length/50),storage:{objects:report.optimized_media_objects,full_bytes:fullBytes,thumbnail_bytes:thumbnailBytes,total_bytes:storageBytes,budget_bytes:storageBudgetBytes,remaining_bytes:storageBudgetBytes-storageBytes}},null,2)}\n`);
   }
   return report;
 }
 
-async function main(){const report=await prepare({runDir:arg('--run-dir',DEFAULT_RUN),output:arg('--output'),translations:arg('--translations'),factories:arg('--factories'),supplierAliases:arg('--supplier-aliases',path.join(__dirname,'supplier-aliases.json')),gitCommitSha:arg('--git-commit-sha'),supabaseUrl:arg('--supabase-url'),storageBudgetMb:arg('--storage-budget-mb'),maxImages:arg('--max-images',4),batchSize:arg('--batch-size',50),target:arg('--target',4736),usdJpy:arg('--usd-jpy',pricing.DEFAULT_USD_JPY),fxSnapshotId:arg('--fx-snapshot-id','atelix-static-jpy-150'),build:process.argv.includes('--build')});process.stdout.write(`${JSON.stringify(report,null,2)}\n`);}
+async function main(){const report=await prepare({runDir:arg('--run-dir',DEFAULT_RUN),output:arg('--output'),translations:arg('--translations'),factories:arg('--factories'),supplierAliases:arg('--supplier-aliases',path.join(__dirname,'supplier-aliases.json')),gitCommitSha:arg('--git-commit-sha'),supabaseUrl:arg('--supabase-url'),storageBudgetMb:arg('--storage-budget-mb'),maxImages:arg('--max-images',4),batchSize:arg('--batch-size',50),thumbnailMode:arg('--thumbnail-mode','stored'),target:arg('--target',4736),usdJpy:arg('--usd-jpy',pricing.DEFAULT_USD_JPY),fxSnapshotId:arg('--fx-snapshot-id','atelix-static-jpy-150'),build:process.argv.includes('--build')});process.stdout.write(`${JSON.stringify(report,null,2)}\n`);}
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={prepare,digest,removeBatchManifests};
+module.exports={prepare,digest,removeBatchManifests,transformedThumbUrl};

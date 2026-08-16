@@ -21,7 +21,7 @@ async function main(){
     process.stderr.write(`Release failed; rolling back ${completed.length} verified batches\n`);
     for(const item of completed.reverse()){
       await request(cfg,'/rest/v1/rpc/catalog_rollback_source_free_batch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({p_batch_id:item.document.batch_id,p_reason:String(error.message||error)})}).catch(()=>{});
-      if(item.document.kind==='product')for(const entity of item.document.entities)for(const media of entity.media||[])for(const storagePath of [media.storage_path,media.thumb_storage_path])await request(cfg,`/storage/v1/object/catalog-media/${storagePath}`,{method:'DELETE'}).catch(()=>{});
+      if(item.document.kind==='product')for(const entity of item.document.entities)for(const media of entity.media||[])for(const storagePath of [media.storage_path,media.thumb_storage_path].filter(Boolean))await request(cfg,`/storage/v1/object/catalog-media/${storagePath}`,{method:'DELETE'}).catch(()=>{});
     }
     await request(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit:500})}).catch(()=>{});
     throw error;

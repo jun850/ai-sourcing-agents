@@ -12,6 +12,7 @@ function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 async function mapLimit(items,limit,worker){let next=0;const runners=Array.from({length:Math.min(limit,items.length)},async()=>{while(next<items.length){const index=next;next+=1;await worker(items[index],index);}});const results=await Promise.allSettled(runners),failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;}
 async function withRetries(label,worker,{attempts=6,wait=sleep}={}){let lastError;for(let attempt=0;attempt<attempts;attempt+=1){try{return await worker(attempt);}catch(error){lastError=error;if(attempt+1<attempts)await wait(Math.min(500*(2**attempt),4000));}}throw new Error(`${label} failed after ${attempts} attempts: ${lastError?.message||lastError}`);}
 function isMissingStorageObject(status){return status===400||status===404;}
+function transformedThumbUrl(origin,storagePath){return `${origin.replace('/storage/v1/object/public/','/storage/v1/render/image/public/')}/${storagePath}?width=640&quality=76&resize=contain`;}
 async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sleep,attempts=10}){
   let status=0;
   for(let attempt=0;attempt<attempts;attempt+=1){
@@ -50,13 +51,15 @@ function validate(document,manifestFile){
       if(Number(entity.prices.find(item=>item.currency==='USD').catalog_amount)!==Number(entity.product.price))throw new Error('product compatibility price must match its USD catalogue price');
       for(const [position,media] of entity.media.entries()){
         if(media.position!==position)throw new Error('product media positions must be contiguous and ordered');
-        for(const key of ['storage_path','thumb_storage_path','sha256','thumb_sha256'])if(!media[key])throw new Error(`media missing ${key}`);
-        if(!media.storage_path.endsWith(`/${media.sha256}-1600.webp`)||!media.thumb_storage_path.endsWith(`/${media.thumb_sha256}-640.webp`))throw new Error('media paths must be content addressed by their own hashes');
+        for(const key of ['storage_path','sha256','thumb_url'])if(!media[key])throw new Error(`media missing ${key}`);
+        const transformed=media.thumb_storage_path==null&&media.thumb_sha256==null&&media.thumb_bytes==null,stored=media.thumb_storage_path!=null&&media.thumb_sha256!=null&&Number(media.thumb_bytes)>0;
+        if(!transformed&&!stored)throw new Error('thumbnail metadata must be entirely stored or transformed');
+        if(!media.storage_path.endsWith(`/${media.sha256}-1600.webp`)||(stored&&!media.thumb_storage_path.endsWith(`/${media.thumb_sha256}-640.webp`)))throw new Error('media paths must be content addressed by their own hashes');
         if(!['en','ja','zh'].every(locale=>String(media.alt_i18n?.[locale]||'').trim()))throw new Error('media alternative text must be complete in EN, JA, and ZH');
-        const full=fs.readFileSync(mediaFile(manifestFile,media.storage_path)),thumb=fs.readFileSync(mediaFile(manifestFile,media.thumb_storage_path));
+        const full=fs.readFileSync(mediaFile(manifestFile,media.storage_path));
         if(sha(full)!==media.sha256||full.length!==media.bytes)throw new Error(`full media hash or byte count mismatch: ${media.storage_path}`);
-        if(sha(thumb)!==media.thumb_sha256||thumb.length!==media.thumb_bytes)throw new Error(`thumbnail hash or byte count mismatch: ${media.thumb_storage_path}`);
-        storageBytes+=full.length+thumb.length;
+        if(stored){const thumb=fs.readFileSync(mediaFile(manifestFile,media.thumb_storage_path));if(sha(thumb)!==media.thumb_sha256||thumb.length!==media.thumb_bytes)throw new Error(`thumbnail hash or byte count mismatch: ${media.thumb_storage_path}`);storageBytes+=thumb.length;}
+        storageBytes+=full.length;
       }
     }
     if(storageBytes!==document.storage_bytes)throw new Error(`batch storage byte total mismatch: expected ${document.storage_bytes}, found ${storageBytes}`);
@@ -65,9 +68,11 @@ function validate(document,manifestFile){
 }
 async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
   const origin=`${cfg.url}/storage/v1/object/public/catalog-media`;
-  const objects=[];for(const entity of document.entities)for(const media of entity.media||[]){
-    if(media.public_url!==`${origin}/${media.storage_path}`||media.thumb_url!==`${origin}/${media.thumb_storage_path}`)throw new Error(`manifest media URL does not match production project: ${media.storage_path}`);
-    objects.push({storagePath:media.storage_path,hash:media.sha256,bytes:media.bytes},{storagePath:media.thumb_storage_path,hash:media.thumb_sha256,bytes:media.thumb_bytes});
+  const objects=[],transformed=[];for(const entity of document.entities)for(const media of entity.media||[]){
+    if(media.public_url!==`${origin}/${media.storage_path}`)throw new Error(`manifest media URL does not match production project: ${media.storage_path}`);
+    objects.push({storagePath:media.storage_path,hash:media.sha256,bytes:media.bytes});
+    if(media.thumb_storage_path){if(media.thumb_url!==`${origin}/${media.thumb_storage_path}`)throw new Error(`stored thumbnail URL does not match production project: ${media.storage_path}`);objects.push({storagePath:media.thumb_storage_path,hash:media.thumb_sha256,bytes:media.thumb_bytes});}
+    else{if(media.thumb_url!==transformedThumbUrl(origin,media.storage_path))throw new Error(`transformed thumbnail URL does not match production project: ${media.storage_path}`);transformed.push(media);}
   }
   await mapLimit(objects,4,async object=>{
       const body=fs.readFileSync(mediaFile(manifestFile,object.storagePath));
@@ -75,6 +80,7 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
       if(!existed){await withRetries(`storage upload ${object.storagePath}`,async()=>{const response=await fetch(`${cfg.url}/storage/v1/object/catalog-media/${object.storagePath}`,{method:'POST',headers:{apikey:cfg.key,authorization:`Bearer ${cfg.key}`,'content-type':'image/webp','cache-control':'31536000, immutable','x-upsert':'false'},body,signal:AbortSignal.timeout(30000)});if(!response.ok&&response.status!==409)throw new Error(`status ${response.status}: ${(await response.text()).slice(0,300)}`);});uploaded.push(object.storagePath);}
       await withRetries(`live media verification ${object.storagePath}`,async()=>{const live=await fetch(`${origin}/${object.storagePath}`,{cache:'no-store',signal:AbortSignal.timeout(30000)}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length!==object.bytes||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP'||sha(liveBytes)!==object.hash)throw new Error(`status ${live.status} or content mismatch`);});
   });
+  await mapLimit(transformed,4,async media=>withRetries(`transformed thumbnail verification ${media.storage_path}`,async()=>{const live=await fetch(media.thumb_url,{cache:'no-store',headers:{accept:'image/webp'},signal:AbortSignal.timeout(30000)}),liveBytes=Buffer.from(await live.arrayBuffer());if(!live.ok||liveBytes.length<12||liveBytes[0]!==0x52||liveBytes.toString('ascii',8,12)!=='WEBP')throw new Error(`status ${live.status} or invalid transformed image`);}));
   return uploaded;
 }
 async function syncSearch(cfg,document){
@@ -106,4 +112,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={validate,verifyAlgoliaObject,withRetries,isMissingStorageObject,drainSearchQueue};
+module.exports={validate,verifyAlgoliaObject,withRetries,isMissingStorageObject,drainSearchQueue,transformedThumbUrl};
