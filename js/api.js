@@ -179,7 +179,7 @@ function mapPublicProduct(p){
     origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,
     price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${UNIT_LABEL[p.unit_type]||p.unit_type}`:'',seller:p.supplier_name||supplier.name||'',
     factoryId:p.factory_id||supplier.id||null,factorySlug:p.supplier_slug||supplier.slug||null,supplierVerified:p.supplier_verified??supplier.verify_state==='verified',loc:p.supplier_city||supplier.loc||p.loc,country:p.supplier_region||supplier.region||'',badge:p.badge||'',cat:p.category,
-    pricingMode:p.pricing_mode,catalogPrices:p.catalog_prices||{},isPrivate:p.is_private===true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants||[])
+    pricingMode:p.pricing_mode,catalogPrices:p.catalog_prices||{},createdAt:p.created_at||null,updatedAt:p.updated_at||null,isPrivate:p.is_private===true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants||[])
   };
 }
 function mapPublicFactory(f){return {id:f.slug,databaseId:f.id,name:localizedCopy(f.copy_i18n,'name',f.name),type:TYPE_LABEL[f.type]||f.type,region:f.region,loc:f.loc,verified:f.verify_state==='verified',years:f.years,moq:f.moq,lead:f.lead,orders:f.orders_label,capacity:f.capacity,certs:f.certs||[],tags:f.tags||[],img:f.img,logo_img:f.logo_img,page_img:f.page_img,sales:f.sales,phone:f.phone,web:f.web,founded:f.founded,employees:f.employees,area:f.area,port:f.port,bio:localizedCopy(f.copy_i18n,'description',f.bio),copyI18n:f.copy_i18n||{},productCount:Number(f.product_count||0),taxonomy:(f.supplier_taxonomy_memberships||[]).map(item=>({l2:item.l2,l3:item.l3,isPrimary:item.is_primary===true}))};}
@@ -382,8 +382,8 @@ const API = {
     }
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
-        .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
-        .eq('listing_status','active').eq('is_private',false),
+        .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,created_at,updated_at,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
+        .eq('listing_status','active').eq('is_private',false).order('created_at',{ascending:false}),
       (async()=>{const result=await sb.rpc('public_list_catalog_factories',{p_locale:catalogLocale()});return result.error?sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'):result;})(),
       sb.rpc('catalog_public_prices',{p_currency:'USD'}),
       sb.rpc('catalog_public_prices',{p_currency:'JPY'}),
@@ -406,7 +406,7 @@ const API = {
       seller: p.factories ? p.factories.name : '', factoryId:p.factories?.id||null, factorySlug:p.factories?.slug||null, loc: p.loc,
       country: p.factories ? p.factories.region : '',
       badge: p.badge || '', cat: p.category,
-      pricingMode:p.pricing_mode, catalogPrices:pricesByProduct[p.id]||{},
+      pricingMode:p.pricing_mode, catalogPrices:pricesByProduct[p.id]||{}, createdAt:p.created_at||null, updatedAt:p.updated_at||null,
       options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants)
     }));
     return { products, factories };

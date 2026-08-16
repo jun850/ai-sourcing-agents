@@ -267,12 +267,17 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   const grid=document.getElementById('curatedGrid');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
-  const isNewSource=p=>/^(FAB-(13[7-9]|14[0-9]|15[0-4])|BUT-155|ZIP-15[6-7])$/.test(p.id);
   function renderCurated(cat){
     curCat=cat;
-    const list=window.ARCANA_PRODUCTS
-      .filter(p=>cat==='all'?true:p.cat===cat)
-      .sort((a,b)=>Number(isNewSource(b))-Number(isNewSource(a)))
+    const list=(window.ARCANA_PRODUCTS||[])
+      .map((product,index)=>({product,index}))
+      .filter(({product})=>product.cat!=='oem'&&(cat==='all'||product.cat===cat))
+      .sort((a,b)=>{
+        const aDate=Date.parse(a.product.createdAt||a.product.updatedAt||'')||0;
+        const bDate=Date.parse(b.product.createdAt||b.product.updatedAt||'')||0;
+        return bDate-aDate||b.index-a.index;
+      })
+      .map(({product})=>product)
       .slice(0,12);
     grid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
     window.ARCANA_wireCards(grid);
