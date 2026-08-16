@@ -68,11 +68,11 @@
           >
         </div>
         <div class="field-lg" data-field>
-          <label for="email">Work email</label
+          <label for="email">Email address</label
           ><input
             id="email"
             type="email"
-            placeholder="you@company.com"
+            placeholder="you@example.com"
             autocomplete="email"
           /><span class="err">Enter a valid email address.</span>
         </div>
@@ -315,37 +315,7 @@
         });
 
         const form = document.getElementById("signupForm");
-        const blockedEmailDomain = (domain) => {
-          const d = domain.toLowerCase();
-          const personal = [
-            "gmail.com",
-            "googlemail.com",
-            "yahoo.com",
-            "yahoo.co.uk",
-            "ymail.com",
-            "rocketmail.com",
-            "outlook.com",
-            "hotmail.com",
-            "live.com",
-            "msn.com",
-            "icloud.com",
-            "me.com",
-            "mac.com",
-            "aol.com",
-            "proton.me",
-            "protonmail.com",
-            "gmx.com",
-            "mail.com",
-          ];
-          return personal.includes(d) || /(^|\.)edu(\.|$)/.test(d);
-        };
-        const businessEmail = (value) => {
-          const match = value
-            .trim()
-            .toLowerCase()
-            .match(/^[^@\s]+@([^@\s]+)$/);
-          return !!match && !blockedEmailDomain(match[1]);
-        };
+        const validEmail = (value) => /^[^@\s]+@[^@\s]+$/.test(value.trim());
         form.addEventListener("submit", async (e) => {
           e.preventDefault();
           clearForm();
@@ -356,13 +326,7 @@
           };
           mark(form.fullName, form.fullName.value.trim().length > 1);
           mark(form.company, form.company.value.trim().length > 1);
-          const emailEligible = businessEmail(form.email.value);
-          mark(form.email, emailEligible);
-          if (!emailEligible)
-            form.email
-              .closest("[data-field]")
-              .querySelector(".err").textContent =
-              "Use your company email. Personal and education domains are not eligible.";
+          mark(form.email, validEmail(form.email.value));
           mark(form.country, !!form.country.value);
           mark(form.pw, form.pw.value.length >= 6);
           mark(
