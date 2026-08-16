@@ -383,7 +383,7 @@ const API = {
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
         .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,created_at,updated_at,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
-        .eq('listing_status','active').eq('is_private',false).order('created_at',{ascending:false}),
+        .eq('listing_status','active').eq('is_private',false).order('created_at',{ascending:false}).order('updated_at',{ascending:false}).order('sku',{ascending:true}),
       (async()=>{const result=await sb.rpc('public_list_catalog_factories',{p_locale:catalogLocale()});return result.error?sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'):result;})(),
       sb.rpc('catalog_public_prices',{p_currency:'USD'}),
       sb.rpc('catalog_public_prices',{p_currency:'JPY'}),
