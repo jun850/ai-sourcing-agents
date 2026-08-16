@@ -15,9 +15,9 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const MAX_CALLS = 3;
 const MAX_TOKENS = 128000;
 const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
-// Keep the server-side model explicit so an old environment fallback cannot
-// silently downgrade the analysis path. GEMINI_API_KEY remains an Edge secret.
-const MODEL = "gemini-3.6-flash";
+// OpenRouter resolves the model, provider routing, and shared policy through
+// this account-managed preset. Keep the credential server-side only.
+const MODEL = "@preset/marketplace-copilot";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) {
     return jsonResponse({ ok: false, reason: "llm_not_configured" });
   }
@@ -134,38 +134,53 @@ Deno.serve(async (req) => {
 
   const userContent = JSON.stringify({ brief: text, readAs: intent, matches });
 
-  let geminiJson: any;
+  let completion: any;
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`,
+      "https://openrouter.ai/api/v1/chat/completions",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "HTTP-Referer": "https://atelix.app",
+          "X-Title": "Atelix",
+        },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-          contents: [{ role: "user", parts: [{ text: userContent }] }],
-          generationConfig: { maxOutputTokens: 220, thinkingConfig: { thinkingLevel: "minimal" } },
+          model: MODEL,
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userContent },
+          ],
+          // The current preset uses a reasoning-capable model. Leave enough
+          // completion budget for its internal work and the short final copy.
+          max_tokens: 1024,
         }),
       },
     );
     if (!resp.ok) {
-      console.error("[copilot-ask] Gemini error", resp.status, await resp.text());
+      console.error("[copilot-ask] OpenRouter error", resp.status);
       return jsonResponse({ ok: false, reason: "llm_error" });
     }
-    geminiJson = await resp.json();
+    completion = await resp.json();
   } catch (err) {
-    console.error("[copilot-ask] Gemini fetch failed", err);
+    console.error("[copilot-ask] OpenRouter fetch failed", err);
     return jsonResponse({ ok: false, reason: "llm_error" });
   }
 
-  const summary: string | undefined = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const rawSummary = completion?.choices?.[0]?.message?.content;
+  const summary = typeof rawSummary === "string"
+    ? rawSummary
+    : Array.isArray(rawSummary)
+      ? rawSummary.map((part: any) => part?.text || "").join("")
+      : undefined;
   if (!summary) {
-    console.error("[copilot-ask] Gemini returned no text", JSON.stringify(geminiJson).slice(0, 500));
+    console.error("[copilot-ask] OpenRouter returned no text");
     return jsonResponse({ ok: false, reason: "llm_error" });
   }
 
-  const tokensUsed: number = geminiJson?.usageMetadata?.totalTokenCount
-    ?? ((geminiJson?.usageMetadata?.promptTokenCount || 0) + (geminiJson?.usageMetadata?.candidatesTokenCount || 0))
+  const tokensUsed: number = completion?.usage?.total_tokens
+    ?? ((completion?.usage?.prompt_tokens || 0) + (completion?.usage?.completion_tokens || 0))
     ?? 0;
 
   let tokenUsage: any = null;

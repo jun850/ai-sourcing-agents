@@ -327,6 +327,57 @@ async function inspectSearch(viewport) {
   return { route: "search interactions", viewport: viewport.name, issues, data: { populated, recent } };
 }
 
+async function inspectAiEntryPoints(viewport) {
+  const target = await newPage("about:blank");
+  const cdp = connect(target.webSocketDebuggerUrl);
+  await cdp.ready;
+  let loadedResolve;
+  const loaded = new Promise((resolve) => { loadedResolve = resolve; });
+  await Promise.all([
+    cdp.send("Page.enable"), cdp.send("Runtime.enable"),
+    cdp.send("Emulation.setDeviceMetricsOverride", {
+      width: viewport.width, height: viewport.height, deviceScaleFactor: 1,
+      mobile: viewport.mobile, screenWidth: viewport.width, screenHeight: viewport.height,
+    }),
+  ]);
+  cdp.on("Page.loadEventFired", () => loadedResolve());
+  await cdp.send("Page.navigate", { url: base + "/" });
+  await Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, 10000))]);
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  const evaluate = async (expression) => (await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.value;
+  const issues = [];
+  const floating = await evaluate(`(() => {
+    const button=document.querySelector('.cop-fab-btn');
+    button?.click();
+    const panel=document.querySelector('.cop-fab-panel');
+    return {button:!!button, expanded:button?.getAttribute('aria-expanded'), panel:!!panel&&!panel.hidden, input:document.activeElement?.id};
+  })()`);
+  if (!floating?.button || floating.expanded !== "true" || !floating.panel || floating.input !== "copFabInput") issues.push("floating copilot did not open as an accessible dialog");
+  const imageSearch = await evaluate(`(() => {
+    document.querySelector('[data-cam]')?.click();
+    return {panel:/Search by fabric photo/i.test(document.querySelector('[data-search-pop]')?.innerText||''),browse:!!document.querySelector('[data-search-pop] [data-browse]'),fileAccept:document.querySelector('[data-search-form] input[type=file]')?.accept||''};
+  })()`);
+  if (!imageSearch?.panel || !imageSearch.browse || imageSearch.fileAccept !== "image/*") issues.push("fabric photo search did not expose its supported upload handoff");
+  const design = await evaluate(`(() => {
+    localStorage.setItem('arcana_session',JSON.stringify({role:'buyer',name:'QA'}));
+    const png=new File(['x'],'fabric.png',{type:'image/png'});
+    window.ARCANA_openDesignMatch?.([png],{mode:'fabric'});
+    const modal=document.querySelector('.design-match-overlay');
+    return {modal:!!modal&&!modal.hidden,title:modal?.querySelector('#dmTitle')?.textContent.trim(),accept:modal?.querySelector('[data-dm-files]')?.accept||'',submitDisabled:modal?.querySelector('[data-dm-submit]')?.disabled,files:modal?.querySelectorAll('[data-dm-list] li').length||0};
+  })()`);
+  if (!design?.modal || design.title !== "Find fabrics from a photo" || !design.accept.includes("application/pdf") || design.submitDisabled || design.files !== 1) issues.push("fabric-photo analysis modal did not retain its validated upload state");
+  const techpack = await evaluate(`(() => {
+    const pdf=new File(['%PDF-1.4'],'tech-pack.pdf',{type:'application/pdf'});
+    window.ARCANA_openDesignMatch?.([pdf]);
+    const modal=document.querySelector('.design-match-overlay');
+    return {title:modal?.querySelector('#dmTitle')?.textContent.trim(),files:modal?.querySelectorAll('[data-dm-list] li').length||0,submitDisabled:modal?.querySelector('[data-dm-submit]')?.disabled};
+  })()`);
+  if (techpack?.title !== "Turn your tech pack into product matches" || techpack.files !== 1 || techpack.submitDisabled) issues.push("tech-pack upload did not retain its validated upload state");
+  cdp.close();
+  await fetch(`${debug}/json/close/${target.id}`, { method: "PUT" }).catch(() => {});
+  return { route: "AI entry points", viewport: viewport.name, issues, data: { floating, imageSearch, design, techpack } };
+}
+
 (async () => {
   const results = [];
   for (const viewport of viewports) {
@@ -338,6 +389,9 @@ async function inspectSearch(viewport) {
     const searchResult = await inspectSearch(viewport);
     results.push(searchResult);
     process.stdout.write(searchResult.issues.length ? `FAIL ${viewport.name} search interactions: ${searchResult.issues.join("; ")}\n` : `PASS ${viewport.name} search interactions\n`);
+    const aiResult = await inspectAiEntryPoints(viewport);
+    results.push(aiResult);
+    process.stdout.write(aiResult.issues.length ? `FAIL ${viewport.name} AI entry points: ${aiResult.issues.join("; ")}\n` : `PASS ${viewport.name} AI entry points\n`);
   }
   const failures = results.filter((result) => result.issues.length);
   fs.mkdirSync(outputDir, { recursive: true });

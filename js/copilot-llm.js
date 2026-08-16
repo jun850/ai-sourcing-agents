@@ -1,6 +1,6 @@
 /* Atelix Copilot LLM bridge — wires window.ARCANA_LLM (the extension point
    copilot.js's ask() already awaits) to the copilot-ask Supabase Edge
-   Function, which holds the Gemini key server-side and enforces the shared
+   Function, which holds the OpenRouter key server-side and enforces the shared
    3-call / 128k token daily cap. Only ever reached for a signed-in session —
    Copilot's entry points are auth-gated in components.js — but the Edge
    Function independently re-checks the JWT and the cap, so this is UX, not

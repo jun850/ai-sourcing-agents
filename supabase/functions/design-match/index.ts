@@ -3,16 +3,13 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // Athelia reads source material into a structured brief; Atelix's own catalog data supplies
 // every supplier, certification, MOQ, lead-time, and price shown to a buyer.
-const MODEL = "gemini-3.6-flash";
+// The preset owns the multimodal model and provider routing. Its name stays
+// stable here while the configuration can evolve in OpenRouter.
+const MODEL = "@preset/marketplace-copilot";
 const MAX_FILES = 8;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_PDF_BYTES = 30 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
-// Inline small requests so a normal tech pack does not depend on the Files
-// API's asynchronous processing state. Larger batches use Files API URIs to
-// keep the Edge worker and generateContent request comfortably bounded.
-const MAX_INLINE_TOTAL_BYTES = 12 * 1024 * 1024;
-const FILE_PROCESSING_TIMEOUT_MS = 60 * 1000;
 const MODEL_TIMEOUT_MS = 75 * 1000;
 const MAX_DAILY_CALLS = 3;
 const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
@@ -256,76 +253,32 @@ function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[],
   };
 }
 
-async function toInlinePart(file: File) {
+async function toBase64DataUrl(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const mimeType = file.type;
   const nativeBase64 = (bytes as any).toBase64;
+  let data: string;
   if (typeof nativeBase64 === "function") {
-    return { inline_data: { mime_type: mimeType, data: nativeBase64.call(bytes) } };
+    data = nativeBase64.call(bytes);
+  } else {
+    // Avoid spreading a multi-megabyte Uint8Array into String.fromCharCode —
+    // that exceeds the argument limit on large, valid tech-pack PDFs.
+    let binary = "";
+    const chunk = 0x8000;
+    for (let start = 0; start < bytes.length; start += chunk) binary += String.fromCharCode(...bytes.subarray(start, start + chunk));
+    data = btoa(binary);
   }
-  // Avoid spreading a multi-megabyte Uint8Array into String.fromCharCode —
-  // that exceeds the argument limit on large, valid tech-pack PDFs.
-  let binary = "";
-  const chunk = 0x8000;
-  for (let start = 0; start < bytes.length; start += chunk) binary += String.fromCharCode(...bytes.subarray(start, start + chunk));
-  return { inline_data: { mime_type: mimeType, data: btoa(binary) } };
+  return `data:${file.type};base64,${data}`;
 }
 
-async function uploadGeminiFile(file: File, apiKey: string) {
-  const start = await fetch("https://generativelanguage.googleapis.com/upload/v1beta/files", {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "X-Goog-Upload-Protocol": "resumable",
-      "X-Goog-Upload-Command": "start",
-      "X-Goog-Upload-Header-Content-Length": String(file.size),
-      "X-Goog-Upload-Header-Content-Type": file.type,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ file: { display_name: safeText(file.name, 160) || "design-reference" } }),
-  });
-  const uploadUrl = start.headers.get("x-goog-upload-url");
-  if (!start.ok || !uploadUrl) throw new Error(`file_upload_start_${start.status}`);
-
-  const uploadedResponse = await fetch(uploadUrl, {
-    method: "POST",
-    headers: {
-      "Content-Length": String(file.size),
-      "X-Goog-Upload-Offset": "0",
-      "X-Goog-Upload-Command": "upload, finalize",
-    },
-    body: file,
-  });
-  if (!uploadedResponse.ok) throw new Error(`file_upload_${uploadedResponse.status}`);
-  const payload = await uploadedResponse.json();
-  let uploaded = payload?.file;
-  if (!uploaded?.name || !uploaded?.uri) throw new Error("file_upload_invalid_response");
-
-  // Documents can remain PROCESSING well beyond 20 seconds. Poll with a
-  // bounded backoff so valid PDFs are not rejected just because ingestion is
-  // briefly busy, while still staying inside the Edge Function wall timeout.
-  const deadline = Date.now() + FILE_PROCESSING_TIMEOUT_MS;
-  let delay = 500;
-  while (uploaded.state === "PROCESSING" && Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, delay));
-    const status = await fetch(`https://generativelanguage.googleapis.com/v1beta/${uploaded.name}`, {
-      headers: { "x-goog-api-key": apiKey },
-    });
-    if (!status.ok) throw new Error(`file_status_${status.status}`);
-    uploaded = await status.json();
-    delay = Math.min(Math.round(delay * 1.5), 2500);
+async function toOpenRouterPart(file: File) {
+  const dataUrl = await toBase64DataUrl(file);
+  if (file.type === PDF) {
+    return {
+      type: "file",
+      file: { filename: safeText(file.name, 160) || "tech-pack.pdf", file_data: dataUrl },
+    };
   }
-  if (uploaded.state === "PROCESSING") throw new Error("file_processing_timeout");
-  if (uploaded.state && uploaded.state !== "ACTIVE") throw new Error(`file_state_${uploaded.state.toLowerCase()}`);
-  return uploaded;
-}
-
-async function deleteGeminiFile(name: string, apiKey: string) {
-  try {
-    await fetch(`https://generativelanguage.googleapis.com/v1beta/${name}`, {
-      method: "DELETE", headers: { "x-goog-api-key": apiKey },
-    });
-  } catch (_) {}
+  return { type: "image_url", image_url: { url: dataUrl } };
 }
 
 async function handleRequest(req: Request) {
@@ -333,7 +286,7 @@ async function handleRequest(req: Request) {
   if (req.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
   const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
   if (!jwt) return json({ ok: false, reason: "unauthorized" }, 401);
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!apiKey || !supabaseUrl || !serviceKey) return json({ ok: false, reason: "analysis_unavailable" }, 503);
@@ -386,21 +339,12 @@ async function handleRequest(req: Request) {
   }
 
   const parts: any[] = [];
-  const temporaryFiles: string[] = [];
   try {
-    const useFilesApi = totalBytes > MAX_INLINE_TOTAL_BYTES;
     for (const file of files) {
-      if (useFilesApi) {
-        const uploaded = await uploadGeminiFile(file, apiKey);
-        temporaryFiles.push(uploaded.name);
-        parts.push({ file_data: { mime_type: uploaded.mimeType || file.type, file_uri: uploaded.uri } });
-      } else {
-        parts.push(await toInlinePart(file));
-      }
+      parts.push(await toOpenRouterPart(file));
     }
   } catch (error) {
-    await Promise.all(temporaryFiles.map(name => deleteGeminiFile(name, apiKey)));
-    console.error("[design-match] Gemini file upload failed", error);
+    console.error("[design-match] OpenRouter input preparation failed", error);
     const detail = error instanceof Error ? error.message : "file_upload_failed";
     return json({ ok: false, reason: "analysis_failed", stage: "file_upload", detail }, 502);
   }
@@ -419,45 +363,61 @@ async function handleRequest(req: Request) {
    - For unsupported, explain why in unsupportedReason and return empty sourcing arrays.
 4. Normalize supported BOM items into these exact categories: shell and lining materials=fabrics; buttons, snaps, and rivets=buttons; zippers, sliders, and pullers=zippers; brand, care, size, and hang labels/tags=labels; sewing yarn and thread=yarns; tapes, elastic, cords, patches, rib, and interlining=trims; buckles, hooks, eyelets, grommets, and other hardware=accessories.
 Return only JSON matching the schema. The resulting supported brief will be matched deterministically against Atelix's verified catalog.`;
-  let gemini: any;
+  let completion: any;
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": "https://atelix.app",
+        "X-Title": "Atelix",
+      },
       signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [...parts, { text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", responseJsonSchema: BRIEF_SCHEMA, thinkingConfig: { thinkingLevel: "medium" } }
+        model: MODEL,
+        messages: [{
+          role: "user",
+          content: [{ type: "text", text: prompt }, ...parts],
+        }],
+        response_format: {
+          type: "json_schema",
+          json_schema: { name: "atelix_sourcing_brief", schema: BRIEF_SCHEMA },
+        },
       })
     });
     if (!response.ok) {
       const providerBody = (await response.text()).slice(0, 2000);
-      console.error("[design-match] Gemini error", response.status, providerBody.slice(0, 500));
+      console.error("[design-match] OpenRouter error", response.status);
       let providerCode = "";
       try { providerCode = JSON.parse(providerBody)?.error?.status || ""; } catch (_) {}
-      const creditsExhausted = response.status === 429 && providerCode === "RESOURCE_EXHAUSTED";
+      const creditsExhausted = response.status === 402 || response.status === 429;
       return json({ ok: false, reason: creditsExhausted ? "analysis_unavailable" : "analysis_failed", stage: creditsExhausted ? "provider_capacity" : "model", detail: creditsExhausted ? "credits_exhausted" : providerCode, upstreamStatus: response.status }, creditsExhausted ? 503 : 502);
     }
-    gemini = await response.json();
-  } catch (error) { console.error("[design-match] Gemini request failed", error); return json({ ok: false, reason: "analysis_failed", stage: "model_request" }, 502); }
-  finally { await Promise.all(temporaryFiles.map(name => deleteGeminiFile(name, apiKey))); }
-  const tokensUsed = gemini?.usageMetadata?.totalTokenCount
-    ?? ((gemini?.usageMetadata?.promptTokenCount || 0) + (gemini?.usageMetadata?.candidatesTokenCount || 0));
+    completion = await response.json();
+  } catch (error) { console.error("[design-match] OpenRouter request failed", error); return json({ ok: false, reason: "analysis_failed", stage: "model_request" }, 502); }
+  const tokensUsed = completion?.usage?.total_tokens
+    ?? ((completion?.usage?.prompt_tokens || 0) + (completion?.usage?.completion_tokens || 0));
   if (!unlimited && tokensUsed > 0) {
     const { error } = await admin.rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed });
     if (error) console.error("[design-match] Token accounting failed", error);
   }
-  const candidate = gemini?.candidates?.[0];
-  const text = candidate?.content?.parts?.find((part: any) => part.text)?.text;
+  const candidate = completion?.choices?.[0];
+  const rawText = candidate?.message?.content;
+  const text = typeof rawText === "string"
+    ? rawText
+    : Array.isArray(rawText)
+      ? rawText.map((part: any) => part?.text || "").join("")
+      : "";
   if (!text) {
-    const finishReason = candidate?.finishReason || gemini?.promptFeedback?.blockReason || "empty_response";
-    console.error("[design-match] Gemini returned no structured text", { finishReason, promptFeedback: gemini?.promptFeedback });
+    const finishReason = candidate?.finish_reason || "empty_response";
+    console.error("[design-match] OpenRouter returned no structured text", { finishReason });
     return json({ ok: false, reason: "analysis_failed", stage: "model_output", detail: finishReason }, 502);
   }
   let brief: ReturnType<typeof normalizeBrief>;
   try { brief = normalizeBrief(JSON.parse(text)); }
   catch (error) {
-    console.error("[design-match] Gemini returned invalid structured JSON", error, text.slice(0, 500));
+    console.error("[design-match] OpenRouter returned invalid structured JSON", error);
     return json({ ok: false, reason: "analysis_failed", stage: "structured_output" }, 502);
   }
 
