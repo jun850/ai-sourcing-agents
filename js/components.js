@@ -1092,7 +1092,9 @@
 
   /* ---------- live badges ---------- */
   function syncBadges() {
-    const n = Store.cartCount();
+    const M = window.ARCANA_PRODUCT_MAP;
+    const cart = Store.cart();
+    const n = M ? cart.filter(i => M[i.id]).length : cart.length;
     document.querySelectorAll("[data-cart-badge]").forEach((b) => {
       b.textContent = n;
       b.hidden = n === 0;
@@ -2929,6 +2931,7 @@
       }
       if (window.ATELIX_refreshCatalogStats)
         window.ATELIX_refreshCatalogStats();
+      syncBadges();
     } catch (err) {
       console.warn(
         "[Atelix] live catalog unavailable — using bundled data.js",
