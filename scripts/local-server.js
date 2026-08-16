@@ -3,6 +3,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const { execFileSync } = require('child_process');
 const { LocalFabricPreview } = require('./catalog/fabrics/local-preview');
 
 const root = path.resolve(__dirname, '..');
@@ -11,6 +12,23 @@ const port = Number(portIndex >= 0 ? process.argv[portIndex + 1] : process.env.P
 const mime = { '.css':'text/css', '.html':'text/html', '.js':'application/javascript', '.json':'application/json', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.ico':'image/x-icon' };
 const localFabricPreview = new LocalFabricPreview();
 const releaseId = 'd5564bc8-aad3-5a7a-83db-7da36da9809c';
+const paymentLocal = process.env.ATELIX_PAYMENT_LOCAL === '1';
+
+function localSupabaseConfig() {
+  if (!paymentLocal) return null;
+  try {
+    const npx = process.env.ATELIX_NPX_BIN || (fs.existsSync('/opt/homebrew/bin/npx') ? '/opt/homebrew/bin/npx' : 'npx');
+    const output = execFileSync(npx, ['supabase', 'status', '--output', 'env'], { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const values = Object.fromEntries(output.split(/\r?\n/).map(line => {
+      const match = line.match(/^([A-Z_]+)=(?:"([^"]*)"|'([^']*)'|(.*))$/);
+      return match ? [match[1], match[2] ?? match[3] ?? match[4] ?? ''] : null;
+    }).filter(Boolean));
+    const url = values.API_URL;
+    const publishableKey = values.ANON_KEY || values.PUBLISHABLE_KEY;
+    if (!/^http:\/\/(localhost|127\.0\.0\.1):54321$/.test(url || '') || !publishableKey) return null;
+    return { environment: 'local', url, publishableKey };
+  } catch (_) { return null; }
+}
 
 function releaseProgress(res) {
   execFile('npx',['supabase','projects','api-keys','--project-ref','bobwfxvxzjovpgmmqsew','--output','json'],{maxBuffer:1024*1024},(error,stdout)=>{
@@ -78,6 +96,10 @@ function localCatalog(req,res,url) {
 
 function rewrite(url) {
   const pathname = decodeURIComponent(url.pathname);
+  // Local development accepts the same page aliases used by legacy links and
+  // notifications, while serving the canonical files from /pages.
+  const pageAlias = pathname.match(/^\/([a-z0-9-]+\.html)$/i);
+  if (pageAlias && fs.existsSync(path.join(root, 'pages', pageAlias[1]))) return `/pages/${pageAlias[1]}`;
   if (pathname === '/categories') return '/pages/categories.html';
   const category = pathname.match(/^\/categories\/([^/]+)(?:\/([^/]+))?$/);
   if (category) {
@@ -99,6 +121,11 @@ function rewrite(url) {
 
 http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname === '/__local_payment_config.js') {
+    res.writeHead(200, { 'Content-Type':'application/javascript; charset=utf-8', 'Cache-Control':'no-store', 'X-Robots-Tag':'noindex, nofollow, noarchive' });
+    res.end(`window.ATELIX_LOCAL_SUPABASE=${JSON.stringify(localSupabaseConfig())};\n`);
+    return;
+  }
   if (url.pathname === '/__local_catalog/release-progress') { releaseProgress(res); return; }
   if (localCatalog(req,res,url)) return;
   let pathname = rewrite(url);
@@ -114,6 +141,12 @@ http.createServer((req, res) => {
       headers['Referrer-Policy'] = 'no-referrer';
       headers['X-Content-Type-Options'] = 'nosniff';
       headers['X-Frame-Options'] = 'SAMEORIGIN';
+    }
+    if (paymentLocal && path.extname(filename).toLowerCase() === '.html') {
+      const document = file.toString('utf8').replace('</head>', '<script src="/__local_payment_config.js"></script></head>');
+      res.writeHead(200, headers);
+      res.end(document);
+      return;
     }
     res.writeHead(200, headers);
     res.end(file);

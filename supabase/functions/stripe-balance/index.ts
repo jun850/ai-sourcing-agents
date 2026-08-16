@@ -1,0 +1,2 @@
+import { cors, json, mode, requireAdmin, stripe } from "../_shared/stripe.ts";
+Deno.serve(async req => { if(req.method === "OPTIONS") return new Response("ok",{headers:cors}); try { await requireAdmin(req); const balance=await stripe("/balance"); return json({environment:mode(),available:balance.available||[],pending:balance.pending||[]}); } catch(error) { return json({error:error instanceof Error?error.message:"Unable to load balance"},400); } });

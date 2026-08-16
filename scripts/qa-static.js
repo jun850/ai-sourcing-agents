@@ -29,6 +29,11 @@ const orderPage=fs.readFileSync(path.join(root,"pages/order.html"),"utf8");
 const componentsSource=fs.readFileSync(path.join(root,"js/components.js"),"utf8");
 const copilotSource=fs.readFileSync(path.join(root,"js/copilot.js"),"utf8");
 const designMatchFunction=fs.readFileSync(path.join(root,"supabase/functions/design-match/index.ts"),"utf8");
+const stripeMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260816170000_stripe_payments.sql"),"utf8");
+const stripeCheckout=fs.readFileSync(path.join(root,"supabase/functions/stripe-checkout/index.ts"),"utf8");
+const stripeWebhook=fs.readFileSync(path.join(root,"supabase/functions/stripe-webhook/index.ts"),"utf8");
+const stripeReadiness=fs.readFileSync(path.join(root,"supabase/functions/stripe-readiness/index.ts"),"utf8");
+const intoolsSource=fs.readFileSync(path.join(root,"intools/intools.js"),"utf8");
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
@@ -106,5 +111,11 @@ if(/www[.]apparel-x[.]com|apparelx\//i.test(sourceFreeMigration))problems.push('
 const gold=(globalStyles.match(/--gold:(#[0-9a-f]{6})/i)||[])[1];
 const luminance=hex=>{const channels=hex.slice(1).match(/../g).map(value=>parseInt(value,16)/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);return .2126*channels[0]+.7152*channels[1]+.0722*channels[2]};
 if(!gold||1.05/(luminance(gold)+.05)<7)problems.push("css/styles.css: brass CTA must maintain 7:1 contrast with white text");
+if(!checkoutPage.includes('data-promo-apply')||!checkoutPage.includes('arcana_checkout_promo'))problems.push('pages/checkout.html: discount code entry must persist safely to Stripe payment');
+if(!orderPage.includes('data-pay-stripe'))problems.push('pages/order.html: Stripe payment control is missing');
+for(const contract of ['stripe_payments','stripe_webhook_events','stripe_refunds','payment_notifications','stripe_checkout_enabled'])if(!stripeMigration.includes(contract))problems.push(`Stripe payment migration missing: ${contract}`);
+for(const contract of ['mode()','livemode','invoice_creation','Idempotency-Key'])if(!stripeCheckout.includes(contract))problems.push(`stripe-checkout: missing safe payment contract ${contract}`);
+for(const contract of ['stripe-signature','stripe_webhook_events','checkout.session.completed','checkout.session.async_payment_succeeded'])if(!stripeWebhook.includes(contract))problems.push(`stripe-webhook: missing reconciliation contract ${contract}`);
+if(!stripeReadiness.includes('charges_enabled')||!intoolsSource.includes('stripeReadiness'))problems.push('Intools: production Stripe toggle must run live readiness validation');
 if(problems.length){console.error(problems.join("\n"));process.exit(1)}
 console.log(`Static QA passed across ${files.length} files.`);

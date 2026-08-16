@@ -108,7 +108,13 @@ if(!sb || !sb.auth){
     intoolsListOrders(){ return Promise.resolve({ items:[], error:err }); },
     intoolsGetOrderDetail(){ return Promise.resolve({ order:null, error:err }); },
     getPlatformSetting(){ return Promise.resolve(null); },
-    intoolsUpdatePlatformSetting(){ return Promise.resolve({ error:err }); }
+    intoolsUpdatePlatformSetting(){ return Promise.resolve({ error:err }); },
+    createStripeCheckout(){ return Promise.resolve({ error:err }); },
+    stripeReadiness(){ return Promise.resolve({ error:err }); },
+    intoolsStripeBalance(){ return Promise.resolve({ error:err }); },
+    intoolsStripePaymentDetail(){ return Promise.resolve({ error:err }); },
+    intoolsStripeRefund(){ return Promise.resolve({ error:err }); },
+    intoolsCreateStripeTestCode(){ return Promise.resolve({ error:err }); }
   };
   return;
 }
@@ -1079,6 +1085,31 @@ const API = {
   },
   async intoolsUpdatePlatformSetting(key,value){
     try{const {error}=await sb.rpc('intools_update_platform_setting',{p_key:key,p_value:value});return {error:error||null};}
+    catch(error){return {error};}
+  }
+  ,
+  async createStripeCheckout(orderNo,promotionCode=null){
+    try{const {data,error}=await sb.functions.invoke('stripe-checkout',{body:{orderNo,promotionCode:promotionCode||null}}),result=await edgeResult(data,error);return result.error?{error:result.data?.error||result.error}:{...result.data,error:null};}
+    catch(error){return {error};}
+  },
+  async stripeReadiness(){
+    try{const {data,error}=await sb.functions.invoke('stripe-readiness',{body:{}}),result=await edgeResult(data,error);return result.error?{error:result.data?.error||result.error}:{...result.data,error:null};}
+    catch(error){return {error};}
+  },
+  async intoolsStripeBalance(){
+    try{const {data,error}=await sb.functions.invoke('stripe-balance',{body:{}}),result=await edgeResult(data,error);return result.error?{error:result.data?.error||result.error}:{...result.data,error:null};}
+    catch(error){return {error};}
+  },
+  async intoolsStripePaymentDetail(orderNo){
+    try{const {data,error}=await sb.rpc('intools_stripe_payment_detail',{p_order_no:orderNo});return {payment:data?.payment||null,refunds:data?.refunds||[],error:error||null};}
+    catch(error){return {payment:null,refunds:[],error};}
+  },
+  async intoolsStripeRefund(orderNo,amountCents,reason){
+    try{const {data,error}=await sb.functions.invoke('stripe-refund',{body:{orderNo,amountCents,reason}}),result=await edgeResult(data,error);return result.error?{error:result.data?.error||result.error}:{...result.data,error:null};}
+    catch(error){return {error};}
+  },
+  async intoolsCreateStripeTestCode(){
+    try{const {data,error}=await sb.functions.invoke('stripe-promotion',{body:{}}),result=await edgeResult(data,error);return result.error?{error:result.data?.error||result.error}:{...result.data,error:null};}
     catch(error){return {error};}
   }
 };

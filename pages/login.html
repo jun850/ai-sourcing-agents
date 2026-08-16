@@ -295,6 +295,7 @@
         document
           .getElementById("magicModeBtn")
           .addEventListener("click", () => setLoginMode(false));
+        if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && window.ATELIX_LOCAL_SUPABASE?.environment === "local") setLoginMode(true);
         const offerPasswordFallback = () => {
           setLoginMode(true);
           showForm(

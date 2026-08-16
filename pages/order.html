@@ -42,9 +42,10 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   }
 
   // Active payment account, available only to authenticated marketplace users.
-  const [bank, PAYMENT_METHOD] = await Promise.all([
+  const [bank, PAYMENT_METHOD, STRIPE_ENABLED] = await Promise.all([
     API.getBankAccount(),
-    API.getPlatformSetting ? API.getPlatformSetting('payment_method') : Promise.resolve('bank_transfer')
+    API.getPlatformSetting ? API.getPlatformSetting('payment_method') : Promise.resolve('bank_transfer'),
+    API.getPlatformSetting ? API.getPlatformSetting('stripe_checkout_enabled') : Promise.resolve('false')
   ]);
   const PLATFORM_BANK = bank
     ? { bank:bank.bank_name, account:bank.account_number, holder:bank.account_name, swift:bank.swift||'—' }
@@ -91,13 +92,14 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const fmtDate=ts=>new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
   function bankPanel(o){
-    if(o.status==='awaiting_payment' && (PAYMENT_METHOD||'bank_transfer')==='xendit') return `
+    if(o.status==='awaiting_payment' && STRIPE_ENABLED==='true') return `
       <section class="panel ord-bank">
         <h2>Complete payment</h2>
-        <p class="ph">Pay ${money(o.total)} securely via Xendit. You'll be redirected to a secure checkout page.</p>
+        <p class="ph">Pay ${money(o.total)} securely through Stripe. Your final amount is confirmed before payment.</p>
         <div class="ord-bank-actions">
-          <button class="btn btn-gold" data-pay-xendit>${IC.lock} Pay now</button>
+          <button class="btn btn-gold" data-pay-stripe>${IC.lock} Continue to secure payment</button>
         </div>
+        <div data-stripe-checkout aria-live="polite"></div>
       </section>`;
     if(o.status==='awaiting_payment' && !PLATFORM_BANK) return `
       <section class="panel ord-bank">
@@ -202,17 +204,16 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       toast("Marked as transferred — we'll verify and update this page.");
       render();
     });
-    const xBtn=root.querySelector('[data-pay-xendit]');
-    if(xBtn) xBtn.addEventListener('click',async ()=>{
-      xBtn.disabled=true; xBtn.textContent='Redirecting…';
-      if(typeof API.createXenditSession==='function'){
-        const { url, error } = await API.createXenditSession(order.no);
-        if(error){ toast(`Payment error — ${error.message||'please try again.'}`); xBtn.disabled=false; xBtn.innerHTML=`${IC.lock} Pay now`; return; }
-        if(url) window.location.href=url;
-      } else {
-        toast('Online payment is not yet available. Please contact Atelix.');
-        xBtn.disabled=false; xBtn.innerHTML=`${IC.lock} Pay now`;
-      }
+    const stripeBtn=root.querySelector('[data-pay-stripe]');
+    if(stripeBtn) stripeBtn.addEventListener('click',async ()=>{
+      stripeBtn.disabled=true;stripeBtn.textContent='Preparing secure payment…';
+      const promotionCode=sessionStorage.getItem('arcana_checkout_promo');
+      const result=await API.createStripeCheckout(order.no,promotionCode);
+      if(result.error||!result.clientSecret||!result.publishableKey){toast(`Payment error — ${result.error?.message||result.error||'please try again.'}`);stripeBtn.disabled=false;stripeBtn.innerHTML=`${IC.lock} Continue to secure payment`;return;}
+      if(!window.Stripe){const script=document.createElement('script');script.src='https://js.stripe.com/v3/';script.async=true;document.head.appendChild(script);await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=reject;});}
+      const host=root.querySelector('[data-stripe-checkout]');
+      try{const checkout=await window.Stripe(result.publishableKey).initEmbeddedCheckout({fetchClientSecret:async()=>result.clientSecret});host.innerHTML='';checkout.mount(host);stripeBtn.hidden=true;sessionStorage.removeItem('arcana_checkout_promo');}
+      catch(error){toast('Secure payment could not load. Please try again.');stripeBtn.disabled=false;stripeBtn.innerHTML=`${IC.lock} Continue to secure payment`;}
     });
   }
   render();

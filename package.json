@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "node scripts/local-server.js",
+    "dev:payment-local": "ATELIX_PAYMENT_LOCAL=1 PORT=8091 node scripts/local-server.js",
     "test": "npm run qa:static",
     "crawl:apparel-x-oem": "node scripts/crawl-apparel-x-oem.js",
     "catalog:crawl-only": "node scripts/catalog/crawl/cli.js",

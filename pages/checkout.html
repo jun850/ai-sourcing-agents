@@ -116,6 +116,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
         <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
         <div class="sum-row"><span class="k">${T('Shipping')}</span><span id="summaryShipping">${window.ARCANA_money(10)}</span></div>
+        <div class="checkout-promo" aria-labelledby="promoLabel"><label id="promoLabel" for="checkoutPromo">Discount code</label><div class="checkout-promo-row"><input id="checkoutPromo" autocomplete="off" placeholder="Enter code"><button class="btn btn-out" type="button" data-promo-apply>Apply</button></div><p id="promoHelp" class="checkout-place-help" aria-live="polite">Applied securely at payment.</p></div>
         <div class="cart-summary-total"><span>${T('Total')}</span><strong id="summaryTotal">${currencyMoney(baseTotal+shippingAmount())}</strong></div>
         <button class="btn btn-gold btn-block cart-summary-action" type="button" data-place disabled>Place order</button>
         <p class="checkout-place-help" id="placeHelp">Select an address to continue.</p>
@@ -132,6 +133,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   const picker=root.querySelector('.address-picker');
   const pickerTrigger=root.querySelector('[data-address-picker]');
+  const promoInput=root.querySelector('#checkoutPromo'),promoHelp=root.querySelector('#promoHelp');
+  promoInput.value=sessionStorage.getItem('arcana_checkout_promo')||'';
+  function savePromo(){const value=promoInput.value.trim();if(value){sessionStorage.setItem('arcana_checkout_promo',value);promoHelp.textContent='Code saved. Stripe will validate it before payment.';}else{sessionStorage.removeItem('arcana_checkout_promo');promoHelp.textContent='Applied securely at payment.';}}
 
   function updateAddress(){
     const target=document.getElementById('selectedAddress');
@@ -188,6 +192,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   picker.querySelector('[data-picker-close]').addEventListener('click',()=>picker.close());
   picker.addEventListener('click',event=>{if(event.target===picker)picker.close();});
   root.querySelector('[data-place]').addEventListener('click',placeOrder);
+  root.querySelector('[data-promo-apply]').addEventListener('click',savePromo);
+  promoInput.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();savePromo();}});
   root.querySelectorAll('[data-item-note]').forEach(note=>note.addEventListener('input',()=>note.closest('.checkout-item-note').querySelector('[data-item-note-count]').textContent=note.value.length));
   addressBook=window.ATELIX_createAddressBook({
     api:window.ARCANA_API,
