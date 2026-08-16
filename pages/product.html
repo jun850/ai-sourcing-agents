@@ -157,11 +157,15 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const supplierParts=[seller,supplierCountry,supplierCity].filter((value,index,all)=>value&&all.indexOf(value)===index);
     const sanitizeRichText=window.ATELIX_sanitizeRichText||(value=>String(value||''));
     const productSummary=sanitizeRichText(p.description||TR(`A ${comp||catLabel.toLowerCase()} product for considered sourcing and development.`));
+    const swatchFaq={question:T('Can I order a swatch?'),answer:T('Yes. Add a fabric swatch to your cart for a flat $4 to check whether the fabric is right for your project before placing a material order.')};
     const fallbackFaqs=[
-      {question:T('How should I confirm colour and hand feel?'),answer:T('Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.')},
+      {question:T('How should I confirm colour and hand feel?'),answer:T('Add a $4 swatch to your cart before production. Screen colours and textile lots can vary.')},
       {question:T('What should I confirm before ordering?'),answer:T('Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.')}
     ];
-    const productFaqs=(Array.isArray(p.faqs)&&p.faqs.length?p.faqs:fallbackFaqs).filter(item=>item&&item.question&&item.answer);
+    const sourceFaqs=(Array.isArray(p.faqs)&&p.faqs.length?p.faqs:fallbackFaqs).filter(item=>item&&item.question&&item.answer);
+    const productFaqs=p.cat==='fabrics'
+      ? [swatchFaq,...sourceFaqs.filter(item=>String(item.question).trim()!==swatchFaq.question)]
+      : sourceFaqs;
     const productSpecs=[
       [T('Material'),publicValue(comp)],[T('Construction'),publicValue(p.construction)],
       [T('Weight'),publicValue(p.gsm)],[T('Width'),publicValue(p.fabric_width)],

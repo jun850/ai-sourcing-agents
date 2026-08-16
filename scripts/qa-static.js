@@ -72,6 +72,7 @@ for(const commercePage of ['pages/cart.html','pages/checkout.html','pages/produc
 const cartPage=fs.readFileSync(path.join(root,'pages/cart.html'),'utf8');
 const swatchMigration=fs.readFileSync(path.join(root,'supabase/migrations/20260816120000_fabric_swatch_cart_and_specifications.sql'),'utf8');
 if(!quotePage.includes('id="swatchBtn"')||!quotePage.includes("Store.addToCart(p.id,1,selectedOptions,'swatch')"))problems.push('pages/product.html: each public fabric PDP must add a swatch as its own cart line');
+if(!quotePage.includes("const swatchFaq=")||!quotePage.includes("p.cat==='fabrics'"))problems.push('pages/product.html: every fabric PDP must include the swatch-order FAQ');
 if(!cartPage.includes('data-minimum')||!cartPage.includes('type="number"')||!cartPage.includes("event.key==='Enter'"))problems.push('pages/cart.html: cart quantities must be operable by stepper and manual numeric entry');
 for(const contract of ["line_type IN ('product','swatch')","THEN 4.00","fabric_width=COALESCE","roll_length=COALESCE"])if(!swatchMigration.includes(contract))problems.push(`swatch migration missing: ${contract}`);
 if(/esc\(t\("From"\)\)|t\("From"\)\s*\+/.test(componentsSource)||/\$\{T\('From'\)\}/.test(quotePage))problems.push('catalog pricing: public product prices must not use From wording');
