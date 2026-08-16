@@ -1840,6 +1840,36 @@ window.ARCANA_FACTORIES = [
     "copyI18n": {},
     "productCount": 0,
     "taxonomy": []
+  },
+  {
+    "id": "yamamoto-co-ltd",
+    "databaseId": "55e6f692-7e45-5b82-9104-7c746576d814",
+    "name": "Yamamoto Co., Ltd.",
+    "type": "Fabric Mill",
+    "region": "Japan",
+    "loc": null,
+    "verified": true,
+    "years": null,
+    "moq": null,
+    "lead": null,
+    "orders": null,
+    "capacity": null,
+    "certs": [],
+    "tags": [],
+    "img": null,
+    "logo_img": null,
+    "page_img": null,
+    "sales": null,
+    "phone": null,
+    "web": "https://www.excy.co.jp/",
+    "founded": null,
+    "employees": null,
+    "area": null,
+    "port": null,
+    "bio": null,
+    "copyI18n": {},
+    "productCount": 14,
+    "taxonomy": []
   }
 ];
 window.ARCANA_FACTORY_MAP = Object.fromEntries(window.ARCANA_FACTORIES.map(f=>[f.id,f]));
