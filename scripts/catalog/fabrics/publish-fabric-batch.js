@@ -21,6 +21,17 @@ async function verifyAlgoliaObject({url,headers,objectId,fetchImpl=fetch,wait=sl
   }
   throw new Error(`Algolia read-back failed for ${objectId} after ${attempts} attempts (status ${status})`);
 }
+async function drainSearchQueue(cfg,{limit=10,maxRounds=100,requestImpl=request}={}){
+  let processed=0;
+  for(let round=0;round<maxRounds;round+=1){
+    const sync=await withRetries('Algolia queue processing',()=>requestImpl(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit})}),{attempts:4});
+    const count=Number(sync?.processed||0),failed=Number(sync?.failed||0);
+    if(!sync?.ok||!Number.isSafeInteger(count)||count<0||!Number.isSafeInteger(failed)||failed>0)throw new Error(`Algolia sync failed: ${JSON.stringify(sync)}`);
+    processed+=count;
+    if(count<limit)return processed;
+  }
+  throw new Error(`Algolia queue did not drain after ${maxRounds} rounds`);
+}
 function validate(document,manifestFile){
   if(document.version!==1||!['supplier','product'].includes(document.kind)||!Number.isInteger(document.sequence_no)||document.sequence_no<1||!/^[0-9a-f-]{36}$/.test(document.release_id||''))throw new Error('invalid source-free batch header');
   if(!Array.isArray(document.entities)||document.entities.length<1||document.entities.length>50)throw new Error('batch must contain 1..50 entities');
@@ -68,7 +79,7 @@ async function uploadMedia(cfg,document,manifestFile,uploaded=[]){
 }
 async function syncSearch(cfg,document){
   if(document.kind==='supplier')return;
-  const sync=await request(cfg,'/functions/v1/algolia-sync',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'process_queue',limit:500})});if(!sync?.ok||Number(sync.failed||0)>0)throw new Error(`Algolia sync failed: ${JSON.stringify(sync)}`);
+  await drainSearchQueue(cfg);
   const publicConfig=await request(cfg,'/functions/v1/algolia-public-config'),index=document.kind==='supplier'?publicConfig?.indices?.factories:publicConfig?.indices?.products;if(!publicConfig?.appId||!publicConfig?.apiKey||!index)throw new Error('Algolia public configuration incomplete');
   await mapLimit(document.entities,12,async entity=>{const objectId=document.kind==='supplier'?entity.slug:entity.product.sku;await verifyAlgoliaObject({url:`https://${publicConfig.appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(index)}/${encodeURIComponent(objectId)}`,headers:{'X-Algolia-Application-Id':publicConfig.appId,'X-Algolia-API-Key':publicConfig.apiKey},objectId});});
 }
@@ -95,4 +106,4 @@ async function main(){
   }
 }
 if(require.main===module)main().catch(error=>{process.stderr.write(`${error.stack||error.message}\n`);process.exitCode=1;});
-module.exports={validate,verifyAlgoliaObject,withRetries,isMissingStorageObject};
+module.exports={validate,verifyAlgoliaObject,withRetries,isMissingStorageObject,drainSearchQueue};
