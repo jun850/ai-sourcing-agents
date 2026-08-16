@@ -132,6 +132,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     const checkout=root.querySelector('[data-checkout]');if(checkout)checkout.addEventListener('click',()=>{Store.beginCheckout?.();location.href='checkout.html';});
   }
   render();
+  window.addEventListener('arcana:cartchange',render);
   window.ARCANA_onLang(render);
 };
 </script>

@@ -290,6 +290,9 @@
         .sort((a, b) => a.key.localeCompare(b.key));
     return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
   };
+  const notifyCartChanged = () => {
+    window.dispatchEvent(new CustomEvent("arcana:cartchange"));
+  };
   const Store = {
     session() {
       return LS.get("session", null);
@@ -2431,6 +2434,7 @@
         if (!result || !result.error) clearSyncedCartPending(pending);
       }
       syncBadges();
+      notifyCartChanged();
       return;
     }
     const map = new Map(dbItems.map((i) => [i.key || cartLineKey(i.id,i.options,i.lineType), { ...i }]));
@@ -2443,6 +2447,7 @@
     LS.set("cart", merged);
     localStorage.setItem(flag, "1");
     syncBadges();
+    notifyCartChanged();
   }
 
   /* Pull the signed-in user's DB wishlist into the LS mirror. The first time for

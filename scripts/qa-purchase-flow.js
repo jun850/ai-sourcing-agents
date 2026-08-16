@@ -53,7 +53,7 @@ const mockApi = `(() => {
   ];
   const decorate=api=>Object.assign(api,{
     getSessionProfile:async()=>profile,getMyProfile:async()=>profile,onChange:()=>({data:{subscription:{unsubscribe(){}}}}),
-    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>localStorage.getItem('qa_force_empty_db')==='1'||location.search.includes('qa-persist-empty-db')?[]:[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}],replaceCart:async()=>({error:null}),
+    fetchCatalog:async()=>({products:[],factories:[]}),getCart:async()=>{if(location.search.includes('qa-cart-late-sync'))return new Promise(resolve=>setTimeout(()=>resolve([{id:'FAB-100',qty:300,key:'FAB-100',options:{}}]),350));return localStorage.getItem('qa_force_empty_db')==='1'||location.search.includes('qa-persist-empty-db')?[]:[{id:'FAB-100',qty:300,key:'FAB-100',options:{}}]},replaceCart:async()=>({error:null}),
     getWishlist:async()=>[],replaceWishlist:async()=>({error:null}),getMyOrders:async()=>[],
     getAddresses:async()=>location.search.includes('qa-empty-address')?[]:addresses.map(address=>({...address})),
     createAddress:async payload=>{const address={...payload,id:'addr-new',is_default:false};addresses.push(address);return {address,error:null};},
@@ -71,7 +71,7 @@ const mockApi = `(() => {
   let value;
   Object.defineProperty(window,'ARCANA_API',{configurable:true,get:()=>value,set:api=>{value=decorate(api);}});
   try {
-    localStorage.setItem('arcana_cart',JSON.stringify([{id:'FAB-100',qty:300,key:'FAB-100',options:{}}]));
+    if(location.search.includes('qa-cart-late-sync'))localStorage.removeItem('arcana_cart');else localStorage.setItem('arcana_cart',JSON.stringify([{id:'FAB-100',qty:300,key:'FAB-100',options:{}}]));
     localStorage.setItem('arcana_cart_merged_qa-user','1');
     localStorage.setItem('arcana_session',JSON.stringify({role:'buyer',name:'Jun Buyer',avatarUrl:null}));
   } catch (_) {}
@@ -218,6 +218,22 @@ async function cartRefreshPersistenceScenario() {
   return issues;
 }
 
+async function cartLateSyncScenario() {
+  const browser = await open("/pages/cart.html?qa-cart-late-sync=1", 1440, 900);
+  const { cdp } = browser;
+  if (!await waitFor(cdp, "document.querySelector('.cart-empty')")) throw new Error("Cart did not begin in its empty state");
+  if (!await waitFor(cdp, "document.querySelector('[data-checkout]')")) throw new Error("Cart did not re-render after account cart synchronization");
+  const data = await evaluate(cdp, `({
+    heading:document.querySelector('h1')?.textContent.trim(),
+    items:document.querySelectorAll('.cart-product').length,
+    badge:document.querySelector('[data-cart-badge]')?.textContent
+  })`);
+  cdp.close();
+  const issues = [...browser.errors, ...browser.failures];
+  if (data.heading !== "Your Cart" || data.items !== 1 || data.badge !== "1") issues.push("delayed account cart sync left the cart page out of sync with its badge");
+  return issues;
+}
+
 async function profileScenario() {
   const browser = await open("/pages/brand-owner.html#address", 1440, 900);
   const { cdp } = browser;
@@ -261,6 +277,7 @@ async function emptyAddressScenario() {
 
 (async () => {
   const scenarios = [
+    ["cart re-renders after delayed account sync", cartLateSyncScenario],
     ["cart persists across refresh with stale account cart", cartRefreshPersistenceScenario],
     ["cart to checkout handoff with stale account cart", checkoutHandoffScenario],
     ["checkout desktop", () => checkoutScenario(1440, 900)],
