@@ -3,9 +3,4 @@
 node_modules
 .diffui/
 supabase/.temp/
-data/catalog-runs/
-data/apparel-x-oem/
-data/**/private-contacts.json
-data/**/private-contacts.ndjson
-data/**/raw/
-data/**/media-tmp/
+data/
