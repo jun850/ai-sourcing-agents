@@ -82,7 +82,7 @@ window.ARCANA_PRODUCT_MAP = Object.fromEntries(window.ARCANA_PRODUCTS.map(p=>[p.
 /* Factories directory — real verified suppliers */
 window.ARCANA_FACTORIES = [
   {
-    "id": "apparelx-nancy",
+    "id": "oem-nancy",
     "databaseId": "df1a065b-e9a7-4dad-855b-16cd485174ea",
     "name": "&Nancy",
     "type": "Garment Manufacturer",
@@ -96,8 +96,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/NANCY/45b159e5d36163b73f66fb42228e366fde93eea1b7d09a1d795d6695296b31cc.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/NANCY/45b159e5d36163b73f66fb42228e366fde93eea1b7d09a1d795d6695296b31cc.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/NANCY/45b159e5d36163b73f66fb42228e366fde93eea1b7d09a1d795d6695296b31cc.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/NANCY/45b159e5d36163b73f66fb42228e366fde93eea1b7d09a1d795d6695296b31cc.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -150,7 +150,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-alians",
+    "id": "oem-alians",
     "databaseId": "6214678f-7eda-419e-88d1-2a650cae27ab",
     "name": "Aliansa Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -164,8 +164,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/ALIANS/9d28c5a41125c6657f7dd8a02ee4e548b2b72028a0e04f25e4b8d99de41218e4.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/ALIANS/9d28c5a41125c6657f7dd8a02ee4e548b2b72028a0e04f25e4b8d99de41218e4.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/ALIANS/9d28c5a41125c6657f7dd8a02ee4e548b2b72028a0e04f25e4b8d99de41218e4.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/ALIANS/9d28c5a41125c6657f7dd8a02ee4e548b2b72028a0e04f25e4b8d99de41218e4.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -191,7 +191,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-canal",
+    "id": "oem-canal",
     "databaseId": "a09d2dd7-c635-4cc8-a7de-5ebc5afdb53b",
     "name": "Canal Co., Ltd.",
     "type": "Accessories Supplier",
@@ -205,8 +205,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/CANAL/0368dc52d2aa84519ed34a9c47ece4db09232d4c248f7e043880a3ce19812a47.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/CANAL/0368dc52d2aa84519ed34a9c47ece4db09232d4c248f7e043880a3ce19812a47.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/CANAL/0368dc52d2aa84519ed34a9c47ece4db09232d4c248f7e043880a3ce19812a47.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/CANAL/0368dc52d2aa84519ed34a9c47ece4db09232d4c248f7e043880a3ce19812a47.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -260,7 +260,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-craft",
+    "id": "oem-craft",
     "databaseId": "caec3588-de0f-4bc7-9f0b-bae4aae32e0e",
     "name": "Craft House G Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -274,7 +274,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/CRAFT/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/CRAFT/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -296,7 +296,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-da1itk",
+    "id": "oem-da1itk",
     "databaseId": "2ea93bc9-ea7f-40e8-b982-16eb60f5f61c",
     "name": "Daiko Product Co., Ltd.",
     "type": "Accessories Supplier",
@@ -310,8 +310,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DA1ITK/ff66e75ba9506296539f545bf9db0e87136c5149f4622e60a72433b00df8868b.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DA1ITK/ff66e75ba9506296539f545bf9db0e87136c5149f4622e60a72433b00df8868b.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DA1ITK/ff66e75ba9506296539f545bf9db0e87136c5149f4622e60a72433b00df8868b.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DA1ITK/ff66e75ba9506296539f545bf9db0e87136c5149f4622e60a72433b00df8868b.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -332,7 +332,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-dan",
+    "id": "oem-dan",
     "databaseId": "39590e03-bbf5-44f6-b22b-4b79214cea67",
     "name": "DAN TOKYO Ltd.",
     "type": "Garment Manufacturer",
@@ -346,9 +346,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DAN/ec68fb8a4868c238d3f341ae3e862ae2196c6c5848460640f80a7c2059fa38a2.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DAN/ec68fb8a4868c238d3f341ae3e862ae2196c6c5848460640f80a7c2059fa38a2.webp",
     "logo_img": null,
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DAN/ec68fb8a4868c238d3f341ae3e862ae2196c6c5848460640f80a7c2059fa38a2.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DAN/ec68fb8a4868c238d3f341ae3e862ae2196c6c5848460640f80a7c2059fa38a2.webp",
     "sales": null,
     "phone": null,
     "web": "https://www.dantokyo.com",
@@ -368,7 +368,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-dongs",
+    "id": "oem-dongs",
     "databaseId": "d2857c7d-a010-45b0-80fc-e115334f1ac7",
     "name": "Dongsin Textile Co., Ltd.",
     "type": "Trim Supplier",
@@ -382,8 +382,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DONGS/b604d1bb2f354c8f7adba281b968510566e23e72cf95e77cc49697bac82574bf.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/DONGS/b604d1bb2f354c8f7adba281b968510566e23e72cf95e77cc49697bac82574bf.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DONGS/b604d1bb2f354c8f7adba281b968510566e23e72cf95e77cc49697bac82574bf.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/DONGS/b604d1bb2f354c8f7adba281b968510566e23e72cf95e77cc49697bac82574bf.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -414,7 +414,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-hpi1b",
+    "id": "oem-hpi1b",
     "databaseId": "7f6bbc7b-ee0a-4d2c-b397-e4ac0b3db6e2",
     "name": "Elbe Road Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -428,9 +428,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/HPI1B/ff4fbde651753ec5875f1fa4aa111e5e593d621666dba5de5e40643c7826b3da.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/HPI1B/d3f2f5596def755f22b65bab7c351731cdff8c0bde3326e03ee2d584be023885.webp",
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/HPI1B/ff4fbde651753ec5875f1fa4aa111e5e593d621666dba5de5e40643c7826b3da.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/HPI1B/ff4fbde651753ec5875f1fa4aa111e5e593d621666dba5de5e40643c7826b3da.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/HPI1B/d3f2f5596def755f22b65bab7c351731cdff8c0bde3326e03ee2d584be023885.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/HPI1B/ff4fbde651753ec5875f1fa4aa111e5e593d621666dba5de5e40643c7826b3da.webp",
     "sales": null,
     "phone": null,
     "web": "https://www.elbeweb.net",
@@ -450,7 +450,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-fet",
+    "id": "oem-fet",
     "databaseId": "7cd7fdff-be9d-4ab7-83f0-2d40eaa0761b",
     "name": "Fetia Co., Ltd.",
     "type": "Accessories Supplier",
@@ -464,8 +464,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/FET/dadaaca063bb5a3658524a31c7dda70c8408fc0f2f0bd43f6f2d7753fcc2f90e.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/FET/dadaaca063bb5a3658524a31c7dda70c8408fc0f2f0bd43f6f2d7753fcc2f90e.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/FET/dadaaca063bb5a3658524a31c7dda70c8408fc0f2f0bd43f6f2d7753fcc2f90e.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/FET/dadaaca063bb5a3658524a31c7dda70c8408fc0f2f0bd43f6f2d7753fcc2f90e.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -486,7 +486,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-geekpe",
+    "id": "oem-geekpe",
     "databaseId": "a35902dc-ee5e-4171-998c-cfc970135163",
     "name": "GEEK PENGUIN Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -500,8 +500,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/GEEKPE/b9f8b63d24cbbcf83ba736e8bcce67b9bb92c1a6dd0e566059b996598fbd9f5d.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/GEEKPE/b9f8b63d24cbbcf83ba736e8bcce67b9bb92c1a6dd0e566059b996598fbd9f5d.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/GEEKPE/b9f8b63d24cbbcf83ba736e8bcce67b9bb92c1a6dd0e566059b996598fbd9f5d.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/GEEKPE/b9f8b63d24cbbcf83ba736e8bcce67b9bb92c1a6dd0e566059b996598fbd9f5d.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -522,7 +522,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-j8687t",
+    "id": "oem-j8687t",
     "databaseId": "31cb0b24-e303-4458-b108-ff12a610520a",
     "name": "Good Life Lab Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -536,8 +536,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/j8687T/2c85d0b205970082622e5738af4195ebaed22a9435a78516bb4df48d74fef2c8.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/j8687T/2c85d0b205970082622e5738af4195ebaed22a9435a78516bb4df48d74fef2c8.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/j8687T/2c85d0b205970082622e5738af4195ebaed22a9435a78516bb4df48d74fef2c8.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/j8687T/2c85d0b205970082622e5738af4195ebaed22a9435a78516bb4df48d74fef2c8.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -558,7 +558,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-z4y",
+    "id": "oem-z4y",
     "databaseId": "4e095725-ca90-4ae5-97c7-8e24f48aa4bc",
     "name": "Hoshibako Works Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -572,8 +572,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/Z4Y/3a2b6e6705c3c0368bc86c5c96ef4b61ccc0490a18764736e7b61fefb391f056.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/Z4Y/3a2b6e6705c3c0368bc86c5c96ef4b61ccc0490a18764736e7b61fefb391f056.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/Z4Y/3a2b6e6705c3c0368bc86c5c96ef4b61ccc0490a18764736e7b61fefb391f056.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/Z4Y/3a2b6e6705c3c0368bc86c5c96ef4b61ccc0490a18764736e7b61fefb391f056.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -599,7 +599,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-ikegra",
+    "id": "oem-ikegra",
     "databaseId": "972ee44e-90ce-4cd6-9078-ab7b5196efea",
     "name": "Ikegami Hat Workshop",
     "type": "Accessories Supplier",
@@ -613,7 +613,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/IKEGRA/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/IKEGRA/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -668,7 +668,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-bqeldv",
+    "id": "oem-bqeldv",
     "databaseId": "222510e8-aaf4-449d-9425-6c0ca82af0e6",
     "name": "inthese",
     "type": "Garment Manufacturer",
@@ -682,8 +682,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/BQELDV/6caa841f561413b527ea468b0f1f802019c37020fd3325a4f3dd60498a509421.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/BQELDV/6caa841f561413b527ea468b0f1f802019c37020fd3325a4f3dd60498a509421.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/BQELDV/6caa841f561413b527ea468b0f1f802019c37020fd3325a4f3dd60498a509421.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/BQELDV/6caa841f561413b527ea468b0f1f802019c37020fd3325a4f3dd60498a509421.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -734,7 +734,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-5dyi",
+    "id": "oem-5dyi",
     "databaseId": "97220b5c-71d7-4a20-9525-c64b79a36207",
     "name": "Ishikawa Giken Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -748,7 +748,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/5DYI/ce47781705511bda93f806860c20d382fdc8e8e1732af61d1a51d8ac71dcbdc8.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/5DYI/ce47781705511bda93f806860c20d382fdc8e8e1732af61d1a51d8ac71dcbdc8.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -770,7 +770,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-xsakru",
+    "id": "oem-xsakru",
     "databaseId": "e40c35ac-113f-40fa-8927-189cd02602c1",
     "name": "JbyJ",
     "type": "Garment Manufacturer",
@@ -784,7 +784,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/XSAKRU/2fed6666872eca5670bd2a227e8cde4e5aa4db7ee0504b97991f687a45931b1d.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/XSAKRU/2fed6666872eca5670bd2a227e8cde4e5aa4db7ee0504b97991f687a45931b1d.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -868,7 +868,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-kaoris",
+    "id": "oem-kaoris",
     "databaseId": "b0b8b0cc-ba85-4fd8-be84-7be491e2362e",
     "name": "Kaori's Curated Elegance (Suzhou) Export Trading Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -882,8 +882,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/KAORIS/0dc2d9e5dd17459ac80ac3a69a7ce12312f95422d3b1fb270936e15766cfd6cc.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/KAORIS/0dc2d9e5dd17459ac80ac3a69a7ce12312f95422d3b1fb270936e15766cfd6cc.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/KAORIS/0dc2d9e5dd17459ac80ac3a69a7ce12312f95422d3b1fb270936e15766cfd6cc.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/KAORIS/0dc2d9e5dd17459ac80ac3a69a7ce12312f95422d3b1fb270936e15766cfd6cc.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -909,7 +909,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-ig6",
+    "id": "oem-ig6",
     "databaseId": "d58552b9-b6bc-42c8-8640-94148728d68f",
     "name": "Koshin Co., Ltd.",
     "type": "Yarn Supplier",
@@ -923,8 +923,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/IG6/cd3233272d14177529ccf72c7dab66047c6f58a2f5b99a2f32bda20726c6f97d.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/IG6/cd3233272d14177529ccf72c7dab66047c6f58a2f5b99a2f32bda20726c6f97d.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/IG6/cd3233272d14177529ccf72c7dab66047c6f58a2f5b99a2f32bda20726c6f97d.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/IG6/cd3233272d14177529ccf72c7dab66047c6f58a2f5b99a2f32bda20726c6f97d.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -982,7 +982,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-iic",
+    "id": "oem-iic",
     "databaseId": "1d28e93a-bcc8-4e5d-ae38-4038c912a709",
     "name": "LAF SUPPLY",
     "type": "Garment Manufacturer",
@@ -996,8 +996,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/IIC/6f17e731d767a77d4e40ba892d428136ae185c15df06fad9dfa3e80b11d2c34d.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/IIC/6f17e731d767a77d4e40ba892d428136ae185c15df06fad9dfa3e80b11d2c34d.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/IIC/6f17e731d767a77d4e40ba892d428136ae185c15df06fad9dfa3e80b11d2c34d.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/IIC/6f17e731d767a77d4e40ba892d428136ae185c15df06fad9dfa3e80b11d2c34d.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -1023,7 +1023,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-geh",
+    "id": "oem-geh",
     "databaseId": "4a310953-e880-44e6-a0bb-86d41756753b",
     "name": "Liafur Collection General Incorporated Association",
     "type": "Garment Manufacturer",
@@ -1037,9 +1037,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/GEH/4f5e706920e640a5cec6f8748a0790c8741da6c99a8a8d9490500f41adf54318.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/GEH/b66edc1165b0b278417819d8f6a0690978db0977b87289039adba922dda9f262.webp",
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/GEH/4f5e706920e640a5cec6f8748a0790c8741da6c99a8a8d9490500f41adf54318.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/GEH/4f5e706920e640a5cec6f8748a0790c8741da6c99a8a8d9490500f41adf54318.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/GEH/b66edc1165b0b278417819d8f6a0690978db0977b87289039adba922dda9f262.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/GEH/4f5e706920e640a5cec6f8748a0790c8741da6c99a8a8d9490500f41adf54318.webp",
     "sales": null,
     "phone": null,
     "web": "http://anjaricu.info",
@@ -1121,7 +1121,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-lwbggk",
+    "id": "oem-lwbggk",
     "databaseId": "53e8f3af-e3ef-4444-bf0a-430a94603a50",
     "name": "Nakachu Shoten Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -1135,9 +1135,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/LWBGGK/9dda9e8daadea384386f02b72b7aec29768f471441afa6cf911aec629998c4e5.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/LWBGGK/9dda9e8daadea384386f02b72b7aec29768f471441afa6cf911aec629998c4e5.webp",
     "logo_img": null,
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/LWBGGK/9dda9e8daadea384386f02b72b7aec29768f471441afa6cf911aec629998c4e5.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/LWBGGK/9dda9e8daadea384386f02b72b7aec29768f471441afa6cf911aec629998c4e5.webp",
     "sales": null,
     "phone": null,
     "web": "http://www.nakachuu.co.jp",
@@ -1167,7 +1167,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-7im",
+    "id": "oem-7im",
     "databaseId": "4c26d4a3-9280-4b82-92af-1db091f787f0",
     "name": "NEHA Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -1181,9 +1181,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/7IM/cc3b261a8398464fa31615ec5f4d885257ae07c6d9b246aa6c5213d7b1fad0c3.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/7IM/cc3b261a8398464fa31615ec5f4d885257ae07c6d9b246aa6c5213d7b1fad0c3.webp",
     "logo_img": null,
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/7IM/cc3b261a8398464fa31615ec5f4d885257ae07c6d9b246aa6c5213d7b1fad0c3.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/7IM/cc3b261a8398464fa31615ec5f4d885257ae07c6d9b246aa6c5213d7b1fad0c3.webp",
     "sales": null,
     "phone": null,
     "web": "https://n-official.com",
@@ -1203,7 +1203,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-l2b1",
+    "id": "oem-l2b1",
     "databaseId": "e69c64c1-c167-4257-abb1-268734042210",
     "name": "Nekonote Design Studio",
     "type": "Garment Manufacturer",
@@ -1217,8 +1217,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/L2B1/177fbe2f0bcd2d2469a796effd38cc6f2d4496850fd90a1c575920f58c3340cf.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/L2B1/177fbe2f0bcd2d2469a796effd38cc6f2d4496850fd90a1c575920f58c3340cf.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/L2B1/177fbe2f0bcd2d2469a796effd38cc6f2d4496850fd90a1c575920f58c3340cf.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/L2B1/177fbe2f0bcd2d2469a796effd38cc6f2d4496850fd90a1c575920f58c3340cf.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -1239,7 +1239,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-mstt",
+    "id": "oem-mstt",
     "databaseId": "7ace5d3b-d6ee-418d-b6b1-02fe647cb12d",
     "name": "nono × nono factory",
     "type": "Garment Manufacturer",
@@ -1253,9 +1253,9 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/MSTT/a83e6b6fa916d8a815acce1db703d2c36f59fa83690ac357a29fb7e5fb9d7e15.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/MSTT/5fbe2b73b2ed601c0e245868476e17bc7c576b3dc99e826662b5ba92a33816c1.webp",
-    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/MSTT/a83e6b6fa916d8a815acce1db703d2c36f59fa83690ac357a29fb7e5fb9d7e15.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/MSTT/a83e6b6fa916d8a815acce1db703d2c36f59fa83690ac357a29fb7e5fb9d7e15.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/MSTT/5fbe2b73b2ed601c0e245868476e17bc7c576b3dc99e826662b5ba92a33816c1.webp",
+    "page_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/MSTT/a83e6b6fa916d8a815acce1db703d2c36f59fa83690ac357a29fb7e5fb9d7e15.webp",
     "sales": null,
     "phone": null,
     "web": null,
@@ -1275,7 +1275,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-olife",
+    "id": "oem-olife",
     "databaseId": "032af79a-cb99-45e7-a295-13f4fbf26fc1",
     "name": "OLIFE Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -1289,8 +1289,8 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/OLIFE/5ff0a264b872921c1144107d994d87bafd7bff489b2e8f1f4715b8160262b769.webp",
-    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/OLIFE/5ff0a264b872921c1144107d994d87bafd7bff489b2e8f1f4715b8160262b769.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/OLIFE/5ff0a264b872921c1144107d994d87bafd7bff489b2e8f1f4715b8160262b769.webp",
+    "logo_img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/OLIFE/5ff0a264b872921c1144107d994d87bafd7bff489b2e8f1f4715b8160262b769.webp",
     "page_img": null,
     "sales": null,
     "phone": null,
@@ -1316,7 +1316,7 @@ window.ARCANA_FACTORIES = [
     ]
   },
   {
-    "id": "apparelx-panaa",
+    "id": "oem-panaa",
     "databaseId": "a7557291-11e2-4858-8475-7e37d3b23a2a",
     "name": "Pana Art",
     "type": "Accessories Supplier",
@@ -1330,7 +1330,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/PANAA/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/PANAA/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -1382,7 +1382,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-333z8",
+    "id": "oem-333z8",
     "databaseId": "885fb3d7-14f1-453c-ac5a-bba232179ca2",
     "name": "Royal Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -1396,7 +1396,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/333z8/72de2545387526d82c5b91e96760b2b86899b0d9eefb6cce15390f4c9b1b932b.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/333z8/72de2545387526d82c5b91e96760b2b86899b0d9eefb6cce15390f4c9b1b932b.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
@@ -1706,7 +1706,7 @@ window.ARCANA_FACTORIES = [
     "taxonomy": []
   },
   {
-    "id": "apparelx-ukf",
+    "id": "oem-ukf",
     "databaseId": "0d1fd5db-10da-45b9-a7ea-9b0c19530354",
     "name": "UKF Co., Ltd.",
     "type": "Garment Manufacturer",
@@ -1720,7 +1720,7 @@ window.ARCANA_FACTORIES = [
     "capacity": null,
     "certs": [],
     "tags": [],
-    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/apparelx/suppliers/UKF/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
+    "img": "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/catalog-media/oem-partners/suppliers/UKF/16cc086a29b99d046e5873ecbb9d86185d15335352ecddb8886dd5a049da9601.webp",
     "logo_img": null,
     "page_img": null,
     "sales": null,
