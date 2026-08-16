@@ -24,14 +24,16 @@ English, Japanese, and Chinese copy. English is the default and fallback.
 
 1. Normalize maker names and match an existing supplier by exact normalized
    identity. Create one verified `fabric_mill` only when no exact supplier
-   exists. A supplier stays out of public lists until it owns an active product.
+   exists. Reuse the existing VANCET factory and map `yamamoto-excy` to the
+   existing `Yamamoto Co., Ltd.` record; never create duplicate mills. A
+   supplier stays out of public lists until it owns an active product.
 2. Assign a neutral `FAB-XXXXXXXXXX` Atelix SKU and construction-based L3.
-3. Select two still images for this release. The first is a flat swatch or sample card.
-   Generate 640 px and 1600 px WebP variants, strip metadata, use sRGB, and
-   deduplicate by SHA-256 under `products/{uuid}/{hash}-{size}.webp`.
-   For the bulk release, choose the smallest explicit `--max-images` value that
-   preserves a useful sample and detail view. Estimate first; raw downloads and
-   crawl evidence are never uploaded to Storage.
+3. Select up to three still images for each release. The first is a flat swatch
+   or sample card. Generate and store 640 px and 1600 px WebP variants, strip
+   metadata, use sRGB, and deduplicate by SHA-256 under
+   `products/{uuid}/{hash}-{size}.webp`. Do not enable paid on-the-fly image
+   transformations. Estimate first; raw downloads and crawl evidence are never
+   uploaded to Storage.
 4. Retain only product-relevant care, colour, lot, finish, test, print, dye, or
    application FAQ. Reject platform support, payment, refund, fee, stock,
    shipping, unrelated-maker, trademark, and unsupported claims. Store all FAQ
@@ -41,7 +43,9 @@ English, Japanese, and Chinese copy. English is the default and fallback.
    covers the exact public media URLs written to the database.
    Each product batch follows Storage upload and hash verification, one database
    transaction, search sync, public API read-back, PDP smoke, cart/checkout
-   smoke, and batch receipt. Stop on the first failed batch.
+   smoke, and batch receipt. Stop on the first failed batch. After all batches,
+   run the paginated Algolia public reindex and verify every eligible product
+   and verified factory is present before declaring search complete.
 
 ## Touch points
 
@@ -72,7 +76,7 @@ npm run catalog:fabrics:prepare -- --build \
   --factories /absolute/path/to/factories.json \
   --git-commit-sha DEPLOYED_40_CHARACTER_SHA \
   --supabase-url https://PROJECT_REF.supabase.co \
-  --max-images 2 \
+  --max-images 3 \
   --storage-budget-mb APPROVED_BUDGET_MB
 ```
 
@@ -80,7 +84,7 @@ Before build, compare the storage budget with a deterministic sample that does
 not persist optimized files:
 
 ```sh
-npm run catalog:fabrics:storage-estimate -- --sample-size 100 --max-images 2
+npm run catalog:fabrics:storage-estimate -- --sample-size 100 --max-images 3
 ```
 
 ## Local retention
@@ -88,6 +92,6 @@ npm run catalog:fabrics:storage-estimate -- --sample-size 100 --max-images 2
 After a production receipt proves exactly 4,736 active products plus live,
 privacy, translation, price, media, supplier, search, PDP, cart, and checkout
 gates, remove the local product archive, raw downloads, databases, CSV exports,
-logs, generated translations, and optimized media. Retain only reusable scripts
-outside the run plus the run instructions/history, production receipt, and
-cleanup report.
+logs, generated translations, and optimized media. Retain the reusable scripts
+and this tracked rollout guide only; never commit source archives or generated
+catalogue data.
