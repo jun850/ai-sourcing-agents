@@ -194,7 +194,7 @@ async function inspect(route, viewport) {
       const bodyText=document.body.innerText;
       const sentinel=(bodyText.match(/\\b(undefined|null|NaN)\\b|\\[object Object\\]/g)||[]);
       const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth;
-      const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),shippingAtCheckout:/\$10\.00 default|Intools destination rate is applied automatically/i.test(bodyText)};
+      const cart={quantityInputs:[...document.querySelectorAll('[data-qty] input')].map(input=>({value:Number(input.value),min:Number(input.min)})),hasAddons:/Add-on services|QC Inspection|Shipment Insurance/i.test(bodyText),hasPromo:/Promo code/i.test(bodyText),hasShippingRow:document.querySelectorAll('.cart-summary .sum-row').length>=3,hasCheckout:Boolean(document.querySelector('[data-checkout]')),hasRemovedDestinationRateCopy:/An active Intools destination rate is applied automatically at checkout\./i.test(bodyText)};
       const pdp={quoteHref:document.getElementById('emailBtn')?.getAttribute('href')||'',quoteText:document.getElementById('emailBtn')?.textContent.trim()||'',quantityType:document.getElementById('pdpQuantity')?.type||'',wishlistPressed:document.querySelector('.pdp-save')?.getAttribute('aria-pressed')||'',packageRadios:document.querySelectorAll('[data-pkg-group] input[type="radio"]').length,selectedPackages:document.querySelectorAll('[data-pkg-group] input[type="radio"]:checked').length,optionGroups:document.querySelectorAll('[data-product-option]').length,optionValues:document.querySelectorAll('[data-product-option] input[type="radio"]').length,selectedOptions:document.querySelectorAll('[data-product-option] input[type="radio"]:checked').length,galleryButtons:document.querySelectorAll('[data-gallery-image]').length,applicationIcons:[...document.querySelectorAll('.application-icon')].map(icon=>({type:icon.dataset.application,label:icon.getAttribute('aria-label'),title:icon.title})),touchTargets:[...document.querySelectorAll('.pdp-mini button,.pdp-option-values span,.application-icon')].map(button=>Math.round(button.getBoundingClientRect().height))};
       const supplierDetailText=[...document.querySelectorAll('.sup-main,.map-panel,.overview')].map(el=>el.innerText).join(' ');
       const website=document.querySelector('.supplier-website');
@@ -218,7 +218,9 @@ async function inspect(route, viewport) {
   if (route.includes("cart.html?seed=cart")) {
     if (!data.cart.quantityInputs.length || data.cart.quantityInputs.some((input) => input.value < input.min)) issues.push("cart quantity is below product MOQ");
     if (data.cart.hasAddons || data.cart.hasPromo) issues.push("cart exposes an unsupported add-on or promo affordance");
-    if (!data.cart.shippingAtCheckout) issues.push("cart does not explain that shipping is calculated from the checkout address");
+    if (!data.cart.hasShippingRow) issues.push("cart order summary is missing the shipping row");
+    if (!data.cart.hasCheckout) issues.push("cart checkout action is missing");
+    if (data.cart.hasRemovedDestinationRateCopy) issues.push("cart still exposes the removed Intools destination-rate wording");
   }
   if (route === "/pages/product.html?id=FAB-100&lang=en") {
     if (!contactData?.length || contactData.some((contact) => contact.subjectPrefix !== "Product request" && contact.subjectPrefix !== "OEM request") || contactData.some((contact) => !contact.bodyLines?.some((line) => /^Specification: /.test(line)))) issues.push("PDP contact CTA did not build a complete email request");
@@ -273,6 +275,12 @@ async function inspect(route, viewport) {
     }
     const shot = await cdp.send("Page.captureScreenshot", { format: "png", captureBeyondViewport: route === "/about" });
     fs.writeFileSync(path.join(outputDir, `${viewport.name}-${route.replace(/[^a-z0-9]+/gi,"-").replace(/^-|-$/g,"")||"home"}.png`), Buffer.from(shot.data, "base64"));
+  }
+  if (route.includes("cart.html?seed=cart") && data.cart.hasCheckout) {
+    await cdp.send("Runtime.evaluate", { expression: "document.querySelector('[data-checkout]')?.click()" });
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const navigation = await cdp.send("Runtime.evaluate", { returnByValue: true, expression: "location.pathname" });
+    if (!navigation.result.value.endsWith("/pages/checkout.html")) issues.push("cart checkout action did not navigate to checkout");
   }
   cdp.close();
   await fetch(`${debug}/json/close/${target.id}`, { method: "PUT" }).catch(() => {});
