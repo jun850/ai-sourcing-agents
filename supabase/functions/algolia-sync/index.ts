@@ -105,8 +105,7 @@ function factoryRecord(factory: any) {
 }
 async function syncPublicFactory(admin: any, id: string, deletedSlug?: string) {
   const { data } = await admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("id", id).maybeSingle();
-  const { count } = data ? await admin.from("products").select("id", { count: "exact", head: true }).eq("factory_id", id).eq("listing_status", "active").eq("is_private", false).is("archived_at", null) : { count: 0 };
-  if(data?.verify_state === "verified" && !data.archived_at && Number(count || 0) > 0) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "updateObject", body: factoryRecord(data) }] });
+  if(data?.verify_state === "verified" && !data.archived_at) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "updateObject", body: factoryRecord(data) }] });
   const slug=data?.slug||deletedSlug;
   if(slug) return algolia(PUBLIC_FACTORIES_INDEX, { requests: [{ action: "deleteObject", body: { objectID: slug } }] });
 }
@@ -152,12 +151,8 @@ Deno.serve(async (req) => {
   try {
     if (action === "configure") { await configureIndexes(); return json({ ok: true }); }
     if (action === "reindex_factories") {
-      const [{ data: factories = [] }, { data: productFactories = [] }] = await Promise.all([
-        admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null),
-        admin.from("products").select("factory_id").eq("listing_status", "active").eq("is_private", false).is("archived_at", null),
-      ]);
-      const active = new Set(productFactories.map((product: any) => product.factory_id));
-      const requests = factories.filter((factory: any) => active.has(factory.id)).map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
+      const { data: factories = [] } = await admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null);
+      const requests = factories.map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
       for (let offset = 0; offset < requests.length; offset += 500) await algolia(PUBLIC_FACTORIES_INDEX, { requests: requests.slice(offset, offset + 500) });
       return json({ ok: true, factories: requests.length });
     }
@@ -170,8 +165,7 @@ Deno.serve(async (req) => {
         const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
         return factory?.verify_state === "verified" && !factory?.archived_at;
       }).map(publicRecord).map((body: any) => ({ action: "updateObject", body }));
-      const factoryIdsWithProducts = new Set(products.map((product: any) => product.factory_id));
-      const factoryRequests = factories.filter((factory: any) => factoryIdsWithProducts.has(factory.id)).map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
+      const factoryRequests = factories.map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
       const suggestions = [
         ["cotton twill", "Fabrics", 100], ["linen fabric", "Fabrics", 95], ["organic cotton jersey", "Fabrics", 92],
         ["denim", "Fabrics", 90], ["recycled polyester", "Fabrics", 88], ["wool suiting", "Fabrics", 84],

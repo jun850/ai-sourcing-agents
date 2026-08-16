@@ -476,9 +476,14 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const selected=slug===l3;
     return `<a class="${selected?'on':''}" ${selected?'aria-current="page"':''} href="${selected?`/categories/${cat}`:`/categories/${cat}/${slug}`}">${label}${selected?'<span aria-hidden="true">×</span>':''}</a>`;
   }).join('');
-  const supplierCount=new Set([...items.map(product=>product.seller).filter(Boolean),...supplierItems.map(factory=>factory.id)]).size;
+  const supplierCount=isFabric
+    ? new Set(items.map(product=>product.seller).filter(Boolean)).size
+    : new Set(supplierItems.map(factory=>factory.id)).size;
   let resultTotal=remotePage?Number(remotePage.total||0):items.length;
-  let resultSupplierTotal=remotePage?.supplier_total??supplierCount;
+  // OEM, trims, accessories and yarns list verified directory suppliers even
+  // before they publish an orderable SKU. Keep the existing L2/L3 count in
+  // step with those cards rather than the product-only API aggregate.
+  let resultSupplierTotal=isFabric?(remotePage?.supplier_total??supplierCount):supplierCount;
   const supplierStatus=remotePage?.preview?'supplier candidates':'verified suppliers';
   levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p>${isFabric?`<b>${resultTotal}</b> ${meta.noun}`:`<b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}`}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
   const crumbs=[['Home','/'],['All categories','/categories'],[meta.title,`/categories/${cat}`]];
