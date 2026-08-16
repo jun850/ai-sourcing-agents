@@ -2903,11 +2903,19 @@
     if (!(window.ARCANA_API && ARCANA_API.fetchCatalog)) return;
     catalogLoadBar(true);
     try {
+      const bundledProducts = window.ARCANA_PRODUCTS || [];
       const { products, factories } = await ARCANA_API.fetchCatalog();
       if (products && products.length) {
-        window.ARCANA_PRODUCTS = products;
+        const liveCategories = new Set(products.map((product) => product.cat));
+        // The source-free release publishes category groups progressively.
+        // Keep the existing public fallback for groups that are not live yet,
+        // rather than turning a working curated tab into an empty state.
+        window.ARCANA_PRODUCTS = [
+          ...products,
+          ...bundledProducts.filter((product) => !liveCategories.has(product.cat)),
+        ];
         window.ARCANA_PRODUCT_MAP = Object.fromEntries(
-          products.map((product) => [product.id, product]),
+          window.ARCANA_PRODUCTS.map((product) => [product.id, product]),
         );
       }
       if (factories && factories.length) {
