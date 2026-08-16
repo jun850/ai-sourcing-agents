@@ -223,14 +223,14 @@ async function skuIdMap(skus){
   return { map: Object.fromEntries((prods||[]).map(p=>[p.sku, p.id])) };
 }
 
-/* Replace a cart's contents with items:[{id:sku,qty,options,key,note}]. Unknown SKUs are dropped;
+/* Replace a cart's contents with items:[{id:sku,qty,options,key,lineType,note}]. Unknown SKUs are dropped;
    returns { matched } = how many rows actually got written, so callers can tell
    "cart cleared" apart from "every SKU was invalid". */
 async function writeCartRows(cartId, items){
   const { map: idBySku, error: me } = await skuIdMap((items||[]).map(i=>i.id));
   if(me) return { error: me };
   const rows = (items||[]).filter(i=>idBySku[i.id] && i.qty>0)
-    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty, line_key:i.key||i.id, option_selection:i.options||{}, buyer_note:typeof i.note==='string'?(i.note.trim()||null):null }));
+    .map(i=>({ cart_id: cartId, product_id: idBySku[i.id], qty: i.qty, line_key:i.key||i.id, line_type:i.lineType==='swatch'?'swatch':'product', option_selection:i.options||{}, buyer_note:typeof i.note==='string'?(i.note.trim()||null):null }));
   const del = await sb.from('cart_items').delete().eq('cart_id', cartId);
   if(del.error) return { error: del.error };
   if(rows.length){
@@ -492,14 +492,14 @@ const API = {
       if(!session || !session.user) return [];
       const { data: cart } = await sb.from('carts').select('id').eq('profile_id', session.user.id).maybeSingle();
       if(!cart) return [];
-      const { data: items, error } = await sb.from('cart_items').select('qty,line_key,option_selection,buyer_note,products(sku)').eq('cart_id', cart.id);
+      const { data: items, error } = await sb.from('cart_items').select('qty,line_key,line_type,option_selection,buyer_note,products(sku)').eq('cart_id', cart.id);
       if(error || !items) return [];
-      return items.filter(i=>i.products).map(i=>({ id:i.products.sku,qty:Number(i.qty),key:i.line_key||i.products.sku,options:i.option_selection||{},note:i.buyer_note||null }));
+      return items.filter(i=>i.products).map(i=>({ id:i.products.sku,qty:Number(i.qty),key:i.line_key||i.products.sku,lineType:i.line_type==='swatch'?'swatch':'product',options:i.option_selection||{},note:i.buyer_note||null }));
     }catch(_){ return []; }
   },
 
   /* Upsert (or, at qty<=0, delete) one cart line for the signed-in user. */
-  async syncCartItem(sku, qty, options={}, lineKey=sku){
+  async syncCartItem(sku, qty, options={}, lineKey=sku, lineType='product'){
     try{
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated' } };
@@ -512,7 +512,7 @@ const API = {
         return { error: del.error || null };
       }
       const up = await sb.from('cart_items').upsert(
-        { cart_id:ec.cart.id,product_id:prod.id,qty,line_key:lineKey,option_selection:options||{} },
+        { cart_id:ec.cart.id,product_id:prod.id,qty,line_key:lineKey,line_type:lineType==='swatch'?'swatch':'product',option_selection:options||{} },
         { onConflict:'cart_id,line_key' }
       );
       return { error: up.error || null };

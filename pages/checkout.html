@@ -18,7 +18,7 @@
 
 <div id="ftr"></div>
 <script src="../js/data.js"></script>
-<script src="../js/components.js?v=20260814-checkout-hotfix"></script>
+<script src="../js/components.js?v=20260816-swatch"></script>
 <script defer src="../js/analytics.bundle.js"></script>
 <script src="../js/supabase-client.bundle.js"></script>
 <script src="../js/api.js"></script>
@@ -32,14 +32,20 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const TR=window.ARCANA_TR, T=window.ARCANA_T;
   const text=value=>String(value||'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const optionSummary=item=>Object.entries(item.options||{}).map(([name,value])=>`${text(name)}: ${text(value)}`).join(' · ');
+  const isSwatch=item=>item.lineType==='swatch';
+  const itemMinimum=(product,item)=>isSwatch(item)?1:Math.max(1,Math.ceil(Number.parseFloat(product.moq)||1));
+  const swatchUnit=()=>productAmount({price:4},1);
+  const unitPrice=(product,item)=>isSwatch(item)?swatchUnit():productAmount(product,1);
+  const lineAmount=(product,item)=>unitPrice(product,item)*item.qty;
+  const itemName=(product,item)=>isSwatch(item)?`${T('Swatch')} — ${TR(product.name)}`:TR(product.name);
   // Read the cart captured at checkout intent so an in-flight account sync
   // cannot replace the buyer's local selection during page navigation.
   const cart=(Store.checkoutCart?Store.checkoutCart():Store.cart()).filter(i=>M[i.id]);
   cart.forEach(i=>{
-    const minimum=Math.max(1,Math.ceil(Number.parseFloat(M[i.id].moq)||1));
+    const minimum=itemMinimum(M[i.id],i);
     if(i.qty<minimum){i.qty=minimum;Store.setQty(i.key||i.id,minimum);}
   });
-  const subtotal=cart.reduce((sum,item)=>sum+productAmount(M[item.id],item.qty),0);
+  const subtotal=cart.reduce((sum,item)=>sum+lineAmount(M[item.id],item),0);
   const fee=+(subtotal*0.05).toFixed(2);
   const baseTotal=subtotal+fee;
   const defaultShippingQuote=country=>({id:null,country_code:null,country_name:country||'',service_name:'Standard shipping',flat_rate_usd:10,eta_min_days:null,eta_max_days:null,is_default:true});
@@ -52,7 +58,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`;
     return;
   }
-  if(cart.some(item=>M[item.id].pricingMode==='quote'||!(M[item.id].price>0))){
+  if(cart.some(item=>!isSwatch(item)&&(M[item.id].pricingMode==='quote'||!(M[item.id].price>0)))){
     root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.msg}</span><h1>${T('Contact supplier')}</h1><p>${T('Volume pricing shared on quote')}</p><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><a class="btn btn-out" href="cart.html">${T('View cart')}</a></div>`;
     return;
   }
@@ -79,11 +85,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   });
   const supplierItems=groups.map(group=>`<div class="checkout-supplier">
     <header><span aria-hidden="true">${IC.factory}</span><strong>${text(group.name)}</strong></header>
-    ${group.items.map(item=>{const product=M[item.id],options=optionSummary(item),itemIndex=cart.indexOf(item);return `<div class="checkout-item">
+    ${group.items.map(item=>{const product=M[item.id],options=optionSummary(item),itemIndex=cart.indexOf(item),swatch=isSwatch(item);return `<div class="checkout-item">
       <img src="${window.ATELIX_productAsset(product)}" alt="${text(product.name)}">
-      <div><a href="product.html?id=${encodeURIComponent(product.id)}">${text(TR(product.name))}</a>${options?`<p>${options}</p>`:''}<p>${item.qty} × ${productMoney(product)}</p></div>
-      <strong>${productMoney(product,item.qty)}</strong>
-      <label class="checkout-item-note"><span>Note for supplier <small>Optional</small></span><textarea maxlength="300" data-item-note="${itemIndex}" aria-label="Note for ${text(TR(product.name))}" placeholder="Color matching, packaging, or handling instructions for this item"></textarea><small><span data-item-note-count>0</span>/300</small></label>
+      <div><a href="product.html?id=${encodeURIComponent(product.id)}">${text(itemName(product,item))}</a>${options?`<p>${options}</p>`:''}<p>${item.qty} × ${swatch?currencyMoney(swatchUnit()):productMoney(product)}</p></div>
+      <strong>${currencyMoney(lineAmount(product,item))}</strong>
+      <label class="checkout-item-note"><span>Note for supplier <small>Optional</small></span><textarea maxlength="300" data-item-note="${itemIndex}" aria-label="Note for ${text(itemName(product,item))}" placeholder="Color matching, packaging, or handling instructions for this item"></textarea><small><span data-item-note-count>0</span>/300</small></label>
     </div>`;}).join('')}
   </div>`).join('');
   const shippingAmount=()=>{
@@ -161,7 +167,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(place){ place.disabled=true; place.textContent='Placing order…'; }
     const shipAddress=[selectedAddress.recipient_name,selectedAddress.phone,window.ATELIX_formatAddress(selectedAddress)].filter(Boolean).join(' · ');
     const { orderNo, error } = await window.ARCANA_API.placeOrder({
-      items: cart.map((i,index)=>({id:i.id,qty:i.qty,key:i.key||i.id,options:i.options||{},note:root.querySelector(`[data-item-note="${index}"]`)?.value.trim()||null})),
+      items: cart.map((i,index)=>({id:i.id,qty:i.qty,key:i.key||i.id,lineType:i.lineType||'product',options:i.options||{},note:root.querySelector(`[data-item-note="${index}"]`)?.value.trim()||null})),
       shipCountry: selectedAddress.country,
       shipAddress,
       notes: null,

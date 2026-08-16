@@ -101,7 +101,7 @@ window.ARCANA_FACTORIES = [
     "page_img": null,
     "sales": null,
     "phone": null,
-    "web": null,
+    "web": "https://www.andnancy.com/",
     "founded": null,
     "employees": null,
     "area": null,
@@ -2117,6 +2117,9 @@ Object.assign(window.ARCANA_TERMS.zh.ui, {'Recently listed':'新近上架','orde
 Object.assign(window.ARCANA_TERMS.en.ui, {'Important to read':'Important to read','How should I confirm colour and hand feel?':'How should I confirm colour and hand feel?','Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.':'Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.','What should I confirm before ordering?':'What should I confirm before ordering?','Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.':'Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.'});
 Object.assign(window.ARCANA_TERMS.ja.ui, {'Important to read':'重要事項','How should I confirm colour and hand feel?':'色と風合いはどのように確認すればよいですか？','Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.':'生産前にサプライヤーへ最新のスワッチまたはサンプルをご依頼ください。画面上の色と生地ロットには差が生じる場合があります。','What should I confirm before ordering?':'注文前に何を確認すべきですか？','Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.':'最新の仕様、最小ロット、リードタイム、取扱方法、用途をサプライヤーにご確認ください。'});
 Object.assign(window.ARCANA_TERMS.zh.ui, {'Important to read':'重要须知','How should I confirm colour and hand feel?':'如何确认颜色和手感？','Request a current swatch or sample from the supplier before production. Screen colours and textile lots can vary.':'生产前请向供应商索取最新色卡或样品。屏幕颜色和不同面料批次可能存在差异。','What should I confirm before ordering?':'下单前需要确认什么？','Confirm the current specification, minimum order, lead time, care requirements, and intended application with the supplier.':'请与供应商确认当前规格、起订量、交期、护理要求及预期用途。'});
+Object.assign(window.ARCANA_TERMS.en.ui, {'Add swatch':'Add swatch','Swatch':'Swatch','swatch':'swatch','Swatch added to cart':'Swatch added to cart','One material swatch':'One material swatch'});
+Object.assign(window.ARCANA_TERMS.ja.ui, {'Add swatch':'スワッチを追加','Swatch':'スワッチ','swatch':'スワッチ','Swatch added to cart':'スワッチをカートに追加しました','One material swatch':'生地スワッチ1点'});
+Object.assign(window.ARCANA_TERMS.zh.ui, {'Add swatch':'添加色样','Swatch':'色样','swatch':'色样','Swatch added to cart':'色样已加入购物车','One material swatch':'一份面料色样'});
 window.ARCANA_TR = function(str, lang){
   lang = lang || (document.documentElement.lang || 'en');
   const T = window.ARCANA_TERMS[lang];

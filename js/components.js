@@ -257,19 +257,21 @@
         .filter(([name, value]) => name && value)
         .sort(([left], [right]) => left.localeCompare(right)),
     );
-  const cartLineKey = (id, options) => {
+  const cartLineKey = (id, options, lineType = "product") => {
     const selection = normalizeSelection(options);
     const suffix = Object.entries(selection)
       .map(([name, value]) => `${encodeURIComponent(name)}=${encodeURIComponent(value)}`)
       .join("&");
-    return suffix ? `${id}::${suffix}` : id;
+    const prefix = lineType === "swatch" ? `${id}::swatch` : id;
+    return suffix ? `${prefix}${lineType === "swatch" ? "&" : "::"}${suffix}` : prefix;
   };
   window.ATELIX_cartLineKey = cartLineKey;
   const checkoutCartKey = "arcana_checkout_cart";
   const normalizeCartItems = (items) =>
     (Array.isArray(items) ? items : []).map((item) => ({
       ...item,
-      key: item.key || cartLineKey(item.id, item.options),
+      lineType: item.lineType === "swatch" ? "swatch" : "product",
+      key: item.key || cartLineKey(item.id, item.options, item.lineType),
       options: normalizeSelection(item.options),
     }));
   const readCartPending = () => LS.get("cart_pending", {});
@@ -284,7 +286,7 @@
   const sameCartItems = (left, right) => {
     const comparable = (items) =>
       normalizeCartItems(items)
-        .map(({ id, qty, key, options }) => ({ id, qty, key, options }))
+        .map(({ id, qty, key, options, lineType }) => ({ id, qty, key, options, lineType }))
         .sort((a, b) => a.key.localeCompare(b.key));
     return JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
   };
@@ -338,17 +340,18 @@
     cartUnits() {
       return Store.cart().reduce((n, i) => n + i.qty, 0);
     },
-    addToCart(id, qty, options = {}) {
+    addToCart(id, qty, options = {}, lineType = "product") {
       qty = qty || 1;
       const selection = normalizeSelection(options);
-      const key = cartLineKey(id, selection);
+      const normalizedLineType = lineType === "swatch" ? "swatch" : "product";
+      const key = cartLineKey(id, selection, normalizedLineType);
       const c = Store.cart();
       const row = c.find((i) => i.key === key);
       if (row) row.qty += qty;
-      else c.push({ id, qty, key, options: selection });
+      else c.push({ id, qty, key, options: selection, lineType: normalizedLineType });
       LS.set("cart", c);
       syncBadges();
-      pushCartItem(id, row ? row.qty : qty, selection, key);
+      pushCartItem(id, row ? row.qty : qty, selection, key, normalizedLineType);
       return Store.cartCount();
     },
     setQty(key, qty) {
@@ -357,7 +360,7 @@
       if (r) {
         r.qty = Math.max(1, qty);
         LS.set("cart", c);
-        pushCartItem(r.id, r.qty, r.options, r.key);
+        pushCartItem(r.id, r.qty, r.options, r.key, r.lineType);
       }
     },
     remove(key) {
@@ -367,7 +370,7 @@
         Store.cart().filter((i) => i.key !== key && !(i.id === key && i.key === i.id)),
       );
       syncBadges();
-      if(row)pushCartItem(row.id,0,row.options,row.key);
+      if(row)pushCartItem(row.id,0,row.options,row.key,row.lineType);
     },
     clearCart() {
       localStorage.removeItem("arcana_cart");
@@ -1059,7 +1062,7 @@
   }
 
   /* Fire-and-forget DB write-through for a cart line, only when signed in. */
-  function pushCartItem(sku, qty, options, lineKey) {
+  function pushCartItem(sku, qty, options, lineKey, lineType = "product") {
     const api = window.ARCANA_API;
     const signedIn = !!Store.session();
     const operation = {
@@ -1067,6 +1070,7 @@
       qty,
       key: lineKey,
       options: normalizeSelection(options),
+      lineType: lineType === "swatch" ? "swatch" : "product",
       token: `${Date.now()}-${Math.random()}`,
     };
     if (signedIn) {
@@ -1076,7 +1080,7 @@
     }
     if (!api || api.unavailable || !signedIn) return;
     api
-      .syncCartItem(sku, qty, operation.options, lineKey)
+      .syncCartItem(sku, qty, operation.options, lineKey, operation.lineType)
       .then((result) => {
         if (!result || !result.error)
           clearSyncedCartPending({ [lineKey]: operation });
@@ -2417,6 +2421,7 @@
             qty: operation.qty,
             key: operation.key,
             options: operation.options || {},
+            lineType: operation.lineType || "product",
           });
       });
       const merged = Array.from(map.values());
@@ -2428,7 +2433,7 @@
       syncBadges();
       return;
     }
-    const map = new Map(dbItems.map((i) => [i.key || cartLineKey(i.id,i.options), { ...i }]));
+    const map = new Map(dbItems.map((i) => [i.key || cartLineKey(i.id,i.options,i.lineType), { ...i }]));
     Store.cart().forEach((li) => {
       if (map.has(li.key)) map.get(li.key).qty += li.qty;
       else map.set(li.key, { ...li });
@@ -2878,7 +2883,7 @@
         b.id = "arcanaLoadBar";
         b.style.cssText =
           "position:fixed;top:0;left:0;height:2px;width:100%;z-index:9999;" +
-          "background:var(--brass,#b0863c);transform:scaleX(0);transform-origin:left;" +
+          "background:var(--brass,#72531d);transform:scaleX(0);transform-origin:left;" +
           "transition:transform .4s ease,opacity .3s ease";
         document.body.appendChild(b);
       }
