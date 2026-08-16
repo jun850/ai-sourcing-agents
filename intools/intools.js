@@ -14,7 +14,7 @@
   let currentProfile=null;
   let currentView='dashboard';
   let editorLanguage='en';
-  let cache={pages:[],widgets:[],products:[],suppliers:[],shipping:[],media:[],history:[]};
+  let cache={pages:[],widgets:[],products:[],suppliers:[],shipping:[],media:[],history:[],transactions:[]};
   let methodWarnings=new Set();
   let drawerReturnFocus=null;
 
@@ -141,8 +141,15 @@
     const shipping=[{id:'ship-id',country_code:'ID',country_name:'Indonesia',service_name:'Tracked delivery',flat_rate_usd:18,eta_min_days:3,eta_max_days:6,is_active:true,updated_at:'2026-08-14T09:00:00Z'}];
     const media=[{id:'m1',name:'cotton-twill.jpg',url:'../assets/atelix-beta-source-box.webp',alt_text:{en:'Folded cotton twill fabric'},mime_type:'image/webp',updated_at:'2026-08-13T04:00:00Z'}];
     const history=[{id:'h1',entity_type:'page',entity_name:'Privacy policy',action:'published',actor_email:'jun@arcanawangsa.com',created_at:'2026-08-12T10:30:00Z',revision:4}];
+    const orders=[
+      {id:'o1',order_no:'ARC-260815-0001',status:'awaiting_payment',buyer_name:'Sarah Chen',buyer_email:'sarah@example.com',buyer_company:'Thread & Co',item_count:3,subtotal:2520,fee:126,ship:18,qc_fee:25.20,ins_fee:12.60,total:2701.80,ship_country:'ID',placed_at:'2026-08-15T09:30:00Z',payment_declared_at:null,payment_verified_at:null},
+      {id:'o2',order_no:'ARC-260814-0001',status:'payment_verified',buyer_name:'Yuki Tanaka',buyer_email:'yuki@example.com',buyer_company:'Komono Atelier',item_count:1,subtotal:840,fee:42,ship:10,qc_fee:16.80,ins_fee:8.40,total:917.20,ship_country:'JP',placed_at:'2026-08-14T14:00:00Z',payment_declared_at:'2026-08-14T16:00:00Z',payment_verified_at:'2026-08-15T10:00:00Z'},
+      {id:'o3',order_no:'ARC-260813-0001',status:'completed',buyer_name:'Liam Porter',buyer_email:'liam@example.com',buyer_company:'Cloth Theory',item_count:2,subtotal:1680,fee:84,ship:18,qc_fee:16.80,ins_fee:8.40,total:1807.20,ship_country:'AU',placed_at:'2026-08-13T08:00:00Z',payment_declared_at:'2026-08-13T10:00:00Z',payment_verified_at:'2026-08-13T15:00:00Z'}
+    ];
+    const settings={payment_method:'bank_transfer'};
+    const orderDetail={id:'o1',order_no:'ARC-260815-0001',status:'awaiting_payment',subtotal:2520,fee:126,ship:18,qc_fee:25.20,ins_fee:12.60,total:2701.80,ship_country:'ID',ship_address:'Jl. Sudirman 42, Jakarta Selatan 12190',shipping_service:'Tracked delivery',shipping_eta_min_days:3,shipping_eta_max_days:6,placed_at:'2026-08-15T09:30:00Z',payment_declared_at:null,payment_verified_at:null,buyer:{full_name:'Sarah Chen',email:'sarah@example.com',company_name:'Thread & Co',country:'ID'},items:[{name:'Organic Cotton Twill',seller:'Mori Textile',sku:'ATL-COT-104',unit_price:8.40,qty:300,line_total:2520,option_selection:null,buyer_note:'Need natural white, no bleaching'}],fulfillments:[{factory_name:'Mori Textile',fulfillment_status:'pending',tracking:null}],events:[{status:'awaiting_payment',note:'Order placed',created_by_name:'Sarah Chen',created_at:'2026-08-15T09:30:00Z'}]};
     return {
-      adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListShippingRates:async()=>({shipping}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,
+      adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListShippingRates:async()=>({shipping}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,intoolsListOrders:async()=>({items:orders}),intoolsGetOrderDetail:async()=>({order:orderDetail}),adminUpdateOrderStatus:async(orderNo,status,note)=>({data:[{order_no:orderNo,status,buyer_email:'sarah@example.com',buyer_name:'Sarah Chen',total:2701.80}]}),getPlatformSetting:async(key)=>settings[key]||null,intoolsUpdatePlatformSetting:async(key,value)=>{settings[key]=value;return {error:null};},
       adminSaveContentPage:async(payload)=>({page:{...payload,updated_at:new Date().toISOString()}}),adminPublishContentPage:async()=>({}),adminRollbackContentPage:async()=>({}),
       adminSaveWidget:async(payload)=>({widget:payload}),adminArchiveWidget:async()=>({}),adminSaveProduct:async(payload)=>{window.__qaSavedProduct=payload;return {product:payload};},adminArchiveProduct:async()=>({}),adminRestoreProduct:async()=>({}),adminSaveSupplier:async(payload)=>{const supplier={...payload,id:payload.id||`f${suppliers.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedSupplier=supplier;if(!payload.id)suppliers.push(supplier);return {supplier};},adminArchiveSupplier:async()=>({}),adminRestoreSupplier:async()=>({}),adminSaveShippingRate:async payload=>{const saved={...payload,id:payload.id||`ship-${shipping.length+1}`,updated_at:new Date().toISOString()};window.__qaSavedShippingRate=saved;return {rate:saved};},adminArchiveShippingRate:async()=>({}),adminUploadMedia:async()=>({}),adminArchiveMedia:async()=>({}),uploadImage:async(file,folder)=>({url:`https://storage.example.com/${folder}/${file.name}`,path:`qa/${folder}/${file.name}`}),uploadCatalogProductImage:async(file)=>({media:{role:'detail',public_url:`https://storage.example.com/products/${file.name}`,thumb_url:`https://storage.example.com/products/${file.name}`,storage_path:`products/00000000-0000-4000-8000-000000000000/${'a'.repeat(64)}-1600.webp`,thumb_storage_path:`products/00000000-0000-4000-8000-000000000000/${'b'.repeat(64)}-640.webp`,width:1,height:1,bytes:file.size,sha256:'a'.repeat(64),thumb_bytes:file.size,thumb_sha256:'b'.repeat(64),alt_i18n:{}}}),signOut:async()=>({})
     };
@@ -170,7 +177,7 @@
     state('desktop');
     root.innerHTML=`<div class="intools" data-intools-shell>
       <header class="topbar"><div class="brand"><span class="brand-mark">A</span><span>Atelix <small>Intools</small></span></div><div class="crumb">Intools <span aria-hidden="true">/</span> <strong data-crumb>Dashboard</strong></div><div class="top-actions"><span class="environment">ADMIN</span><span class="admin-name">${esc(currentProfile?.email||'Administrator')}</span><button class="btn btn-quiet" data-signout>Sign out</button></div></header>
-      <aside class="sidebar"><nav class="nav" aria-label="Intools"><button data-view="dashboard"><span class="nav-symbol">⌂</span>Dashboard</button><button data-view="pages"><span class="nav-symbol">▤</span>Pages</button><button data-view="widgets"><span class="nav-symbol">▦</span>Widgets</button><button data-view="products"><span class="nav-symbol">◇</span>Products</button><button data-view="suppliers"><span class="nav-symbol">⌘</span>Suppliers</button><button data-view="shipping"><span class="nav-symbol">⌁</span>Shipping</button><button data-view="media"><span class="nav-symbol">▧</span>Media</button><button data-view="history"><span class="nav-symbol">↺</span>History</button></nav><div class="sidebar-foot">Desktop administration workspace<br>Atelix marketplace</div></aside>
+      <aside class="sidebar"><nav class="nav" aria-label="Intools"><button data-view="dashboard"><span class="nav-symbol">⌂</span>Dashboard</button><button data-view="pages"><span class="nav-symbol">▤</span>Pages</button><button data-view="widgets"><span class="nav-symbol">▦</span>Widgets</button><button data-view="products"><span class="nav-symbol">◇</span>Products</button><button data-view="suppliers"><span class="nav-symbol">⌘</span>Suppliers</button><button data-view="shipping"><span class="nav-symbol">⌁</span>Shipping</button><button data-view="transactions"><span class="nav-symbol">¤</span>Transactions</button><button data-view="media"><span class="nav-symbol">▧</span>Media</button><button data-view="history"><span class="nav-symbol">↺</span>History</button></nav><div class="sidebar-foot">Desktop administration workspace<br>Atelix marketplace</div></aside>
       <main class="workspace"><div class="workspace-inner" data-workspace></div></main>
       <div class="toast-region" aria-live="polite" data-toasts></div>
       <dialog class="confirm" data-confirm><div class="confirm-body"><h2 data-confirm-title>Confirm action</h2><p data-confirm-copy></p></div><div class="confirm-actions"><button class="btn btn-secondary" value="cancel">Cancel</button><button class="btn btn-primary" value="confirm" data-confirm-action>Confirm</button></div></dialog>
@@ -201,6 +208,7 @@
     if(view==='products')return renderProducts();
     if(view==='suppliers')return renderSuppliers();
     if(view==='shipping')return renderShipping();
+    if(view==='transactions')return renderTransactions();
     if(view==='media')return renderMedia();
     if(view==='history')return renderHistory();
   }
@@ -444,6 +452,72 @@
     const copy=supplier.copy_i18n||{};
     imageSection.insertAdjacentHTML('beforebegin',`<div class="form-section"><h2>Localized supplier copy</h2><div class="form-grid"><label class="field"><span>Japanese name</span><input name="supplier_name_ja" value="${esc(copy.ja?.name||'')}"></label><label class="field field-wide"><span>Japanese description</span><textarea name="supplier_description_ja">${esc(copy.ja?.description||'')}</textarea></label><label class="field"><span>Chinese name</span><input name="supplier_name_zh" value="${esc(copy.zh?.name||'')}"></label><label class="field field-wide"><span>Chinese description</span><textarea name="supplier_description_zh">${esc(copy.zh?.description||'')}</textarea></label></div><p class="field-help">English uses the supplier name and profile description above. Complete all languages before verification.</p></div><div class="form-section"><h2>Supplier FAQ</h2><div data-catalog-faq-editor></div></div>`);
     bindFaqEditor(form,supplier.faqs||[]);
+  }
+
+  const ORDER_STATUSES=[['awaiting_payment','Awaiting payment'],['payment_declared','Payment declared'],['payment_verified','Payment verified'],['fulfilling','In fulfillment'],['completed','Completed'],['cancelled','Cancelled'],['disputed','Disputed'],['refunded','Refunded']];
+  function orderBadge(status){const cls={completed:'active',payment_verified:'published',fulfilling:'published',awaiting_payment:'draft',payment_declared:'draft',cancelled:'archived',disputed:'archived',refunded:'archived'}[status]||'draft';const label=ORDER_STATUSES.find(([v])=>v===status)?.[1]||titleCase(status);return `<span class="badge badge-${cls}">${esc(label)}</span>`;}
+  const money=n=>`$${Number(n||0).toFixed(2)}`;
+
+  async function renderTransactions(){
+    const [result,payMethod]=await Promise.all([callFirst(['intoolsListOrders','adminListOrders']),api.getPlatformSetting('payment_method')]);
+    cache.transactions=valueOf(result.result,'items');
+    if(!cache.transactions.length&&Array.isArray(result.result))cache.transactions=result.result;
+    const pending=cache.transactions.filter(o=>o.status==='awaiting_payment'||o.status==='payment_declared').length;
+    const revenue=cache.transactions.filter(o=>!['cancelled','refunded'].includes(o.status)).reduce((s,o)=>s+Number(o.total||0),0);
+    const isXendit=payMethod==='xendit';
+    workspace().innerHTML=`${listHead('Transactions','View all marketplace orders, verify payments, and update fulfillment status.')}
+      <div class="payment-method-card"><div class="payment-method-info"><strong>Payment method</strong><span class="muted">Buyers see this on checkout. Changes take effect immediately.</span></div><div class="payment-method-toggle"><span class="${!isXendit?'payment-label-active':'muted'}">Bank transfer</span><label class="toggle-switch"><input type="checkbox" data-payment-toggle ${isXendit?'checked':''}><span class="toggle-slider"></span></label><span class="${isXendit?'payment-label-active':'muted'}">Xendit</span></div></div>
+      <div class="metrics"><div class="metric"><span>Total orders</span><strong>${cache.transactions.length}</strong></div><div class="metric"><span>Pending payment</span><strong>${pending}</strong></div><div class="metric"><span>Revenue (USD)</span><strong>${money(revenue)}</strong></div></div>
+      <div class="toolbar"><label class="search"><input data-txn-filter placeholder="Search order, buyer, or company" aria-label="Search transactions"></label><select data-txn-status aria-label="Filter status"><option value="">All statuses</option>${ORDER_STATUSES.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></div>
+      ${unavailableNotice()}<section class="panel" data-txn-list>${transactionsTable(cache.transactions)}</section>`;
+    bindTransactionFilters();
+    bindTransactionRows();
+    bindPaymentToggle();
+  }
+  function transactionsTable(rows){return rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Order</th><th>Buyer</th><th>Items</th><th>Total</th><th>Placed</th><th>Status</th></tr></thead><tbody>${rows.map(o=>`<tr data-txn-row="${esc(o.order_no)}" style="cursor:pointer"><td class="table-primary">${esc(o.order_no)}</td><td><span class="table-primary">${esc(o.buyer_name||'—')}</span><span class="table-secondary">${esc(o.buyer_email||'')}</span></td><td>${esc(o.item_count??'—')}</td><td>${money(o.total)}</td><td>${esc(fmtDate(o.placed_at))}</td><td>${orderBadge(o.status)}</td></tr>`).join('')}</tbody></table></div>`:tableEmpty('¤','No transactions yet','Orders placed by buyers will appear here.');}
+  function bindTransactionFilters(){
+    const filter=()=>{const q=workspace().querySelector('[data-txn-filter]').value.trim().toLowerCase(),s=workspace().querySelector('[data-txn-status]').value;const rows=cache.transactions.filter(o=>(!q||[o.order_no,o.buyer_name,o.buyer_email,o.buyer_company].some(v=>String(v||'').toLowerCase().includes(q)))&&(!s||o.status===s));workspace().querySelector('[data-txn-list]').innerHTML=transactionsTable(rows);bindTransactionRows();};
+    workspace().querySelector('[data-txn-filter]').addEventListener('input',filter);workspace().querySelector('[data-txn-status]').addEventListener('change',filter);
+  }
+  function bindTransactionRows(){workspace().querySelectorAll('[data-txn-row]').forEach(row=>row.onclick=()=>openTransactionDrawer(row.dataset.txnRow));}
+  function bindPaymentToggle(){
+    const toggle=workspace().querySelector('[data-payment-toggle]');
+    if(!toggle)return;
+    const updateLabels=()=>{const labels=toggle.closest('.payment-method-toggle').querySelectorAll('span:not(.toggle-slider)');labels[0].className=toggle.checked?'muted':'payment-label-active';labels[1].className=toggle.checked?'payment-label-active':'muted';};
+    toggle.onchange=async()=>{
+      const newVal=toggle.checked?'xendit':'bank_transfer';
+      const label=toggle.checked?'Xendit online payment':'Manual bank transfer';
+      confirmAction(`Switch to ${label}?`,`All new orders will use ${label}. Existing orders are not affected.`,'Confirm switch',async()=>{
+        try{
+          const r=await api.intoolsUpdatePlatformSetting('payment_method',newVal);
+          if(r?.error)throw r.error;
+          updateLabels();
+          toast(`Payment method set to ${label}.`);
+        }catch(err){toast(err?.message||'Failed to update payment method.',true);toggle.checked=!toggle.checked;}
+      },()=>{toggle.checked=!toggle.checked;});
+    };
+  }
+  async function openTransactionDrawer(orderNo){
+    let detail;
+    try{const r=await callFirst(['intoolsGetOrderDetail'],orderNo);detail=r.result?.order||r.result;}catch(_){toast('Could not load order details.',true);return;}
+    if(!detail){toast('Order not found.',true);return;}
+    const o=detail;
+    const itemRows=(o.items||[]).map(i=>`<tr><td>${esc(i.name)}</td><td>${esc(i.seller)}</td><td>${esc(i.qty)}</td><td>${money(i.unit_price)}</td><td>${money(i.line_total)}</td></tr>`).join('');
+    const timeline=(o.events||[]).map((ev,i)=>`<div class="timeline-event${i===0?' timeline-current':''}"><div class="timeline-dot"></div><div class="timeline-body"><strong>${orderBadge(ev.status)}</strong>${ev.note?`<p>${esc(ev.note)}</p>`:''}<small>${esc(ev.created_by_name||'System')} · ${esc(fmtDate(ev.created_at))}</small></div></div>`).join('');
+    openDrawer('Order details',o.order_no,`<div class="panel"><div style="margin-bottom:12px">${orderBadge(o.status)}</div><div class="form-section"><h2>Buyer</h2><div class="order-meta"><div><strong>${esc(o.buyer?.full_name||'—')}</strong></div><div>${esc(o.buyer?.email||'—')}</div><div>${esc(o.buyer?.company_name||'')}${o.buyer?.country?` · ${esc(o.buyer.country)}`:''}</div></div></div><div class="form-section"><h2>Cost breakdown</h2><div class="cost-breakdown"><div class="cost-row"><span>Items subtotal</span><span>${money(o.subtotal)}</span></div><div class="cost-row"><span>Service fee (5%)</span><span>${money(o.fee)}</span></div>${o.qc_fee?`<div class="cost-row"><span>QC inspection</span><span>${money(o.qc_fee)}</span></div>`:''}${o.ins_fee?`<div class="cost-row"><span>Insurance</span><span>${money(o.ins_fee)}</span></div>`:''}<div class="cost-row"><span>Shipping${o.shipping_service?` · ${esc(o.shipping_service)}`:''}${o.shipping_eta_min_days!=null?` · ${o.shipping_eta_min_days}–${o.shipping_eta_max_days} days`:''}</span><span>${money(o.ship)}</span></div><div class="cost-row cost-total"><span>Total</span><span>${money(o.total)}</span></div></div></div><div class="form-section"><h2>Items</h2><div class="table-wrap"><table class="data-table"><thead><tr><th>Product</th><th>Seller</th><th>Qty</th><th>Unit</th><th>Total</th></tr></thead><tbody>${itemRows||'<tr><td colspan="5">No items</td></tr>'}</tbody></table></div></div>${o.ship_address?`<div class="form-section"><h2>Shipping</h2><div class="order-meta"><div>${esc(o.ship_address)}</div><div>${esc(o.ship_country||'')}</div></div></div>`:''}<div class="form-section"><h2>Payment timeline</h2><div class="order-timeline">${timeline||'<p class="muted">No events recorded.</p>'}</div></div><div class="form-section"><h2>Update status</h2><div class="form-grid"><label class="field"><span>New status</span><select data-txn-new-status>${ORDER_STATUSES.map(([v,l])=>`<option value="${esc(v)}"${v===o.status?' selected':''}>${esc(l)}</option>`).join('')}</select></label><label class="field field-wide"><span>Note to buyer (included in email)</span><textarea data-txn-note placeholder="Optional note…"></textarea></label></div><button class="btn btn-primary" data-txn-update-status style="margin-top:8px">Update status</button></div></div>`,`<div><button class="btn btn-secondary" data-close>Close</button></div><div></div>`);
+    root.querySelector('[data-txn-update-status]').onclick=()=>{
+      const newStatus=root.querySelector('[data-txn-new-status]').value;
+      const note=root.querySelector('[data-txn-note]').value.trim()||null;
+      if(newStatus===o.status){toast('Select a different status.',true);return;}
+      const label=ORDER_STATUSES.find(([v])=>v===newStatus)?.[1]||newStatus;
+      confirmAction(`Update to "${label}"?`,`This will change ${o.order_no} from ${ORDER_STATUSES.find(([v])=>v===o.status)?.[1]||o.status} and email the buyer.`,'Confirm update',async()=>{
+        try{
+          const r=await api.adminUpdateOrderStatus(o.order_no,newStatus,note);
+          if(r?.error)throw r.error;
+          closeDrawer();toast(`${o.order_no} updated to ${label}.`);navigate('transactions');
+        }catch(error){toast(error?.message||'Status update failed.',true);}
+      });
+    };
   }
 
   async function renderShipping(){
