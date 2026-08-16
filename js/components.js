@@ -548,12 +548,6 @@
 
   /* ---------- shared product card (single source, used on every surface) ---------- */
   // Shared cards always show the catalog price. Campaign pricing is currently hidden.
-  const soldOf = (id) => {
-    const value = String(id || "");
-    return ["500+", "1rb+", "2rb+", "5rb+", "800+"][
-      (value.charCodeAt(Math.min(4, Math.max(0, value.length - 1))) || 0) % 5
-    ];
-  };
   /* opts: {href, shop=true, fabricSpec=false} — language + currency aware */
   function cardHTML(p, opts) {
     opts = opts || {};
@@ -596,7 +590,7 @@
         : `<span class="tquote">${t("Contact supplier")}</span>`;
     const meta = isService
       ? `<div class="tmeta">${IC.truck} ${esc(spec)} ${t("lead")} <span class="dot">·</span> ${t("MOQ")} ${esc(translated(p.moq))}</div>`
-      : `<div class="tmeta">${soldOf(p.id)} ${t("sold")}</div>`;
+      : "";
     const shopRow =
       opts.shop === false
         ? ""

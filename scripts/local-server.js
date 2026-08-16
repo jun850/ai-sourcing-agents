@@ -2,6 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 const { LocalFabricPreview } = require('./catalog/fabrics/local-preview');
 
 const root = path.resolve(__dirname, '..');
@@ -9,6 +10,23 @@ const portIndex = process.argv.findIndex(value => value === '--port' || value ==
 const port = Number(portIndex >= 0 ? process.argv[portIndex + 1] : process.env.PORT) || 8090;
 const mime = { '.css':'text/css', '.html':'text/html', '.js':'application/javascript', '.json':'application/json', '.svg':'image/svg+xml', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.ico':'image/x-icon' };
 const localFabricPreview = new LocalFabricPreview();
+const releaseId = 'd5564bc8-aad3-5a7a-83db-7da36da9809c';
+
+function releaseProgress(res) {
+  execFile('npx',['supabase','projects','api-keys','--project-ref','bobwfxvxzjovpgmmqsew','--output','json'],{maxBuffer:1024*1024},(error,stdout)=>{
+    if (error) { json(res,503,{error:'Release tracker cannot read project credentials.'}); return; }
+    try {
+      const keys=JSON.parse(stdout),rows=Array.isArray(keys)?keys:(keys.api_keys||keys.keys||[]),row=rows.find(item=>/service_role|secret/i.test(String(item.name||item.type||''))),key=row&&(row.api_key||row.key||row.value);
+      if (!key) throw new Error('service key unavailable');
+      fetch(`https://bobwfxvxzjovpgmmqsew.supabase.co/rest/v1/catalog_release_batches?release_id=eq.${releaseId}&select=entity_kind,status,entity_count`,{headers:{apikey:key,authorization:`Bearer ${key}`}})
+        .then(response=>response.json()).then(batches=>{
+          const live=batches.filter(item=>item.entity_kind==='product'&&item.status==='live_verified').reduce((sum,item)=>sum+item.entity_count,0);
+          const suppliers=batches.filter(item=>item.entity_kind==='supplier'&&item.status==='live_verified').reduce((sum,item)=>sum+item.entity_count,0);
+          json(res,200,{release_id:releaseId,total_products:4736,verified_products:live,remaining_products:4736-live,verified_suppliers:suppliers,total_suppliers:60,updated_at:new Date().toISOString()});
+        }).catch(fetchError=>json(res,503,{error:fetchError.message}));
+    } catch (parseError) { json(res,503,{error:parseError.message}); }
+  });
+}
 
 function json(res,status,value) {
   res.writeHead(status, { 'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'private, no-store', 'X-Robots-Tag':'noindex, nofollow, noarchive' });
@@ -81,6 +99,7 @@ function rewrite(url) {
 
 http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  if (url.pathname === '/__local_catalog/release-progress') { releaseProgress(res); return; }
   if (localCatalog(req,res,url)) return;
   let pathname = rewrite(url);
   if (pathname === '/') pathname = '/index.html';
