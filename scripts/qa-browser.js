@@ -50,7 +50,6 @@ const routes = [
   "/pages/forgot-password.html",
   "/pages/reset-password.html",
   "/pages/campaign.html",
-  "/pages/building.html",
   "/about",
   "/help-center",
   "/legal",

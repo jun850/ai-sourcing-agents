@@ -1010,7 +1010,6 @@
   function buildFooter() {
     const el = document.getElementById("ftr");
     if (!el) return;
-    const building = P("building.html");
     const about = ROOT ? "../about" : "about";
     const helpCenter = ROOT ? "../help-center" : "help-center";
     const terms = P("terms.html"),
@@ -1030,7 +1029,6 @@
     <div class="sf-col">
       <h5 data-i18n="ft.company">Atelix</h5>
       <a href="${about}" data-i18n="ft.about">About Atelix</a>
-      <a href="${building}" data-i18n="ft.b2b">B2B sourcing</a>
       <a href="${trust}" data-i18n="ft.trustsafety">Trust &amp; safety</a>
     </div>
     <div class="sf-col">
@@ -2496,7 +2494,6 @@
       "ft.about": "About Atelix",
       "ft.careers": "Careers",
       "ft.blog": "Blog",
-      "ft.b2b": "B2B sourcing",
       "ft.trustsafety": "Trust & safety",
       "ft.buy": "Buy",
       "ft.sourcing": "Sourcing guide",
@@ -2611,7 +2608,6 @@
       "ft.about": "Atelixについて",
       "ft.careers": "採用情報",
       "ft.blog": "ブログ",
-      "ft.b2b": "B2B調達",
       "ft.trustsafety": "安全性と信頼",
       "ft.buy": "購入",
       "ft.sourcing": "調達ガイド",
@@ -2723,7 +2719,6 @@
       "ft.about": "关于 Atelix",
       "ft.careers": "招聘",
       "ft.blog": "博客",
-      "ft.b2b": "B2B 采购",
       "ft.trustsafety": "信任与安全",
       "ft.buy": "采购",
       "ft.sourcing": "采购指南",

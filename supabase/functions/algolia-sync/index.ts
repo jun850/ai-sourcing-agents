@@ -44,8 +44,34 @@ async function indexedObjectIds(index: string) {
 }
 async function pruneIndex(index: string, validIds: Set<string>) {
   const stale = (await indexedObjectIds(index)).filter(id => !validIds.has(id));
-  if (stale.length) await algolia(index, { requests: stale.map(objectID => ({ action: "deleteObject", body: { objectID } })) });
+  for (let offset = 0; offset < stale.length; offset += 500) {
+    await algolia(index, { requests: stale.slice(offset, offset + 500).map(objectID => ({ action: "deleteObject", body: { objectID } })) });
+  }
   return stale.length;
+}
+
+async function allPublicProducts(admin: any) {
+  const products: any[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await admin.from("products").select("*, product_media(role,position,public_url,thumb_url), factories(name,verify_state,archived_at)").eq("listing_status", "active").eq("is_private", false).is("archived_at", null).range(offset, offset + 499);
+    if (error) throw error;
+    products.push(...(data || []));
+    if (!data || data.length < 500) return products;
+  }
+}
+
+async function allVerifiedFactories(admin: any) {
+  const factories: any[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null).range(offset, offset + 499);
+    if (error) throw error;
+    factories.push(...(data || []));
+    if (!data || data.length < 500) return factories;
+  }
+}
+
+async function writeBatches(index: string, requests: any[]) {
+  for (let offset = 0; offset < requests.length; offset += 500) await algolia(index, { requests: requests.slice(offset, offset + 500) });
 }
 
 function plain(value: unknown) { return String(value ?? "").replace(/<[^>]*>/g, " ").replace(/&nbsp;/gi, " ").replace(/&amp;/gi, "&").replace(/\s+/g, " ").trim(); }
@@ -151,16 +177,13 @@ Deno.serve(async (req) => {
   try {
     if (action === "configure") { await configureIndexes(); return json({ ok: true }); }
     if (action === "reindex_factories") {
-      const { data: factories = [] } = await admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null);
+      const factories = await allVerifiedFactories(admin);
       const requests = factories.map(factoryRecord).map((body: any) => ({ action: "updateObject", body }));
-      for (let offset = 0; offset < requests.length; offset += 500) await algolia(PUBLIC_FACTORIES_INDEX, { requests: requests.slice(offset, offset + 500) });
+      await writeBatches(PUBLIC_FACTORIES_INDEX, requests);
       return json({ ok: true, factories: requests.length });
     }
     if (action === "reindex_public") {
-      const [{ data: products = [] }, { data: factories = [] }] = await Promise.all([
-        admin.from("products").select("*, product_media(role,position,public_url,thumb_url), factories(name,verify_state,archived_at)").eq("listing_status", "active").eq("is_private", false).is("archived_at", null),
-        admin.from("factories").select("*, supplier_taxonomy_memberships(l2,l3,is_primary)").eq("verify_state", "verified").is("archived_at", null),
-      ]);
+      const [products, factories] = await Promise.all([allPublicProducts(admin), allVerifiedFactories(admin)]);
       const productRequests = products.filter((product: any) => {
         const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
         return factory?.verify_state === "verified" && !factory?.archived_at;
@@ -172,14 +195,43 @@ Deno.serve(async (req) => {
         ["ykk zipper", "Trims", 82], ["metal buttons", "Trims", 78], ["woven labels", "Accessories", 76],
         ["oem clothing", "OEM Services", 74], ["private label manufacturer", "OEM Services", 72], ["sock manufacturer", "OEM Services", 68],
       ].map(([query, category, weight], index) => ({ action: "updateObject", body: { objectID: `suggestion_${index + 1}`, query, category, weight } }));
-      if (productRequests.length) await algolia(PUBLIC_INDEX, { requests: productRequests });
-      if (factoryRequests.length) await algolia(PUBLIC_FACTORIES_INDEX, { requests: factoryRequests });
+      await writeBatches(PUBLIC_INDEX, productRequests);
+      await writeBatches(PUBLIC_FACTORIES_INDEX, factoryRequests);
       await algolia(PUBLIC_SUGGESTIONS_INDEX, { requests: suggestions });
       const [removedProducts, removedFactories] = await Promise.all([
         pruneIndex(PUBLIC_INDEX, new Set(productRequests.map((request: any) => request.body.objectID))),
         pruneIndex(PUBLIC_FACTORIES_INDEX, new Set(factoryRequests.map((request: any) => request.body.objectID))),
       ]);
       return json({ ok: true, products: productRequests.length, factories: factoryRequests.length, suggestions: suggestions.length, removedProducts, removedFactories });
+    }
+    if (action === "verify_public") {
+      const [products, factories, indexedProducts, indexedFactories] = await Promise.all([
+        allPublicProducts(admin),
+        allVerifiedFactories(admin),
+        indexedObjectIds(PUBLIC_INDEX),
+        indexedObjectIds(PUBLIC_FACTORIES_INDEX),
+      ]);
+      const expectedProducts = new Set(products.filter((product: any) => {
+        const factory = Array.isArray(product.factories) ? product.factories[0] : product.factories;
+        return factory?.verify_state === "verified" && !factory?.archived_at;
+      }).map((product: any) => String(product.sku)));
+      const expectedFactories = new Set(factories.map((factory: any) => String(factory.slug)));
+      const indexedProductIds = new Set(indexedProducts);
+      const indexedFactoryIds = new Set(indexedFactories);
+      const missingProducts = [...expectedProducts].filter(id => !indexedProductIds.has(id));
+      const missingFactories = [...expectedFactories].filter(id => !indexedFactoryIds.has(id));
+      return json({
+        ok: true,
+        complete: missingProducts.length === 0 && missingFactories.length === 0,
+        expected_products: expectedProducts.size,
+        indexed_products: indexedProductIds.size,
+        missing_products: missingProducts.length,
+        missing_product_samples: missingProducts.slice(0, 20),
+        expected_factories: expectedFactories.size,
+        indexed_factories: indexedFactoryIds.size,
+        missing_factories: missingFactories.length,
+        missing_factory_samples: missingFactories.slice(0, 20),
+      });
     }
     const { data: jobs = [] } = await admin.from("algolia_sync_outbox").select("*").is("processed_at", null).order("created_at").limit(Math.min(Number(limit) || 100, 500));
     let processed = 0, failed = 0;
