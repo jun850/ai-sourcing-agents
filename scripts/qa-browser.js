@@ -307,7 +307,7 @@ async function inspectSearch(viewport) {
   const evaluate = async (expression) => (await cdp.send("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true })).result.value;
   const issues = [];
   const publicEmpty = await evaluate(`(() => { localStorage.removeItem('arcana_session'); const i=document.querySelector('#site-search'); i.value=''; i.focus(); i.dispatchEvent(new Event('input',{bubbles:true})); return true; })()`);
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 800));
   const publicState = await evaluate(`(() => { const p=document.querySelector('[data-search-pop]'); return {hidden:p.hidden,text:p.innerText}; })()`);
   if (!publicEmpty || !publicState.hidden || /Popular|Recent searches/i.test(publicState.text)) issues.push("public empty search exposed keyword suggestions");
   await evaluate(`(() => { const i=document.querySelector('#site-search'); i.value='wool suiting'; i.dispatchEvent(new Event('input',{bubbles:true})); })()`);
@@ -319,7 +319,7 @@ async function inspectSearch(viewport) {
   const keyboard = await evaluate(`(() => { const i=document.querySelector('#site-search'); i.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true})); return i.getAttribute('aria-activedescendant'); })()`);
   if (!keyboard) issues.push("keyboard navigation did not select an option");
   await evaluate(`(() => { localStorage.setItem('arcana_session',JSON.stringify({role:'buyer',name:'QA'})); window.ARCANA_API.getRecentSearches=async()=>['denim','linen fabric']; const i=document.querySelector('#site-search'); i.value=''; i.focus(); i.dispatchEvent(new Event('input',{bubbles:true})); })()`);
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 800));
   const recent = await evaluate(`document.querySelector('[data-search-pop]').innerText`);
   if (!/Recent searches/i.test(recent) || !/denim/i.test(recent) || /Popular/i.test(recent)) issues.push("signed-in recent searches did not render correctly");
   cdp.close();
@@ -357,7 +357,19 @@ async function inspectAiEntryPoints(viewport) {
     document.querySelector('[data-cam]')?.click();
     return {panel:/Search by fabric photo/i.test(document.querySelector('[data-search-pop]')?.innerText||''),browse:!!document.querySelector('[data-search-pop] [data-browse]'),fileAccept:document.querySelector('[data-search-form] input[type=file]')?.accept||''};
   })()`);
+  await new Promise((resolve) => setTimeout(resolve, 450));
+  imageSearch.panel = /Search by fabric photo/i.test(await evaluate(`document.querySelector('[data-search-pop]')?.innerText||''`));
   if (!imageSearch?.panel || !imageSearch.browse || imageSearch.fileAccept !== "image/*") issues.push("fabric photo search did not expose its supported upload handoff");
+  const copilotSafety = await evaluate(`(() => {
+    const original = window.ARCANA_PRODUCTS;
+    try {
+      window.ARCANA_PRODUCTS = [{ id:'qa-incomplete', name:null, cat:'fabrics', comp:null, spec:null, loc:null, seller:null, price:null, moq:null, badge:null }];
+      const matches = window.ARCANA_Copilot.match(window.ARCANA_Copilot.parse('cotton fabric in India'));
+      return { ok:Array.isArray(matches), count:matches.length };
+    } catch (error) { return { ok:false, error:String(error && error.message || error) }; }
+    finally { window.ARCANA_PRODUCTS = original; }
+  })()`);
+  if (!copilotSafety?.ok) issues.push("copilot did not tolerate incomplete catalog fields" + (copilotSafety?.error ? `: ${copilotSafety.error}` : ""));
   const design = await evaluate(`(() => {
     localStorage.setItem('arcana_session',JSON.stringify({role:'buyer',name:'QA'}));
     const png=new File(['x'],'fabric.png',{type:'image/png'});
@@ -375,7 +387,7 @@ async function inspectAiEntryPoints(viewport) {
   if (techpack?.title !== "Turn your tech pack into product matches" || techpack.files !== 1 || techpack.submitDisabled) issues.push("tech-pack upload did not retain its validated upload state");
   cdp.close();
   await fetch(`${debug}/json/close/${target.id}`, { method: "PUT" }).catch(() => {});
-  return { route: "AI entry points", viewport: viewport.name, issues, data: { floating, imageSearch, design, techpack } };
+  return { route: "AI entry points", viewport: viewport.name, issues, data: { floating, imageSearch, copilotSafety, design, techpack } };
 }
 
 (async () => {

@@ -1430,7 +1430,9 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 .cop-summary{font-size:15px;line-height:1.55;color:var(--ink);margin-top:3px;min-height:22px}
 .cop-summary .cop-cursor{display:inline-block;width:8px;height:1.05em;background:var(--green);
   vertical-align:-2px;margin-left:2px;animation:copBlink 1s steps(2) infinite}
+.cop-thinking-copy{display:inline-block;animation:copThinkingIn .28s cubic-bezier(.25,1,.5,1) both}
 @keyframes copBlink{50%{opacity:0}}
+@keyframes copThinkingIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
 .cop-actions{display:flex;gap:14px;margin-left:auto;flex-shrink:0}
 .cop-actions button{font-size:13px;font-weight:600;color:var(--green);display:inline-flex;align-items:center;gap:6px}
 .cop-actions button:hover{color:var(--green-d)}
@@ -1642,6 +1644,7 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
 
 @media(prefers-reduced-motion:reduce){
   .cop-summary .cop-cursor{animation:none}
+  .cop-thinking-copy{animation:none}
   .cop-shimmer::after{animation:none;display:none}
   .cop-gate-art img{animation:none}
   .cop-gate-overlay,.cop-gate-overlay .modal-box{transition-duration:.01ms}

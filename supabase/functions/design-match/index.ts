@@ -384,6 +384,11 @@ Return only JSON matching the schema. The resulting supported brief will be matc
           type: "json_schema",
           json_schema: { name: "atelix_sourcing_brief", schema: BRIEF_SCHEMA },
         },
+        // Keep the preset's response focused on its structured brief. Some
+        // reasoning-capable preset routes can otherwise exhaust their default
+        // completion allowance before returning any visible JSON.
+        reasoning: { enabled: false },
+        max_tokens: 2048,
       })
     });
     if (!response.ok) {

@@ -1800,6 +1800,7 @@
       }
     }
     function close() {
+      photoSearchOpen = false;
       pop.classList.remove("in");
       pop.hidden = true;
       sel = -1;
@@ -1857,7 +1858,12 @@
     }
 
     /* --- image search --- */
+    let photoSearchOpen = false;
     function camPanel() {
+      photoSearchOpen = true;
+      // Invalidate an in-flight recent-search or Algolia render before it can
+      // overwrite the image-search panel after the camera is clicked.
+      renderSequence++;
       pop.innerHTML = `<div class="s-drop">
       <span class="s-drop-ic">${IC.camera}</span>
       <b>${esc(t("Search by fabric photo"))}</b>
@@ -2072,10 +2078,11 @@
     /* --- events --- */
     let searchTimer;
     input.addEventListener("input", () => {
+      photoSearchOpen = false;
       clearTimeout(searchTimer);
       searchTimer = setTimeout(render, 140);
     });
-    input.addEventListener("focus", render);
+    input.addEventListener("focus", () => { if (!photoSearchOpen) render(); });
     input.addEventListener("keydown", (e) => {
       if (pop.hidden) {
         if (e.key === "ArrowDown") {
@@ -2109,9 +2116,10 @@
       location.href = "/search" + (ps.length ? "?" + ps.join("&") : "");
     });
     if (cam)
-      cam.addEventListener("click", () => {
-        input.focus();
+      cam.addEventListener("click", (event) => {
+        event.preventDefault();
         camPanel();
+        input.focus({ preventScroll: true });
       });
     const design = form.querySelector("[data-design-match]");
     if (design)

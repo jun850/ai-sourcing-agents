@@ -27,6 +27,8 @@ const categoryPage=fs.readFileSync(path.join(root,"pages/category.html"),"utf8")
 const checkoutPage=fs.readFileSync(path.join(root,"pages/checkout.html"),"utf8");
 const orderPage=fs.readFileSync(path.join(root,"pages/order.html"),"utf8");
 const componentsSource=fs.readFileSync(path.join(root,"js/components.js"),"utf8");
+const copilotSource=fs.readFileSync(path.join(root,"js/copilot.js"),"utf8");
+const designMatchFunction=fs.readFileSync(path.join(root,"supabase/functions/design-match/index.ts"),"utf8");
 const catalogMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814123000_catalog_import_pipeline.sql"),"utf8");
 const productOptions=fs.readFileSync(path.join(root,"js/product-options.js"),"utf8");
 const optionMigration=fs.readFileSync(path.join(root,"supabase/migrations/20260814110000_product_options_and_fabric_catalog.sql"),"utf8");
@@ -89,6 +91,10 @@ const supplierPage=fs.readFileSync(path.join(root,'pages/supplier.html'),'utf8')
 if(supplierPage.includes('class="sup-tags"')||supplierPage.includes('class="panel capabilities"'))problems.push('pages/supplier.html: crawled supplier tags and capability metadata must remain backend-only');
 if(supplierPage.includes('class="crumbs"'))problems.push('pages/supplier.html: supplier profiles must not render the broken factory breadcrumb');
 if(orderPage.includes('class="crumbs"'))problems.push('pages/order.html: order detail must not render a breadcrumb');
+if(!copilotSource.includes("const textValue = value => String(value ?? '');")||!copilotSource.includes('const comp = textValue(p.comp)'))problems.push('js/copilot.js: matcher must tolerate incomplete catalog fields');
+if(!categoryPage.includes('function showThinking(el)')||!categoryPage.includes('Ranking verified catalog options…'))problems.push('pages/category.html: Copilot must present a general working status while matching');
+if(!componentsSource.includes('let photoSearchOpen = false;')||!componentsSource.includes('renderSequence++;'))problems.push('js/components.js: fabric photo search must not be overwritten by recent-search rendering');
+if(!designMatchFunction.includes('model: MODEL')||!designMatchFunction.includes('reasoning: { enabled: false }')||!designMatchFunction.includes('max_tokens: 2048'))problems.push('design-match: OpenRouter preset must return a usable structured brief');
 if(supplierPage.includes('class="panel overview"'))problems.push('pages/supplier.html: supplier profiles must not render a company overview section');
 if(!supplierPage.includes('class="supplier-website"')||!supplierPage.includes('rel="noopener noreferrer"'))problems.push('pages/supplier.html: supplier websites must render as safe clickable links');
 if(!supplierPage.includes("let feat=PRODUCTS.filter(belongsToSupplier).slice(0,5)")||!supplierPage.includes('supplierSlug:f.id')||supplierPage.includes('own.length?own')||supplierPage.includes('p.seller===f.name')||!supplierPage.includes('p.factorySlug')||!supplierPage.includes('p.factoryId&&f.databaseId'))problems.push('pages/supplier.html: public products must use exact supplier linkage without imported-name or category fallback');

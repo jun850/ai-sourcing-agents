@@ -296,6 +296,20 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       return new Promise(res=>{ let i=0; const tick=()=>{ i++; el.textContent=text.slice(0,i);
         if(i<text.length) setTimeout(tick, 11); else res(); }; tick(); });
     }
+    function showThinking(el){
+      const updates=[
+        'Reading your sourcing brief…',
+        'Checking fabric, trim, and supplier signals…',
+        'Ranking verified catalog options…',
+        'Preparing the strongest matches…'
+      ];
+      let index=0;
+      const paint=()=>{ el.innerHTML=`<span class="cop-thinking-copy">${updates[index]}</span><span class="cop-cursor" aria-hidden="true"></span>`; };
+      paint();
+      if(reduce) return ()=>{};
+      const timer=setInterval(()=>{ index=(index+1)%updates.length; paint(); },1800);
+      return ()=>clearInterval(timer);
+    }
     function resultHTML(r,i){
       const p=r.p;
       const card=window.ARCANA_card(p,{href:'product.html?id='+p.id, fabricSpec:p.cat==='fabrics'});
@@ -319,7 +333,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       return `<div class="cop-request${compact?' compact':''}">${IC.msg}<div><b>Need an exact match?</b><p>Send us your sourcing brief and our team will help find it.</p></div><a class="btn btn-green" href="${href}">Request sourcing help</a></div>`;
     }
 
-    let editing=false;
+    let editing=false, activeRun=0, stopThinking=()=>{};
     function paintBar(brief, summaryText, intent){
       const chips = intent ? Cop.describe(intent) : [];
       bar.innerHTML=`
@@ -373,9 +387,27 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     }
 
     async function run(text){
+      const runId=++activeRun;
+      stopThinking();
       skeleton();
       const sumEl=paintBar(text, '', Cop.parse(text));
-      const {matches, summary, meta}=await Cop.ask(text);
+      stopThinking=showThinking(sumEl);
+      let result;
+      try{ result=await Cop.ask(text); }
+      catch(error){
+        if(runId!==activeRun) return;
+        console.error('[Athelia] Catalog matching failed',error);
+        stopThinking();
+        stopThinking=()=>{};
+        grid.className='cop-grid';
+        grid.innerHTML=`<div class="cop-empty">${SPARK}<b>Search interrupted</b><p>Try refining your brief or run the search again.</p></div>`;
+        sumEl.textContent='I could not complete that catalog search.';
+        return;
+      }
+      if(runId!==activeRun) return;
+      stopThinking();
+      stopThinking=()=>{};
+      const {matches, summary, meta}=result;
       grid.className='cop-grid';
       const list=matches.slice(0,12);
       const hasStrongMatch=list.some(r=>r.score>=72);

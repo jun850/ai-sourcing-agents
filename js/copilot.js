@@ -7,6 +7,7 @@
 
 const LSKEY = 'arcana_brief';
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const textValue = value => String(value ?? '');
 
 /* ---------- vocabulary ---------- */
 const CATS = [
@@ -77,43 +78,47 @@ function parse(text){
 /* ---------- resolvers over catalog data ---------- */
 function factoryOf(p){
   const map = window.ARCANA_FACTORY_BY_NAME||{}, fmap = window.ARCANA_FACTORY_MAP||{};
-  const fid = map[p.seller]; if(fid && fmap[fid]) return fmap[fid];
+  const fid = map[p && p.seller]; if(fid && fmap[fid]) return fmap[fid];
   // fuzzy: match on shared token (e.g. "Greenknit")
-  const key = (p.seller||'').toLowerCase();
+  const key = textValue(p && p.seller).toLowerCase();
   for(const f of (window.ARCANA_FACTORIES||[])){
-    const fn = f.name.toLowerCase();
+    const fn = textValue(f && f.name).toLowerCase();
     if(key && fn && (fn.split(/\s|,/).some(w=>w.length>4 && key.includes(w)))) return f;
   }
   return null;
 }
 function gsmOf(p){
-  const nums = (String(p.spec).match(/\d{2,4}/g)||[]).map(Number).filter(n=>n>=40 && n<=1000);
+  const nums = (textValue(p && p.spec).match(/\d{2,4}/g)||[]).map(Number).filter(n=>n>=40 && n<=1000);
   if(!nums.length) return null;
   return {min:Math.min(...nums), max:Math.max(...nums)};
 }
 const moqNum = s => parseInt(String(s).replace(/[^\d]/g,''),10) || 0;
-function leadDaysMax(f){ if(!f||!f.lead) return null; const n=(f.lead.match(/\d+/g)||[]).map(Number); return n.length?Math.max(...n):null; }
-const matLabel = c => c.replace(/\b\w/g,x=>x.toUpperCase());
+function leadDaysMax(f){ const lead=textValue(f && f.lead); if(!lead) return null; const n=(lead.match(/\d+/g)||[]).map(Number); return n.length?Math.max(...n):null; }
+const matLabel = c => textValue(c).replace(/\b\w/g,x=>x.toUpperCase());
 
 /* ---------- score one product against an intent ---------- */
 function scoreProduct(p, intent){
+  if(!p || typeof p !== 'object') return null;
   if(intent.cat && p.cat !== intent.cat) return null;
+  const comp = textValue(p.comp), compLower = comp.toLowerCase();
+  const spec = textValue(p.spec), loc = textValue(p.loc);
+  const price = Number(p.price) || 0;
   const f = factoryOf(p);
   const hits = [], miss = [];
   let matched = 0, total = 0;
   const add = (ok, hitLabel, missLabel) => { total++; if(ok){ matched++; hits.push(hitLabel); } else if(missLabel){ miss.push(missLabel); } };
 
   if(intent.materials.length){
-    const hit = intent.materials.find(mm => p.comp.toLowerCase().includes(mm));
+    const hit = intent.materials.find(mm => compLower.includes(textValue(mm).toLowerCase()));
     add(!!hit, `${matLabel(hit||intent.materials[0])} ✓`, `Not ${matLabel(intent.materials[0])}`);
   }
   if(intent.gsm){
     const g = gsmOf(p);
     const ok = g && g.max >= intent.gsm.min && g.min <= intent.gsm.max;
-    add(!!ok, `${p.spec} in range`, `${p.spec||'GSM n/a'} vs ${intent.gsm.min}–${intent.gsm.max}`);
+    add(!!ok, `${spec} in range`, `${spec||'GSM n/a'} vs ${intent.gsm.min}–${intent.gsm.max}`);
   }
   if(intent.priceMax != null){
-    add(p.price>0 && p.price<=intent.priceMax, `$${p.price.toFixed(2)} ≤ $${intent.priceMax}`, p.price>0?`$${p.price.toFixed(2)} over budget`:`Quote only`);
+    add(price>0 && price<=intent.priceMax, `$${price.toFixed(2)} ≤ $${intent.priceMax}`, price>0?`$${price.toFixed(2)} over budget`:`Quote only`);
   }
   if(intent.moqMax != null){
     add(moqNum(p.moq) <= intent.moqMax, `MOQ ${p.moq} ≤ ${intent.moqMax}`, `MOQ ${p.moq} over`);
@@ -128,21 +133,21 @@ function scoreProduct(p, intent){
     add(l != null && l <= 14, l!=null?`Fast lead ~${l}d`:'', l!=null?`Lead ~${l}d`:null);
   }
   intent.certs.forEach(c => {
-    const has = f && f.certs && f.certs.some(fc => fc.toLowerCase().includes(c.toLowerCase()));
+    const has = f && Array.isArray(f.certs) && f.certs.some(fc => textValue(fc).toLowerCase().includes(textValue(c).toLowerCase()));
     add(!!has, `${c} ✓`, `No ${c} on file`);
   });
   if(intent.region){
-    add(p.loc.toLowerCase().includes(intent.region.toLowerCase()), `${intent.region} ✓`, `${p.loc}`);
+    add(loc.toLowerCase().includes(intent.region.toLowerCase()), `${intent.region} ✓`, loc);
   }
   if(intent.oem){
     add(p.badge==='oem'||p.badge==='recycle'||p.cat==='oem', `OEM-ready`, `Non-OEM`);
   }
 
   // relevance from keywords + material presence (drives ranking when few hard constraints)
-  const hay = (p.name+' '+p.comp+' '+p.spec).toLowerCase();
+  const hay = `${textValue(p.name)} ${comp} ${spec}`.toLowerCase();
   let rel = 0;
   intent.keywords.forEach(k => { if(hay.includes(k)) rel += 1; });
-  if(intent.materials.some(mm => p.comp.toLowerCase().includes(mm))) rel += 2;
+  if(intent.materials.some(mm => compLower.includes(textValue(mm).toLowerCase()))) rel += 2;
   const relN = Math.min(1, rel/5);
 
   const verified = f ? !!f.verified : true;
