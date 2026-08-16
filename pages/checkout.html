@@ -157,7 +157,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     quoteLoading=false;
     shippingQuote=result?.quote||defaultShippingQuote(selectedAddress.country);
     const displayShipping=shippingAmount(),total=baseTotal+displayShipping;
-    document.getElementById('summaryShipping').textContent=window.ARCANA_money(Number(shippingQuote.flat_rate_usd));document.getElementById('summaryTotal').textContent=currencyMoney(total);place.disabled=false;help.textContent=shippingQuote.is_default?'Default shipping applied. An active Intools destination rate overrides it automatically.':'Your configured destination shipping rate was applied automatically.';
+    document.getElementById('summaryShipping').textContent=window.ARCANA_money(Number(shippingQuote.flat_rate_usd));document.getElementById('summaryTotal').textContent=currencyMoney(total);place.disabled=false;help.textContent='';
   }
 
   async function placeOrder(){

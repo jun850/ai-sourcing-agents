@@ -104,7 +104,11 @@ if(!sb || !sb.auth){
     intoolsListShippingRates(){ return Promise.resolve({ items:[], error:err }); },
     intoolsSaveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
     intoolsArchiveShippingRate(){ return Promise.resolve({ rate:null, error:err }); },
-    intoolsListAudit(){ return Promise.resolve({ items:[], error:err }); }
+    intoolsListAudit(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsListOrders(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsGetOrderDetail(){ return Promise.resolve({ order:null, error:err }); },
+    getPlatformSetting(){ return Promise.resolve(null); },
+    intoolsUpdatePlatformSetting(){ return Promise.resolve({ error:err }); }
   };
   return;
 }
@@ -1059,6 +1063,23 @@ const API = {
   async intoolsListAudit({targetType=null,targetId=null,limit=100}={}){
     try{const {data,error}=await sb.rpc('intools_list_audit',{p_target_type:targetType,p_target_id:targetId,p_limit:limit});return {items:data||[],error:error||null};}
     catch(error){return {items:[],error};}
+  },
+
+  async intoolsListOrders(){
+    try{const {data,error}=await sb.rpc('intools_list_orders');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsGetOrderDetail(orderNo){
+    try{const {data,error}=await sb.rpc('intools_get_order_detail',{p_order_no:orderNo});return {order:data||null,error:error||null};}
+    catch(error){return {order:null,error};}
+  },
+  async getPlatformSetting(key){
+    try{const {data,error}=await sb.rpc('get_platform_setting',{p_key:key});if(error)return null;return data;}
+    catch(_){return null;}
+  },
+  async intoolsUpdatePlatformSetting(key,value){
+    try{const {error}=await sb.rpc('intools_update_platform_setting',{p_key:key,p_value:value});return {error:error||null};}
+    catch(error){return {error};}
   }
 };
 
