@@ -175,36 +175,41 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       [T('Colour family'),publicValue(p.color_family)],[T('Certifications'),publicValue(certs)]
     ];
     const sourcingSpecs=[[T('Order unit'),publicValue(p.unit)],['MOQ',publicValue(p.moq)],['Lead time',publicValue(p.lead_time||p.lt)],['Origin',publicValue(p.origin_country||p.country||String(p.loc||'').split(',').pop().trim())]];
+
+    const verifiedSupplier=p.supplierVerified!==false;
+    const trustRow=verifiedSupplier?`<div class="pdp-trust">
+      <span class="pdp-trust-badge"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>${T('Verified supplier')}</span>
+      ${(p.certs||[]).slice(0,3).map(c=>`<span class="pdp-trust-cert">${html(TR(c))}</span>`).join('')}
+    </div>`:''
+
     document.getElementById('pdpRoot').innerHTML=`
     <nav class="crumbs" aria-label="Breadcrumb"><ol>${breadcrumbItems.map(([label,href],index)=>`<li>${href?`<a href="${href}">${label}</a>`:`<span aria-current="page">${label}</span>`}</li>`).join('')}</ol></nav>
     <div class="pdp">
-      <div class="gallery">
-        <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img data-gallery-main src="${productAsset({img:galleryImages[0]||p.img})}" alt="${nm}" loading="eager" decoding="async" fetchpriority="high">
-          ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
+      <!-- Gallery: col 1 row 1 desktop · top mobile -->
+      <div class="pdp-gallery-col">
+        <div class="gallery">
+          <div class="main">${isOEM?`<span class="badge b-oem">OEM</span>`:''}<img data-gallery-main src="${productAsset({img:galleryImages[0]||p.img})}" alt="${nm}" loading="eager" decoding="async" fetchpriority="high">
+            ${supplierHighlight ? `<div class="supplier-highlight" aria-label="${T('Supplier highlight')}: ${supplierHighlight}">${IC.factory}<span><small>${T('Supplier highlight')}</small><b>${supplierHighlight}</b></span></div>` : ''}
+          </div>
+          ${galleryImages.length>1?`<div class="pdp-thumbnails" aria-label="${T('Product images')}">${galleryImages.map((image,index)=>`<button type="button" data-gallery-image="${productAsset({img:image})}" aria-label="${nm}, ${T('view')} ${index+1}" aria-pressed="${index===0}"><img src="${productAsset({img:image})}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>`:''}
         </div>
-        ${galleryImages.length>1?`<div class="pdp-thumbnails" aria-label="${T('Product images')}">${galleryImages.map((image,index)=>`<button type="button" data-gallery-image="${productAsset({img:image})}" aria-label="${nm}, ${T('view')} ${index+1}" aria-pressed="${index===0}"><img src="${productAsset({img:image})}" alt="" loading="lazy" decoding="async"></button>`).join('')}</div>`:''}
       </div>
-      <div class="pdp-info">
+      <!-- Sticky panel: col 2 spans rows desktop · second on mobile -->
+      <div class="pdp-sticky-panel">
         <div class="titlebar">
           <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
             ${isOEM
               ? `<span class="badge b-oem-soft"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block"></span> ${p.cat==='oem'?T('OEM Service'):T('OEM Available')}</span>`
               : `<span class="badge b-nonoem">${T('Non-OEM')}</span>`}
-            <span class="muted" style="display:inline-flex;align-items:center;gap:6px;font-size:.9375rem;white-space:nowrap">${IC.factory} ${p.cat==='oem'?T('Made to order'):T('In Stock')}</span>
           </div>
-          <div class="muted" style="font-size:13px">SKU: ${p.id}</div>
         </div>
         <h1>${nm}</h1>
         <p class="desc pdp-supplier-line">${supplierParts.join(' · ')}</p>
-        <div class="pdp-details">
-          <section class="pdp-about"><h2>${T('About this product')}</h2><div class="rich-content">${productSummary}</div></section>
-          <section class="pdp-spec-panel"><h2>${T('Specifications')}</h2><dl>${productSpecs.map(([label,value,isHtml])=>`<div><dt>${label}</dt><dd>${isHtml?value:html(value)}</dd></div>`).join('')}</dl></section>
-          <section class="pdp-spec-panel pdp-sourcing"><h2>${T('Sourcing')}</h2><dl>${sourcingSpecs.map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}${productFaqs.length?`<div class="pdp-handling"><b>${T('Important to read')}</b><div class="help-faqs">${productFaqs.map((item,index)=>`<details${index===0?' open':''}><summary>${html(item.question)}<span aria-hidden="true">+</span></summary><div><p>${html(item.answer)}</p></div></details>`).join('')}</div></div>`:''}</section>
-        </div>
-        <div class="price-box">
-          <div><span class="muted" style="font-size:13px">${p.price>0?T('Unit Price'):T('Pricing')}</span><div class="big" style="margin-top:6px">${p.price>0?`${productMoney(p)} <small>/${TR(p.unit)}</small>`:T('Contact supplier')}</div></div>
-          ${p.price>0?`<p class="pdp-price-note">Price depends on order quantity and requirements. Contact the supplier to confirm the details.</p>`:''}
-        </div>
+        ${trustRow}
+        ${purchasable?`<div class="price-box">
+          <div><div class="big">${productMoney(p)} <small>/${TR(p.unit)}</small></div></div>
+          <p class="pdp-price-note">Price varies by quantity and specs. Confirm with supplier.</p>
+        </div>`:''}
         ${productOptions.length?`<div class="pdp-options" aria-label="${T('Product options')}">${productOptions.map((option,optionIndex)=>`<fieldset data-product-option="${optionIndex}"><legend><span>${html(option.name)}</span><strong data-option-value>${html(selectedOptions[option.name])}</strong></legend><div class="pdp-option-values">${option.values.map((value,valueIndex)=>`<label><input type="radio" name="product-option-${optionIndex}" value="${html(value)}" ${valueIndex===0?'checked':''}><span>${html(value)}</span></label>`).join('')}</div></fieldset>`).join('')}</div>`:''}
         ${purchasable?`<div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
           <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="${T('Decrease quantity')}">−</button><input type="number" id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="${T('Increase quantity')}">+</button></div>
@@ -226,20 +231,57 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           <span class="ps-view">${facId?T('View factory'):T('View supplier')} ${IC.chevR}</span>
         </a>
       </div>
+      <!-- Tabbed specs: col 1 row 2 desktop · third on mobile -->
+      <div class="pdp-details">
+        <div class="pdp-tab-list" role="tablist" aria-label="${T('Product details')}">
+          <button class="pdp-tab-btn" role="tab" aria-selected="true" aria-controls="pdp-tab-about" id="pdp-tbtn-about">${T('About')}</button>
+          <button class="pdp-tab-btn" role="tab" aria-selected="false" aria-controls="pdp-tab-specs" id="pdp-tbtn-specs">${T('Specifications')}</button>
+          <button class="pdp-tab-btn" role="tab" aria-selected="false" aria-controls="pdp-tab-sourcing" id="pdp-tbtn-sourcing">${T('Sourcing')}</button>
+        </div>
+        <div class="pdp-tab-panel" role="tabpanel" id="pdp-tab-about" aria-labelledby="pdp-tbtn-about">
+          <div class="pdp-about"><div class="rich-content">${productSummary}</div></div>
+        </div>
+        <div class="pdp-tab-panel" role="tabpanel" id="pdp-tab-specs" aria-labelledby="pdp-tbtn-specs" hidden>
+          <section class="pdp-spec-panel"><dl>${productSpecs.filter(([,v])=>v&&v!=='—').map(([label,value,isHtml])=>`<div><dt>${label}</dt><dd>${isHtml?value:html(value)}</dd></div>`).join('')}</dl></section>
+        </div>
+        <div class="pdp-tab-panel" role="tabpanel" id="pdp-tab-sourcing" aria-labelledby="pdp-tbtn-sourcing" hidden>
+          <section class="pdp-spec-panel pdp-sourcing"><dl>${sourcingSpecs.filter(([,v])=>v&&v!=='—').map(([label,value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl>${p.handling_notes?`<div class="pdp-handling"><b>${T('Handling')}</b><div class="rich-content">${sanitizeRichText(p.handling_notes)}</div></div>`:''}${productFaqs.length?`<div class="pdp-handling"><b>${T('Important to read')}</b><div class="help-faqs">${productFaqs.map((item,index)=>`<details${index===0?' open':''}><summary>${html(item.question)}<span aria-hidden="true">+</span></summary><div><p>${html(item.answer)}</p></div></details>`).join('')}</div></div>`:''}</section>
+        </div>
+      </div>
     </div>
     ${isOEM && p.cat!=='oem' ? oemSection(T,TR,money) : ''}
     <section class="section">
       <div class="sec-head"><h2 style="font-family:var(--sans);font-size:1.25rem;font-weight:600">${T('More in')} ${catLabel}</h2><a class="link-arrow" href="${catUrl}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,6).map(x=>window.ARCANA_card(x,{href:'product.html?id='+x.id})).join('')||`<p class="muted">—</p>`}</div>
-    </section>`;
+    </section>
+    <!-- Lightbox -->
+    <dialog class="pdp-lightbox" id="pdpLightbox" aria-label="${T('Image viewer')}">
+      <div class="lb-inner">
+        <img class="lb-img" src="" alt="${nm}" id="lbImg">
+        <button class="lb-close" id="lbClose" aria-label="${T('Close')}">×</button>
+        <button class="lb-prev" id="lbPrev" aria-label="${T('Previous image')}" hidden>‹</button>
+        <button class="lb-next" id="lbNext" aria-label="${T('Next image')}" hidden>›</button>
+      </div>
+    </dialog>`;
 
-    // wiring (re-attached on every build)
+    // ── Tab wiring ──
+    const tabBtns=[...document.querySelectorAll('.pdp-tab-btn')];
+    const tabPanels=[...document.querySelectorAll('.pdp-tab-panel')];
+    tabBtns.forEach((btn,i)=>{
+      btn.addEventListener('click',()=>{
+        tabBtns.forEach((b,j)=>{b.setAttribute('aria-selected',String(i===j));tabPanels[j].hidden=i!==j;});
+      });
+    });
+
+    // ── Quantity stepper wiring ──
     const qi=document.querySelector('#pdpQty input');
     if(qi){
       document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(minimumOrder,(+qi.value||minimumOrder)-1);
       document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||minimumOrder)+1;
       qi.addEventListener('change',()=>{qi.value=Math.max(minimumOrder,Math.floor(Number(qi.value)||minimumOrder));});
     }
+
+    // ── CTA wiring ──
     const add=document.getElementById('addBtn');
     if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
@@ -251,6 +293,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       if(emailBtn.tagName==='A') emailBtn.href=contactHref(T('Product quote request'),null);
       else window.ARCANA_contactEmail({subjectPrefix:T('Product request'), bodyLines:productLines(qi?.value)});
     });
+
+    // ── Product options wiring ──
     document.querySelectorAll('[data-product-option]').forEach((fieldset,optionIndex)=>{
       const option=productOptions[optionIndex];
       fieldset.querySelectorAll('input[type="radio"]').forEach(input=>input.addEventListener('change',()=>{
@@ -259,17 +303,50 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         fieldset.querySelector('[data-option-value]').textContent=input.value;
       }));
     });
+
+    // ── Gallery thumbnail wiring ──
     const galleryMain=document.querySelector('[data-gallery-main]');
     document.querySelectorAll('[data-gallery-image]').forEach(button=>button.addEventListener('click',()=>{
       galleryMain.src=button.dataset.galleryImage;
       document.querySelectorAll('[data-gallery-image]').forEach(item=>item.setAttribute('aria-pressed',String(item===button)));
     }));
+
+    // ── Lightbox wiring ──
+    const lightbox=document.getElementById('pdpLightbox');
+    const lbImg=document.getElementById('lbImg');
+    const lbClose=document.getElementById('lbClose');
+    const lbPrev=document.getElementById('lbPrev');
+    const lbNext=document.getElementById('lbNext');
+    let lbIndex=0;
+    function openLightbox(index){
+      lbIndex=Math.max(0,Math.min(index,galleryImages.length-1));
+      lbImg.src=productAsset({img:galleryImages[lbIndex]});
+      if(lbPrev) lbPrev.hidden=galleryImages.length<=1;
+      if(lbNext) lbNext.hidden=galleryImages.length<=1;
+      lightbox?.showModal();
+    }
+    function closeLightbox(){ lightbox?.close(); }
+    if(lightbox){
+      galleryMain.addEventListener('click',()=>openLightbox(lbIndex));
+      lbClose?.addEventListener('click',closeLightbox);
+      lbPrev?.addEventListener('click',()=>{ lbIndex=(lbIndex-1+galleryImages.length)%galleryImages.length; lbImg.src=productAsset({img:galleryImages[lbIndex]}); });
+      lbNext?.addEventListener('click',()=>{ lbIndex=(lbIndex+1)%galleryImages.length; lbImg.src=productAsset({img:galleryImages[lbIndex]}); });
+      lightbox.addEventListener('keydown',e=>{ if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowLeft') lbPrev?.click(); if(e.key==='ArrowRight') lbNext?.click(); });
+      lightbox.addEventListener('click',e=>{ if(e.target===lightbox) closeLightbox(); });
+      document.querySelectorAll('[data-gallery-image]').forEach((button,i)=>{
+        button.addEventListener('click',()=>{ lbIndex=i+1; });
+      });
+    }
+
+    // ── OEM package wiring ──
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
       const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
       const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
       window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi?.value,[`${T('OEM service selected')}: ${pkgName}`])});
     });
+
+    // ── Wishlist + share wiring ──
     const sv=document.querySelector('.pdp-save'); sv.classList.toggle('on',Store.isSaved(p.id));
     sv.addEventListener('click',e=>{e.preventDefault();const on=Store.toggleSaved(p.id);sv.classList.toggle('on',on);sv.setAttribute('aria-pressed',String(on));toast(on?T('Saved to your list'):T('Removed from list'), on?{href:'wishlist.html',label:T('View wishlist')}:undefined);});
     document.querySelector('[data-share]').addEventListener('click',async()=>{
@@ -293,10 +370,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       packageChoices.forEach(input=>input.closest('[data-pkg]').classList.toggle('sel',input===choice));
     }));
 
-    // Copilot: "why this matched" — only for a product that was ACTUALLY in the
-    // most recent Copilot result set (scoped to this tab, see components.js's
-    // ARCANA_getCopilotMatchFor). Never a live re-score against a lingering
-    // brief: that's what let this panel resurface on unrelated PDPs.
+    // ── Copilot match panel ──
+    // Only for a product that was ACTUALLY in the most recent Copilot result set
+    // (scoped to this tab, see components.js's ARCANA_getCopilotMatchFor).
     const brief=window.ARCANA_Copilot&&window.ARCANA_Copilot.getBrief();
     const r=window.ARCANA_getCopilotMatchFor&&window.ARCANA_getCopilotMatchFor(p.id);
     if(r&&brief&&brief.text){
@@ -308,7 +384,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       panel.innerHTML=`
         <div class="cm-head">
           <div class="cop-score" style="--v:${r.score}"><b>${r.score}</b></div>
-          <div class="cm-title">Matches your Athelia search · ${r.score}%<span>“${brief.text}”</span></div>
+          <div class="cm-title">Matches your Athelia search · ${r.score}%<span>"${brief.text}"</span></div>
         </div>
         <div class="cop-chips">${hits}${miss}</div>`;
       const sg=document.querySelector('.pdp-details'); if(sg) sg.insertAdjacentElement('afterend',panel);
