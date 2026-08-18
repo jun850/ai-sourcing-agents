@@ -43,7 +43,7 @@ window.ARCANA_PRODUCTS = [
   {id:'FAB-136',name:'Yarn-Dyed Banshu Stripe Shirting',img:'ueyama-banshu-stripe',comp:'100% Cotton Twill',spec:'80s × 80s · 120 GSM · Banshu region heritage',price:0,unit:'m',moq:'300 m',seller:'Ueyama Textile Co. Ltd.',loc:'Nishiwaki, Hyogo, Japan',badge:'',cat:'fabrics',country:'Japan'},
   {id:'FAB-137',name:'Albini Sea Island Cotton',img:'takisada-sea-island-cotton.jpg',comp:'100% Cotton',spec:'170 GSM · 150 cm · 40 m roll · Style 1078420',price:0,unit:'m',moq:'40 m',seller:'TAKISADA-NAGOYA Co., Ltd.',loc:'Nagoya, Aichi, Japan',badge:'',cat:'fabrics',lt:'Quote on request',certs:[],country:'Japan'},
   {id:'FAB-138',name:'21-Wale Indigo Washed Corduroy Stretch',img:'sunwell-indigo-corduroy-stretch.jpg',comp:'97% Cotton 3% Polyurethane',spec:'136–138 cm · 25 m roll · Style 13477',price:0,unit:'m',moq:'25 m',seller:'SUNWELL Co., Ltd.',loc:'Osaka, Japan',badge:'',cat:'fabrics',lt:'Quote on request',certs:[],country:'Japan'},
-  {id:'FAB-139',name:'TC Weather Cloth NANO-WING Water Repellent',img:'vancet-tc-weather-nano-wing.jpg',comp:'65% Polyester 35% Cotton',spec:'170 GSM · 112 cm · 54 m roll · Style 10611',price:0,unit:'m',moq:'1 m',seller:'Sojitz Fashion Co., Ltd. (VANCET)',loc:'Tokyo, Japan',badge:'',cat:'fabrics',lt:'Stock status on request',certs:[],country:'Japan'},
+  {id:'FAB-139',name:'TC Weather Cloth NANO-WING Water Repellent',img:'vancet-tc-weather-nano-wing.jpg',comp:'65% Polyester 35% Cotton',spec:'170 GSM · 112 cm · 54 m roll · Style 10611',price:0,unit:'m',moq:'1 m',seller:'Vancet',loc:'Tokyo, Japan',badge:'',cat:'fabrics',lt:'Stock status on request',certs:[],country:'Japan'},
   {id:'FAB-140',name:'RR8811 Summer Wool-Like Trousers',img:'catalog/fabrics/rokal/1094299.jpg',images:['catalog/fabrics/rokal/1094299.jpg','catalog/fabrics/rokal/1094299-3.jpg','catalog/fabrics/rokal/1094299-5.jpg'],description:'A thin, wool-like polyester textile suited to spring and summer trousers.',comp:'100% Polyester',spec:'130 GSM · 145 cm · 50 m roll · RR8811',gsm:'130 GSM',fabric_width:'145 cm',roll_length:'50 m',style_code:'RR8811',price:5.71,unit:'m',moq:'1 m',seller:'ROKAL Co., Ltd.',loc:'Harajuku, Tokyo, Japan',badge:'',cat:'fabrics',subcategory:'polyester',lt:'Stock status on request',handling_notes:'For orders of 10 m or less, a US$12.54 cutting fee and US$6.27 small-order fee apply.',options:[{name:'Color',values:['Light Gray','Dark Grey','Dark Brown','Navy Blue','Black']}],certs:[],country:'Japan'},
   {id:'FAB-141',name:'RE:NEWOOL® Beaver Glen Check',img:'takisada-renewool-beaver-glencheck.jpg',comp:'70% Polyester 26% Nylon 4% Acrylic',spec:'358 GSM · 145 cm · 50 m roll · Style 1015291',price:0,unit:'m',moq:'50 m',seller:'TAKISADA-NAGOYA Co., Ltd.',loc:'Nagoya, Aichi, Japan',badge:'recycle',cat:'fabrics',lt:'Quote on request',certs:[],country:'Japan'},
   {id:'FAB-142',name:'Cotton & Wool Yarn-Dyed Twill',img:'sunwell-cotton-wool-twill.jpg',comp:'55% Cotton 45% Wool',spec:'154–156 cm · 60 m roll · Style 14346',price:0,unit:'m',moq:'60 m',seller:'SUNWELL Co., Ltd.',loc:'Osaka, Japan',badge:'',cat:'fabrics',lt:'Quote on request',certs:[],country:'Japan'},
@@ -1556,7 +1556,7 @@ window.ARCANA_FACTORIES = [
   {
     "id": "F-16",
     "databaseId": "f74bf5db-e373-4f0f-a3b0-156cf2ade709",
-    "name": "Sojitz Fashion Co., Ltd. (VANCET)",
+    "name": "Vancet",
     "type": "Textile Trading Company",
     "region": "Japan",
     "loc": "Tokyo",
@@ -1578,8 +1578,12 @@ window.ARCANA_FACTORIES = [
     "employees": null,
     "area": null,
     "port": null,
-    "bio": null,
-    "copyI18n": {},
+    "bio": "Known commercially as Vancet — the trading name of Sojitz Fashion Co., Ltd. Contact the supplier to confirm current capabilities, specifications, minimums, and terms.",
+    "copyI18n": {
+      "en": { "name": "Vancet", "description": "Known commercially as Vancet — the trading name of Sojitz Fashion Co., Ltd. Contact the supplier to confirm current capabilities, specifications, minimums, and terms." },
+      "ja": { "name": "Vancet", "description": "正式社名は双日ファッション株式会社(Sojitz Fashion Co., Ltd.)、屋号としてVancetを使用しています。現在の対応可否、仕様、最小ロット、条件は供給者に直接ご確認ください。" },
+      "zh": { "name": "Vancet", "description": "正式名称为双日时尚有限公司(Sojitz Fashion Co., Ltd.),现以Vancet的名义经营。请直接联系供应商确认当前的产能、规格、最低起订量和条款。" }
+    },
     "productCount": 0,
     "taxonomy": []
   },

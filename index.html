@@ -380,6 +380,22 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     };
     renderFactoryNetwork();
     window.ARCANA_onLang(renderFactoryNetwork);
+    // This page opts out of the shared blocking catalog hydration
+    // (data-catalog-defer, so the hero/curated grid never waits on it), which
+    // means window.ARCANA_FACTORIES otherwise stays the bundled data.js
+    // fallback forever — under-counting suppliers/countries against the live
+    // roster shown on factories.html. Refresh just the factory list live and
+    // re-render once it lands.
+    if(window.ARCANA_API && window.ARCANA_API.fetchCatalogFactories){
+      window.ARCANA_API.fetchCatalogFactories().then(factories=>{
+        if(!factories||!factories.length) return;
+        window.ARCANA_FACTORIES=factories;
+        window.ARCANA_FACTORY_MAP=Object.fromEntries(factories.map(f=>[f.id,f]));
+        window.ARCANA_FACTORY_BY_NAME=Object.fromEntries(factories.map(f=>[f.name,f.id]));
+        if(window.ATELIX_refreshCatalogStats) window.ATELIX_refreshCatalogStats();
+        renderFactoryNetwork();
+      }).catch(err=>console.warn('[Atelix] live factory roster unavailable — using bundled data.js',err&&err.message));
+    }
   }
 
   const certificationList=document.getElementById('certificationList');
