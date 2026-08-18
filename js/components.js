@@ -2307,6 +2307,8 @@
             x.classList.remove("sel"),
           );
           p.classList.add("sel");
+          const radio = p.querySelector(".pkg-radio");
+          if (radio) radio.checked = true;
         }),
       ),
     );
