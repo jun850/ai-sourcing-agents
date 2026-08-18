@@ -175,6 +175,117 @@ function match(intent, opts){
   return opts.limit ? out.slice(0, opts.limit) : out;
 }
 
+/* ---------- deterministic price benchmark / margin engine ----------
+   The "safeguard": every number an agent quotes about pricing is computed
+   HERE, over the live catalog (window.ARCANA_PRODUCTS, hydrated from the DB),
+   never invented by the LLM. The LLM only narrates the object these return. */
+const MIN_SAMPLE = 4; // below this, a "benchmark" isn't trustworthy — say so.
+
+const fabricPriceUSD = p => Number(p && p.price) || 0;
+function fabricPriceJPY(p){
+  const direct = p && p.catalogPrices && Number(p.catalogPrices.JPY);
+  if(Number.isFinite(direct) && direct > 0) return direct;
+  if(typeof window.ATELIX_productAmount === 'function'){
+    const v = Number(window.ATELIX_productAmount(p, 1, 'ja'));
+    if(Number.isFinite(v) && v > 0) return v;
+  }
+  const fx = (window.ARCANA_FX && window.ARCANA_FX.ja) || { rate:150 };
+  return fabricPriceUSD(p) * (Number(fx.rate) || 150);
+}
+
+function priceStats(nums){
+  const a = nums.filter(n => Number.isFinite(n) && n > 0).sort((x,y) => x - y);
+  const n = a.length;
+  if(!n) return null;
+  const q = f => { const i = (n-1)*f, lo = Math.floor(i), hi = Math.ceil(i); return a[lo] + (a[hi]-a[lo])*(i-lo); };
+  return { n, min:a[0], max:a[n-1], median:q(0.5), avg:a.reduce((s,x)=>s+x,0)/n, p25:q(0.25), p75:q(0.75) };
+}
+
+/* products comparable to the intent: same material (matched on comp) and, when
+   given, same category — restricted to one unit so we never mix $/m with $/kg. */
+function comparablePool(intent, unit){
+  const mats = (intent && intent.materials) || [];
+  return (window.ARCANA_PRODUCTS || []).filter(p => {
+    if(!p || typeof p !== 'object') return false;
+    if(intent && intent.cat && p.cat !== intent.cat) return false;
+    if(unit && (p.unit || 'unit') !== unit) return false;
+    if(mats.length){
+      const comp = textValue(p.comp).toLowerCase();
+      return mats.some(m => comp.includes(textValue(m).toLowerCase()));
+    }
+    return true;
+  });
+}
+
+// comparable AND actually priced — quote-only SKUs (price 0) can't benchmark.
+function pricedPool(intent, unit){
+  return comparablePool(intent, unit).filter(p => fabricPriceUSD(p) > 0);
+}
+
+// dominant unit among the priced comparable set, so the benchmark is apples-to-apples
+function dominantUnit(intent){
+  const counts = {};
+  comparablePool(intent).forEach(p => { if(fabricPriceUSD(p) <= 0) return; const u = p.unit || 'unit'; counts[u] = (counts[u]||0)+1; });
+  return Object.keys(counts).sort((a,b) => counts[b] - counts[a])[0] || 'm';
+}
+
+function priceBenchmark(intent){
+  const unit = dominantUnit(intent);
+  const items = pricedPool(intent, unit);
+  const label = (intent.materials||[]).map(matLabel).join(' / ') || (intent.cat || 'catalog');
+  if(items.length < MIN_SAMPLE) return { n: items.length, unit, label, insufficient: true };
+  return { n: items.length, unit, label,
+    usd: priceStats(items.map(fabricPriceUSD)),
+    jpy: priceStats(items.map(fabricPriceJPY)) };
+}
+
+// % of priced comparable peers priced BELOW this product (0 = cheapest, 100 = priciest)
+function percentileOf(product, intent){
+  const unit = product.unit || dominantUnit(intent);
+  const pool = pricedPool(intent, unit);
+  if(pool.length < MIN_SAMPLE) return null;
+  const price = fabricPriceUSD(product);
+  const below = pool.filter(p => fabricPriceUSD(p) < price).length;
+  return Math.round((below / pool.length) * 100);
+}
+
+/* Frame a fabric's price against a resale price. Deliberately NOT a gross-margin
+   claim: with no per-garment fabric usage we only compute the material cost of
+   ONE priced unit (e.g. 1 m) as a share of one piece's resale price, plus where
+   the fabric sits vs. peers. resaleCurrency defaults to JPY. */
+function resaleContext(opts){
+  opts = opts || {};
+  const product = opts.product; if(!product) return null;
+  const intent = opts.intent || parse(`${textValue(product.comp)} ${textValue(product.name)}`);
+  const benchmark = priceBenchmark(intent);
+  const pct = percentileOf(product, intent);
+  const fx = (window.ARCANA_FX && window.ARCANA_FX.ja) || { rate:150 };
+  let resaleJPY = Number(opts.resaleAmount) || 0;
+  const cur = String(opts.resaleCurrency || 'JPY').toUpperCase();
+  if(cur === 'USD') resaleJPY = resaleJPY * (Number(fx.rate) || 150);
+  const fabricJPY = fabricPriceJPY(product);
+  const fabricUSD = fabricPriceUSD(product);
+  let verdict = 'typical';
+  if(pct != null){ if(pct >= 75) verdict = 'premium'; else if(pct <= 30) verdict = 'value'; }
+  return {
+    product: { id: product.id, name: product.name, seller: product.seller, unit: product.unit || 'unit', usd: fabricUSD, jpy: fabricJPY },
+    benchmark, percentile: pct, verdict,
+    resaleJPY: resaleJPY || null,
+    // material cost of ONE priced unit vs one piece's resale price (labelled per-unit, not margin)
+    perUnitShare: (resaleJPY > 0) ? fabricJPY / resaleJPY : null
+  };
+}
+
+/* ---------- classify a turn: what does the user want? ---------- */
+const ACTION_RE = /\b(add(?:\s+\w+){0,4}\s+(?:to\s+)?(?:cart|basket|wishlist)|put(?:\s+\w+){0,4}\s+in(?:to)?\s+(?:my\s+)?cart|save\s+(?:this|it|that)|wishlist\s+(?:this|it|that)|buy\s+(?:it|this|now)|check\s*out|proceed\s+to\s+checkout|purchase|place\s+(?:the\s+)?order)\b/i;
+const PRICING_RE = /\b(too\s+much|over-?pay|overpaying|paying\s+too|is\s+this\s+(?:price|expensive|cheap|worth)|fair\s+price|market\s+(?:rate|price)|benchmark|average\s+price|compare\s+price|price\s+compar|margin|resell|resale|sell\s+(?:it|this|these)?\s*(?:for|at)|worth\s+it|am\s+i\s+(?:paying|getting))\b/i;
+function classify(text){
+  const t = String(text || '');
+  if(ACTION_RE.test(t)) return 'action';
+  if(PRICING_RE.test(t)) return 'pricing';
+  return 'sourcing';
+}
+
 /* ---------- human-readable brief chips ---------- */
 function describe(intent){
   const c = [];
@@ -288,6 +399,8 @@ window.ARCANA_Copilot = {
   getBrief, setBrief, clearBrief,
   scoreProduct, factoryOf,
   demandStream, demandMatch, draftListing,
-  version: '1.0'
+  classify, priceBenchmark, percentileOf, resaleContext,
+  fabricPriceJPY, fabricPriceUSD,
+  version: '1.1'
 };
 })();

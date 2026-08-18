@@ -3,29 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Atelix Agent — sourcing that drafts, asks, then acts</title>
-<meta name="description" content="Describe what you're sourcing. Atelix's agent finds five real matches, drafts five real RFQs, and waits for your approval before it sends a thing.">
+<title>Athelia — your sourcing agent</title>
+<meta name="description" content="Athelia benchmarks fabric prices against Atelix's live catalog, weighs them against your resale price, and adds what you choose straight to your cart.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="../css/agentpoc.css">
 </head>
-<body class="agentpoc">
+<body class="agentpoc" data-root=".." data-catalog data-search="Describe what you're sourcing…">
 <!--
-THESIS: An agent that shows its work — recommends, drafts, and asks before it acts — replacing the chatbot-bubble default with a live procurement desk where drafts are the interface.
-OWN-WORLD: Sage-green ambient ground, warm paper panel, ink-black pill controls and badges, hairline-bordered agent replies; Space Grotesk for voice, Space Mono for every fact (price, status, product code).
-STORY: A buyer describes a sourcing need in one line, watches the agent pull five real catalog matches and draft five real supplier messages, then holds the send until they approve or edit.
-FIRST VIEWPORT: Paper panel centered on sage ground, empty-state thesis with two example prompts, composer anchored bottom, no chrome above it.
-FORM: Palisade-lineage agentic-commerce demo, pinned directly by the user's own reference images; brief-pinned, no concept-seed round run.
+THESIS: A sourcing agent that shows its math — every price verdict is computed live over the real catalog, and every action (cart, wishlist, checkout) really happens on the signed-in buyer's account.
+OWN-WORLD: Sage-green ambient ground, warm paper panel, ink-black pill controls and badges, hairline-bordered agent replies; Space Grotesk for voice, Space Mono for every fact (price, percentile, product code).
+STORY: A signed-in buyer asks whether a fabric is fairly priced for their resale target; Athelia answers with real benchmark stats, then adds the chosen fabric to their real cart on request.
+FIRST VIEWPORT: Paper panel centered on sage ground; signed-in buyers see the ask prompt, guests see a sign-in gate; composer anchored bottom.
+FORM: Palisade-lineage agentic-commerce surface, now the live logged-in Athelia copilot.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
 -->
 
 <div class="apoc-ambient-head">
-  <div class="apoc-word">ATELIX <small>/ agent</small></div>
-  <div class="apoc-live"><span class="apoc-live-dot"></span>live demo · simulated actions</div>
+  <div class="apoc-word">ATHELIA <small>/ atelix</small></div>
+  <div class="apoc-live"><span class="apoc-live-dot"></span>live · real catalog &amp; cart</div>
 </div>
 
 <main class="apoc-panel" id="apocPanel">
   <header class="apoc-header">
-    <h1>Sourcing agent<span class="apoc-tag">real catalog · real drafts · nothing sent without you</span></h1>
+    <h1>Sourcing agent<span class="apoc-tag">live price benchmarks · real cart &amp; wishlist</span></h1>
     <div class="apoc-header-actions">
       <button class="apoc-icon-btn" id="wishlistBtn" type="button" aria-label="Wishlist">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6c-1.8-1.5-4.4-1.3-6 .4L12 7.8l-2.8-2.8c-1.6-1.7-4.2-1.9-6-.4-2 1.7-2.1 4.8-.3 6.6l8.4 8.6c.4.4 1 .4 1.4 0l8.4-8.6c1.8-1.8 1.7-4.9-.3-6.6z"/></svg>
@@ -41,13 +41,19 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <div class="apoc-confirmations" id="confirmations"></div>
 
   <div class="apoc-body" id="apocBody">
-    <section class="apoc-hero" id="hero">
-      <h2>Tell it what you need. Watch it work before it acts.</h2>
-      <p>Real Atelix catalog underneath, real drafted messages, one approval gate before anything reaches a supplier.</p>
+    <section class="apoc-hero" id="hero" hidden>
+      <h2>Ask before you commit budget.</h2>
+      <p>Athelia benchmarks any fabric against Atelix's live catalog, weighs it against your resale price, and adds what you choose straight to your real cart.</p>
       <div class="apoc-hero-examples">
-        <button class="apoc-example" type="button" data-example="GOTS organic cotton for a resort capsule, 300m, and a recycled option for outerwear panels">"GOTS organic cotton for a resort capsule, 300m, and a recycled option for outerwear panels"</button>
-        <button class="apoc-example" type="button" data-example="Merino wool yarn, small batch, Japan mills only">"Merino wool yarn, small batch, Japan mills only"</button>
+        <button class="apoc-example" type="button" data-example="Am I paying too much for organic cotton if I sell the garment at ¥30,000 a piece?">"Am I paying too much for organic cotton if I sell the garment at ¥30,000 a piece?"</button>
+        <button class="apoc-example" type="button" data-example="GOTS organic cotton for a resort capsule, 300m">"GOTS organic cotton for a resort capsule, 300m"</button>
       </div>
+    </section>
+
+    <section class="apoc-gate" id="gate" hidden>
+      <h2>Sign in to use Athelia</h2>
+      <p>Athelia benchmarks live prices and acts on your real cart and wishlist, so it's for signed-in buyers.</p>
+      <a class="apoc-gate-btn" id="gateLogin" href="#">Log in</a>
     </section>
 
     <section aria-live="polite">
@@ -55,34 +61,37 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <div class="apoc-grid" id="grid"></div>
     </section>
 
+    <div id="benchmarkSlot"></div>
+
     <div class="apoc-transcript" id="transcript"></div>
 
     <section aria-live="polite">
-      <div class="apoc-section-label" id="draftsLabel" hidden>Drafted to suppliers</div>
+      <div class="apoc-section-label" id="draftsLabel" hidden>Drafted inquiries</div>
       <div class="apoc-drafts" id="drafts"></div>
     </section>
-
-    <div id="paymentSlot"></div>
   </div>
 
   <footer class="apoc-composer">
     <div class="apoc-suggestions" id="suggestions" hidden></div>
     <div class="apoc-composer-row">
-      <button class="apoc-approve-btn" id="approveBtn" type="button">Send to suppliers</button>
+      <button class="apoc-approve-btn" id="approveBtn" type="button">Add top pick to cart</button>
       <form class="apoc-composer-form" id="composerForm">
-        <input id="composerInput" type="text" autocomplete="off" placeholder="Describe what you're sourcing, or tell the agent what to do next…" aria-label="Message the agent">
+        <input id="composerInput" type="text" autocomplete="off" placeholder="Ask about a price, describe what you're sourcing, or tell Athelia what to do…" aria-label="Message Athelia">
         <button class="apoc-send-btn" id="sendBtn" type="submit" aria-label="Send" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </button>
       </form>
     </div>
   </footer>
-  <p class="apoc-footnote">All actions on this page are simulated — no real RFQs, orders, or charges. Real catalog data, real drafting model.</p>
+  <p class="apoc-footnote">Prices and stats are computed live over Atelix's verified catalog. Cart and wishlist changes are real; payment is always confirmed by you at checkout.</p>
 </main>
 
-<script src="../js/data.js"></script>
-<script src="../js/copilot.js"></script>
-<script src="../js/supabase-client.bundle.js"></script>
-<script src="../js/agentpoc.js"></script>
+<script defer src="../js/data.js"></script>
+<script defer src="../js/catalog-taxonomy.js"></script>
+<script defer src="../js/copilot.js"></script>
+<script defer src="../js/components.js"></script>
+<script defer src="../js/supabase-client.bundle.js"></script>
+<script defer src="../js/api.js"></script>
+<script defer src="../js/agentpoc.js"></script>
 </body>
 </html>

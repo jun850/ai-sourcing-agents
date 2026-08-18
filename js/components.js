@@ -944,9 +944,9 @@
   function buildMobileNav() {
     const path = location.pathname;
     const focused =
-      /\/(?:login|signup|forgot-password|reset-password|checkout|order|building)\.html$/.test(
+      /\/(?:login|signup|forgot-password|reset-password|checkout|order|building|agentpoc)\.html$/.test(
         path,
-      );
+      ) || path === "/agentpoc";
     const workspace =
       document.body.dataset.surface === "seller" ||
       /\/(?:dashboard|admin-orders|admin-supplier)\.html$/.test(path);
@@ -1161,7 +1161,8 @@
       (s && s.role === "seller" && document.body.dataset.surface !== "buyer");
     if (
       seller ||
-      /login\.html|signup\.html|checkout\.html/.test(location.pathname)
+      /login\.html|signup\.html|checkout\.html|agentpoc\.html/.test(location.pathname) ||
+      location.pathname === "/agentpoc"
     )
       return;
     const t = window.ARCANA_T || ((x) => x);
@@ -1244,7 +1245,7 @@
         close(false);
         return;
       }
-      location.href = P("category.html") + "?copilot=1";
+      location.href = P("agentpoc.html");
     });
     pop.addEventListener("click", (e) => {
       const r = e.target.closest("[data-eg]");
@@ -1281,7 +1282,7 @@
         /[&<>"]/g,
         (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
       );
-    const next = encodeURIComponent("category.html?copilot=1");
+    const next = encodeURIComponent("agentpoc.html");
     const wrap = document.createElement("div");
     wrap.className = "modal-overlay cop-gate-overlay";
     wrap.hidden = true;
@@ -1342,6 +1343,49 @@
     if (Store.session()) return true;
     openCopilotGate();
     return false;
+  };
+
+  /* ---------- Agent action layer ----------
+   The only surface the (separate-file) Athelia agent uses to act for real.
+   Wraps the closure-private Store — whose addToCart/toggleSaved already do the
+   real DB write-through (ARCANA_API.syncCartItem/syncWishlistItem) for a
+   signed-in user — and hard-gates every mutation on a live session, so a
+   logged-out caller can never write. No silent payment: goToCheckout only
+   stages the cart and navigates to the real checkout page, where the user
+   confirms and pays themselves. */
+  window.ATELIX_agentActions = {
+    isLoggedIn() {
+      return !!Store.session();
+    },
+    product(sku) {
+      return (window.ARCANA_PRODUCT_MAP && window.ARCANA_PRODUCT_MAP[sku]) || null;
+    },
+    addToCart(sku, qty) {
+      if (!Store.session()) return { ok: false, reason: "not_logged_in" };
+      const p = this.product(sku);
+      if (!p) return { ok: false, reason: "not_found" };
+      const n = Math.max(1, parseInt(qty, 10) || 1);
+      Store.addToCart(sku, n);
+      return { ok: true, product: p, qty: n, cartCount: Store.cartCount(), cartUnits: Store.cartUnits(), cartHref: P("cart.html") };
+    },
+    toggleSaved(sku, qty) {
+      if (!Store.session()) return { ok: false, reason: "not_logged_in" };
+      const p = this.product(sku);
+      if (!p) return { ok: false, reason: "not_found" };
+      const on = Store.toggleSaved(sku, Math.max(1, parseInt(qty, 10) || 1));
+      return { ok: true, product: p, saved: on, wishlistHref: P("wishlist.html") };
+    },
+    isSaved(sku) {
+      return Store.isSaved(sku);
+    },
+    goToCheckout() {
+      if (!Store.session()) return { ok: false, reason: "not_logged_in" };
+      if (!Store.cart().length) return { ok: false, reason: "empty_cart" };
+      Store.beginCheckout();
+      location.href = P("checkout.html");
+      return { ok: true };
+    },
+    cartHref() { return P("cart.html"); },
   };
 
   /* ---------- Design Match: private, session-only tech-pack analysis ---------- */
