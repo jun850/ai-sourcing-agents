@@ -281,10 +281,21 @@ function parseResale(text){
 function resolveRef(text){
   const t = text.toLowerCase();
   const pool = state.candidates.length ? state.candidates : products().slice(0,80);
+  // A full product name quoted in the message is unambiguous — check that
+  // before falling back to loose token overlap, where a single shared generic
+  // word (e.g. two products both named "... Wool ...") could otherwise pick
+  // the wrong one just because it comes first in iteration order.
+  for(const p of pool){
+    const name = String(p.name||'').toLowerCase();
+    if(name && t.includes(name)) return p.id;
+  }
+  let best = null, bestScore = 0;
   for(const p of pool){
     const tokens = [p.style_code, p.seller, ...String(p.name||'').split(/\s+/)].filter(Boolean);
-    if(tokens.some(tok => String(tok).length>3 && t.includes(String(tok).toLowerCase()))) return p.id;
+    const score = tokens.filter(tok => String(tok).length>3 && t.includes(String(tok).toLowerCase())).length;
+    if(score > bestScore){ bestScore = score; best = p.id; }
   }
+  if(best) return best;
   return state.lastRef || (pool[0] && pool[0].id) || null;
 }
 function parseQty(text){
