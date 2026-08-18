@@ -39,7 +39,13 @@
     ['satin',/satin|sateen/i],['chiffon-organza',/chiffon|organza/i],['gauze',/gauze|double gauze/i],
     ['melton-tweed',/melton|tweed|flannel/i],['crepe',/crepe|cr[eê]pe/i],['plain-weave',/plain weave|broadcloth|poplin|taffeta|sheeting/i]
   ];
-  const ALIASES=Object.freeze({cotton:'plain-weave',linen:'plain-weave',polyester:'specialty-other',viscose:'specialty-other',knits:'jersey-pique',denim:'denim-chambray'});
+  const MATERIALS=[
+    ['cotton','Cotton','綿','棉'],['polyester','Polyester','ポリエステル','聚酯纤维'],
+    ['linen','Linen','リネン','亚麻'],['viscose','Viscose & rayon','ビスコース・レーヨン','粘胶与人造丝'],
+    ['wool','Wool','ウール','羊毛'],['nylon','Nylon','ナイロン','尼龙'],
+    ['spandex','Spandex','スパンデックス','氨纶']
+  ].map(([slug,en,ja,zh])=>Object.freeze({slug,label:Object.freeze({en,ja,zh})}));
+  const ALIASES=Object.freeze({knits:'jersey-pique',denim:'denim-chambray'});
 
   function classify(input){
     const text=[input?.construction,input?.organization,input?.subcategory,input?.name,input?.description].filter(Boolean).join(' ');
@@ -50,9 +56,25 @@
     const slug=String(value||'').trim().toLowerCase();
     return ALIASES[slug]||CONSTRUCTIONS.some(item=>item.slug===slug)&&slug||'specialty-other';
   }
+  function normalizeMaterialSlug(value){
+    const slug=String(value||'').trim().toLowerCase();
+    if(slug==='rayon'||slug==='modal'||slug==='cupro')return 'viscose';
+    return MATERIALS.some(item=>item.slug===slug)&&slug||null;
+  }
+  function materialLabel(slug,locale='en'){
+    const item=MATERIALS.find(entry=>entry.slug===normalizeMaterialSlug(slug));
+    return item?.label[LOCALES.includes(locale)?locale:'en']||item?.label.en||'';
+  }
+  function materialMatches(input,slug){
+    const requested=normalizeMaterialSlug(slug);
+    if(!requested)return false;
+    const text=[input?.comp,input?.material,input?.name,input?.description].filter(Boolean).join(' ').toLowerCase();
+    const terms={cotton:['cotton'],polyester:['polyester'],linen:['linen'],viscose:['viscose','rayon','modal','cupro'],wool:['wool','merino','cashmere'],nylon:['nylon'],spandex:['spandex','elastane','lycra','polyurethane']};
+    return (terms[requested]||[requested]).some(term=>text.includes(term));
+  }
   function label(slug,locale='en'){
     const item=CONSTRUCTIONS.find(entry=>entry.slug===normalizeSlug(slug))||CONSTRUCTIONS.at(-1);
     return item.label[LOCALES.includes(locale)?locale:'en']||item.label.en;
   }
-  return Object.freeze({ALIASES,CONSTRUCTIONS,LOCALES,classify,label,normalizeSlug});
+  return Object.freeze({ALIASES,CONSTRUCTIONS,LOCALES,MATERIALS,classify,label,materialLabel,materialMatches,normalizeMaterialSlug,normalizeSlug});
 });
