@@ -803,6 +803,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
   render();
   window.ARCANA_onLang(render);
+  window.addEventListener('pageshow',e=>{if(e.persisted)refreshRemote(1);});
 };
 </script>
 </body>

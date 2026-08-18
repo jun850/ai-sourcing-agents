@@ -30,6 +30,10 @@
     "qa:browser": "node scripts/qa-browser.js",
     "qa:intools": "node scripts/qa-intools.js",
     "qa:regression": "npm run qa:static && npm run qa:browser && npm run qa:intools",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "qa:full": "npm run qa:static && npm run qa:regression && npm run test:e2e",
     "bundle:analytics": "esbuild js/analytics-entry.js --bundle --minify --outfile=js/analytics.bundle.js",
     "bundle:supabase": "esbuild js/supabase-entry.js --bundle --minify --outfile=js/supabase-client.bundle.js",
     "bundle:all": "npm run bundle:analytics && npm run bundle:supabase"
@@ -52,6 +56,7 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "esbuild": "^0.28.1"
   }
 }

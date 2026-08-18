@@ -341,9 +341,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     // ── OEM package wiring ──
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
-      const pkgEl=document.querySelector('[data-pkg-group] [data-pkg].sel');
-      const pkgName=pkgEl ? pkgEl.querySelector('h4').textContent.trim() : '';
-      window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi?.value,[`${T('OEM service selected')}: ${pkgName}`])});
+      window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi?.value)});
     });
 
     // ── Wishlist + share wiring ──
@@ -364,11 +362,6 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     });
     document.querySelectorAll('[data-toast]').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();toast(b.dataset.toast);}));
     window.ARCANA_wireCards(document.querySelector('.prod-grid'));
-    const packageChoices=[...document.querySelectorAll('[data-pkg-group] .pkg-radio')];
-    packageChoices.forEach(choice=>choice.addEventListener('change',()=>{
-      if(!choice.checked)return;
-      packageChoices.forEach(input=>input.closest('[data-pkg]').classList.toggle('sel',input===choice));
-    }));
 
     // ── Copilot match panel ──
     // Only for a product that was ACTUALLY in the most recent Copilot result set
@@ -393,13 +386,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
 
   function oemSection(T,TR,money){
-    const pk=(n,title,tag,bullets,price)=>`<label class="pkg${n===1?' sel':''}" data-pkg><input class="pkg-radio" type="radio" name="oem-package" value="${n}" aria-labelledby="oem-package-${n}" ${n===1?'checked':''}><span class="pnum">${IC.factory}</span><h4 id="oem-package-${n}">${n}. ${title}</h4><div class="tag">${tag}</div><ul>${bullets.map(b=>`<li>${b}</li>`).join('')}</ul><div class="from">${price}</div></label>`;
+    const pk=(n,title,tag,bullets,price)=>`<div class="pkg" data-pkg><span class="pnum">${IC.factory}</span><h4>${n}. ${title}</h4><div class="tag">${tag}</div><ul>${bullets.map(b=>`<li>${b}</li>`).join('')}</ul><div class="from">${price}</div></div>`;
     return `
     <section class="oem-section section" data-pkg-group>
       <div class="oem-intro"><h2>${T('OEM Services')}</h2><span class="badge b-oem-soft" style="margin-top:14px">${T('Built for Your Brand')}</span>
         <p>${T('oemIntroPre')}${TR(p.seller)}${T('oemIntroPost')}</p>
         <button class="btn btn-gold" id="oemContactBtn" style="margin-top:18px">${IC.msg||''} ${T('Contact us')}</button></div>
-      <div class="oem-packages" role="radiogroup" aria-label="${T('OEM Services')}">
+      <div class="oem-packages" aria-label="${T('OEM Services')}">
         ${pk(1,T('Sampling Package'),T('Validate quality & design'),[T('Up to 3 samples'),T('Swatch & color cards'),T('Lab testing support'),`5–7 ${TR('days')} ${T('turnaround')}`],`<b>${money(45)}</b>`)}
         ${pk(2,T('Private Label'),T('Build your brand identity'),[T('Custom labels & tags'),T('Branded packaging'),T('Care label customization'),`10–14 ${TR('days')} ${T('turnaround')}`],`<b>${money(180)}</b>`)}
         ${pk(3,T('Color Matching'),T('Match your exact shade'),[T('Custom color development'),T('Lab dip & approval'),T('Fastness testing'),`10–14 ${TR('days')} ${T('turnaround')}`],`<b>${money(120)}</b>`)}
