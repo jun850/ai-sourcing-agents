@@ -35,27 +35,6 @@
       "name":"Atelix",
       "publisher":{"@id":"https://atelix.app/#organization"},
       "inLanguage":["en","ja","zh"]
-    },
-    {
-      "@type":"FAQPage",
-      "@id":"https://atelix.app/#sourcing-answers",
-      "mainEntity":[
-        {
-          "@type":"Question",
-          "name":"What can I source on Atelix?",
-          "acceptedAnswer":{"@type":"Answer","text":"Atelix lists fabrics, yarns, trims, accessories and full-package OEM services. Product pages surface composition, GSM, MOQ and indicative lead time so briefs start with operating details."}
-        },
-        {
-          "@type":"Question",
-          "name":"Where are Atelix suppliers based?",
-          "acceptedAnswer":{"@type":"Answer","text":"The current verified supplier roster is based in China and Japan, including Zhejiang, Guangdong, Fukui, Wakayama, Hyogo, Ehime, Osaka and Tokyo."}
-        },
-        {
-          "@type":"Question",
-          "name":"Which certifications appear on Atelix supplier profiles?",
-          "acceptedAnswer":{"@type":"Answer","text":"The current supplier roster lists GOTS, GRS, OEKO-TEX Standard 100, OCS and ISO 9001. Buyers should confirm certificate scope and validity directly with the supplier before placing an order."}
-        }
-      ]
     }
   ]
 }
@@ -124,42 +103,6 @@
       <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
       <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
       <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
-    </div>
-  </section>
-
-  <!-- SOURCING ANSWERS: clear, crawlable answers backed by the supplier directory -->
-  <section class="sourcing-answers" aria-labelledby="sourcing-answers-title">
-    <div class="sourcing-answers-head">
-      <div>
-        <p class="sourcing-answers-kicker">Sourcing, explained</p>
-        <h2 id="sourcing-answers-title">The essentials, before you request a quote</h2>
-        <p>Atelix helps fashion teams compare the supplier details that shape a viable brief.</p>
-      </div>
-      <a class="link-arrow" href="pages/factories.html">Browse verified suppliers <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-    </div>
-    <div class="sourcing-answer-list">
-      <article class="sourcing-answer">
-        <h3>What can I source on Atelix?</h3>
-        <p>Fabrics, yarns, trims, accessories and full-package OEM services. Product pages surface composition, GSM, MOQ and indicative lead time so briefs start with the operating details.</p>
-      </article>
-      <article class="sourcing-answer">
-        <h3>Where are Atelix suppliers based?</h3>
-        <p>The current verified supplier roster is based in China and Japan, including Zhejiang, Guangdong, Fukui, Wakayama, Hyogo, Ehime, Osaka and Tokyo.</p>
-      </article>
-      <article class="sourcing-answer">
-        <h3>How do I assess a supplier?</h3>
-        <p>Review the factory profile, product specifications, supplier-held certifications and production capabilities, then request a quote for your material, quantity and timing.</p>
-      </article>
-    </div>
-    <div class="sourcing-certifications" aria-labelledby="certifications-title">
-      <div>
-        <p class="sourcing-answers-kicker">Certification coverage</p>
-        <h3 id="certifications-title">Which certifications appear on supplier profiles?</h3>
-      </div>
-      <div>
-        <div class="certification-list" id="certificationList" aria-label="Supplier-held certifications"></div>
-        <p>These are certifications currently listed by suppliers in the Atelix directory. Confirm certificate scope and validity directly with the supplier before placing an order.</p>
-      </div>
     </div>
   </section>
 
@@ -398,25 +341,6 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     }
   }
 
-  const certificationList=document.getElementById('certificationList');
-  if(certificationList){
-    const certificationLabels={
-      'GOTS':'GOTS', 'GRS':'GRS', 'OEKO-TEX':'OEKO-TEX® Standard 100',
-      'Oeko-Tex':'OEKO-TEX® Standard 100', 'OCS':'OCS', 'ISO 9001':'ISO 9001'
-    };
-    const certificationOrder=['GOTS','GRS','OEKO-TEX® Standard 100','OCS','ISO 9001'];
-    const certificationSuppliers={};
-    (window.ARCANA_FACTORIES||[]).forEach(factory=>{
-      (factory.certs||[]).forEach(certification=>{
-        const label=certificationLabels[certification]||certification;
-        (certificationSuppliers[label]||=new Set()).add(factory.id);
-      });
-    });
-    certificationList.innerHTML=certificationOrder.filter(label=>certificationSuppliers[label]).map(label=>{
-      const count=certificationSuppliers[label].size;
-      return `<span class="certification-pill"><b>${escapeHTML(label)}</b><small>${count} supplier${count===1?'':'s'}</small></span>`;
-    }).join('');
-  }
 };
 </script>
 </body>

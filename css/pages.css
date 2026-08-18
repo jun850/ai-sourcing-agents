@@ -699,23 +699,6 @@
 .fcard-skeleton .fbody i{display:block;height:12px;border-radius:6px}
 .fcard-skeleton .fbody i:nth-child(1){width:72%;height:21px}.fcard-skeleton .fbody i:nth-child(2){width:38%;height:22px}.fcard-skeleton .fbody i:nth-child(3){width:66%}.fcard-skeleton .fbody i:nth-child(4){width:52%}.fcard-skeleton .fbody i:nth-child(5){width:100%;height:40px;margin-top:auto}
 
-/* ---- Sourcing answers: clear proof, held in the same cadence as the supplier directory ---- */
-.sourcing-answers{padding:52px 0 6px;border-top:1px solid var(--line)}
-.sourcing-answers-head{display:flex;align-items:end;justify-content:space-between;gap:28px;margin-bottom:20px}
-.sourcing-answers-kicker{margin:0 0 8px;color:var(--green);font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
-.sourcing-answers h2{margin:0;font-family:var(--sans);font-size:30px;font-weight:600;letter-spacing:-.02em}
-.sourcing-answers-head p:not(.sourcing-answers-kicker){max-width:58ch;margin:10px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
-.sourcing-answers-head .link-arrow{flex:none;margin-bottom:3px;white-space:nowrap}
-.sourcing-answer-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--line)}
-.sourcing-answer{padding:18px 18px 20px;border-bottom:1px solid var(--line)}
-.sourcing-answer+.sourcing-answer{border-left:1px solid var(--line)}
-.sourcing-answer h3,.sourcing-certifications h3{font-size:15px;font-weight:700;line-height:1.35;text-wrap:balance}
-.sourcing-answer p,.sourcing-certifications p{margin:8px 0 0;color:var(--muted);font-size:13px;line-height:1.62}
-.sourcing-certifications{display:grid;grid-template-columns:minmax(230px,.72fr) minmax(0,1.28fr);gap:32px;padding:22px 18px 24px;border-bottom:1px solid var(--line);background:var(--green-l)}
-.certification-list{display:flex;flex-wrap:wrap;gap:8px}
-.certification-pill{display:inline-flex;align-items:baseline;gap:7px;padding:7px 10px;border:1px solid #c9d7cb;border-radius:var(--radius-pill);background:#fff;color:var(--green)}
-.certification-pill b{font-size:12px;font-weight:700}
-.certification-pill small{color:var(--muted);font-size:11px}
 
 /* ---- Help center: answers lead, terms stay visible ---- */
 .help-center{padding-bottom:18px}
@@ -1220,10 +1203,6 @@
   .camp-cats{grid-template-columns:repeat(3,1fr)}
   .auth-aside{display:none}
   .home-2col,.listing{grid-template-columns:1fr}
-  .sourcing-answer-list{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .sourcing-answer+.sourcing-answer{border-left:0}
-  .sourcing-answer:nth-child(2n){border-left:1px solid var(--line)}
-  .sourcing-certifications{grid-template-columns:1fr;gap:16px}
   .factory-mark-item{padding:15px 18px}
   .factory-mark-name{max-width:130px}
   .home-banner .bov{max-width:78%}
@@ -1279,7 +1258,7 @@
   .quick-panel .qp-row{grid-template-columns:1fr}
   .tabs{overflow:auto;flex-wrap:nowrap;scrollbar-width:none}
   .tabs [data-tab]{flex:0 0 auto}
-  .sourcing-answers,.factory-network{display:none}
+  .factory-network{display:none}
 
   /* Catalog becomes a phone task flow: concise heading, horizontal quick tabs,
      then cards. Full filters remain a desktop capability. */
@@ -1383,13 +1362,6 @@
   .sell-hero{padding:30px 22px}
   .sell-hero h1{font-size:31px}
   .sell-hero .btns{flex-wrap:wrap}
-  .sourcing-answers{padding-top:40px}
-  .sourcing-answers-head{align-items:flex-start;flex-direction:column;gap:14px}
-  .sourcing-answers h2{font-size:26px}
-  .sourcing-answers-head .link-arrow{margin-bottom:0}
-  .sourcing-answer-list{grid-template-columns:1fr}
-  .sourcing-answer:nth-child(2n){border-left:0}
-  .sourcing-certifications{padding:20px 14px}
   .help-hero{align-items:flex-start;flex-direction:column;padding:8px 0 28px;gap:18px}
   .help-hero h1{font-size:34px}
   .help-hero .btn{width:100%}

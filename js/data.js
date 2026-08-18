@@ -1901,7 +1901,9 @@ window.ATELIX_refreshCatalogStats=()=>{
   window.ATELIX_catalogStats=Object.freeze({
     products:products.length,
     factories:factories.length,
-    countries:new Set(factories.map(factory=>factory.region)).size,
+    // A missing region isn't a distinct country — exclude it so factories with
+    // no location on file don't inflate the count.
+    countries:new Set(factories.map(factory=>factory.region).filter(Boolean)).size,
     productCountByCategory:Object.freeze(productCountByCategory),
     supplierCountByCategory:Object.freeze(supplierCountByCategory)
   });
