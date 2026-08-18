@@ -256,6 +256,7 @@
   display:flex;
   align-items:center;
   gap:8px;
+  margin-bottom:14px;
 }
 .apoc-grid{
   display:grid;
@@ -524,12 +525,13 @@
   align-items:center;
   gap:8px;
   background:var(--white);
-  border:1px solid var(--paper-line);
+  border:1px solid transparent;
   border-radius:var(--r-pill);
   padding:6px 6px 6px 18px;
+  box-shadow:var(--shadow-card);
   transition:border-color .18s, box-shadow .18s;
 }
-.apoc-composer-form:focus-within{ border-color:var(--sage-500); box-shadow:0 0 0 3px var(--sage-100); }
+.apoc-composer-form:focus-within{ border-color:transparent; box-shadow:var(--shadow-card); }
 .apoc-composer-form input{
   flex:1;
   border:none;
@@ -540,6 +542,7 @@
   color:var(--ink);
   min-width:0;
 }
+.apoc-composer-form input:focus-visible{ outline:none; }
 .apoc-composer-form input::placeholder{ color:var(--ink-soft); opacity:.55; }
 .apoc-send-btn{
   flex:none;
