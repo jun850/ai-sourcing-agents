@@ -1920,6 +1920,15 @@
     /* --- image search --- */
     let photoSearchOpen = false;
     function camPanel() {
+      if (!Store.session()) {
+        close();
+        toast("Sign in to search by fabric photo.");
+        location.href =
+          P("login.html") +
+          "?next=" +
+          encodeURIComponent("category.html?design-match=1");
+        return;
+      }
       photoSearchOpen = true;
       // Invalidate an in-flight recent-search or Algolia render before it can
       // overwrite the image-search panel after the camera is clicked.
