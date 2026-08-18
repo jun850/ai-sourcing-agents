@@ -233,12 +233,16 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: MODEL,
         messages: llmMessages,
-        // The preset resolves to an NVIDIA reasoning-capable model. Its hidden
-        // chain-of-thought is the dominant source of latency, and we never use
-        // it (we only want the final JSON) — turn it off so replies come back
-        // fast, per the same fix already applied in design-match/index.ts.
-        reasoning: { enabled: false },
-        max_tokens: 3000,
+        // The preset resolves to a reasoning model; leave ample budget so its
+        // internal reasoning doesn't consume the whole allowance before the
+        // final answer (the bug that bit the earlier public function).
+        // Tried `reasoning:{enabled:false}` here to cut latency (matching
+        // design-match's fix) — in production this preset kept spending most
+        // of a much smaller max_tokens on hidden reasoning anyway (confirmed
+        // via function_logs: finish_reason "length", then unparseable "stop"
+        // content), so it's reverted. Revisit with response_format:json_schema
+        // (like design-match uses) before trying reasoning:false again here.
+        max_tokens: 10000,
       }),
     });
     if (!resp.ok) {

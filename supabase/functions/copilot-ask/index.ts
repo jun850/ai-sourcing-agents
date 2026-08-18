@@ -152,12 +152,12 @@ Deno.serve(async (req) => {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userContent },
           ],
-          // The preset resolves to an NVIDIA reasoning-capable model. Its
-          // hidden chain-of-thought is the dominant source of latency and we
-          // never use it (only the final paragraph matters) — turn it off so
-          // replies come back fast, matching design-match/index.ts.
-          reasoning: { enabled: false },
-          max_tokens: 400,
+          // The current preset uses a reasoning-capable model. Leave enough
+          // completion budget for its internal work and the short final copy.
+          // (Tried reasoning:{enabled:false} + a smaller budget here too — see
+          // copilot-agent/index.ts for why it was reverted after a production
+          // failure on that function using the same preset.)
+          max_tokens: 1024,
         }),
       },
     );

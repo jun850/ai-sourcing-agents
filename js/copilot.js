@@ -14,8 +14,8 @@ const CATS = [
   {cat:'oem',         re:/\boem\b|private[ -]?label|cut\s*&?\s*sew|full[ -]?package|sampling|dyeing|colou?r[ -]?match/},
   {cat:'trims',       re:/\bribbon|elastic|\btape\b|\blace\b|\btrims?\b|binding|\bcord\b|grosgrain/},
   {cat:'accessories', re:/\bzipper|\bbutton|\blabels?\b|\bhook|rivet|buckle|\baccessor/},
-  {cat:'yarns',       re:/\byarns?\b|\bthread|filament|\bply\b|\bne\s?\d/},
-  {cat:'fabrics',     re:/\bfabric|jersey|twill|denim|satin|fleece|canvas|chambray|flannel|woven|\bknit|taslan|suiting/},
+  {cat:'yarns',       re:/\byarns?\b|\bsewing\s+thread\b|\bembroidery\s+thread\b|filament|\bply\b|\bne\s?\d/},
+  {cat:'fabrics',     re:/\bfabric|jersey|twill|denim|satin|fleece|canvas|chambray|flannel|woven|\bknit|taslan|suiting|\blawn\b/},
 ];
 const MATERIALS = [
   {k:'organic cotton',    re:/organic\s*cotton/,          comp:'organic cotton'},
