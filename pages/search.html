@@ -30,6 +30,7 @@
       <div class="prod-grid search-product-grid" id="searchProductGrid" aria-busy="true"></div>
       <div class="search-factory-list" id="searchFactoryList" hidden aria-busy="true"></div>
       <div class="search-results-status" id="searchResultsStatus" role="status"><span aria-hidden="true"></span><p>Searching verified listings…</p></div>
+      <div class="search-load-sentinel" id="searchLoadSentinel" aria-live="polite" hidden></div>
     </section>
   </div>
 </main>
@@ -45,12 +46,13 @@ window.ARCANA_PAGE=async function({IC}){
   const params=new URLSearchParams(location.search);
   const query=(params.get('q')||'').trim();
   let activeType=params.get('type')==='factories'?'factories':'products';
-  let activeFilter='all',sort='relevance',productHits=[],factoryHits=[];
+  let activeFilter='all',sort='relevance',productHits=[],factoryHits=[],productPage=0,productHasMore=false,isLoadingProducts=false,searchRequest=0;
   const T=window.ARCANA_T,TR=window.ARCANA_TR;
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const title=document.getElementById('searchResultsTitle'),summary=document.getElementById('searchResultsSummary');
   const grid=document.getElementById('searchProductGrid'),factoryList=document.getElementById('searchFactoryList');
   const status=document.getElementById('searchResultsStatus'),count=document.getElementById('searchResultCount');
+  const loadSentinel=document.getElementById('searchLoadSentinel');
   const rail=document.getElementById('searchFilterRail'),quick=document.getElementById('searchQuickFilters');
   const sortSelect=document.getElementById('searchSort');
   const headerInput=document.getElementById('site-search'); if(headerInput) headerInput.value=query;
@@ -116,7 +118,15 @@ window.ARCANA_PAGE=async function({IC}){
     const heading=T(type==='products'?'No products found':'No factories found');
     return `<section class="search-empty"><span aria-hidden="true">${IC.search}</span><h2>${heading}${query?` — “${esc(query)}”`:''}</h2><p>${T('Try a broader material, product, supplier, city or country name.')}</p><button type="button" class="btn btn-out" data-clear-search>${T('Clear search')}</button></section>`;
   }
-  function render(){
+  const skeletons=count=>Array.from({length:count},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
+  const clearSkeletons=()=>grid.querySelectorAll('[data-search-skeleton]').forEach(card=>card.remove());
+  function updateLoadState(){
+    const show=activeType==='products'&&productHasMore;
+    loadSentinel.hidden=!show;
+    loadSentinel.setAttribute('aria-busy',String(isLoadingProducts));
+    loadSentinel.innerHTML=isLoadingProducts?`<span class="muted">${T('Loading more products…')}</span>`:'';
+  }
+  function render({append=false,products=null}={}){
     paintFilters();
     const isProducts=activeType==='products',list=isProducts?visibleProducts():visibleFactories();
     grid.hidden=!isProducts;factoryList.hidden=isProducts;sortSelect.closest('label').hidden=!isProducts;
@@ -124,14 +134,24 @@ window.ARCANA_PAGE=async function({IC}){
     document.getElementById('factoriesTab').setAttribute('aria-selected',String(!isProducts));document.getElementById('factoriesTab').tabIndex=isProducts?-1:0;
     document.getElementById('searchResultsPanel').setAttribute('aria-labelledby',isProducts?'productsTab':'factoriesTab');
     count.textContent=`${list.length} ${T(list.length===1?'result':'results')}`;
-    if(isProducts){grid.innerHTML=list.length?list.map(product=>window.ARCANA_card(product,{href:window.ATELIX_productRoute(product.id),fabricSpec:product.cat==='fabrics'})).join(''):emptyState('products');window.ARCANA_wireCards(grid);}
+    if(isProducts){
+      clearSkeletons();
+      const cards=(products||list).map(product=>window.ARCANA_card(product,{href:window.ATELIX_productRoute(product.id),fabricSpec:product.cat==='fabrics'})).join('');
+      if(append)grid.insertAdjacentHTML('beforeend',cards);
+      else grid.innerHTML=cards||emptyState('products');
+      window.ARCANA_wireCards(grid);
+    }
     else factoryList.innerHTML=list.length?list.map(factoryCard).join(''):emptyState('factories');
+    updateLoadState();
     document.querySelectorAll('[data-clear-search]').forEach(button=>button.addEventListener('click',()=>{location.href='/search';}));
   }
   async function load(){
     status.hidden=false;grid.hidden=true;factoryList.hidden=true;
+    const request=++searchRequest;isLoadingProducts=true;productPage=0;productHasMore=false;grid.innerHTML=skeletons(6);updateLoadState();
     try{
-      const [products,factories]=await Promise.all([window.ATELIX_searchPublicAlgolia('products',query,{hitsPerPage:100}),window.ATELIX_searchPublicAlgolia('factories',query,{hitsPerPage:100})]);
+      const [products,factories]=await Promise.all([window.ATELIX_searchPublicAlgolia('products',query,{hitsPerPage:24,page:0}),window.ATELIX_searchPublicAlgolia('factories',query,{hitsPerPage:100})]);
+      if(request!==searchRequest)return;
+      productPage=Number(products.page||0);productHasMore=Number(products.page||0)+1<Number(products.nbPages||0);
       productHits=(products.hits||[]).map(localProduct).filter(Boolean);factoryHits=(factories.hits||[]).map(localFactory).filter(Boolean);
       const indexedProducts=new Set(productHits.map(product=>product.id)), indexedFactories=new Set(factoryHits.map(factory=>factory.id));
       productHits.push(...window.ARCANA_PRODUCTS.filter(product=>!indexedProducts.has(product.id)&&localMatch(searchableProduct(product),query)));
@@ -139,10 +159,26 @@ window.ARCANA_PAGE=async function({IC}){
     }catch(_){
       productHits=window.ARCANA_PRODUCTS.filter(product=>localMatch(searchableProduct(product),query));
       factoryHits=window.ARCANA_FACTORIES.filter(factory=>localMatch(searchableFactory(factory),query));
+      productPage=0;productHasMore=false;
     }
-    status.hidden=true;grid.setAttribute('aria-busy','false');factoryList.setAttribute('aria-busy','false');
+    if(request!==searchRequest)return;
+    isLoadingProducts=false;status.hidden=true;grid.setAttribute('aria-busy','false');factoryList.setAttribute('aria-busy','false');
     document.getElementById('productTabCount').textContent=productHits.length;document.getElementById('factoryTabCount').textContent=factoryHits.length;
     render();
+  }
+  async function loadMoreProducts(){
+    if(activeType!=='products'||!productHasMore||isLoadingProducts)return;
+    isLoadingProducts=true;grid.insertAdjacentHTML('beforeend',skeletons(6).replaceAll('class="tcard-skeleton"','class="tcard-skeleton" data-search-skeleton="1"'));updateLoadState();
+    try{
+      const next=await window.ATELIX_searchPublicAlgolia('products',query,{hitsPerPage:24,page:productPage+1});
+      const existing=new Set(productHits.map(product=>product.id));
+      const nextProducts=(next.hits||[]).map(localProduct).filter(product=>product&&!existing.has(product.id));
+      productHits.push(...nextProducts);
+      productPage=Number(next.page||productPage+1);productHasMore=productPage+1<Number(next.nbPages||0);
+      document.getElementById('productTabCount').textContent=productHits.length;
+      render({append:true,products:nextProducts});
+    }catch(error){console.error('Search result loading failed',error);clearSkeletons();productHasMore=false;}
+    finally{isLoadingProducts=false;updateLoadState();}
   }
   document.querySelector('.search-type-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-result-type]');if(!button)return;activeType=button.dataset.resultType;activeFilter='all';params.set('type',activeType);history.replaceState(null,'','/search?'+params.toString());render();});
   document.querySelector('.search-type-tabs').addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight'].includes(event.key))return;event.preventDefault();const target=activeType==='products'?'factories':'products';document.querySelector(`[data-result-type="${target}"]`).click();document.querySelector(`[data-result-type="${target}"]`).focus();});
@@ -155,6 +191,9 @@ window.ARCANA_PAGE=async function({IC}){
   rail.addEventListener('change',event=>{if(event.target.name==='searchFilter'){activeFilter=event.target.value;render();}});
   rail.addEventListener('click',event=>{const button=event.target.closest('[data-search-filter]');if(button){activeFilter=button.dataset.searchFilter;render();}});
   sortSelect.addEventListener('change',()=>{sort=sortSelect.value;render();});
+  const loadObserver='IntersectionObserver' in window?new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting))loadMoreProducts();},{rootMargin:'900px 0px'}):null;
+  if(loadObserver)loadObserver.observe(loadSentinel);
+  else window.addEventListener('scroll',()=>{if(window.scrollY+window.innerHeight>=document.body.scrollHeight-900)loadMoreProducts();},{passive:true});
   await load();
   if(query) window.ARCANA_API?.recordRecentSearch?.(query);
   window.ARCANA_onLang(()=>{localizeStatic();render();});

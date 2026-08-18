@@ -129,7 +129,7 @@
         <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
         <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
       </div>
-      <nav class="catalog-pagination" id="catalogPagination" aria-label="Catalogue pages" hidden></nav>
+      <div class="catalog-load-sentinel" id="catalogLoadSentinel" aria-live="polite" hidden></div>
       <section class="oem-material-sources" id="oemMaterialSources" hidden aria-labelledby="oem-material-sources-title"></section>
     </div>
   </div>
@@ -634,7 +634,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount'), oemMaterialSources=document.getElementById('oemMaterialSources');
-  const pagination=document.getElementById('catalogPagination');
+  const pagination=document.getElementById('catalogLoadSentinel');
   const catalogSkeleton=(count=6)=>Array.from({length:count},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
   const addLoadingCards=(count=6)=>{
     const fragment=document.createRange().createContextualFragment(catalogSkeleton(count));
