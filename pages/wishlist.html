@@ -13,9 +13,18 @@
 <div id="hdr"></div>
 
 <main class="wrap">
-  <nav class="crumbs"><a href="../index.html">Home</a><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg><span class="cur">Wishlist</span></nav>
+  <nav class="crumbs"><span class="cur">Wishlist</span></nav>
 
-  <div id="wlRoot"></div>
+  <div id="wlRoot" class="wl-loading" aria-busy="true" aria-live="polite">
+    <div class="wl-skeleton" aria-hidden="true">
+      <div class="wl-skeleton-toolbar"><i></i><i></i><i></i></div>
+      <div class="wl-skeleton-row"><i class="check"></i><i class="product"></i><i class="meta"></i><i class="action"></i></div>
+      <div class="wl-skeleton-row"><i class="check"></i><i class="product"></i><i class="meta"></i><i class="action"></i></div>
+      <div class="wl-skeleton-row"><i class="check"></i><i class="product"></i><i class="meta"></i><i class="action"></i></div>
+      <div class="wl-skeleton-row"><i class="check"></i><i class="product"></i><i class="meta"></i><i class="action"></i></div>
+    </div>
+    <span class="sr-only">Loading wishlist</span>
+  </div>
 </main>
 
 <div id="ftr"></div>
@@ -40,6 +49,8 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
   const reco=window.ARCANA_recommended(8); // computed once so it doesn't reshuffle on re-render
 
   function render(){
+    root.classList.remove('wl-loading');
+    root.setAttribute('aria-busy','false');
     const saved=Store.saved().filter(i=>M[i.id]);
     if(!saved.length){
       root.innerHTML=`<div class="panel cart-empty">

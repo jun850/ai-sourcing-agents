@@ -70,7 +70,9 @@
 .apoc-ambient-head::before{
   content:'';
   position:absolute;
-  inset:-32px 0 -14px;
+  inset:-32px auto -14px 50%;
+  width:100vw;
+  transform:translateX(-50%);
   background:linear-gradient(180deg, rgba(20,24,16,.3), rgba(20,24,16,0) 100%);
   pointer-events:none;
   z-index:-1;
