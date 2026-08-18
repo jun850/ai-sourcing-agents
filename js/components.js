@@ -3,7 +3,7 @@
   "use strict";
 
   /* ---------- path helpers ---------- */
-  const CLEAN_MARKETPLACE_ROUTE = /^\/(?:categories|search)(?:\/|$)/.test(
+  const CLEAN_MARKETPLACE_ROUTE = /^\/(?:categories|search|agentpoc)(?:\/|$)/.test(
     location.pathname,
   );
   const ROOT = document.body.dataset.root === ".." && !CLEAN_MARKETPLACE_ROUTE; // true inside /pages
@@ -1229,7 +1229,11 @@
       btn.setAttribute("aria-expanded", "false");
       if (focusBtn) btn.focus();
     }
-    btn.addEventListener("click", open);
+    // Clicking Athelia anywhere on the site opens the full agent at /agentpoc,
+    // rather than the inline mini-composer, so the copilot is one consistent
+    // surface. void(open) keeps the panel machinery available but unused.
+    btn.addEventListener("click", () => { location.href = "/agentpoc"; });
+    void open;
     form
       .querySelector(".cfb-close")
       .addEventListener("click", () => close(true));

@@ -38,7 +38,7 @@ A deterministic engine has already searched the LIVE catalog and given you CONTE
 
 Decide what to say and which products to surface. Reply with ONLY minified JSON, no markdown:
 {"reply":"<your conversational answer, max 60 words, plain text>","show":["<candidate id>", ...],"drafts":false}
-- "show": the ids (0-5, best first) of candidates worth showing as cards for THIS turn; [] when none fit or the turn is purely conversational. Only ids present in candidates.
+- "show": the ids (0-5, best first) of candidates to render as cards for THIS turn. CRITICAL: every product you name or recommend in "reply" MUST have its id here, so its add-to-cart card appears. Use [] only when the turn is purely conversational or nothing fits. Only ids present in candidates.
 - "reply": speak naturally. If nothing fits the (possibly narrowed) request, say so honestly and suggest relaxing one constraint — do not show unrelated products.
 - "drafts": true only if the buyer explicitly asked you to draft/write supplier inquiries.
 Tone: precise, calm, confident. Never salesy, no exclamation points.`;

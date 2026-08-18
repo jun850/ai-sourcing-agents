@@ -289,6 +289,20 @@ function parseQty(text){
   const m = text.match(/(\d[\d,]*)\s*(m|meters?|metres?|kg|units?|pcs?|pieces?)\b/i);
   return m ? parseInt(m[1].replace(/,/g,''),10) : null;
 }
+// candidate ids/names the agent's reply mentions inline, so their cards render
+function referencedInReply(reply){
+  const text = String(reply||'');
+  const low = text.toLowerCase();
+  const out = [];
+  for(const p of state.candidates){
+    const id = String(p.id||'');
+    const idHit = id && new RegExp('\\b'+id.replace(/[-/\\^$*+?.()|[\]{}]/g,'\\$&')+'\\b','i').test(text);
+    const name = String(p.name||'');
+    const nameHit = name.length>6 && low.includes(name.toLowerCase().slice(0,20));
+    if(idHit || nameHit) out.push(p.id);
+  }
+  return out;
+}
 
 /* ================= deterministic action turn ================= */
 
@@ -339,7 +353,11 @@ async function handleChat(text){
     stop();
     appendAgent(payload.reply); logAgent(payload.reply);
     if(benchmark && benchmark.benchmark && !benchmark.benchmark.insufficient) appendBenchmark(benchmark);
-    const show = (payload.show||[]).map(findProduct).filter(Boolean);
+    // Show cards for every product the agent surfaced — its `show` list PLUS any
+    // candidate the reply names inline (ids like "FAB-154" or the product name),
+    // so a product mentioned in prose always renders an add-to-cart card.
+    const showIds = Array.from(new Set([...(payload.show||[]), ...referencedInReply(payload.reply)]));
+    const show = showIds.map(findProduct).filter(Boolean);
     if(show.length){ appendCards(show); state.lastRef = show[0].id; }
     if(payload.drafts) requestDrafts();
     offerActions();
