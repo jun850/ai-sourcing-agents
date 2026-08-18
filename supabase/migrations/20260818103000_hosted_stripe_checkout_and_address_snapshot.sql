@@ -1,7 +1,7 @@
 -- A payment path is fixed when an order is created. Changing the Intools
 -- setting must not change how an already-created order can be paid.
 ALTER TABLE public.orders
-  ADD COLUMN IF NOT EXISTS payment_path text NOT NULL DEFAULT 'bank_transfer'
+  ADD COLUMN IF NOT EXISTS payment_path text NOT NULL DEFAULT 'stripe'
   CHECK (payment_path IN ('bank_transfer', 'stripe'));
 
 -- Retire the client-supplied delivery-address RPC. The replacement snapshots a

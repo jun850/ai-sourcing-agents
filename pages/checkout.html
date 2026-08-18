@@ -13,7 +13,15 @@
 <div id="hdr"></div>
 
 <main class="wrap" style="padding-bottom:40px">
-  <div id="coRoot"></div>
+  <div id="coRoot" class="checkout-loading" aria-busy="true" aria-live="polite">
+    <div class="checkout-loading-flow" aria-hidden="true">
+      <div class="checkout-loading-block"><i class="checkout-sk-line checkout-sk-line--heading"></i><i class="checkout-sk-line checkout-sk-line--wide"></i><i class="checkout-sk-line checkout-sk-line--medium"></i></div>
+      <div class="checkout-loading-block checkout-loading-items"><i class="checkout-sk-line checkout-sk-line--heading"></i><i class="checkout-sk-line checkout-sk-line--wide"></i><i class="checkout-sk-line checkout-sk-line--wide"></i><i class="checkout-sk-line checkout-sk-line--medium"></i></div>
+      <div class="checkout-loading-block checkout-loading-note"><i class="checkout-sk-line checkout-sk-line--wide"></i><i class="checkout-sk-line checkout-sk-line--medium"></i></div>
+    </div>
+    <aside class="checkout-loading-summary" aria-hidden="true"><i class="checkout-sk-line checkout-sk-line--heading"></i><i class="checkout-sk-line"></i><i class="checkout-sk-line"></i><i class="checkout-sk-line checkout-sk-line--medium"></i><i class="checkout-sk-button"></i></aside>
+    <span class="sr-only">Loading checkout details</span>
+  </div>
 </main>
 
 <div id="ftr"></div>
@@ -38,6 +46,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const unitPrice=(product,item)=>isSwatch(item)?swatchUnit():productAmount(product,1);
   const lineAmount=(product,item)=>unitPrice(product,item)*item.qty;
   const itemName=(product,item)=>isSwatch(item)?`${T('Swatch')} — ${TR(product.name)}`:TR(product.name);
+  const renderRoot=html=>{root.setAttribute('aria-busy','false');root.classList.remove('checkout-loading');root.innerHTML=html;};
   // Read the cart captured at checkout intent so an in-flight account sync
   // cannot replace the buyer's local selection during page navigation.
   const cart=(Store.checkoutCart?Store.checkoutCart():Store.cart()).filter(i=>M[i.id]);
@@ -55,33 +64,28 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   let addressBook=null;
 
   if(!cart.length){
-    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`;
+    renderRoot(`<div class="panel cart-empty"><span class="ce-ic">${IC.cart}</span><h1>${T('Nothing to check out')}</h1><p>${T('Your cart is empty.')}</p><a class="btn btn-green" href="/categories/fabrics">${T('Browse fabrics')}</a></div>`);
     return;
   }
   if(cart.some(item=>!isSwatch(item)&&(M[item.id].pricingMode==='quote'||!(M[item.id].price>0)))){
-    root.innerHTML=`<div class="panel cart-empty"><span class="ce-ic">${IC.msg}</span><h1>${T('Contact supplier')}</h1><p>${T('Volume pricing shared on quote')}</p><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><a class="btn btn-out" href="cart.html">${T('View cart')}</a></div>`;
+    renderRoot(`<div class="panel cart-empty"><span class="ce-ic">${IC.msg}</span><h1>${T('Contact supplier')}</h1><p>${T('Volume pricing shared on quote')}</p><a class="btn btn-green" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><a class="btn btn-out" href="cart.html">${T('View cart')}</a></div>`);
     return;
   }
 
   // Checkout requires a signed-in buyer because place_order is account-scoped.
   const profile = await window.ARCANA_API.getSessionProfile();
   if(!profile){
-    root.innerHTML=`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
+    renderRoot(`<div class="panel cart-empty" style="max-width:520px;margin:0 auto">
       <span class="ce-ic">${IC.lock}</span>
       <h1>Log in to check out</h1>
       <p>Sign in to your Atelix account to submit this order. Your cart is saved.</p>
       <a class="btn btn-green" href="login.html?next=checkout.html">Log in to continue</a>
       <p style="margin-top:14px;font-size:.9375rem;color:var(--muted)">New to Atelix? <a href="signup.html" style="color:var(--green);font-weight:600">Create an account</a></p>
-    </div>`;
+    </div>`);
     return;
   }
-  const [rates,stripeCheckoutEnabled]=await Promise.all([
-    window.ARCANA_API.getShippingRates(),
-    window.ARCANA_API.getPlatformSetting?.('stripe_checkout_enabled')||Promise.resolve('false')
-  ]);
-  const paymentNote=stripeCheckoutEnabled==='true'
-    ? `<strong>Secure payment with Stripe</strong><span>After you confirm the order, you’ll be redirected to Stripe Checkout to review and pay securely.</span>`
-    : `<strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span>`;
+  const rates=await window.ARCANA_API.getShippingRates();
+  const paymentNote=`<strong>Secure payment with Stripe</strong><span>After you confirm the order, you’ll be redirected to Stripe Checkout to review and pay securely.</span>`;
   const groups=[];
   cart.forEach(item=>{
     const product=M[item.id],key=product.factoryId||product.seller||'supplier';
@@ -104,7 +108,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     return Math.ceil((raw-Number.EPSILON)/increment)*increment;
   };
 
-  root.innerHTML=`<header class="checkout-page-head"><h1>Checkout</h1><p>Confirm delivery and review the final total before placing your order.</p></header>
+  renderRoot(`<header class="checkout-page-head"><h1>Checkout</h1><p>Confirm delivery and review the final total before placing your order.</p></header>
     <div class="co-wrap">
       <div class="checkout-flow">
         <section class="panel checkout-block" aria-labelledby="deliveryTitle">
@@ -135,7 +139,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="address-picker-tools"><label class="address-search"><span class="sr-only">Search saved addresses</span><input id="checkoutAddressSearch" type="search" placeholder="Search by label, city, or country"></label><button class="btn btn-green" type="button" id="checkoutAddAddress">+ Add address</button></div>
         <div id="checkoutAddressList" class="address-list address-picker-list"></div>
       </div>
-    </dialog>`;
+    </dialog>`);
 
   const picker=root.querySelector('.address-picker');
   const pickerTrigger=root.querySelector('[data-address-picker]');

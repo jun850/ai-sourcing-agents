@@ -42,15 +42,6 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   }
 
   // Active payment account, available only to authenticated marketplace users.
-  const [bank, PAYMENT_METHOD, STRIPE_ENABLED] = await Promise.all([
-    API.getBankAccount(),
-    API.getPlatformSetting ? API.getPlatformSetting('payment_method') : Promise.resolve('bank_transfer'),
-    API.getPlatformSetting ? API.getPlatformSetting('stripe_checkout_enabled') : Promise.resolve('false')
-  ]);
-  const PLATFORM_BANK = bank
-    ? { bank:bank.bank_name, account:bank.account_number, holder:bank.account_name, swift:bank.swift||'—' }
-    : null;
-
   // Load the order (header + snapshot items) and map to the render shape.
   let order=null;
   async function load(){
@@ -80,8 +71,8 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   };
 
   const stepsFor=o=>[
-    ['Pending payment',o.paymentPath==='stripe' ? 'Complete payment securely with Stripe Checkout' : 'Awaiting bank transfer confirmation'],
-    ['Payment verified',"We've matched your transfer"],
+    ['Pending payment',o.paymentPath==='stripe' ? 'Complete payment securely with Stripe Checkout' : 'Payment status pending'],
+    ['Payment verified',o.paymentPath==='stripe' ? 'Stripe payment confirmed' : "We've matched your payment"],
     ['In production','Supplier(s) confirmed and began production'],
     ['Shipped','Tracking shared once dispatched'],
     ['Delivered','Confirm receipt to complete your order'],
@@ -92,7 +83,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const fmtDate=ts=>new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
   function bankPanel(o){
-    if(o.status==='awaiting_payment' && (o.paymentPath==='stripe'||(!o.paymentPath&&STRIPE_ENABLED==='true'))) return `
+    if(o.status==='awaiting_payment' && o.paymentPath==='stripe') return `
       <section class="panel ord-bank">
         <h2>Complete payment</h2>
         <p class="ph">Pay ${money(o.total)} securely through Stripe. Your final amount is confirmed before payment.</p>
@@ -100,32 +91,11 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
           <button class="btn btn-gold" data-pay-stripe>${IC.lock} Continue to secure payment</button>
         </div>
       </section>`;
-    if(o.status==='awaiting_payment' && !PLATFORM_BANK) return `
-      <section class="panel ord-bank">
-        <h2>Payment instructions pending</h2>
-        <p class="ph">Do not transfer funds yet. Atelix will publish verified payment instructions here after reviewing the order.</p>
-        <a class="btn btn-out" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Payment instructions for '+o.no)}">Contact Atelix</a>
-      </section>`;
     if(o.status==='awaiting_payment') return `
       <section class="panel ord-bank">
-        <h2>Complete your payment</h2>
-        <p class="ph">Transfer <strong style="color:var(--ink)">${money(o.total)}</strong> to the bank account below to confirm your order.</p>
-        <div class="bank-instructions">
-          <div class="bank-step"><span class="bank-step-num">1</span><span>Transfer exactly <b>${money(o.total)}</b> to this account:</span></div>
-          <div class="bank-detail-card">
-            <div class="bank-row"><span class="k">Bank</span><span class="v">${PLATFORM_BANK.bank}</span></div>
-            <div class="bank-row"><span class="k">Account number</span><span class="v">${PLATFORM_BANK.account}</span></div>
-            <div class="bank-row"><span class="k">Account name</span><span class="v">${PLATFORM_BANK.holder}</span></div>
-            <div class="bank-row"><span class="k">SWIFT / BIC</span><span class="v">${PLATFORM_BANK.swift}</span></div>
-            <div class="bank-row"><span class="k">Currency</span><span class="v">USD</span></div>
-          </div>
-          <div class="bank-step"><span class="bank-step-num">2</span><span>Use <b>${o.no}</b> as your transfer reference / description</span></div>
-          <div class="bank-step"><span class="bank-step-num">3</span><span>After transferring, click the button below so we can match your payment</span></div>
-        </div>
-        <div class="ord-bank-actions" style="margin-top:20px">
-          <button class="btn btn-gold" data-transferred>${IC.lock} I have transferred</button>
-        </div>
-        <p class="bank-note">Payments are typically verified within 1–2 business days. You'll receive an email once confirmed.</p>
+        <h2>Payment status pending</h2>
+        <p class="ph">This order uses the current Stripe payment flow. Contact Atelix if you need help completing payment.</p>
+        <a class="btn btn-out" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Payment help for '+o.no)}">Contact Atelix</a>
       </section>`;
     if(o.status==='payment_declared') return `
       <section class="panel ord-bank">
@@ -194,15 +164,6 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   }
 
   function bind(){
-    const t=root.querySelector('[data-transferred]');
-    if(t) t.addEventListener('click',async ()=>{
-      t.disabled=true; const orig=t.innerHTML; t.textContent='Confirming…';
-      const { error } = await API.declarePayment(order.no);
-      if(error){ toast(`Could not confirm — ${error.message||'please try again.'}`); t.disabled=false; t.innerHTML=orig; return; }
-      await load();
-      toast("Marked as transferred — we'll verify and update this page.");
-      render();
-    });
     const stripeBtn=root.querySelector('[data-pay-stripe]');
     if(stripeBtn) stripeBtn.addEventListener('click',async ()=>{
       stripeBtn.disabled=true;stripeBtn.textContent='Preparing secure payment…';

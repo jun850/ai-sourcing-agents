@@ -446,7 +446,7 @@ const API = {
         p_insurance: !!insurance
       });
       if(error) return { error };
-      return { orderNo: data?.order_no || null, paymentPath: data?.payment_path || 'bank_transfer' };
+      return { orderNo: data?.order_no || null, paymentPath: data?.payment_path || 'stripe' };
     }catch(error){ return { error }; }
   },
 

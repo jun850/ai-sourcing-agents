@@ -146,7 +146,7 @@
       {id:'o2',order_no:'ARC-260814-0001',status:'payment_verified',buyer_name:'Yuki Tanaka',buyer_email:'yuki@example.com',buyer_company:'Komono Atelier',item_count:1,subtotal:840,fee:42,ship:10,qc_fee:16.80,ins_fee:8.40,total:917.20,ship_country:'JP',placed_at:'2026-08-14T14:00:00Z',payment_declared_at:'2026-08-14T16:00:00Z',payment_verified_at:'2026-08-15T10:00:00Z'},
       {id:'o3',order_no:'ARC-260813-0001',status:'completed',buyer_name:'Liam Porter',buyer_email:'liam@example.com',buyer_company:'Cloth Theory',item_count:2,subtotal:1680,fee:84,ship:18,qc_fee:16.80,ins_fee:8.40,total:1807.20,ship_country:'AU',placed_at:'2026-08-13T08:00:00Z',payment_declared_at:'2026-08-13T10:00:00Z',payment_verified_at:'2026-08-13T15:00:00Z'}
     ];
-    const settings={payment_method:'bank_transfer'};
+    const settings={payment_method:'stripe',stripe_checkout_enabled:'true'};
     const orderDetail={id:'o1',order_no:'ARC-260815-0001',status:'awaiting_payment',subtotal:2520,fee:126,ship:18,qc_fee:25.20,ins_fee:12.60,total:2701.80,ship_country:'ID',ship_address:'Jl. Sudirman 42, Jakarta Selatan 12190',shipping_service:'Tracked delivery',shipping_eta_min_days:3,shipping_eta_max_days:6,placed_at:'2026-08-15T09:30:00Z',payment_declared_at:null,payment_verified_at:null,buyer:{full_name:'Sarah Chen',email:'sarah@example.com',company_name:'Thread & Co',country:'ID'},items:[{name:'Organic Cotton Twill',seller:'Mori Textile',sku:'ATL-COT-104',unit_price:8.40,qty:300,line_total:2520,option_selection:null,buyer_note:'Need natural white, no bleaching'}],fulfillments:[{factory_name:'Mori Textile',fulfillment_status:'pending',tracking:null}],events:[{status:'awaiting_payment',note:'Order placed',created_by_name:'Sarah Chen',created_at:'2026-08-15T09:30:00Z'}]};
     return {
       adminListContentPages:async()=>({pages}),adminListWidgets:async()=>({widgets}),adminListProducts:async()=>({products}),adminListSuppliers:async()=>({suppliers}),adminListShippingRates:async()=>({shipping}),adminListMedia:async()=>({media}),adminListAudit:async()=>history,intoolsListOrders:async()=>({items:orders}),intoolsGetOrderDetail:async()=>({order:orderDetail}),adminUpdateOrderStatus:async(orderNo,status,note)=>({data:[{order_no:orderNo,status,buyer_email:'sarah@example.com',buyer_name:'Sarah Chen',total:2701.80}]}),getPlatformSetting:async(key)=>settings[key]||null,intoolsUpdatePlatformSetting:async(key,value)=>{settings[key]=value;return {error:null};},stripeReadiness:async()=>({ready:true,environment:'live'}),intoolsStripeBalance:async()=>({environment:'live',available:[{amount:0,currency:'usd'}],pending:[{amount:0,currency:'usd'}]}),intoolsStripePaymentDetail:async()=>({payment:null,refunds:[]}),intoolsStripeRefund:async()=>({error:null}),intoolsCreateStripeTestCode:async()=>({code:'ATX-LIVE-DEMO1234',expiresAt:Date.now()+1800000,environment:'live'}),
@@ -242,7 +242,7 @@
     const revenue=orders.filter(o=>!['cancelled','refunded'].includes(o.status)).reduce((s,o)=>s+Number(o.total||0),0);
     workspace().innerHTML=`<div class="page-head"><div><h1>Dashboard</h1><p>Marketplace overview — catalog, suppliers, and transactions at a glance.</p></div></div>${unavailableNotice()}
       <div class="metrics"><div class="metric"><span>Active products</span><strong>${activeProducts}</strong></div><div class="metric"><span>Suppliers</span><strong>${activeSuppliers}</strong></div><div class="metric"><span>Total orders</span><strong>${orders.length}</strong></div><div class="metric"><span>Pending payment</span><strong>${pendingPayment}</strong></div><div class="metric"><span>Verified / Fulfilled</span><strong>${verified}</strong></div><div class="metric"><span>Revenue (USD)</span><strong>${money(revenue)}</strong></div></div>
-      <div class="dashboard-grid"><section class="panel"><div class="panel-head"><h2>Recent activity</h2><button class="btn btn-quiet" data-go-history>View history</button></div><div class="panel-body">${activityRows(cache.history.slice(0,6))}</div></section><section class="panel"><div class="panel-head"><h2>Needs attention</h2></div><div class="panel-body"><div class="quick-list">${pendingPayment?`<div class="quick-row"><span>¤</span><div><b>${pendingPayment} pending payment${pendingPayment>1?'s':''}</b><small>Verify bank transfers in Transactions</small></div></div>`:''}<div class="quick-row"><span>◇</span><div><b>${cache.products.filter(x=>(x.listing_status||x.status)==='draft').length} draft SKUs</b><small>Complete catalog data</small></div></div><div class="quick-row"><span>⌘</span><div><b>${cache.suppliers.filter(x=>(x.verify_state||x.status)==='pending').length} pending suppliers</b><small>Verification requires review</small></div></div></div></div></section></div>`;
+      <div class="dashboard-grid"><section class="panel"><div class="panel-head"><h2>Recent activity</h2><button class="btn btn-quiet" data-go-history>View history</button></div><div class="panel-body">${activityRows(cache.history.slice(0,6))}</div></section><section class="panel"><div class="panel-head"><h2>Needs attention</h2></div><div class="panel-body"><div class="quick-list">${pendingPayment?`<div class="quick-row"><span>¤</span><div><b>${pendingPayment} pending payment${pendingPayment>1?'s':''}</b><small>Review pending payments in Transactions</small></div></div>`:''}<div class="quick-row"><span>◇</span><div><b>${cache.products.filter(x=>(x.listing_status||x.status)==='draft').length} draft SKUs</b><small>Complete catalog data</small></div></div><div class="quick-row"><span>⌘</span><div><b>${cache.suppliers.filter(x=>(x.verify_state||x.status)==='pending').length} pending suppliers</b><small>Verification requires review</small></div></div></div></div></section></div>`;
     workspace().querySelector('[data-go-history]').onclick=()=>navigate('history');
   }
 
@@ -467,22 +467,20 @@
   const money=n=>`$${Number(n||0).toFixed(2)}`;
 
   async function renderTransactions(){
-    const [result,stripeEnabled,balanceResult]=await Promise.all([callFirst(['intoolsListOrders','adminListOrders']),api.getPlatformSetting('stripe_checkout_enabled'),api.intoolsStripeBalance?.()||Promise.resolve({})]);
+    const [result,balanceResult]=await Promise.all([callFirst(['intoolsListOrders','adminListOrders']),api.intoolsStripeBalance?.()||Promise.resolve({})]);
     cache.transactions=valueOf(result.result,'items');
     if(!cache.transactions.length&&Array.isArray(result.result))cache.transactions=result.result;
     const pending=cache.transactions.filter(o=>o.status==='awaiting_payment'||o.status==='payment_declared').length;
     const revenue=cache.transactions.filter(o=>!['cancelled','refunded'].includes(o.status)).reduce((s,o)=>s+Number(o.total||0),0);
-    const isStripe=stripeEnabled==='true';
     const balance=balanceResult?.error?null:balanceResult;
     const balanceAmount=kind=>Number((balance?.[kind]||[]).find(row=>row.currency==='usd')?.amount||0)/100;
-    workspace().innerHTML=`${listHead('Transactions','View all marketplace orders, verify payments, and update fulfillment status.')}
-      <div class="payment-method-card"><div class="payment-method-info"><strong>Stripe payments</strong><span class="muted">Production can be enabled only after live Stripe readiness passes.</span><span data-stripe-code-status class="muted" aria-live="polite"></span></div><div class="payment-method-toggle"><button class="btn btn-quiet" type="button" data-create-stripe-code>Create one-time 100% test code</button><span class="${!isStripe?'payment-label-active':'muted'}">Bank transfer</span><label class="toggle-switch"><input type="checkbox" data-payment-toggle ${isStripe?'checked':''} aria-label="Enable Stripe payments"><span class="toggle-slider"></span></label><span class="${isStripe?'payment-label-active':'muted'}">Stripe</span></div></div>
+    workspace().innerHTML=`${listHead('Transactions','View all marketplace orders, review Stripe payments, and update fulfillment status.')}
+      <div class="payment-method-card"><div class="payment-method-info"><strong>Stripe payments</strong><span class="muted">Hosted Stripe Checkout is the payment method for all new orders.</span><span data-stripe-code-status class="muted" aria-live="polite"></span></div><div class="payment-method-toggle"><button class="btn btn-quiet" type="button" data-create-stripe-code>Create one-time 100% test code</button><span class="payment-label-active">Stripe active</span></div></div>
       <div class="metrics"><div class="metric"><span>Total orders</span><strong>${cache.transactions.length}</strong></div><div class="metric"><span>Pending payment</span><strong>${pending}</strong></div><div class="metric"><span>Stripe available${balance?.environment?` (${esc(balance.environment)})`:''}</span><strong>${balance?money(balanceAmount('available')):'—'}</strong></div><div class="metric"><span>Stripe pending</span><strong>${balance?money(balanceAmount('pending')):'—'}</strong></div></div>
       <div class="toolbar"><label class="search"><input data-txn-filter placeholder="Search order, buyer, or company" aria-label="Search transactions"></label><select data-txn-status aria-label="Filter status"><option value="">All statuses</option>${ORDER_STATUSES.map(([v,l])=>`<option value="${esc(v)}">${esc(l)}</option>`).join('')}</select></div>
       ${unavailableNotice()}<section class="panel" data-txn-list>${transactionsTable(cache.transactions)}</section>`;
     bindTransactionFilters();
     bindTransactionRows();
-    bindPaymentToggle();
     workspace().querySelector('[data-create-stripe-code]')?.addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;try{const r=await api.intoolsCreateStripeTestCode();if(r?.error)throw r.error;const message=`Live code: ${r.code}. Expires in 30 minutes; copy it now.`;workspace().querySelector('[data-stripe-code-status]').textContent=message;await navigator.clipboard?.writeText(r.code);toast('One-time live test code created and copied.');}catch(error){toast(error?.message||'Could not create live code.',true);}finally{button.disabled=false;}});
   }
   function transactionsTable(rows){return rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Order</th><th>Buyer</th><th>Items</th><th>Total</th><th>Placed</th><th>Status</th></tr></thead><tbody>${rows.map(o=>`<tr data-txn-row="${esc(o.order_no)}" style="cursor:pointer"><td class="table-primary">${esc(o.order_no)}</td><td><span class="table-primary">${esc(o.buyer_name||'—')}</span><span class="table-secondary">${esc(o.buyer_email||'')}</span></td><td>${esc(o.item_count??'—')}</td><td>${money(o.total)}</td><td>${esc(fmtDate(o.placed_at))}</td><td>${orderBadge(o.status)}</td></tr>`).join('')}</tbody></table></div>`:tableEmpty('¤','No transactions yet','Orders placed by buyers will appear here.');}
@@ -491,24 +489,6 @@
     workspace().querySelector('[data-txn-filter]').addEventListener('input',filter);workspace().querySelector('[data-txn-status]').addEventListener('change',filter);
   }
   function bindTransactionRows(){workspace().querySelectorAll('[data-txn-row]').forEach(row=>row.onclick=()=>openTransactionDrawer(row.dataset.txnRow));}
-  function bindPaymentToggle(){
-    const toggle=workspace().querySelector('[data-payment-toggle]');
-    if(!toggle)return;
-    const updateLabels=()=>{const labels=toggle.closest('.payment-method-toggle').querySelectorAll('span:not(.toggle-slider)');labels[0].className=toggle.checked?'muted':'payment-label-active';labels[1].className=toggle.checked?'payment-label-active':'muted';};
-    toggle.onchange=async()=>{
-      const newVal=toggle.checked?'true':'false';
-      const label=toggle.checked?'live Stripe payments':'Manual bank transfer';
-      confirmAction(`Switch to ${label}?`,`All new orders will use ${label}. Existing orders are not affected.`,'Confirm switch',async()=>{
-        try{
-          if(toggle.checked){const ready=await api.stripeReadiness(),local=/^(localhost|127\.0\.0\.1)$/.test(location.hostname),expected=local?'test':'live';if(ready?.error||!ready?.ready||ready.environment!==expected)throw new Error(ready?.error?.message||ready?.error||`${expected==='live'?'Live':'Test'} Stripe is not ready.`);}
-          const r=await api.intoolsUpdatePlatformSetting('stripe_checkout_enabled',newVal);
-          if(r?.error)throw r.error;
-          updateLabels();
-          toast(`Payment method set to ${label}.`);
-        }catch(err){toast(err?.message||'Failed to update payment method.',true);toggle.checked=!toggle.checked;}
-      },()=>{toggle.checked=!toggle.checked;});
-    };
-  }
   async function openTransactionDrawer(orderNo){
     let detail;
     try{const r=await callFirst(['intoolsGetOrderDetail'],orderNo);detail=r.result?.order||r.result;}catch(_){toast('Could not load order details.',true);return;}
