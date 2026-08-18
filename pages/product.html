@@ -210,15 +210,15 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           <div><div class="big">${productMoney(p)} <small>/${TR(p.unit)}</small></div></div>
           <p class="pdp-price-note">Price varies by quantity and specs. Confirm with supplier.</p>
         </div>`:''}
-        ${productOptions.length?`<div class="pdp-options" aria-label="${T('Product options')}">${productOptions.map((option,optionIndex)=>`<fieldset data-product-option="${optionIndex}"><legend><span>${html(option.name)}</span><strong data-option-value>${html(selectedOptions[option.name])}</strong></legend><div class="pdp-option-values">${option.values.map((value,valueIndex)=>`<label><input type="radio" name="product-option-${optionIndex}" value="${html(value)}" ${valueIndex===0?'checked':''}><span>${html(value)}</span></label>`).join('')}</div></fieldset>`).join('')}</div>`:''}
+        ${productOptions.length?`<div class="pdp-options" aria-label="${T('Product options')}">${productOptions.map((option,optionIndex)=>`<div class="pdp-option-group" data-product-option="${optionIndex}"><div class="pdp-option-head"><span>${html(option.name)}</span><small class="muted">${option.values.length} ${T('options')}</small></div><div class="pdp-option-scroll" role="group" aria-label="${html(option.name)}">${option.values.map((value,valueIndex)=>`<label class="pdp-option-pill"><input type="radio" name="product-option-${optionIndex}" value="${html(value)}" ${valueIndex===0?'checked':''}><span>${html(value)}</span></label>`).join('')}</div></div>`).join('')}</div>`:''}
         ${purchasable?`<div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
           <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="${T('Decrease quantity')}">−</button><input type="number" id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="${T('Increase quantity')}">+</button></div>
         </div></div>`:''}
         <div class="pdp-cta${purchasable?'':' pdp-cta--quote'}">
           ${purchasable
-            ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} ${T('Add to Cart')}</button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
+            ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} <span class="cta-full">${T('Add to Cart')}</span><span class="cta-short">+ Cart</span></button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
                ${swatchable?`<button class="btn btn-out" type="button" id="swatchBtn">${IC.cart} ${T('Add swatch')} · ${money(4)}</button>`:''}
-               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} ${T('Contact supplier')}</button>`
+               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} <span class="cta-full">${T('Contact supplier')}</span></button>`
             : `${swatchable?`<button class="btn btn-out" type="button" id="swatchBtn">${IC.cart} ${T('Add swatch')} · ${money(4)}</button>`:''}<a class="btn btn-gold" id="emailBtn" href="${contactHref(T('Product quote request'),null)}">${IC.msg} ${T('Contact supplier')}</a>`}
         </div>
         <div class="pdp-mini">
@@ -250,6 +250,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       </div>
     </div>
     ${isOEM && p.cat!=='oem' ? oemSection(T,TR,money) : ''}
+    ${(()=>{const sp=PRODUCTS.filter(x=>x.seller===p.seller&&x.id!==p.id).slice(0,8);return sp.length?`<section class="section pdp-supplier-strip"><div class="sec-head"><h2>${T('More from')} ${html(seller)}</h2>${facId?`<a class="link-arrow" href="supplier.html?id=${facId}">${T('View factory')} ${IC.chevR}</a>`:''}</div><div class="pdp-hscroll">${sp.map(x=>window.ARCANA_card(x,{href:'product.html?id='+x.id})).join('')}</div></section>`:''})()}
     <section class="section">
       <div class="sec-head"><h2 style="font-family:var(--sans);font-size:1.25rem;font-weight:600">${T('More in')} ${catLabel}</h2><a class="link-arrow" href="${catUrl}">${T('View all')} ${IC.chevR}</a></div>
       <div class="prod-grid">${PRODUCTS.filter(x=>x.cat===p.cat&&x.id!==p.id).slice(0,6).map(x=>window.ARCANA_card(x,{href:'product.html?id='+x.id})).join('')||`<p class="muted">—</p>`}</div>
@@ -295,12 +296,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     });
 
     // ── Product options wiring ──
-    document.querySelectorAll('[data-product-option]').forEach((fieldset,optionIndex)=>{
+    document.querySelectorAll('[data-product-option]').forEach((el,optionIndex)=>{
       const option=productOptions[optionIndex];
-      fieldset.querySelectorAll('input[type="radio"]').forEach(input=>input.addEventListener('change',()=>{
+      el.querySelectorAll('input[type="radio"]').forEach(input=>input.addEventListener('change',()=>{
         if(!input.checked)return;
         selectedOptions[option.name]=input.value;
-        fieldset.querySelector('[data-option-value]').textContent=input.value;
       }));
     });
 
