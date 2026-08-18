@@ -28,62 +28,97 @@
   <div class="listing">
     <!-- filter rail -->
     <aside class="filter-rail" aria-label="Product filters">
-        <div class="frl-head"><b data-i18n="cat.filters">Filters</b><span><button type="button" id="clearFilters" data-i18n="cat.reset">Reset</button><button class="sheet-close" type="button" data-close-filters aria-label="Close filters">×</button></span></div>
+      <div class="frl-head"><b data-i18n="cat.filters">Filters</b><span><button type="button" id="clearFilters" data-i18n="cat.reset">Reset</button><button class="sheet-close" type="button" data-close-filters aria-label="Close filters">×</button></span></div>
       <div class="frl-block">
         <h5 data-i18n="cat.oemavail">OEM availability</h5>
-        <label class="frl-opt"><input type="radio" name="avail" value="all" checked> <span data-i18n="cat.all">All</span></label>
-        <label class="frl-opt"><input type="radio" name="avail" value="oem"> <span data-i18n="cat.oemAvailable">OEM available</span></label>
-        <label class="frl-opt"><input type="radio" name="avail" value="nonoem"> <span data-i18n="cat.nonoem">Non-OEM</span></label>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span data-i18n="cat.oemavail">OEM availability</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <label class="frl-opt"><input type="radio" name="avail" value="all" checked> <span data-i18n="cat.all">All</span></label>
+          <label class="frl-opt"><input type="radio" name="avail" value="oem"> <span data-i18n="cat.oemAvailable">OEM available</span></label>
+          <label class="frl-opt"><input type="radio" name="avail" value="nonoem"> <span data-i18n="cat.nonoem">Non-OEM</span></label>
+        </div>
       </div>
       <div class="frl-block">
-        <h5 data-i18n="cat.material">Material</h5>
-        <div id="matOpts"></div>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span data-i18n="cat.material">Material</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <div id="matOpts"></div>
+        </div>
       </div>
       <div class="frl-block">
-        <h5 data-i18n="cat.price">Price ($ / unit)</h5>
-        <div class="frl-price"><input type="number" id="pmin" aria-label="Minimum price" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" aria-label="Maximum price" placeholder="Max" min="0"></div>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span data-i18n="cat.price">Price ($ / unit)</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <div class="frl-price"><input type="number" id="pmin" aria-label="Minimum price" placeholder="Min" min="0"><span class="muted">–</span><input type="number" id="pmax" aria-label="Maximum price" placeholder="Max" min="0"></div>
+        </div>
       </div>
       <div class="frl-block" id="countryBlock">
-        <h5>Country of Origin</h5>
-        <div id="countryOpts"></div>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span>Country of Origin</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <div id="countryOpts"></div>
+        </div>
       </div>
       <div class="frl-block" id="regionBlock" style="display:none">
-        <h5>Region</h5>
-        <div id="regionOpts"></div>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span>Region</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <div id="regionOpts"></div>
+        </div>
       </div>
       <div class="frl-block">
-        <h5 data-i18n="cat.certs">Certifications</h5>
-        <label class="frl-opt"><input type="checkbox" disabled> GRS <span class="cnt">128</span></label>
-        <label class="frl-opt"><input type="checkbox" disabled> Oeko-Tex <span class="cnt">340</span></label>
-        <label class="frl-opt"><input type="checkbox" disabled> GOTS <span class="cnt">92</span></label>
+        <button type="button" class="frl-toggle" aria-expanded="true">
+          <span data-i18n="cat.certs">Certifications</span>
+          <svg class="ft-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="frl-toggle-body">
+          <label class="frl-opt"><input type="checkbox" disabled> GRS <span class="cnt">128</span></label>
+          <label class="frl-opt"><input type="checkbox" disabled> Oeko-Tex <span class="cnt">340</span></label>
+          <label class="frl-opt"><input type="checkbox" disabled> GOTS <span class="cnt">92</span></label>
+        </div>
       </div>
     </aside>
 
     <!-- main -->
     <div class="listing-main">
-      <div class="mobile-list-tools" role="group" aria-label="Catalog controls">
-        <div class="mobile-filter-chips" role="group" aria-label="Quick filters and sort">
+      <!-- mobile action bar (replaces mobile-list-tools) -->
+      <div class="mobile-action-bar" role="group" aria-label="Catalog controls">
+        <div class="mob-sort-chips" role="group" aria-label="Quick filters">
           <button class="mobile-filter-chip on" type="button" data-quick-avail="all">All</button>
-          <button class="mobile-filter-chip" type="button" data-quick-avail="oem">OEM available</button>
-          <button class="mobile-filter-chip" type="button" data-quick-avail="nonoem">Non-OEM</button>
+          <button class="mobile-filter-chip" type="button" data-quick-avail="oem">OEM</button>
           <button class="mobile-filter-chip on" type="button" data-quick-sort="rec">Recommended</button>
           <button class="mobile-filter-chip" type="button" data-quick-sort="new">Newest</button>
-          <button class="mobile-filter-chip" type="button" data-quick-sort="moq">MOQ: Low</button>
-          <button class="mobile-filter-chip" type="button" data-quick-sort="price">Price: Low</button>
         </div>
-        <span id="mobileResCount" aria-live="polite"></span>
+        <button class="mob-filter-btn" type="button" id="mobileFilterBtn" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
+          Filters
+          <span class="mob-filter-count" id="mobileFilterCount" hidden aria-label="active filters"></span>
+        </button>
+        <span id="mobileResCount" aria-live="polite" style="display:none"></span>
       </div>
+      <!-- desktop sort bar -->
       <div class="sortbar">
         <span class="lbl" data-i18n="cat.sort">Sort</span>
         <div class="sort-chips" id="sortChips">
           <button type="button" class="sort-chip on" data-sort="rec" data-i18n="sort.rec">Recommended</button>
           <button type="button" class="sort-chip" data-sort="new" data-i18n="sort.new">Newest</button>
-          <button type="button" class="sort-chip" data-sort="moq" data-i18n="sort.moq">MOQ: Low</button>
-          <button type="button" class="sort-chip" data-sort="price" data-i18n="sort.price">Price: Low</button>
         </div>
         <span class="count" id="resCount"></span>
         <button class="sheet-close" type="button" data-close-sort aria-label="Close sort">×</button>
       </div>
+      <!-- active filter chips (rendered by JS) -->
+      <div class="active-filters" id="activeFilters" aria-live="polite"></div>
       <div class="prod-grid" id="grid"></div>
       <nav class="catalog-pagination" id="catalogPagination" aria-label="Catalogue pages" hidden></nav>
       <section class="oem-material-sources" id="oemMaterialSources" hidden aria-labelledby="oem-material-sources-title"></section>
@@ -121,6 +156,23 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const filterRail=document.querySelector('.filter-rail'), sortbar=document.querySelector('.sortbar');
   document.querySelector('[data-close-filters]').addEventListener('click',()=>{filterRail.classList.remove('sheet-open');document.body.classList.remove('sheet-active');});
   document.querySelector('[data-close-sort]').addEventListener('click',()=>{sortbar.classList.remove('sheet-open');document.body.classList.remove('sheet-active');});
+
+  // Collapsible filter sections
+  document.querySelectorAll('.frl-toggle').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const expanded=btn.getAttribute('aria-expanded')==='true';
+      btn.setAttribute('aria-expanded',String(!expanded));
+    });
+  });
+
+  // Mobile filter button opens filter rail as sheet
+  const mobileFilterBtn=document.getElementById('mobileFilterBtn');
+  if(mobileFilterBtn){
+    mobileFilterBtn.addEventListener('click',()=>{
+      filterRail.classList.add('sheet-open');
+      document.body.classList.add('sheet-active');
+    });
+  }
 
   // ---- Design Match ----
   if(pageMode==='design-match'){ return runDesignMatch(); }
@@ -223,7 +275,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     function setupDesignControls(){
       document.querySelector('.filter-rail').style.display='';
       document.querySelector('.sortbar').style.display='';
-      document.querySelector('.mobile-list-tools').style.display='';
+      document.querySelector('.mobile-action-bar').style.display='';
       listing.style.display='';
       document.querySelector('[data-sort=new]').hidden=true;
       document.getElementById('regionBlock').style.display='none';
@@ -414,7 +466,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       window.ARCANA_setCopilotMatches(list);
       grid.innerHTML = list.length
         ? list.map(resultHTML).join('')
-        : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>We don’t have an exact match in the catalog yet, but our sourcing team can look for it.</p>${sourcingRequest(text)}</div>`;
+        : `<div class="cop-empty">${SPARK}<b>No verified matches yet</b><p>We don't have an exact match in the catalog yet, but our sourcing team can look for it.</p>${sourcingRequest(text)}</div>`;
       if(list.length&&!hasStrongMatch) grid.insertAdjacentHTML('beforeend',sourcingRequest(text,true));
       window.ARCANA_wireCards(grid);
       paintUsage(meta && meta.usage);
@@ -427,7 +479,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     else {
       grid.className='cop-grid'; grid.innerHTML='';
       const sumEl=paintBar('', '', null);
-      sumEl.textContent='Describe what you’re sourcing and I’ll match it against every verified SKU.';
+      sumEl.textContent="Describe what you're sourcing and I'll match it against every verified SKU.";
       editing=true; const ef=bar.querySelector('[data-cop-edit]'); ef.hidden=false; ef.querySelector('input').focus();
     }
   }
@@ -441,6 +493,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     yarns:{title:'Yarns & Threads',noun:'yarn & thread options'},
     oem:{title:'OEM Services',noun:'service packages'},
   };
+  const LEDE={
+    fabrics:'Woven and knit materials verified for composition, weight, and production minimums — filterable by material type, construction, and country of origin.',
+    accessories:'Labels, tags, hardware, and finishing components sourced from audited manufacturers, ready for private-label and OEM production.',
+    trims:'Zippers, buttons, interlining, lining, tapes, and elastic from verified trim suppliers with transparent MOQ and lead time.',
+    yarns:'Spun and filament yarns for knitting and weaving — cotton, polyester, viscose, wool, and nylon from certified mills.',
+    oem:'End-to-end garment manufacturing packages from verified factories, covering sampling, private label, color matching, and bulk production.',
+  };
   // Clean L2/L3 URLs are served through a rewrite, which preserves the visible
   // pathname rather than adding query parameters in the browser. Read both
   // forms so every category entry point reaches the intended level.
@@ -450,15 +509,18 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const routeL3=categoriesAt>=0 ? routeParts[categoriesAt+2] : '';
   let cat=(qsAll.get('l2')||qsAll.get('cat')||routeL2||'').toLowerCase(); if(!META[cat])cat='fabrics';
   const requestedL3=(qsAll.get('l3')||routeL3||'').toLowerCase();
-  const l3=cat==='fabrics'&&requestedL3?window.ATELIX_CATALOG_TAXONOMY.normalizeSlug(requestedL3):requestedL3;
+  const taxonomy=window.ATELIX_CATALOG_TAXONOMY;
+  const materialL3=cat==='fabrics'&&requestedL3?taxonomy.normalizeMaterialSlug(requestedL3):null;
+  const constructionL3=cat==='fabrics'&&requestedL3&&!materialL3?taxonomy.normalizeSlug(requestedL3):null;
+  const l3=cat==='fabrics'?(materialL3||constructionL3||''):requestedL3;
   const SUBCATS={
-    fabrics:(window.ATELIX_CATALOG_TAXONOMY?.CONSTRUCTIONS||[]).map(item=>[item.slug,item.label.en]),
+    fabrics:(taxonomy?.MATERIALS||[]).map(item=>[item.slug,item.label.en]),
     accessories:[['labels','Labels & Tags'],['hardware','Garment Hardware']],
     trims:[['zippers','Zippers'],['buttons','Buttons'],['interlining','Interlining'],['lining','Lining'],['simple-trims','Tapes & Elastic']],
     yarns:[['cotton','Cotton yarn'],['polyester','Polyester thread'],['viscose','Viscose yarn'],['wool','Wool yarn'],['nylon','Nylon yarn']],
     oem:[['clothing','Clothing'],['accessories','Accessories'],['socks','Socks']]
   };
-  const subLabel=(SUBCATS[cat]||[]).find(x=>x[0]===l3)?.[1];
+  const subLabel=materialL3?taxonomy.materialLabel(materialL3,'en'):(SUBCATS[cat]||[]).find(x=>x[0]===l3)?.[1]||taxonomy?.label(constructionL3||l3,'en');
   if(l3&&!subLabel){ location.replace(`/categories/${cat}`); return; }
   const meta=META[cat];
   // L2 names the category; L3 names the selected material family. Keeping
@@ -480,7 +542,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   };
   const matchSub=(p,slug)=>{
     if(!slug) return true;
-    if(cat==='fabrics')return (p.constructionSlug||window.ATELIX_CATALOG_TAXONOMY?.classify(p))===slug;
+    if(cat==='fabrics')return materialL3?taxonomy.materialMatches(p,materialL3):(p.constructionSlug||taxonomy.classify(p))===slug;
     const structured=String(p.subcategory||'').trim().toLowerCase();
     if(structured) return structured===slug||structured===subLabel?.toLowerCase();
     return inferredSubcategory(p)===slug;
@@ -489,7 +551,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[], currentPage=requestedPage;
   let remotePage=null;
   if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage){
-    remotePage=await window.ARCANA_API.fetchCatalogPage({category:cat,construction:cat==='fabrics'&&l3?l3:null,page:currentPage,pageSize:24}).catch(()=>null);
+    remotePage=await window.ARCANA_API.fetchCatalogPage({category:cat,construction:cat==='fabrics'&&constructionL3?constructionL3:null,materials:materialL3?[materialL3]:[],page:currentPage,pageSize:24}).catch(()=>null);
   }
   let categoryItems=remotePage?remotePage.products:window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
   let items=categoryItems.filter(p=>matchSub(p,l3));
@@ -517,7 +579,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   // step with those cards rather than the product-only API aggregate.
   let resultSupplierTotal=isFabric?(remotePage?.supplier_total??supplierCount):supplierCount;
   const supplierStatus=remotePage?.preview?'supplier candidates':'verified suppliers';
-  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1><p>${isFabric?`<b>${resultTotal}</b> ${meta.noun}`:`<b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}`}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
+  levelNav.innerHTML=`<div class="catalog-level-copy"><h1>${heading}</h1>${isL2&&LEDE[cat]?`<span class="catalog-lede">${LEDE[cat]}</span>`:''}<p>${isFabric?`<b>${resultTotal}</b> ${meta.noun}`:`<b>${resultTotal}</b> ${meta.noun} · <b>${resultSupplierTotal}</b> ${supplierStatus}`}</p></div><nav aria-label="Browse ${meta.title} subcategories">${levelLinks}</nav>`;
   const crumbs=[['Home','/'],['All categories','/categories'],[meta.title,`/categories/${cat}`]];
   if(l3) crumbs.push([heading,`/categories/${cat}/${l3}`]);
   document.querySelector('#catalogCrumbs ol').innerHTML=crumbs.map(([label,href],index)=>{
@@ -584,23 +646,46 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
   populateRegions();
 
+  // Active filter chips
+  function renderActiveFilters(){
+    const af=document.getElementById('activeFilters'); if(!af) return;
+    const chips=[];
+    const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    if(avail!=='all') chips.push({label:avail==='oem'?'OEM available':'Non-OEM',clear:()=>{avail='all';document.querySelector('[name=avail][value=all]').checked=true;document.querySelectorAll('[data-quick-avail]').forEach(b=>b.classList.toggle('on',b.dataset.quickAvail==='all'));refreshRemote(1);}});
+    mat.forEach(m=>chips.push({label:m,clear:()=>{mat=mat.filter(x=>x!==m);const inp=document.querySelector(`#matOpts input[value="${m}"]`);if(inp)inp.checked=false;refreshRemote(1);}}));
+    if(pmin!=null) chips.push({label:`Min $${pmin}`,clear:()=>{pmin=null;document.getElementById('pmin').value='';refreshRemote(1);}});
+    if(pmax!=null) chips.push({label:`Max $${pmax}`,clear:()=>{pmax=null;document.getElementById('pmax').value='';refreshRemote(1);}});
+    if(country!=='all') chips.push({label:country,clear:()=>{country='all';const inp=document.querySelector('[name=ctry][value=all]');if(inp)inp.checked=true;populateRegions();refreshRemote(1);}});
+    if(!chips.length){af.innerHTML='';return;}
+    af.innerHTML=chips.map((chip,i)=>`<button class="afc" type="button" data-afc="${i}">${esc(chip.label)}<span class="afc-x" aria-label="Remove filter" aria-hidden="true">×</span></button>`).join('');
+    af.querySelectorAll('[data-afc]').forEach(btn=>{
+      btn.addEventListener('click',()=>{chips[Number(btn.dataset.afc)].clear();});
+    });
+    // Update mobile filter count badge
+    const countEl=document.getElementById('mobileFilterCount');
+    if(countEl){countEl.textContent=String(chips.length);countEl.hidden=chips.length===0;}
+  }
+
   let remoteRequest=0;
   async function refreshRemote(page=1){
     if(pageMode!=='category'||!window.ARCANA_API?.fetchCatalogPage){render();return;}
+    // Show skeleton while fetching
+    const PAGE_SIZE=24;
+    grid.innerHTML=Array.from({length:Math.min(PAGE_SIZE,8)}).map(()=>`<div class="tcard-skeleton"><div class="sk-img"></div><div class="sk-body"><span class="sk-line"></span><span class="sk-line"></span><span class="sk-line"></span></div></div>`).join('');
     const request=++remoteRequest;
     try{
       const next=await window.ARCANA_API.fetchCatalogPage({
-        category:cat,construction:cat==='fabrics'&&l3?l3:null,page,pageSize:24,materials:mat,country:country==='all'?null:country,
+        category:cat,construction:cat==='fabrics'&&constructionL3?constructionL3:null,page,pageSize:PAGE_SIZE,materials:materialL3?[materialL3,...mat]:mat,country:country==='all'?null:country,
         regions:regionSel,availability:avail,minPrice:pmin,maxPrice:pmax,sort:sort==='rec'?'recommended':sort
       });
       if(request!==remoteRequest)return;
-      const totalPages=Math.max(1,Math.ceil(Number(next.total||0)/Number(next.page_size||24)));
+      const totalPages=Math.max(1,Math.ceil(Number(next.total||0)/Number(next.page_size||PAGE_SIZE)));
       if(page>totalPages){await refreshRemote(totalPages);return;}
       remotePage=next;currentPage=page;categoryItems=next.products||[];items=categoryItems.filter(product=>matchSub(product,l3));
       resultTotal=Number(next.total||0);resultSupplierTotal=Number(next.supplier_total||0);
       const url=new URL(location.href);if(currentPage>1)url.searchParams.set('page',String(currentPage));else url.searchParams.delete('page');history.replaceState(null,'',url);
       renderMaterialFacets();renderCountryFacets();renderPagination();render();
-    }catch(error){console.error('Catalogue filter refresh failed',error);}
+    }catch(error){console.error('Catalogue filter refresh failed',error);render();}
   }
 
   function render(){
@@ -683,6 +768,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       }
     }
     const r2=document.getElementById('reset2'); if(r2) r2.addEventListener('click',e=>{e.preventDefault();resetAll();});
+    renderActiveFilters();
   }
 
   function resetAll(){ avail='all'; sort='rec'; mat=[]; pmin=pmax=null; country='all'; regionSel=[];
