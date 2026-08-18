@@ -54,7 +54,15 @@
         </div>
         <span class="count" id="resCount"></span>
       </div>
-      <div class="fac-grid" id="grid"></div>
+      <div class="fac-grid" id="grid" aria-busy="true" aria-live="polite">
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="fcard fcard-skeleton" aria-hidden="true"><div class="fthumb"></div><div class="fbody"><i></i><i></i><i></i><i></i><i></i></div></div>
+        <span class="sr-only">Loading verified factories</span>
+      </div>
     </div>
   </div>
   <div class="page-end-space" aria-hidden="true"></div>
@@ -98,6 +106,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
     else if(sort==='orders') list=[...list].sort((a,b)=>parseInt(b.orders)-parseInt(a.orders));
     else if(sort==='years') list=[...list].sort((a,b)=>b.years-a.years);
     resCount.textContent=`${list.length} factor${list.length===1?'y':'ies'}`;
+    grid.setAttribute('aria-busy','false');
     grid.innerHTML=list.map(f=>{
       const isNewFactory=isRecentlyListed(f);
       const orderDetail=f.orders==='New'?T('Recently listed'):(f.orders?`${f.orders} ${T('orders')}`:T('Contact supplier'));
