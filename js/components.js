@@ -640,6 +640,17 @@
       img.addEventListener("load", done, { once: true });
       img.addEventListener("error", done, { once: true });
     });
+    // A normal card navigation has no SPA handoff. Give the click an immediate,
+    // non-blocking acknowledgement while the destination loads, without
+    // changing native keyboard, modified-click, or history behaviour.
+    (container || document).querySelectorAll(".tcard:not([data-nav-wired])").forEach((card) => {
+      card.dataset.navWired = "true";
+      card.addEventListener("click", (event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        card.classList.add("is-navigating");
+        catalogLoadBar(true);
+      });
+    });
   }
   window.ARCANA_card = cardHTML;
   window.ARCANA_wireCards = wireCards;
@@ -2954,7 +2965,7 @@
   document.addEventListener("DOMContentLoaded", async () => {
     // Pages that render catalog data opt in with <body data-catalog> so the live
     // read completes before ARCANA_PAGE runs. Other pages render immediately.
-    if (document.body.hasAttribute("data-catalog")) await hydrateCatalog();
+    if (document.body.hasAttribute("data-catalog") && !document.body.hasAttribute("data-catalog-defer")) await hydrateCatalog();
     if (window.ARCANA_PAGE)
       try {
         await window.ARCANA_PAGE({ P, ASSET, Store, IC, toast });

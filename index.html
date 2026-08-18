@@ -63,7 +63,7 @@
 <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/pages.css">
 </head>
-<body data-catalog data-marketplace-search data-hdr="a" data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
+<body data-catalog data-catalog-defer data-marketplace-search data-hdr="a" data-allcat="1" data-search="Search fabrics, trims, accessories, factories…">
 <div id="hdr"></div>
 
 <main class="wrap">
@@ -115,16 +115,15 @@
     <div class="tabs" data-tabs id="curatedTabs">
       <span data-tab data-cat="all" class="on" data-i18n="home.tab.all">All</span><span data-tab data-cat="fabrics" data-i18n="home.tab.fabrics">Fabrics</span><span data-tab data-cat="accessories" data-i18n="home.tab.accessories">Accessories</span><span data-tab data-cat="trims" data-i18n="home.tab.trims">Trims</span>
     </div>
-    <div class="prod-grid" id="curatedGrid" style="margin-top:16px">
-      <!-- Skeleton: visible from first paint, no JS dependency. renderCurated()
-           replaces this the moment live catalog data (or the bundled fallback)
-           is ready and closes the blank-grid gap during hydrateCatalog's fetch. -->
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
-      <div class="sk" aria-hidden="true"><div class="sk-img cop-shimmer"></div><div class="sk-lines"><i class="cop-shimmer"></i><i class="cop-shimmer"></i><i class="cop-shimmer"></i></div></div>
+    <div class="prod-grid" id="curatedGrid" style="margin-top:16px" aria-busy="true" aria-live="polite">
+      <!-- Card-shaped loading placeholders reserve the final grid geometry from
+           first paint while the initial live catalogue request is in flight. -->
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
     </div>
   </section>
 
@@ -262,23 +261,17 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
     location.href=`mailto:info@arcanawangsa.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   });
 
-  // Curated grid uses standardized product cards with a staggered entrance
-  // on both first load (skeleton -> real data) and tab switches.
+  // Curated grid reads only the selected live catalogue page. The complete
+  // catalogue remains available to routes that need it, but must not delay the
+  // homepage's first product shelf.
   const grid=document.getElementById('curatedGrid');
   const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
   let curCat='all';
-  function renderCurated(cat){
-    curCat=cat;
-    const list=(window.ARCANA_PRODUCTS||[])
-      .map((product,index)=>({product,index}))
-      .filter(({product})=>product.cat!=='oem'&&(cat==='all'||product.cat===cat))
-      .sort((a,b)=>{
-        const aDate=Date.parse(a.product.createdAt||a.product.updatedAt||'')||0;
-        const bDate=Date.parse(b.product.createdAt||b.product.updatedAt||'')||0;
-        return bDate-aDate||b.index-a.index;
-      })
-      .map(({product})=>product)
-      .slice(0,12);
+  const curatedCache=new Map();
+  let curatedRequest=0;
+  const curatedSkeleton=()=>Array.from({length:6},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
+  function renderCurated(list){
+    grid.setAttribute('aria-busy','false');
     grid.innerHTML=list.map(p=>window.ARCANA_card(p)).join('');
     window.ARCANA_wireCards(grid);
     if(!reduceMotion){
@@ -288,9 +281,43 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
       });
     }
   }
-  renderCurated('all');
-  document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>renderCurated(t.dataset.cat)));
-  window.ARCANA_onLang(()=>renderCurated(curCat));
+  function bundledCurated(cat){
+    curCat=cat;
+    return (window.ARCANA_PRODUCTS||[])
+      .map((product,index)=>({product,index}))
+      .filter(({product})=>product.cat!=='oem'&&(cat==='all'||product.cat===cat))
+      .sort((a,b)=>{
+        const aDate=Date.parse(a.product.createdAt||a.product.updatedAt||'')||0;
+        const bDate=Date.parse(b.product.createdAt||b.product.updatedAt||'')||0;
+        return bDate-aDate||b.index-a.index;
+      })
+      .map(({product})=>product)
+      .slice(0,12);
+  }
+  async function loadCurated(cat,{force=false}={}){
+    curCat=cat;
+    const request=++curatedRequest;
+    if(!force&&curatedCache.has(cat)){
+      renderCurated(curatedCache.get(cat));
+      return;
+    }
+    grid.setAttribute('aria-busy','true');
+    grid.innerHTML=curatedSkeleton();
+    try{
+      const response=await window.ARCANA_API.fetchCatalogPage({category:cat==='all'?null:cat,pageSize:12,sort:'recommended'});
+      const list=(response.products||[]).filter(product=>product.cat!=='oem').slice(0,12);
+      if(!list.length) throw new Error('No live curated products returned');
+      curatedCache.set(cat,list);
+      list.forEach(product=>{ window.ARCANA_PRODUCT_MAP[product.id]=product; });
+      if(request===curatedRequest) renderCurated(list);
+    }catch(error){
+      console.warn('[Atelix] curated live catalogue unavailable — using bundled fallback',error&&error.message);
+      if(request===curatedRequest) renderCurated(bundledCurated(cat));
+    }
+  }
+  loadCurated('all');
+  document.querySelectorAll('#curatedTabs [data-tab]').forEach(t=>t.addEventListener('click',()=>loadCurated(t.dataset.cat)));
+  window.ARCANA_onLang(()=>loadCurated(curCat,{force:true}));
 
   // Supplier names and locations come from the maintained factory directory.
   // Where a public company mark is available, it is shown as a small visual cue;

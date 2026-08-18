@@ -18,9 +18,9 @@
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/pages.css">
 </head>
-<body data-catalog data-marketplace-search data-product-detail data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body data-catalog data-catalog-defer data-marketplace-search data-product-detail data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
-<main class="wrap"><div id="pdpRoot"></div><div class="page-end-space" aria-hidden="true"></div></main>
+<main class="wrap"><div id="pdpRoot" class="pdp-loading" aria-busy="true" aria-live="polite"><div class="pdp-loading-gallery" aria-hidden="true"></div><div class="pdp-loading-panel" aria-hidden="true"><i class="pdp-loading-line pdp-loading-line--eyebrow"></i><i class="pdp-loading-line pdp-loading-line--title"></i><i class="pdp-loading-line pdp-loading-line--title short"></i><i class="pdp-loading-line"></i><i class="pdp-loading-line short"></i><i class="pdp-loading-price"></i><i class="pdp-loading-action"></i></div><div class="pdp-loading-details" aria-hidden="true"><i class="pdp-loading-line"></i><i class="pdp-loading-line"></i><i class="pdp-loading-line short"></i></div><span class="sr-only">Loading product details</span></div><div class="page-end-space" aria-hidden="true"></div></main>
 <div id="ftr"></div>
 <script defer src="../js/data.js"></script>
 <script defer src="../js/catalog-taxonomy.js"></script>
@@ -40,11 +40,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   // Discount pricing only exists on the 11.11 sale page (campaign.html) — the PDP
   // always shows the real unit price, whichever surface the shopper arrived from.
   const id=new URLSearchParams(location.search).get('id');
-  let p=id?M[id]:null;
-  if(!p&&id&&window.ARCANA_API?.getPublicProduct){
+  const bundledProduct=id?M[id]:null;
+  let p=null;
+  if(id&&window.ARCANA_API?.getPublicProduct){
     p=await window.ARCANA_API.getPublicProduct(id).catch(()=>null);
-    if(p){M[id]=p;PRODUCTS.push(p);}
+    if(p){M[id]=p;if(!PRODUCTS.some(product=>product.id===p.id))PRODUCTS.push(p);}
   }
+  if(!p) p=bundledProduct;
   if(!p && id && window.ARCANA_API?.getMyPrivateProducts){
     const result=await window.ARCANA_API.getMyPrivateProducts().catch(()=>({products:[]}));
     p=(result.products||[]).find(product=>product.id===id)||null;
@@ -52,7 +54,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
   if(!p){
     document.title='Product not found — Atelix';
-    document.getElementById('pdpRoot').innerHTML='<section class="panel empty-state"><h1>Product not found</h1><p>This product may have been removed or the link may be incorrect.</p><a class="btn btn-green" href="/categories">Browse categories</a></section>';
+    const root=document.getElementById('pdpRoot');
+    root.classList.remove('pdp-loading');
+    root.setAttribute('aria-busy','false');
+    root.innerHTML='<section class="panel empty-state"><h1>Product not found</h1><p>This product may have been removed or the link may be incorrect.</p><a class="btn btn-green" href="/categories">Browse categories</a></section>';
     return;
   }
   const isOEM=p.badge==='oem';
@@ -182,7 +187,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
       ${(p.certs||[]).slice(0,3).map(c=>`<span class="pdp-trust-cert">${html(TR(c))}</span>`).join('')}
     </div>`:''
 
-    document.getElementById('pdpRoot').innerHTML=`
+    const root=document.getElementById('pdpRoot');
+    root.classList.remove('pdp-loading');
+    root.setAttribute('aria-busy','false');
+    root.innerHTML=`
     <nav class="crumbs" aria-label="Breadcrumb"><ol>${breadcrumbItems.map(([label,href],index)=>`<li>${href?`<a href="${href}">${label}</a>`:`<span aria-current="page">${label}</span>`}</li>`).join('')}</ol></nav>
     <div class="pdp">
       <!-- Gallery: col 1 row 1 desktop · top mobile -->
@@ -258,7 +266,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     <!-- Lightbox -->
     <dialog class="pdp-lightbox" id="pdpLightbox" aria-label="${T('Image viewer')}">
       <div class="lb-inner">
-        <img class="lb-img" src="" alt="${nm}" id="lbImg">
+        <img class="lb-img" src="${productAsset({img:galleryImages[0]||p.img})}" alt="${nm}" id="lbImg">
         <button class="lb-close" id="lbClose" aria-label="${T('Close')}">×</button>
         <button class="lb-prev" id="lbPrev" aria-label="${T('Previous image')}" hidden>‹</button>
         <button class="lb-next" id="lbNext" aria-label="${T('Next image')}" hidden>›</button>
