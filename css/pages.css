@@ -1779,8 +1779,9 @@ body:has(.cop-fab) .toast-wrap{bottom:96px}
   .pdp{display:flex;flex-direction:column;gap:0}
   .pdp-sticky-panel{position:static;padding-top:20px;padding-bottom:20px}
   .pdp-details{margin-top:0;border-top:1px solid var(--line)}
-  /* Slim CTAs on mobile */
-  .pdp-cta .btn,.pdp-cta--quote .btn{padding:9px 14px;font-size:13px;border-radius:10px;min-height:40px}
+  /* Slim single-column CTAs on mobile */
+  .pdp-cta{grid-template-columns:1fr}
+  .pdp-cta .btn,.pdp-cta--quote .btn{padding:10px 16px;font-size:13.5px;border-radius:10px;min-height:42px}
   /* PDP tabs */
   .pdp-tab-list{margin-top:18px}
   .pdp-tab-btn{padding:8px 14px 9px;font-size:13px}
