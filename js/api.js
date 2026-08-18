@@ -424,10 +424,9 @@ const API = {
 
   /* ---- Checkout / orders ----
      placeOrder syncs the client cart into the DB cart, then calls the
-     place_order RPC which recomputes every total server-side and returns the
-     order_no. Requires a signed-in buyer. Item notes are written to each cart
-     line and snapshotted onto the matching order item. */
-  async placeOrder({ items, shipCountry, shipAddress, notes, qc, insurance }){
+     place_order RPC which recomputes every total server-side and snapshots a
+     saved address plus the active payment path. Requires a signed-in buyer. */
+  async placeOrder({ items, addressId, notes, qc, insurance }){
     try{
       const { data:{ session } } = await sb.auth.getSession();
       if(!session || !session.user) return { error:{ message:'not authenticated', code:'not_authenticated' } };
@@ -441,15 +440,13 @@ const API = {
       if(!wr.matched) return { error:{ message:'no valid items in cart' } };
 
       const { data, error } = await sb.rpc('place_order', {
-        p_ship_country: shipCountry || null,
-        p_ship_address: shipAddress || null,
-        p_incoterms: null,
+        p_address_id: addressId || null,
         p_notes: notes || null,
         p_qc: !!qc,
         p_insurance: !!insurance
       });
       if(error) return { error };
-      return { orderNo: data };
+      return { orderNo: data?.order_no || null, paymentPath: data?.payment_path || 'bank_transfer' };
     }catch(error){ return { error }; }
   },
 

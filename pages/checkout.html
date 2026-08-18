@@ -118,7 +118,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="sum-row"><span class="k">${T('Shipping')}</span><span id="summaryShipping">${window.ARCANA_money(10)}</span></div>
         <div class="checkout-promo" aria-labelledby="promoLabel"><label id="promoLabel" for="checkoutPromo">Discount code</label><div class="checkout-promo-row"><input id="checkoutPromo" autocomplete="off" placeholder="Enter code"><button class="btn btn-out" type="button" data-promo-apply>Apply</button></div><p id="promoHelp" class="checkout-place-help" aria-live="polite">Applied securely at payment.</p></div>
         <div class="cart-summary-total"><span>${T('Total')}</span><strong id="summaryTotal">${currencyMoney(baseTotal+shippingAmount())}</strong></div>
-        <button class="btn btn-gold btn-block cart-summary-action" type="button" data-place disabled>Place order</button>
+        <button class="btn btn-gold btn-block cart-summary-action" type="button" data-place disabled>Review and pay</button>
         <p class="checkout-place-help" id="placeHelp">Select an address to continue.</p>
         <div class="secure-note"><span>${IC.lock} Order details are sent over an encrypted connection</span></div>
       </section></aside>
@@ -168,12 +168,10 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const place=root.querySelector('[data-place]');
     if(!selectedAddress||quoteLoading) return;
     const orig = place ? place.innerHTML : '';
-    if(place){ place.disabled=true; place.textContent='Placing order…'; }
-    const shipAddress=[selectedAddress.recipient_name,selectedAddress.phone,window.ATELIX_formatAddress(selectedAddress)].filter(Boolean).join(' · ');
-    const { orderNo, error } = await window.ARCANA_API.placeOrder({
+    if(place){ place.disabled=true; place.textContent='Confirming order…'; }
+    const { orderNo, paymentPath, error } = await window.ARCANA_API.placeOrder({
       items: cart.map((i,index)=>({id:i.id,qty:i.qty,key:i.key||i.id,lineType:i.lineType||'product',options:i.options||{},note:root.querySelector(`[data-item-note="${index}"]`)?.value.trim()||null})),
-      shipCountry: selectedAddress.country,
-      shipAddress,
+      addressId: selectedAddress.id,
       notes: null,
       qc: false, insurance: false
     });
@@ -185,6 +183,16 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     }
     // place_order cleared the DB cart server-side; clear the local mirror too.
     Store.clearCart();
+    if(paymentPath==='stripe'){
+      if(place) place.textContent='Redirecting to secure payment…';
+      const payment=await window.ARCANA_API.createStripeCheckout(orderNo,promoInput.value.trim()||null);
+      if(!payment.error&&payment.url){
+        sessionStorage.removeItem('arcana_checkout_promo');
+        location.assign(payment.url);
+        return;
+      }
+      toast(`Order created, but secure payment could not start — ${payment.error?.message||payment.error||'open your order to try again.'}`);
+    }
     location.href='order.html?no='+encodeURIComponent(orderNo);
   }
 

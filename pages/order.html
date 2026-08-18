@@ -58,7 +58,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
     const { order:o, items, error } = await API.getOrder(no);
     if(error || !o){ order=null; return; }
     order={
-      no:o.order_no, placedAt:o.placed_at, status:o.status,
+      no:o.order_no, placedAt:o.placed_at, status:o.status, paymentPath:o.payment_path||null,
       items:(items||[]).map(it=>({ name:it.name_snapshot, seller:it.seller_snapshot, qty:Number(it.qty), price:Number(it.unit_price), note:it.buyer_note||'' })),
       subtotal:Number(o.subtotal), fee:Number(o.fee), ship:Number(o.ship),
       shippingService:o.shipping_service||'',shippingEtaMin:o.shipping_eta_min_days,shippingEtaMax:o.shipping_eta_max_days,
@@ -92,14 +92,13 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
   const fmtDate=ts=>new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 
   function bankPanel(o){
-    if(o.status==='awaiting_payment' && STRIPE_ENABLED==='true') return `
+    if(o.status==='awaiting_payment' && (o.paymentPath==='stripe'||(!o.paymentPath&&STRIPE_ENABLED==='true'))) return `
       <section class="panel ord-bank">
         <h2>Complete payment</h2>
         <p class="ph">Pay ${money(o.total)} securely through Stripe. Your final amount is confirmed before payment.</p>
         <div class="ord-bank-actions">
           <button class="btn btn-gold" data-pay-stripe>${IC.lock} Continue to secure payment</button>
         </div>
-        <div data-stripe-checkout aria-live="polite"></div>
       </section>`;
     if(o.status==='awaiting_payment' && !PLATFORM_BANK) return `
       <section class="panel ord-bank">
@@ -209,11 +208,9 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
       stripeBtn.disabled=true;stripeBtn.textContent='Preparing secure payment…';
       const promotionCode=sessionStorage.getItem('arcana_checkout_promo');
       const result=await API.createStripeCheckout(order.no,promotionCode);
-      if(result.error||!result.clientSecret||!result.publishableKey){toast(`Payment error — ${result.error?.message||result.error||'please try again.'}`);stripeBtn.disabled=false;stripeBtn.innerHTML=`${IC.lock} Continue to secure payment`;return;}
-      if(!window.Stripe){const script=document.createElement('script');script.src='https://js.stripe.com/v3/';script.async=true;document.head.appendChild(script);await new Promise((resolve,reject)=>{script.onload=resolve;script.onerror=reject;});}
-      const host=root.querySelector('[data-stripe-checkout]');
-      try{const checkout=await window.Stripe(result.publishableKey).initEmbeddedCheckout({fetchClientSecret:async()=>result.clientSecret});host.innerHTML='';checkout.mount(host);stripeBtn.hidden=true;sessionStorage.removeItem('arcana_checkout_promo');}
-      catch(error){toast('Secure payment could not load. Please try again.');stripeBtn.disabled=false;stripeBtn.innerHTML=`${IC.lock} Continue to secure payment`;}
+      if(result.error||!result.url){toast(`Payment error — ${result.error?.message||result.error||'please try again.'}`);stripeBtn.disabled=false;stripeBtn.innerHTML=`${IC.lock} Continue to secure payment`;return;}
+      sessionStorage.removeItem('arcana_checkout_promo');
+      location.assign(result.url);
     });
   }
   render();

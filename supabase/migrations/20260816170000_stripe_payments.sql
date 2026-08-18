@@ -19,7 +19,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.addresses, public.carts, public.c
 GRANT SELECT ON public.products, public.product_variants, public.price_breaks TO anon, authenticated;
 GRANT SELECT ON public.orders, public.order_items, public.order_fulfillments, public.order_status_events TO authenticated;
 GRANT SELECT, INSERT ON public.conversations, public.messages TO authenticated;
-GRANT SELECT ON public.stripe_payments, public.stripe_refunds TO authenticated;
 GRANT SELECT ON public.platform_settings, public.platform_bank_accounts TO anon, authenticated;
 
 CREATE TYPE public.stripe_payment_state AS ENUM (
@@ -83,6 +82,8 @@ CREATE TABLE public.payment_notifications (
   error text,
   created_at timestamptz NOT NULL DEFAULT now()
 );
+
+GRANT SELECT ON public.stripe_payments, public.stripe_refunds TO authenticated;
 
 ALTER TABLE public.stripe_payments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.stripe_webhook_events ENABLE ROW LEVEL SECURITY;
