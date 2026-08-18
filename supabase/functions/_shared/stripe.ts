@@ -10,7 +10,7 @@ export const mode = () => {
   return value;
 };
 export const stripeKey = () => {
-  const key = Deno.env.get("STRIPE_SECRET_KEY");
+  const key = Deno.env.get("STRIPE_SECRET_API_KEY");
   if (!key) throw new Error("Stripe secret key is not configured");
   if ((mode() === "live") !== key.startsWith("sk_live_")) throw new Error("Stripe secret key does not match configured mode");
   return key;

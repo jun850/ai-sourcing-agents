@@ -30,7 +30,7 @@ Only run `stripe projects init --accept-tos --yes` after confirming that creatin
 ## Production release
 
 1. Rotate any exposed Stripe secret key in the Stripe Dashboard and inspect the retired key's request activity.
-2. In Supabase, set `STRIPE_SECRET_KEY` to the new restricted live key, plus `STRIPE_WEBHOOK_SECRET`, `STRIPE_MODE=live`, and `SITE_URL=https://atelix.app`. Do not commit or shell-history any secret.
+2. In Supabase, set `STRIPE_SECRET_API_KEY` to the new restricted live key, plus `STRIPE_WEBHOOK_SECRET`, `STRIPE_MODE=live`, and `SITE_URL=https://atelix.app`. Do not commit or shell-history any secret.
 3. Create the live Stripe webhook endpoint for `https://bobwfxvxzjovpgmmqsew.supabase.co/functions/v1/stripe-webhook`, then set its signing secret in Supabase.
 4. Deploy the database migration and payment Edge Functions. Keep the Intools toggle off until `stripe-readiness` reports the live account is ready.
 5. Run a live, low-value payment and refund test. Stripe webhooks—not the return URL—are the authority that marks an order paid.
