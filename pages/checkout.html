@@ -75,7 +75,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     </div>`;
     return;
   }
-  const rates=await window.ARCANA_API.getShippingRates();
+  const [rates,stripeCheckoutEnabled]=await Promise.all([
+    window.ARCANA_API.getShippingRates(),
+    window.ARCANA_API.getPlatformSetting?.('stripe_checkout_enabled')||Promise.resolve('false')
+  ]);
+  const paymentNote=stripeCheckoutEnabled==='true'
+    ? `<strong>Secure payment with Stripe</strong><span>After you confirm the order, you’ll be redirected to Stripe Checkout to review and pay securely.</span>`
+    : `<strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span>`;
   const groups=[];
   cart.forEach(item=>{
     const product=M[item.id],key=product.factoryId||product.seller||'supplier';
@@ -109,7 +115,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           <header class="checkout-block-head"><div><span class="checkout-step">2</span><h2 id="itemsTitle">Items (${cart.length})</h2></div><a href="cart.html">Edit cart</a></header>
           <div class="checkout-suppliers">${supplierItems}</div>
         </section>
-        <section class="checkout-payment-note" aria-label="Payment information">${IC.shield}<p><strong>Payment after order review</strong><span>Verified payment instructions appear on your order page when available. Never pay using details from an unverified message.</span></p></section>
+        <section class="checkout-payment-note" aria-label="Payment information">${IC.shield}<p>${paymentNote}</p></section>
       </div>
       <aside><section class="panel summary checkout-summary">
         <h3>${T('Order Summary')}</h3>

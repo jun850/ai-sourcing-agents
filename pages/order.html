@@ -79,8 +79,8 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
     refunded:{label:'Refunded', cls:'b-nonoem'}
   };
 
-  const STEPS=[
-    ['Pending payment','Awaiting bank transfer confirmation'],
+  const stepsFor=o=>[
+    ['Pending payment',o.paymentPath==='stripe' ? 'Complete payment securely with Stripe Checkout' : 'Awaiting bank transfer confirmation'],
     ['Payment verified',"We've matched your transfer"],
     ['In production','Supplier(s) confirmed and began production'],
     ['Shipped','Tracking shared once dispatched'],
@@ -171,7 +171,7 @@ window.ARCANA_PAGE = async function({IC,Store,toast}){
     }
     const cur=STEP_INDEX[o.status] ?? 0;
     return `<section class="panel summary"><h3>Status</h3><div class="timeline" style="margin-top:14px;max-width:none">
-      ${STEPS.map((s,i)=>`<div class="tl-row ${i<=cur?'cur':''}"><span class="tl-dot">${i<cur?IC.check:''}</span><div><b>${s[0]}</b><p>${s[1]}</p></div></div>`).join('')}
+      ${stepsFor(o).map((s,i)=>`<div class="tl-row ${i<=cur?'cur':''}"><span class="tl-dot">${i<cur?IC.check:''}</span><div><b>${s[0]}</b><p>${s[1]}</p></div></div>`).join('')}
     </div></section>`;
   }
 
