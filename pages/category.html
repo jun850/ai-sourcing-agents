@@ -119,7 +119,16 @@
       </div>
       <!-- active filter chips (rendered by JS) -->
       <div class="active-filters" id="activeFilters" aria-live="polite"></div>
-      <div class="prod-grid" id="grid"></div>
+      <div class="prod-grid" id="grid" aria-busy="true" aria-live="polite">
+        <!-- Keep the listing geometry visible from first paint while an L2/L3
+             catalogue request is resolving, matching the curated shelf. -->
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+        <div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>
+      </div>
       <nav class="catalog-pagination" id="catalogPagination" aria-label="Catalogue pages" hidden></nav>
       <section class="oem-material-sources" id="oemMaterialSources" hidden aria-labelledby="oem-material-sources-title"></section>
     </div>
@@ -667,11 +676,14 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   }
 
   let remoteRequest=0;
+  const catalogSkeleton=()=>Array.from({length:6},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
   async function refreshRemote(page=1){
     if(pageMode!=='category'||!window.ARCANA_API?.fetchCatalogPage){render();return;}
-    // Show skeleton while fetching
+    // Match the curated shelf: reserve the final card geometry throughout a
+    // filter, sort, or page request instead of leaving a blank result region.
     const PAGE_SIZE=24;
-    grid.innerHTML=Array.from({length:Math.min(PAGE_SIZE,8)}).map(()=>`<div class="tcard-skeleton"><div class="sk-img"></div><div class="sk-body"><span class="sk-line"></span><span class="sk-line"></span><span class="sk-line"></span></div></div>`).join('');
+    grid.setAttribute('aria-busy','true');
+    grid.innerHTML=catalogSkeleton();
     const request=++remoteRequest;
     try{
       const next=await window.ARCANA_API.fetchCatalogPage({
@@ -751,6 +763,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     };
     const cardHtml=[...list.map(p=>window.ARCANA_card(p,{href:'/pages/product.html?id='+p.id, fabricSpec:isFabric})),...supplierList.map(supplierCard)].join('');
     const emptyForL3=!!l3&&(remotePage?resultTotal===0:items.length===0)&&supplierItems.length===0;
+    grid.setAttribute('aria-busy','false');
     grid.innerHTML = resultCount
       ? cardHtml
       : emptyForL3
