@@ -556,9 +556,14 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(structured) return structured===slug||structured===subLabel?.toLowerCase();
     return inferredSubcategory(p)===slug;
   };
-  const requestedPage=Math.max(1,Number(qsAll.get('page'))||1);
-  let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[], currentPage=requestedPage;
+  const PAGE_SIZE=24;
+  let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[], currentPage=1;
   let remotePage=null;
+  let totalPages=1;
+  let remoteRequest=0;
+  let isLoadingCatalog=false;
+  let isLoadingMoreCatalog=false;
+  let loadObserver;
   // Render L2/L3 navigation and filters from the bundled public catalogue
   // immediately. The live page request is started after the first render so a
   // slow catalogue service cannot leave this route looking blank or inert.
@@ -630,13 +635,43 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const moqNum=s=>parseInt(String(s).replace(/\D/g,''))||0;
   const grid=document.getElementById('grid'), resCount=document.getElementById('resCount'), mobileResCount=document.getElementById('mobileResCount'), oemMaterialSources=document.getElementById('oemMaterialSources');
   const pagination=document.getElementById('catalogPagination');
-  function renderPagination(){
-    if(!remotePage||resultTotal<=remotePage.page_size){pagination.hidden=true;pagination.innerHTML='';return;}
-    const totalPages=Math.ceil(resultTotal/remotePage.page_size);
+  const catalogSkeleton=(count=6)=>Array.from({length:count},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
+  const addLoadingCards=(count=6)=>{
+    const fragment=document.createRange().createContextualFragment(catalogSkeleton(count));
+    fragment.querySelectorAll('.tcard-skeleton').forEach(card=>card.setAttribute('data-infinite-skeleton','1'));
+    grid.appendChild(fragment);
+  };
+  const clearLoadingCards=()=>{
+    grid.querySelectorAll('[data-infinite-skeleton]').forEach(card=>card.remove());
+  };
+  const stopFallbackScroll=()=>window.removeEventListener('scroll',loadMoreOnScroll);
+  const canLoadMore=()=>pageMode==='category'&&remotePage&&currentPage<totalPages&&!isLoadingCatalog;
+  const loadMore=()=>{if(!canLoadMore()) return;refreshRemote(currentPage+1,true);};
+  const loadMoreOnScroll=()=>{
+    if(!pagination||pagination.hidden)return;
+    if(window.scrollY+window.innerHeight>=document.body.scrollHeight-900) loadMore();
+  };
+  const updateLoadState=()=>{
+    const shouldLoad=canLoadMore();
+    if(!shouldLoad){
+      pagination.hidden=true;
+      if(loadObserver) loadObserver.disconnect();
+      stopFallbackScroll();
+      return;
+    }
     pagination.hidden=false;
-    pagination.innerHTML=`<button class="btn btn-out" type="button" data-catalog-page="${currentPage-1}" ${currentPage<=1?'disabled':''}>Previous</button><span>Page ${currentPage} of ${totalPages}</span><button class="btn btn-out" type="button" data-catalog-page="${currentPage+1}" ${currentPage>=totalPages?'disabled':''}>Next</button>`;
-  }
-  renderPagination();
+    pagination.setAttribute('aria-busy',String(isLoadingMoreCatalog));
+    pagination.innerHTML=isLoadingMoreCatalog?'<span class="muted">Loading more products…</span>':'';
+    if(loadObserver) loadObserver.disconnect();
+    if('IntersectionObserver' in window){
+      loadObserver=new IntersectionObserver(entries=>{
+        if(entries.some(entry=>entry.isIntersecting)) loadMore();
+      },{rootMargin:'900px 0px'});
+      loadObserver.observe(pagination);
+    }else{
+      window.addEventListener('scroll',loadMoreOnScroll,{passive:true});
+    }
+  };
 
   function populateRegions(){
     const ctryItems=country==='all'?items:items.filter(p=>countryOf(p)===country),remoteRegions=remotePage?.facets?.regions||{};
@@ -675,29 +710,49 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     if(countEl){countEl.textContent=String(chips.length);countEl.hidden=chips.length===0;}
   }
 
-  let remoteRequest=0;
-  const catalogSkeleton=()=>Array.from({length:6},()=>'<div class="tcard-skeleton" aria-hidden="true"><div class="sk-img"></div><div class="sk-body"><i class="sk-line"></i><i class="sk-line"></i><i class="sk-line"></i></div></div>').join('');
-  async function refreshRemote(page=1){
+  async function refreshRemote(page=1, append=false){
     if(pageMode!=='category'||!window.ARCANA_API?.fetchCatalogPage){render();return;}
     // Match the curated shelf: reserve the final card geometry throughout a
     // filter, sort, or page request instead of leaving a blank result region.
-    const PAGE_SIZE=24;
     grid.setAttribute('aria-busy','true');
-    grid.innerHTML=catalogSkeleton();
+    clearLoadingCards();
+    const nextPage=Math.max(1,Number(page)||1);
+    const isAppend=append && nextPage>1;
+    if(!isAppend&&nextPage===1){
+      categoryItems=[];items=[];
+      resultTotal=0;
+      grid.innerHTML=catalogSkeleton();
+    }
+    if(isAppend) addLoadingCards();
     const request=++remoteRequest;
+    isLoadingCatalog=true;
+    isLoadingMoreCatalog=isAppend;
+    updateLoadState();
     try{
       const next=await window.ARCANA_API.fetchCatalogPage({
-        category:cat,construction:cat==='fabrics'&&constructionL3?constructionL3:null,page,pageSize:PAGE_SIZE,materials:materialL3?[materialL3,...mat]:mat,country:country==='all'?null:country,
+        category:cat,construction:cat==='fabrics'&&constructionL3?constructionL3:null,page:nextPage,pageSize:PAGE_SIZE,materials:materialL3?[materialL3,...mat]:mat,country:country==='all'?null:country,
         regions:regionSel,availability:avail,minPrice:pmin,maxPrice:pmax,sort:sort==='rec'?'recommended':sort
       });
       if(request!==remoteRequest)return;
-      const totalPages=Math.max(1,Math.ceil(Number(next.total||0)/Number(next.page_size||PAGE_SIZE)));
-      if(page>totalPages){await refreshRemote(totalPages);return;}
-      remotePage=next;currentPage=page;categoryItems=next.products||[];items=categoryItems.filter(product=>matchSub(product,l3));
+      const nextProducts=next.products||[];
+      if(!isAppend&&nextPage===1) categoryItems=[...nextProducts];
+      else categoryItems=[...categoryItems,...nextProducts];
+      remotePage=next;
+      currentPage=nextPage;
+      totalPages=Math.max(1,Math.ceil(Number(next.total||0)/Number(next.page_size||PAGE_SIZE)));
+      items=categoryItems.filter(product=>matchSub(product,l3));
       resultTotal=Number(next.total||0);resultSupplierTotal=Number(next.supplier_total||0);
-      const url=new URL(location.href);if(currentPage>1)url.searchParams.set('page',String(currentPage));else url.searchParams.delete('page');history.replaceState(null,'',url);
-      renderMaterialFacets();renderCountryFacets();renderPagination();render();
-    }catch(error){console.error('Catalogue filter refresh failed',error);render();}
+      const url=new URL(location.href);url.searchParams.delete('page');history.replaceState(null,'',url);
+      clearLoadingCards();
+      renderMaterialFacets();renderCountryFacets();render();
+    }catch(error){console.error('Catalogue filter refresh failed',error);clearLoadingCards();render();}
+    finally{
+      if(request!==remoteRequest) return;
+      isLoadingCatalog=false;
+      isLoadingMoreCatalog=false;
+      grid.setAttribute('aria-busy','false');
+      updateLoadState();
+    }
   }
 
   function render(){
@@ -812,10 +867,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   document.getElementById('pmin').addEventListener('input',e=>{pmin=e.target.value?+e.target.value:null;refreshPrice();});
   document.getElementById('pmax').addEventListener('input',e=>{pmax=e.target.value?+e.target.value:null;refreshPrice();});
   document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(c=>c.addEventListener('click',()=>{sort=c.dataset.sort||c.dataset.quickSort;document.querySelectorAll('.sort-chip,[data-quick-sort]').forEach(x=>x.classList.toggle('on',(x.dataset.sort||x.dataset.quickSort)===sort));refreshRemote(1);}));
-  pagination.addEventListener('click',event=>{const button=event.target.closest('[data-catalog-page]');if(button&&!button.disabled)refreshRemote(Number(button.dataset.catalogPage));});
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
   render();
-  if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage)refreshRemote(currentPage);
+  if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage)refreshRemote();
   window.ARCANA_onLang(render);
   window.addEventListener('pageshow',e=>{if(e.persisted)refreshRemote(1);});
 };
