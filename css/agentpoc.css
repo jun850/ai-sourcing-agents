@@ -301,7 +301,9 @@
 }
 .apoc-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(210px, 1fr));
+  /* auto-fill (not auto-fit): a lone card keeps its own column width instead
+     of stretching to fill the whole row when it's the only item this turn. */
+  grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
   gap:14px;
 }
 /* product cards rendered inline in the conversation, under the agent's reply */

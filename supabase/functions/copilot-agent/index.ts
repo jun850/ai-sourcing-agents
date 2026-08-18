@@ -38,7 +38,7 @@ A deterministic engine has already searched the LIVE catalog and given you CONTE
 
 Decide what to say and which products to surface. Reply with ONLY minified JSON, no markdown:
 {"reply":"<your conversational answer, max 70 words, plain text>","show":["<candidate id>", ...],"draftFor":["<candidate id>", ...]}
-- "show": the ids (0-5, best first) of candidates to render as cards for THIS turn. CRITICAL: every product you name or recommend in "reply" MUST have its id here, so its add-to-cart card appears. Use [] only when the turn is purely conversational or nothing fits. Only ids present in candidates.
+- "show": the ids (0-5, best first) of candidates to render as cards for THIS turn. CRITICAL: every NEW product you name or recommend in "reply" MUST have its id here, so its add-to-cart card appears. Use [] when the turn is purely conversational, nothing fits, you're only confirming a spec/qty/price for something the buyer already picked (its card was already shown), or "draftFor" is non-empty this turn — drafting supersedes showing a card again. Only ids present in candidates.
 - "draftFor": candidate ids to draft supplier RFQ inquiries for. Leave [] unless the buyer explicitly asked to draft/write/send a supplier inquiry THIS turn. When they did:
   - If they singled out one option ("draft an inquiry for that one", "just the cheapest", "the first one", "send it to <supplier>"), include ONLY that one id.
   - If they asked for all of them, every option, or named several, include each of those ids (up to 5).
@@ -280,12 +280,16 @@ Deno.serve(async (req) => {
     const reply = trimStr(parsed.reply, 800);
     if (!reply) return jsonResponse({ ok: false, reason: "llm_error" });
     const candIds = new Set(sanitizeCandidates(body?.candidates).map((c) => c.id));
-    const show = Array.isArray(parsed.show)
-      ? parsed.show.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
-      : [];
     const draftFor = Array.isArray(parsed.draftFor)
       ? parsed.draftFor.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
       : [];
+    // Drafting supersedes showing a card again — enforced here, not just asked
+    // for in the prompt, so a card never doubles up alongside the draft.
+    const show = draftFor.length
+      ? []
+      : Array.isArray(parsed.show)
+        ? parsed.show.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
+        : [];
     return jsonResponse({ ok: true, reply, show, draftFor });
   }
 

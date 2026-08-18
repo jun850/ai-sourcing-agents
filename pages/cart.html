@@ -117,7 +117,7 @@ window.ARCANA_PAGE = function({ASSET,IC,Store,toast}){
           <h3>${T('Order Summary')}</h3>
           <div class="sum-row"><span class="k">${T('Subtotal')}</span><span>${currencyMoney(subtotal)}</span></div>
           <div class="sum-row"><span class="k">${T('Service fee (5%)')}</span><span>${currencyMoney(fee)}</span></div>
-          <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${window.ARCANA_money(10)} default</span></div>
+          <div class="sum-row"><span class="k">${T('Shipping')}</span><span>${window.ARCANA_money(10)}</span></div>
           <div class="cart-summary-total"><span>${T('Total before shipping')}</span><strong>${currencyMoney(total)}</strong></div>
           ${hasQuoteOnly?`<a class="btn btn-gold btn-block cart-summary-action" href="mailto:info@arcanawangsa.com?subject=${encodeURIComponent('Quote request from cart')}">${T('Contact supplier')}</a><p class="cart-summary-help">${T('Remove quote-only items to place the remaining order online.')}</p>`:`<button class="btn btn-gold btn-block cart-summary-action" data-checkout><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> ${T('Proceed to Checkout')}</button>`}
           <div class="secure-note"><span>${IC.shield} ${T('Encrypted order details')}</span></div>
