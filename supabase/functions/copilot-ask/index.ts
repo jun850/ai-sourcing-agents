@@ -152,9 +152,12 @@ Deno.serve(async (req) => {
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content: userContent },
           ],
-          // The current preset uses a reasoning-capable model. Leave enough
-          // completion budget for its internal work and the short final copy.
-          max_tokens: 1024,
+          // The preset resolves to an NVIDIA reasoning-capable model. Its
+          // hidden chain-of-thought is the dominant source of latency and we
+          // never use it (only the final paragraph matters) — turn it off so
+          // replies come back fast, matching design-match/index.ts.
+          reasoning: { enabled: false },
+          max_tokens: 400,
         }),
       },
     );

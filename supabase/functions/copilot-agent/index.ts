@@ -37,10 +37,15 @@ A deterministic engine has already searched the LIVE catalog and given you CONTE
 - "benchmark": present only when the buyer asked whether a price is fair — real peer price stats and resale context for one product. Quote ONLY these numbers; note any resale share is a material-cost share per unit, not a full gross margin.
 
 Decide what to say and which products to surface. Reply with ONLY minified JSON, no markdown:
-{"reply":"<your conversational answer, max 60 words, plain text>","show":["<candidate id>", ...],"drafts":false}
+{"reply":"<your conversational answer, max 70 words, plain text>","show":["<candidate id>", ...],"draftFor":["<candidate id>", ...]}
 - "show": the ids (0-5, best first) of candidates to render as cards for THIS turn. CRITICAL: every product you name or recommend in "reply" MUST have its id here, so its add-to-cart card appears. Use [] only when the turn is purely conversational or nothing fits. Only ids present in candidates.
+- "draftFor": candidate ids to draft supplier RFQ inquiries for. Leave [] unless the buyer explicitly asked to draft/write/send a supplier inquiry THIS turn. When they did:
+  - If they singled out one option ("draft an inquiry for that one", "just the cheapest", "the first one", "send it to <supplier>"), include ONLY that one id.
+  - If they asked for all of them, every option, or named several, include each of those ids (up to 5).
+  - If they said "draft an inquiry" with no target and only one candidate is in play, include that one id. If several are in play and none was singled out, do not guess — leave draftFor empty and ask which one(s) in "reply" instead.
+- Pricing verdicts: when "benchmark" is given, answer the fairness question head-on with a firm verdict up front — "Yes, that's fair.", "No, that's overpriced.", or "No, that's underpriced." — grounded in the percentile and peer range, then cite the numbers. Never hedge with "it depends" when a benchmark is present; the data gives a clear answer.
+- Be proactive: end a turn that shows 2+ options, or that completes a draft, with ONE short, concrete next-step question — e.g. "Which one do you like most?", "Want me to draft the RFQ?", "Ready to send this to the supplier?". Skip this on plain informational turns with nothing left to decide.
 - "reply": speak naturally. If nothing fits the (possibly narrowed) request, say so honestly and suggest relaxing one constraint — do not show unrelated products.
-- "drafts": true only if the buyer explicitly asked you to draft/write supplier inquiries.
 Tone: precise, calm, confident. Never salesy, no exclamation points.`;
 
 const DRAFT_SYSTEM_PROMPT = `You are Atelix's Athelia agent drafting supplier outreach for a signed-in buyer. A deterministic engine already found real, verified catalog matches (JSON below). You never invent products, prices, specs, sellers, MOQs, or certifications beyond what is given.
@@ -228,10 +233,12 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: MODEL,
         messages: llmMessages,
-        // The preset resolves to a reasoning model; leave ample budget so its
-        // internal reasoning doesn't consume the whole allowance before the
-        // final answer (the bug that bit the earlier public function).
-        max_tokens: 10000,
+        // The preset resolves to an NVIDIA reasoning-capable model. Its hidden
+        // chain-of-thought is the dominant source of latency, and we never use
+        // it (we only want the final JSON) — turn it off so replies come back
+        // fast, per the same fix already applied in design-match/index.ts.
+        reasoning: { enabled: false },
+        max_tokens: 3000,
       }),
     });
     if (!resp.ok) {
@@ -272,7 +279,10 @@ Deno.serve(async (req) => {
     const show = Array.isArray(parsed.show)
       ? parsed.show.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
       : [];
-    return jsonResponse({ ok: true, reply, show, drafts: !!parsed.drafts });
+    const draftFor = Array.isArray(parsed.draftFor)
+      ? parsed.draftFor.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
+      : [];
+    return jsonResponse({ ok: true, reply, show, draftFor });
   }
 
   if (!Array.isArray(parsed.drafts)) return jsonResponse({ ok: false, reason: "llm_error" });

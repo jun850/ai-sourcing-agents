@@ -359,7 +359,7 @@ async function handleChat(text){
     const showIds = Array.from(new Set([...(payload.show||[]), ...referencedInReply(payload.reply)]));
     const show = showIds.map(findProduct).filter(Boolean);
     if(show.length){ appendCards(show); state.lastRef = show[0].id; }
-    if(payload.drafts) requestDrafts();
+    if(payload.draftFor && payload.draftFor.length) requestDrafts(payload.draftFor);
     offerActions();
   }catch(err){
     stop();
@@ -375,10 +375,16 @@ async function handleChat(text){
   }
 }
 
-async function requestDrafts(){
+async function requestDrafts(targetIds){
   if(!state.candidates.length) return;
+  // targetIds comes from the LLM's draftFor — the specific supplier(s) the buyer
+  // actually asked for, not always every candidate on screen.
+  const targets = Array.isArray(targetIds) && targetIds.length
+    ? targetIds.map(findProduct).filter(Boolean)
+    : state.candidates.slice(0,5);
+  if(!targets.length) return;
   const stop = showTyping();
-  const matches = state.candidates.slice(0,5).map(trimCandidate);
+  const matches = targets.slice(0,5).map(trimCandidate);
   try{
     const payload = await callAgent('draft', { brief: state.brief || (state.history[state.history.length-1]||{}).content || '', matches });
     stop();
@@ -387,8 +393,10 @@ async function requestDrafts(){
   }catch(err){
     stop();
     if(err.reason === 'not_available'){ showGate('unavailable'); return; }
-    const fallback = state.candidates.slice(0,5).map(p=>({ productId:p.id, message: fallbackDraft(p) }));
-    const m = `Here are inquiry drafts for each supplier — copy them into the supplier chat on each product page.`;
+    const fallback = targets.map(p=>({ productId:p.id, message: fallbackDraft(p) }));
+    const m = targets.length>1
+      ? `Here are inquiry drafts for each supplier — copy them into the supplier chat on each product page.`
+      : `Here's an inquiry draft — copy it into the supplier chat on the product page.`;
     appendAgent(m); logAgent(m);
     appendDrafts(fallback);
   }
