@@ -17,7 +17,7 @@
 <link rel="stylesheet" href="/css/styles.css">
 <link rel="stylesheet" href="/css/pages.css">
 </head>
-<body data-catalog data-marketplace-search data-root=".." data-search="Search fabrics, materials, suppliers…">
+<body data-catalog data-catalog-defer data-marketplace-search data-root=".." data-search="Search fabrics, materials, suppliers…">
 <div id="hdr"></div>
 
 <main class="wrap">
@@ -559,9 +559,9 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   const requestedPage=Math.max(1,Number(qsAll.get('page'))||1);
   let avail='all', sort='rec', mat=[], pmin=null, pmax=null, country='all', regionSel=[], currentPage=requestedPage;
   let remotePage=null;
-  if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage){
-    remotePage=await window.ARCANA_API.fetchCatalogPage({category:cat,construction:cat==='fabrics'&&constructionL3?constructionL3:null,materials:materialL3?[materialL3]:[],page:currentPage,pageSize:24}).catch(()=>null);
-  }
+  // Render L2/L3 navigation and filters from the bundled public catalogue
+  // immediately. The live page request is started after the first render so a
+  // slow catalogue service cannot leave this route looking blank or inert.
   let categoryItems=remotePage?remotePage.products:window.ARCANA_PRODUCTS.filter(p=>p.cat===cat);
   let items=categoryItems.filter(p=>matchSub(p,l3));
   const supplierItems=isFabric?[]:(window.ARCANA_FACTORIES||[]).filter(factory=>(factory.taxonomy||[]).some(membership=>
@@ -815,6 +815,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
   pagination.addEventListener('click',event=>{const button=event.target.closest('[data-catalog-page]');if(button&&!button.disabled)refreshRemote(Number(button.dataset.catalogPage));});
   document.getElementById('clearFilters').addEventListener('click',e=>{e.preventDefault();resetAll();});
   render();
+  if(pageMode==='category'&&window.ARCANA_API?.fetchCatalogPage)refreshRemote(currentPage);
   window.ARCANA_onLang(render);
   window.addEventListener('pageshow',e=>{if(e.persisted)refreshRemote(1);});
 };
