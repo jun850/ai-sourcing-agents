@@ -71,7 +71,9 @@ function trimCandidate(p){ return { id:p.id, name:p.name, seller:p.seller, loc:p
 
 function syncBadges(){
   let cart = 0, saved = 0;
-  try{ cart = (JSON.parse(localStorage.getItem('arcana_cart')||'[]')||[]).reduce((n,i)=>n+(Number(i.qty)||0),0); }catch(_){}
+  // Distinct line items, not total quantity/meters — matches Store.cartCount()
+  // in components.js (the header badge everywhere else on the site).
+  try{ cart = (JSON.parse(localStorage.getItem('arcana_cart')||'[]')||[]).length; }catch(_){}
   try{ saved = (JSON.parse(localStorage.getItem('arcana_saved')||'[]')||[]).length; }catch(_){}
   el.cartCount.textContent = cart;
   el.cartCount.classList.toggle('is-visible', cart>0);
