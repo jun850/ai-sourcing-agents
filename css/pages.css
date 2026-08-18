@@ -1298,8 +1298,9 @@
   .pdp-hscroll::-webkit-scrollbar{display:none}
   .pdp-hscroll .tcard{flex:0 0 160px;scroll-snap-align:start}
   .buy-row{margin-top:14px;padding:12px 0}.buy-qty{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px}.buy-qty-lbl{font-size:14px}.buy-qty .qty button{width:44px;height:44px}.buy-qty .qty input{width:52px;height:44px;font-size:16px}
-  body:has(.pdp-cta:not(.pdp-cta--quote)){padding-bottom:calc(132px + env(safe-area-inset-bottom))}
-  .pdp-cta{position:fixed;z-index:510;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom));margin:0;display:grid;grid-template-columns:44px 1fr;gap:8px;padding:8px 16px;background:var(--card);border-top:1px solid var(--line)}
+  body:has(.pdp-cta:not(.pdp-cta--quote)){padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+  body:has(.pdp-cta:not(.pdp-cta--quote)) .mobile-nav{display:none}
+  .pdp-cta{position:fixed;z-index:510;left:0;right:0;bottom:0;margin:0;display:grid;grid-template-columns:44px 1fr;gap:8px;padding:8px 16px calc(8px + env(safe-area-inset-bottom));background:var(--card);box-shadow:0 -4px 20px rgba(28,26,20,.10)}
   .pdp-cta>:not(#addBtn):not(#emailBtn){display:none}
   .pdp-cta #emailBtn{display:inline-flex;order:1;width:44px;padding:0;justify-content:center;border-color:var(--green);color:var(--green)}
   .pdp-cta #emailBtn .cta-full{display:none}
