@@ -12,6 +12,7 @@
     },
     { "source": "/search", "destination": "/pages/search.html" },
     { "source": "/about", "destination": "/pages/about.html" },
+    { "source": "/agentpoc", "destination": "/pages/agentpoc.html" },
     { "source": "/help-center", "destination": "/pages/help-center.html" },
     { "source": "/legal", "destination": "/pages/legal.html" },
     { "source": "/terms", "destination": "/pages/terms.html" },
