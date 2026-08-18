@@ -277,11 +277,37 @@ function resaleContext(opts){
 }
 
 /* ---------- classify a turn: what does the user want? ---------- */
-const ACTION_RE = /\b(add(?:\s+\w+){0,4}\s+(?:to\s+)?(?:cart|basket|wishlist)|put(?:\s+\w+){0,4}\s+in(?:to)?\s+(?:my\s+)?cart|save\s+(?:this|it|that)|wishlist\s+(?:this|it|that)|buy\s+(?:it|this|now)|check\s*out|proceed\s+to\s+checkout|purchase|place\s+(?:the\s+)?order)\b/i;
+// Each sub-intent is its own regex so a chained follow-up ("add 10 more",
+// "remove it", "make it 200") routes to the deterministic action handler
+// instead of falling through to the LLM chat turn, which can only narrate —
+// it has no way to actually mutate the cart/wishlist.
+const UNIT_RE = '(?:m|meters?|metres?|kg|units?|pcs?|pieces?)';
+const CHECKOUT_RE = /\b(check\s*out|checkout|proceed\s+to\s+(?:checkout|pay)|pay\s+now|place\s+(?:the\s+)?order|buy\s+it\s+now|purchase)\b/i;
+const QTY_SET_RE = /\b(?:set|change|update)\s+(?:the\s+)?(?:qty|quantity)\b[\s\S]{0,40}?\bto\s+(\d[\d,]*)\b|\bmake\s+it\s+(\d[\d,]*)\b|\b(?:decrease|reduce)\b[\s\S]{0,40}?\bto\s+(\d[\d,]*)\b/i;
+const QTY_DECREASE_RE = new RegExp(`\\b(decrease|reduce)\\b|\\btake\\s+\\d[\\d,]*\\s*${UNIT_RE}?\\s+off\\b|\\bremove\\s+\\d[\\d,]*\\s*${UNIT_RE}\\b|\\b\\d[\\d,]*\\s*(?:less|fewer)\\b|\\bminus\\s+\\d`, 'i');
+const CART_REMOVE_RE = /\b(?:remove|delete|take)\b(?:(?!\bfrom\b|\bout\b)[\s\S]){0,40}?(?:\bfrom\s+(?:my\s+)?(?:cart|basket)\b|\bout\s+of\s+(?:my\s+)?cart\b)|\b(?:empty|clear)\s+(?:my\s+)?cart\b/i;
+const WISHLIST_REMOVE_RE = /\bunsave\b|\b(?:remove|delete)\b(?:(?!\bfrom\b)[\s\S]){0,40}?\bfrom\s+(?:my\s+)?wishlist\b/i;
+const WISHLIST_ADD_RE = /\bsave\s+(?:this|it|that)\b|\bwishlist\s+(?:this|it|that)\b|\bsave(?:\s+\w+){0,4}\s+to\s+(?:my\s+)?wishlist\b/i;
+const CART_ADD_RE = new RegExp(`\\badd(?:\\s+\\w+){0,6}\\s+(?:to\\s+)?(?:cart|basket|wishlist)\\b|\\bput(?:\\s+\\w+){0,4}\\s+in(?:to)?\\s+(?:my\\s+)?cart\\b|\\badd\\s+(?:\\d[\\d,]*\\s*${UNIT_RE}?\\s*)?(?:more|another|extra|additional)\\b|\\badd\\s+\\d[\\d,]*\\s*${UNIT_RE}\\b|\\bbuy\\s+(?:it|this|now)\\b`, 'i');
+
+// Returns the specific action the buyer wants, or null for a sourcing/chat turn.
+// Checked most-specific-first so e.g. "decrease X to 50" (a set) doesn't get
+// caught by the looser "decrease" (a relative decrement) pattern.
+function classifyAction(text){
+  const t = String(text || '');
+  if(CHECKOUT_RE.test(t)) return 'checkout';
+  if(QTY_SET_RE.test(t)) return 'qty_set';
+  if(QTY_DECREASE_RE.test(t)) return 'qty_decrease';
+  if(CART_REMOVE_RE.test(t)) return 'cart_remove';
+  if(WISHLIST_REMOVE_RE.test(t)) return 'wishlist_remove';
+  if(WISHLIST_ADD_RE.test(t)) return 'wishlist_add';
+  if(CART_ADD_RE.test(t)) return 'cart_add';
+  return null;
+}
 const PRICING_RE = /\b(too\s+much|over-?pay|overpaying|paying\s+too|is\s+this\s+(?:price|expensive|cheap|worth)|fair\s+price|market\s+(?:rate|price)|benchmark|average\s+price|compare\s+price|price\s+compar|margin|resell|resale|sell\s+(?:it|this|these)?\s*(?:for|at)|worth\s+it|am\s+i\s+(?:paying|getting))\b/i;
 function classify(text){
   const t = String(text || '');
-  if(ACTION_RE.test(t)) return 'action';
+  if(classifyAction(t)) return 'action';
   if(PRICING_RE.test(t)) return 'pricing';
   return 'sourcing';
 }
@@ -399,7 +425,7 @@ window.ARCANA_Copilot = {
   getBrief, setBrief, clearBrief,
   scoreProduct, factoryOf,
   demandStream, demandMatch, draftListing,
-  classify, priceBenchmark, percentileOf, resaleContext,
+  classify, classifyAction, priceBenchmark, percentileOf, resaleContext,
   fabricPriceJPY, fabricPriceUSD,
   version: '1.1'
 };

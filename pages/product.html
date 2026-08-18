@@ -220,7 +220,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         </div>`:''}
         ${productOptions.length?`<div class="pdp-options" aria-label="${T('Product options')}">${productOptions.map((option,optionIndex)=>`<div class="pdp-option-group" data-product-option="${optionIndex}"><div class="pdp-option-head"><span>${html(option.name)}</span><small class="muted">${option.values.length} ${T('options')}</small></div><div class="pdp-option-scroll" role="group" aria-label="${html(option.name)}">${option.values.map((value,valueIndex)=>`<label class="pdp-option-pill"><input type="radio" name="product-option-${optionIndex}" value="${html(value)}" ${valueIndex===0?'checked':''}><span>${html(value)}</span></label>`).join('')}</div></div>`).join('')}</div>`:''}
         ${purchasable?`<div class="buy-row"><div class="buy-qty"><label class="buy-qty-lbl" for="pdpQuantity">${T('Quantity')}</label>
-          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="${T('Decrease quantity')}">−</button><input type="number" id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="${T('Increase quantity')}">+</button></div>
+          <div class="qty" data-qty id="pdpQty"><button type="button" data-dec aria-label="${T('Decrease quantity')}">−</button><input type="number" id="pdpQuantity" value="${minimumOrder}" min="${minimumOrder}" max="${window.ARCANA_MAX_QTY}" maxlength="${String(window.ARCANA_MAX_QTY).length}" step="1" inputmode="numeric" aria-label="${T('Quantity')}"><button type="button" data-inc aria-label="${T('Increase quantity')}">+</button></div>
         </div></div>`:''}
         <div class="pdp-cta${purchasable?'':' pdp-cta--quote'}">
           ${purchasable
@@ -284,17 +284,19 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
     // ── Quantity stepper wiring ──
     const qi=document.querySelector('#pdpQty input');
+    const clampQty=v=>window.ARCANA_clampQty(v,minimumOrder);
     if(qi){
-      document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=Math.max(minimumOrder,(+qi.value||minimumOrder)-1);
-      document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=(+qi.value||minimumOrder)+1;
-      qi.addEventListener('change',()=>{qi.value=Math.max(minimumOrder,Math.floor(Number(qi.value)||minimumOrder));});
+      document.querySelector('#pdpQty [data-dec]').onclick=()=>qi.value=clampQty((+qi.value||minimumOrder)-1);
+      document.querySelector('#pdpQty [data-inc]').onclick=()=>qi.value=clampQty((+qi.value||minimumOrder)+1);
+      qi.addEventListener('input',()=>{if(qi.value.length>qi.maxLength)qi.value=qi.value.slice(0,qi.maxLength);});
+      qi.addEventListener('change',()=>{qi.value=clampQty(qi.value);});
     }
 
     // ── CTA wiring ──
     const add=document.getElementById('addBtn');
-    if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
+    if(add) add.addEventListener('click',()=>{Store.addToCart(p.id,clampQty(qi.value),selectedOptions);toast(`${TR(p.name)} — ${T('Added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const buy=document.getElementById('buyBtn');
-    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,Math.max(1,parseInt(qi.value)||1),selectedOptions);Store.beginCheckout?.();location.href='checkout.html';});
+    if(buy) buy.addEventListener('click',()=>{Store.addToCart(p.id,clampQty(qi.value),selectedOptions);Store.beginCheckout?.();location.href='checkout.html';});
     const swatch=document.getElementById('swatchBtn');
     if(swatch) swatch.addEventListener('click',()=>{Store.addToCart(p.id,1,selectedOptions,'swatch');toast(`${TR(p.name)} — ${T('Swatch added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const emailBtn=document.getElementById('emailBtn');

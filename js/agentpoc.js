@@ -237,6 +237,41 @@ function doWishlist(id){
   if(r.saved) pushConfirmation('Saved to wishlist', r.product.name.split(' ').slice(0,2).join(' '));
   appendAgent(msg); logAgent(msg);
 }
+function doRemoveFromCart(id){
+  const r = actions().removeFromCart(id);
+  if(!r.ok){
+    if(r.reason==='not_in_cart'){ const p=findProduct(id); const m=`${p?p.name:'That item'} isn't in your cart.`; appendAgent(m); logAgent(m); return; }
+    handleActionError(r.reason); return;
+  }
+  state.lastRef = id;
+  syncBadges();
+  pushConfirmation('Removed from cart', r.product.name.split(' ').slice(0,2).join(' '));
+  const msg = `Removed ${r.product.name} from your cart.`;
+  appendAgent(msg); logAgent(msg);
+}
+function doSetQty(id, qty){
+  const r = actions().setCartQty(id, qty);
+  if(!r.ok){
+    if(r.reason==='not_in_cart'){ doAddToCart(id, qty); return; }
+    handleActionError(r.reason); return;
+  }
+  state.lastRef = id;
+  syncBadges();
+  pushConfirmation('Quantity updated', `${r.qty} ${r.product.unit||''}`.trim());
+  const msg = `Updated ${r.product.name} to ${r.qty} ${r.product.unit||'units'}.`;
+  appendAgent(msg); logAgent(msg);
+}
+function doDecreaseQty(id, amount){
+  const current = actions().cartQty(id);
+  if(!current){ const p=findProduct(id); const m=`${p?p.name:'That item'} isn't in your cart.`; appendAgent(m); logAgent(m); return; }
+  const next = current - amount;
+  if(next <= 0){ doRemoveFromCart(id); return; }
+  doSetQty(id, next);
+}
+function doRemoveFromWishlist(id){
+  if(!actions().isSaved(id)){ const p=findProduct(id); const m=`${p?p.name:'That item'} isn't on your wishlist.`; appendAgent(m); logAgent(m); return; }
+  doWishlist(id); // toggles off — it's currently saved
+}
 function doCheckout(){
   const r = actions().goToCheckout();
   if(!r.ok){
@@ -278,13 +313,11 @@ function parseResale(text){
   if(m) return { amount: parseFloat(m[1].replace(/,/g,'')), currency:'USD' };
   return null;
 }
-function resolveRef(text){
+// Best product match for `text` against `pool` — a full quoted product name
+// wins outright (avoids two products sharing one generic word like "Wool"
+// picking whichever iterates first), then loose token overlap.
+function bestMatchIn(text, pool){
   const t = text.toLowerCase();
-  const pool = state.candidates.length ? state.candidates : products().slice(0,80);
-  // A full product name quoted in the message is unambiguous — check that
-  // before falling back to loose token overlap, where a single shared generic
-  // word (e.g. two products both named "... Wool ...") could otherwise pick
-  // the wrong one just because it comes first in iteration order.
   for(const p of pool){
     const name = String(p.name||'').toLowerCase();
     if(name && t.includes(name)) return p.id;
@@ -295,12 +328,58 @@ function resolveRef(text){
     const score = tokens.filter(tok => String(tok).length>3 && t.includes(String(tok).toLowerCase())).length;
     if(score > bestScore){ bestScore = score; best = p.id; }
   }
-  if(best) return best;
-  return state.lastRef || (pool[0] && pool[0].id) || null;
+  return best;
 }
+function resolveRef(text){
+  const pool = state.candidates.length ? state.candidates : products().slice(0,80);
+  return bestMatchIn(text, pool) || state.lastRef || (pool[0] && pool[0].id) || null;
+}
+function idsFromLocal(key){
+  try{
+    const raw = JSON.parse(localStorage.getItem(key)||'[]')||[];
+    return raw.map(i=>typeof i==='string'?i:i&&i.id).filter(Boolean);
+  }catch(_){ return []; }
+}
+// Cart/wishlist edits ("remove it", "add 10 more", "unsave that") are almost
+// always about something already in that list — resolve against its real
+// contents first (and if it holds exactly one item, an unnamed "it"/"that"
+// unambiguously means that one) before falling back to the conversation's
+// candidate pool, which can have drifted since the item was added.
+function resolveAgainst(text, storageKey){
+  const items = idsFromLocal(storageKey).map(findProduct).filter(Boolean);
+  if(items.length){
+    const hit = bestMatchIn(text, items);
+    if(hit) return hit;
+    if(items.length===1) return items[0].id;
+  }
+  return resolveRef(text);
+}
+function resolveCartRef(text){ return resolveAgainst(text, 'arcana_cart'); }
+function resolveWishlistRef(text){ return resolveAgainst(text, 'arcana_saved'); }
 function parseQty(text){
-  const m = text.match(/(\d[\d,]*)\s*(m|meters?|metres?|kg|units?|pcs?|pieces?)\b/i);
+  const t = String(text||'');
+  let m = t.match(/(\d[\d,]*)\s*(m|meters?|metres?|kg|units?|pcs?|pieces?)\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  // relative phrasing with no unit word: "add 10 more", "add another 25"
+  m = t.match(/(\d[\d,]*)\s*(?:more|extra|additional)\b/i) || t.match(/\banother\s+(\d[\d,]*)\b/i);
   return m ? parseInt(m[1].replace(/,/g,''),10) : null;
+}
+function parseSetQty(text){
+  const m = text.match(/\bto\s+(\d[\d,]*)\b/i) || text.match(/\bmake\s+it\s+(\d[\d,]*)\b/i);
+  return m ? parseInt(m[1].replace(/,/g,''),10) : null;
+}
+function parseDecreaseQty(text){
+  let m = text.match(/\bby\s+(\d[\d,]*)\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  m = text.match(/\btake\s+(\d[\d,]*)\s*(?:m|meters?|metres?|kg|units?|pcs?|pieces?)?\s+off\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  m = text.match(/\bremove\s+(\d[\d,]*)\s*(?:m|meters?|metres?|kg|units?|pcs?|pieces?)\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  m = text.match(/\b(\d[\d,]*)\s*(?:less|fewer)\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  m = text.match(/\bminus\s+(\d[\d,]*)\b/i);
+  if(m) return parseInt(m[1].replace(/,/g,''),10);
+  return null;
 }
 // candidate ids/names the agent's reply mentions inline, so their cards render
 function referencedInReply(reply){
@@ -320,13 +399,45 @@ function referencedInReply(reply){
 /* ================= deterministic action turn ================= */
 
 function handleAction(text){
-  const t = text.toLowerCase();
-  if(/\b(check\s*out|checkout|proceed to (checkout|pay)|pay now|place (the )?order|buy it now)\b/.test(t)){ doCheckout(); return; }
-  if(/\bwishlist|save (it|this|that)\b/.test(t)){
+  const kind = Copilot().classifyAction(text);
+  if(kind === 'checkout'){ doCheckout(); return; }
+
+  if(kind === 'qty_set'){
+    const id = resolveCartRef(text);
+    const qty = parseSetQty(text);
+    if(!id){ const m=`Which item's quantity should I change?`; appendAgent(m); logAgent(m); return; }
+    if(qty == null){ const m=`What quantity should I set it to?`; appendAgent(m); logAgent(m); return; }
+    doSetQty(id, qty);
+    return;
+  }
+  if(kind === 'qty_decrease'){
+    const id = resolveCartRef(text);
+    if(!id){ const m=`Which item should I reduce?`; appendAgent(m); logAgent(m); return; }
+    const amount = parseDecreaseQty(text);
+    if(amount == null){ const m=`By how much should I reduce it?`; appendAgent(m); logAgent(m); return; }
+    doDecreaseQty(id, amount);
+    return;
+  }
+  if(kind === 'cart_remove'){
+    const id = resolveCartRef(text);
+    if(!id){ const m=`Which item should I remove from your cart?`; appendAgent(m); logAgent(m); return; }
+    doRemoveFromCart(id);
+    return;
+  }
+  if(kind === 'wishlist_remove'){
+    const id = resolveWishlistRef(text);
+    if(!id){ const m=`Which item should I remove from your wishlist?`; appendAgent(m); logAgent(m); return; }
+    doRemoveFromWishlist(id);
+    return;
+  }
+  if(kind === 'wishlist_add'){
     const id = resolveRef(text);
     if(id) doWishlist(id); else { const m=`Which item should I save?`; appendAgent(m); logAgent(m); }
     return;
   }
+  // cart_add — the default: name a new fabric, or narrow an item already on
+  // screen ("add 10 more" resolves against the item the conversation is
+  // currently about via resolveRef's state.lastRef fallback).
   const id = resolveRef(text);
   if(!id){ const m=`Which fabric should I add — name it or search for one first.`; appendAgent(m); logAgent(m); return; }
   doAddToCart(id, parseQty(text) || defaultQty(id));
@@ -388,6 +499,14 @@ async function handleChat(text){
   }
 }
 
+// The buyer gets an English RFQ by default; only a language they explicitly
+// name switches it — never guessed from the supplier's own country.
+function detectLang(text){
+  const t = String(text||'').toLowerCase();
+  if(/japanese|in\s+japan\b|日本語/.test(t)) return 'ja';
+  if(/chinese|mandarin|in\s+china\b|中文/.test(t)) return 'zh';
+  return 'en';
+}
 async function requestDrafts(targetIds){
   if(!state.candidates.length) return;
   // targetIds comes from the LLM's draftFor — the specific supplier(s) the buyer
@@ -396,17 +515,19 @@ async function requestDrafts(targetIds){
     ? targetIds.map(findProduct).filter(Boolean)
     : state.candidates.slice(0,5);
   if(!targets.length) return;
+  const lastUser = state.history.filter(h=>h.role==='user').slice(-1)[0];
+  const lang = detectLang((lastUser||{}).content || state.brief);
   const stop = showTyping();
   const matches = targets.slice(0,5).map(trimCandidate);
   try{
-    const payload = await callAgent('draft', { brief: state.brief || (state.history[state.history.length-1]||{}).content || '', matches });
+    const payload = await callAgent('draft', { brief: state.brief || (state.history[state.history.length-1]||{}).content || '', matches, lang });
     stop();
     if(payload.intro){ appendAgent(payload.intro); logAgent(payload.intro); }
     appendDrafts(payload.drafts||[]);
   }catch(err){
     stop();
     if(err.reason === 'not_available'){ showGate('unavailable'); return; }
-    const fallback = targets.map(p=>({ productId:p.id, message: fallbackDraft(p) }));
+    const fallback = targets.map(p=>({ productId:p.id, message: fallbackDraft(p, lang) }));
     const m = targets.length>1
       ? `Here are inquiry drafts for each supplier — copy them into the supplier chat on each product page.`
       : `Here's an inquiry draft — copy it into the supplier chat on the product page.`;
@@ -414,9 +535,17 @@ async function requestDrafts(targetIds){
     appendDrafts(fallback);
   }
 }
-function fallbackDraft(p){
+// Kept deliberately simple: only the greeting/sign-off are localized, the
+// factual body stays plain-English so specs/numbers never get mistranslated.
+const RFQ_GREETING = {
+  en: { hi:name=>`Hi ${name} team,`, close:`Thanks,\nAtelix buyer` },
+  ja: { hi:name=>`${name} ご担当者様`, close:`よろしくお願いいたします。\nAtelix バイヤー` },
+  zh: { hi:name=>`${name} 团队，您好，`, close:`谢谢，\nAtelix 采购方` },
+};
+function fallbackDraft(p, lang){
   const supplier = String(p.seller||'').split(/[,(]/)[0].trim();
-  return `Hi ${supplier} team,\n\nWe're interested in ${p.name} (${p.spec||p.comp}). Could you confirm current pricing at ${p.moq||'our target'} MOQ and lead time?\n\nThanks,\nAtelix buyer`;
+  const g = RFQ_GREETING[lang] || RFQ_GREETING.en;
+  return `${g.hi(supplier)}\n\nWe're interested in ${p.name} (${p.spec||p.comp}). Could you confirm current pricing at ${p.moq||'our target'} MOQ and lead time?\n\n${g.close}`;
 }
 
 /* ================= suggestions ================= */

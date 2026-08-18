@@ -172,7 +172,9 @@
       </div>
       <a class="link-arrow" href="pages/factories.html">Explore factories <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
     </div>
-    <div class="factory-network-list" id="factoryNetwork"></div>
+    <div class="factory-marquee">
+      <div class="factory-marquee-track" id="factoryNetwork"></div>
+    </div>
   </section>
 </main>
 
@@ -340,7 +342,24 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
   const initials=name=>name.split(/\s+/).filter(Boolean).slice(0,2).map(word=>word[0]).join('').toUpperCase();
   if(factoryNetwork){
     const factoryLocation=window.ATELIX_factoryLocation;
-    const renderFactory=factory=>{
+    // The full directory (105+ factories) is too dense for the homepage — this
+    // strip previews the ~10 biggest, most recognizable, longest-standing
+    // partners (a real logo on file is our proxy for "well known"; years in
+    // business breaks ties toward the oldest) and lets "Explore factories"
+    // carry the buyer to the complete, filterable roster.
+    const featuredFactories=()=>{
+      const all=window.ARCANA_FACTORIES||[];
+      const byYearsDesc=(a,b)=>(b.years||0)-(a.years||0);
+      const known=all.filter(f=>f.logo_img||factoryLogos[f.id]).sort(byYearsDesc);
+      let picked=known.slice(0,10);
+      if(picked.length<10){
+        const pickedIds=new Set(picked.map(f=>f.id));
+        const rest=all.filter(f=>!pickedIds.has(f.id)).sort(byYearsDesc);
+        picked=picked.concat(rest.slice(0,10-picked.length));
+      }
+      return picked;
+    };
+    const renderFactoryMark=(factory,duplicate)=>{
       const supplierName=window.ATELIX_supplierText(factory,'name');
       const logo=factory.logo_img||factoryLogos[factory.id];
       const logoSrc=logo&&(/^https?:|^\//i.test(logo)?logo:`assets/${logo}`);
@@ -348,16 +367,15 @@ window.ARCANA_PAGE = function({ASSET,Store,IC,toast}){
         ? `<img src="${escapeHTML(logoSrc)}" alt="" loading="lazy" decoding="async">`
         : `<span aria-hidden="true">${escapeHTML(initials(supplierName))}</span>`;
       const location=factoryLocation(factory);
-      return `<a class="factory-network-item" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(supplierName)}, ${escapeHTML(location)}">
-        <span class="factory-network-mark${logo?' has-logo':''}">${mark}</span>
-        <span class="factory-network-copy"><strong>${escapeHTML(supplierName)}</strong><small>${escapeHTML(location)}</small></span>
-        <svg class="factory-network-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      return `<a class="factory-mark-item${duplicate?' is-dup':''}" href="pages/supplier.html?id=${encodeURIComponent(factory.id)}" aria-label="${escapeHTML(supplierName)}, ${escapeHTML(location)}"${duplicate?' aria-hidden="true" tabindex="-1"':''}>
+        <span class="factory-mark${logo?' has-logo':''}">${mark}</span>
+        <span class="factory-mark-name">${escapeHTML(supplierName)}</span>
       </a>`;
     };
     const renderFactoryNetwork=()=>{
-      const factories=[...(window.ARCANA_FACTORIES||[])].sort((a,b)=>window.ATELIX_supplierText(a,'name').localeCompare(window.ATELIX_supplierText(b,'name')));
+      const featured=featuredFactories();
       const catalogStats=window.ATELIX_catalogStats;
-      factoryNetwork.innerHTML=factories.map(renderFactory).join('');
+      factoryNetwork.innerHTML=featured.map(f=>renderFactoryMark(f,false)).join('')+featured.map(f=>renderFactoryMark(f,true)).join('');
       document.getElementById('factoryNetworkDescription').textContent=`${catalogStats.factories} ${window.ARCANA_T('verified material and production companies across')} ${catalogStats.countries} ${window.ARCANA_T('countries')}.`;
     };
     renderFactoryNetwork();

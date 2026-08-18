@@ -293,6 +293,11 @@
   const notifyCartChanged = () => {
     window.dispatchEvent(new CustomEvent("arcana:cartchange"));
   };
+  const MAX_QTY = 99999;
+  const clampQty = (qty, min = 1) =>
+    Math.min(MAX_QTY, Math.max(min, Math.floor(Number(qty) || min)));
+  window.ARCANA_MAX_QTY = MAX_QTY;
+  window.ARCANA_clampQty = clampQty;
   const Store = {
     session() {
       return LS.get("session", null);
@@ -344,13 +349,13 @@
       return Store.cart().reduce((n, i) => n + i.qty, 0);
     },
     addToCart(id, qty, options = {}, lineType = "product") {
-      qty = qty || 1;
+      qty = clampQty(qty);
       const selection = normalizeSelection(options);
       const normalizedLineType = lineType === "swatch" ? "swatch" : "product";
       const key = cartLineKey(id, selection, normalizedLineType);
       const c = Store.cart();
       const row = c.find((i) => i.key === key);
-      if (row) row.qty += qty;
+      if (row) row.qty = clampQty(row.qty + qty);
       else c.push({ id, qty, key, options: selection, lineType: normalizedLineType });
       LS.set("cart", c);
       syncBadges();
@@ -361,7 +366,7 @@
       const c = Store.cart();
       const r = c.find((i) => i.key === key || (i.id === key && i.key === i.id));
       if (r) {
-        r.qty = Math.max(1, qty);
+        r.qty = clampQty(qty);
         LS.set("cart", c);
         pushCartItem(r.id, r.qty, r.options, r.key, r.lineType);
       }
@@ -1382,6 +1387,29 @@
     isSaved(sku) {
       return Store.isSaved(sku);
     },
+    cartQty(sku) {
+      const row = Store.cart().find((i) => i.id === sku);
+      return row ? row.qty : 0;
+    },
+    setCartQty(sku, qty) {
+      if (!Store.session()) return { ok: false, reason: "not_logged_in" };
+      const p = this.product(sku);
+      if (!p) return { ok: false, reason: "not_found" };
+      const row = Store.cart().find((i) => i.id === sku);
+      if (!row) return { ok: false, reason: "not_in_cart" };
+      Store.setQty(row.key, qty);
+      const n = this.cartQty(sku);
+      return { ok: true, product: p, qty: n, cartCount: Store.cartCount(), cartUnits: Store.cartUnits(), cartHref: P("cart.html") };
+    },
+    removeFromCart(sku) {
+      if (!Store.session()) return { ok: false, reason: "not_logged_in" };
+      const p = this.product(sku);
+      if (!p) return { ok: false, reason: "not_found" };
+      const row = Store.cart().find((i) => i.id === sku);
+      if (!row) return { ok: false, reason: "not_in_cart" };
+      Store.remove(row.key);
+      return { ok: true, product: p, cartCount: Store.cartCount(), cartUnits: Store.cartUnits(), cartHref: P("cart.html") };
+    },
     goToCheckout() {
       if (!Store.session()) return { ok: false, reason: "not_logged_in" };
       if (!Store.cart().length) return { ok: false, reason: "empty_cart" };
@@ -2301,16 +2329,25 @@
       const inp = q.querySelector("input");
       const dec = q.querySelector("[data-dec]"),
         inc = q.querySelector("[data-inc]");
+      const min = Math.max(1, parseInt(inp.min, 10) || 1);
       if (dec)
         dec.onclick = () => {
-          inp.value = Math.max(1, (+inp.value || 1) - 1);
+          inp.value = clampQty((+inp.value || min) - 1, min);
           inp.dispatchEvent(new Event("change", { bubbles: true }));
         };
       if (inc)
         inc.onclick = () => {
-          inp.value = (+inp.value || 1) + 1;
+          inp.value = clampQty((+inp.value || min) + 1, min);
           inp.dispatchEvent(new Event("change", { bubbles: true }));
         };
+      inp.addEventListener("input", () => {
+        if (inp.value.length > String(MAX_QTY).length) {
+          inp.value = inp.value.slice(0, String(MAX_QTY).length);
+        }
+      });
+      inp.addEventListener("change", () => {
+        inp.value = clampQty(inp.value, min);
+      });
     });
     // oem package select
     document.querySelectorAll("[data-pkg-group]").forEach((g) =>

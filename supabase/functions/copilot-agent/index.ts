@@ -50,8 +50,10 @@ Tone: precise, calm, confident. Never salesy, no exclamation points.`;
 
 const DRAFT_SYSTEM_PROMPT = `You are Atelix's Athelia agent drafting supplier outreach for a signed-in buyer. A deterministic engine already found real, verified catalog matches (JSON below). You never invent products, prices, specs, sellers, MOQs, or certifications beyond what is given.
 
+The input JSON includes "lang": one of "en", "ja", "zh". Write the ENTIRE message — greeting, body, and sign-off — in that language. Default to "en" (English) unless the buyer explicitly asked for another language; never guess a language from the supplier's own country. Keep product names, specs, MOQs, and numbers exactly as given — do not translate or alter facts, only the surrounding prose.
+
 Reply with ONLY minified JSON, no markdown fences, in exactly this shape:
-{"intro":"<one calm sentence, max 40 words, naming the top match and why it fits>","drafts":[{"productId":"<id from matches, one per match, same order>","message":"<a short professional RFQ email to that match's seller, 60-110 words, referencing ONLY the given name/spec/price/moq facts, signed 'Atelix buyer'>"}]}
+{"intro":"<one calm sentence, max 40 words, naming the top match and why it fits, written in the requested lang>","drafts":[{"productId":"<id from matches, one per match, same order>","message":"<a short professional RFQ email to that match's seller, 60-110 words (or the natural equivalent in the target language), referencing ONLY the given name/spec/price/moq facts, signed 'Atelix buyer', written in the requested lang>"}]}
 
 Tone: precise, calm, confident, never salesy, never an exclamation point.`;
 
@@ -211,7 +213,8 @@ Deno.serve(async (req) => {
     if (!brief) return jsonResponse({ ok: false, reason: "missing_brief" }, 400);
     const matches = sanitizeMatches(body?.matches);
     if (!matches.length) return jsonResponse({ ok: false, reason: "missing_matches" }, 400);
-    llmMessages = [{ role: "system", content: DRAFT_SYSTEM_PROMPT }, { role: "user", content: JSON.stringify({ brief, matches }) }];
+    const lang = ["en", "ja", "zh"].includes(body?.lang) ? body.lang : "en";
+    llmMessages = [{ role: "system", content: DRAFT_SYSTEM_PROMPT }, { role: "user", content: JSON.stringify({ brief, matches, lang }) }];
   } else {
     const instruction = trimStr(body?.instruction, 400);
     if (!instruction) return jsonResponse({ ok: false, reason: "missing_instruction" }, 400);
