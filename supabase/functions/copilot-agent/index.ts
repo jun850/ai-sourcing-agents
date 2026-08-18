@@ -10,14 +10,19 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // copilot-ask and design-match) are enforced here server-side.
 //
 // Modes:
-//  - "benchmark": narrate a deterministic price-benchmark / resale-context
-//                 object (real numbers) as one calm paragraph. No new numbers.
-//  - "draft":     brief + real matched products -> one RFQ per supplier.
-//  - "revise":    current drafts + instruction -> revised drafts.
+//  - "chat":   the conversational brain. Given the message history + real
+//              candidate products (and, for price questions, a deterministic
+//              benchmark), it writes the reply and picks which real product ids
+//              to show. It may never invent a product, price, or number.
+//  - "draft":  brief + real matched products -> one RFQ per supplier.
+//  - "revise": current drafts + instruction -> revised drafts.
 
 const MAX_CALLS = 40;
 const MAX_TOKENS = 400000;
 const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
+// Athelia is in limited preview — only these accounts may use the agent.
+// This is the authoritative gate; the front-end shows the same allowlist as UX.
+const ALLOWED_EMAILS = new Set(["jun@arcanawangsa.com"]);
 const MODEL = "@preset/marketplace-copilot";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -25,15 +30,18 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const BENCHMARK_SYSTEM_PROMPT = `You are Atelix's Athelia, a calm procurement analyst inside a B2B fashion-sourcing marketplace. A signed-in buyer asked a pricing / "am I paying too much" / resale-margin question about a specific fabric. A deterministic engine has ALREADY computed the real figures from the live catalog and given them to you as JSON (the target fabric's price, peer benchmark stats, its percentile, and any resale context).
+const CHAT_SYSTEM_PROMPT = `You are Athelia, the sourcing agent inside Atelix, a B2B fashion-sourcing marketplace. You are talking to a signed-in brand-owner buyer. Reason over the WHOLE conversation so far — later messages refine earlier ones (a follow-up like "my budget is $10/m" narrows the previous request, it does not start a new one).
 
-Write ONE short paragraph (max 70 words, plain text, no markdown, no lists) answering the buyer. Rules:
-- Use ONLY the numbers provided. Never invent, round beyond one decimal, or state a figure not present in the JSON.
-- Quote the peer benchmark (e.g. median and range) and where this fabric sits (its percentile / verdict).
-- If resale context is present, describe the fabric's price as a share of ONE piece's resale price, and explicitly note this is a material-cost share per priced unit, NOT a full gross margin (garment fabric usage is unknown).
-- If the benchmark is marked insufficient (too few comparable SKUs), say the sample is too small to benchmark confidently rather than quoting shaky stats.
-- Tone: precise, calm, confident. Never salesy, no exclamation points.
-Reply with ONLY minified JSON: {"answer":"<the paragraph>"}`;
+A deterministic engine has already searched the LIVE catalog and given you CONTEXT as JSON:
+- "candidates": the real verified products that fit the conversation so far (id, name, seller, price, unit, moq, spec, comp, certs). This is the ONLY set of products you may reference or show. Never invent a product, price, spec, supplier, or number that is not in this JSON.
+- "benchmark": present only when the buyer asked whether a price is fair — real peer price stats and resale context for one product. Quote ONLY these numbers; note any resale share is a material-cost share per unit, not a full gross margin.
+
+Decide what to say and which products to surface. Reply with ONLY minified JSON, no markdown:
+{"reply":"<your conversational answer, max 60 words, plain text>","show":["<candidate id>", ...],"drafts":false}
+- "show": the ids (0-5, best first) of candidates worth showing as cards for THIS turn; [] when none fit or the turn is purely conversational. Only ids present in candidates.
+- "reply": speak naturally. If nothing fits the (possibly narrowed) request, say so honestly and suggest relaxing one constraint — do not show unrelated products.
+- "drafts": true only if the buyer explicitly asked you to draft/write supplier inquiries.
+Tone: precise, calm, confident. Never salesy, no exclamation points.`;
 
 const DRAFT_SYSTEM_PROMPT = `You are Atelix's Athelia agent drafting supplier outreach for a signed-in buyer. A deterministic engine already found real, verified catalog matches (JSON below). You never invent products, prices, specs, sellers, MOQs, or certifications beyond what is given.
 
@@ -65,6 +73,32 @@ function sanitizeMatches(matches: unknown): Array<Record<string, unknown>> {
     comp: trimStr(m?.comp, 100),
     certs: Array.isArray(m?.certs) ? m.certs.slice(0, 6).map((c: unknown) => trimStr(c, 30)) : [],
   }));
+}
+
+// Candidates for chat grounding — a few more fields + up to 8, best-first.
+function sanitizeCandidates(candidates: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(candidates)) return [];
+  return candidates.slice(0, 8).map((m: any) => ({
+    id: trimStr(m?.id, 40),
+    name: trimStr(m?.name, 90),
+    seller: trimStr(m?.seller, 60),
+    loc: trimStr(m?.loc, 60),
+    price: typeof m?.price === "number" ? m.price : null,
+    unit: trimStr(m?.unit, 20),
+    moq: trimStr(m?.moq, 30),
+    spec: trimStr(m?.spec, 100),
+    comp: trimStr(m?.comp, 100),
+    certs: Array.isArray(m?.certs) ? m.certs.slice(0, 6).map((c: unknown) => trimStr(c, 30)) : [],
+  }));
+}
+
+// Conversation history: only user/assistant text turns, clamped.
+function sanitizeChatMessages(messages: unknown): Array<{ role: string; content: string }> {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .slice(-16)
+    .map((m: any) => ({ role: m?.role === "assistant" ? "assistant" : "user", content: trimStr(m?.content, 800) }))
+    .filter((m) => m.content);
 }
 
 function sanitizeDrafts(drafts: unknown): Array<Record<string, unknown>> {
@@ -115,10 +149,15 @@ Deno.serve(async (req) => {
   const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
   if (userErr || !user) return jsonResponse({ ok: false, reason: "unauthorized" }, 401);
 
+  // ---- Limited-preview allowlist: only permitted accounts may use Athelia. ----
+  if (!ALLOWED_EMAILS.has((user.email || "").toLowerCase())) {
+    return jsonResponse({ ok: false, reason: "not_available" }, 403);
+  }
+
   let body: any;
   try { body = await req.json(); } catch { return jsonResponse({ ok: false, reason: "invalid_json" }, 400); }
 
-  const mode = ["benchmark", "draft", "revise"].includes(body?.mode) ? body.mode : null;
+  const mode = ["chat", "draft", "revise"].includes(body?.mode) ? body.mode : null;
   if (!mode) return jsonResponse({ ok: false, reason: "invalid_mode" }, 400);
 
   const unlimited = (user.email || "").toLowerCase() === UNLIMITED_EMAIL;
@@ -152,27 +191,28 @@ Deno.serve(async (req) => {
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
   if (!apiKey) return jsonResponse({ ok: false, reason: "llm_not_configured" });
 
-  let systemPrompt: string;
-  let userContent: string;
-  if (mode === "benchmark") {
-    const question = trimStr(body?.question, 400);
-    if (!question) return jsonResponse({ ok: false, reason: "missing_question" }, 400);
-    systemPrompt = BENCHMARK_SYSTEM_PROMPT;
-    userContent = JSON.stringify({ question, data: JSON.parse(sanitizeBenchmarkPayload(body?.data)) });
+  let llmMessages: Array<{ role: string; content: string }>;
+  if (mode === "chat") {
+    const convo = sanitizeChatMessages(body?.messages);
+    if (!convo.length) return jsonResponse({ ok: false, reason: "missing_messages" }, 400);
+    const candidates = sanitizeCandidates(body?.candidates);
+    const benchmark = body?.benchmark ? JSON.parse(sanitizeBenchmarkPayload(body?.benchmark)) : null;
+    llmMessages = [
+      { role: "system", content: CHAT_SYSTEM_PROMPT + "\n\nCONTEXT:\n" + JSON.stringify({ candidates, benchmark }) },
+      ...convo,
+    ];
   } else if (mode === "draft") {
     const brief = trimStr(body?.brief, 400);
     if (!brief) return jsonResponse({ ok: false, reason: "missing_brief" }, 400);
     const matches = sanitizeMatches(body?.matches);
     if (!matches.length) return jsonResponse({ ok: false, reason: "missing_matches" }, 400);
-    systemPrompt = DRAFT_SYSTEM_PROMPT;
-    userContent = JSON.stringify({ brief, matches });
+    llmMessages = [{ role: "system", content: DRAFT_SYSTEM_PROMPT }, { role: "user", content: JSON.stringify({ brief, matches }) }];
   } else {
     const instruction = trimStr(body?.instruction, 400);
     if (!instruction) return jsonResponse({ ok: false, reason: "missing_instruction" }, 400);
     const drafts = sanitizeDrafts(body?.drafts);
     if (!drafts.length) return jsonResponse({ ok: false, reason: "missing_drafts" }, 400);
-    systemPrompt = REVISE_SYSTEM_PROMPT;
-    userContent = JSON.stringify({ instruction, drafts, matches: sanitizeMatches(body?.matches) });
+    llmMessages = [{ role: "system", content: REVISE_SYSTEM_PROMPT }, { role: "user", content: JSON.stringify({ instruction, drafts, matches: sanitizeMatches(body?.matches) }) }];
   }
 
   let completion: any;
@@ -187,10 +227,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
+        messages: llmMessages,
         // The preset resolves to a reasoning model; leave ample budget so its
         // internal reasoning doesn't consume the whole allowance before the
         // final answer (the bug that bit the earlier public function).
@@ -228,10 +265,14 @@ Deno.serve(async (req) => {
     if (tokenErr) console.error("[copilot-agent] token accounting failed", tokenErr);
   }
 
-  if (mode === "benchmark") {
-    const answer = trimStr(parsed.answer, 800);
-    if (!answer) return jsonResponse({ ok: false, reason: "llm_error" });
-    return jsonResponse({ ok: true, answer });
+  if (mode === "chat") {
+    const reply = trimStr(parsed.reply, 800);
+    if (!reply) return jsonResponse({ ok: false, reason: "llm_error" });
+    const candIds = new Set(sanitizeCandidates(body?.candidates).map((c) => c.id));
+    const show = Array.isArray(parsed.show)
+      ? parsed.show.map((x: any) => trimStr(x, 40)).filter((id: string) => candIds.has(id)).slice(0, 5)
+      : [];
+    return jsonResponse({ ok: true, reply, show, drafts: !!parsed.drafts });
   }
 
   if (!Array.isArray(parsed.drafts)) return jsonResponse({ ok: false, reason: "llm_error" });
