@@ -6,3 +6,4 @@ supabase/.temp/
 data/
 playwright-report/
 test-results/
+.impeccable/hook.cache*
