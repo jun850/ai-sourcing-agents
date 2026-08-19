@@ -20,9 +20,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const MAX_CALLS = 40;
 const MAX_TOKENS = 400000;
 const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
-// Athelia is in limited preview — only these accounts may use the agent.
-// This is the authoritative gate; the front-end shows the same allowlist as UX.
-const ALLOWED_EMAILS = new Set(["jun@arcanawangsa.com"]);
 const MODEL = "@preset/marketplace-copilot";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -155,11 +152,6 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
   if (userErr || !user) return jsonResponse({ ok: false, reason: "unauthorized" }, 401);
-
-  // ---- Limited-preview allowlist: only permitted accounts may use Athelia. ----
-  if (!ALLOWED_EMAILS.has((user.email || "").toLowerCase())) {
-    return jsonResponse({ ok: false, reason: "not_available" }, 403);
-  }
 
   let body: any;
   try { body = await req.json(); } catch { return jsonResponse({ ok: false, reason: "invalid_json" }, 400); }
