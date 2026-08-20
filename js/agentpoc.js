@@ -15,13 +15,10 @@
    of real product cards or drafted supplier messages. Add-to-cart works from
    the prompt ("add the denim to cart") or the button on any card.
 
-   Athelia is in limited preview — front-end allowlist here, enforced for real
-   in the copilot-agent function. */
+   Athelia is available to every signed-in account (subject to the shared
+   per-user daily usage cap enforced in the copilot-agent function). */
 (function(){
 'use strict';
-
-const ALLOWED_EMAILS = ['jun@arcanawangsa.com'];
-function isAllowedEmail(email){ return ALLOWED_EMAILS.includes(String(email||'').trim().toLowerCase()); }
 
 function asset(f){ return '../assets/' + f; }
 function resolveAsset(value, fallback){
@@ -612,7 +609,6 @@ async function checkAuthAndInit(){
     try{ profile = await api.getSessionProfile(); }catch(_){}
   }
   if(!profile){ showGate('signin'); return; }
-  if(!isAllowedEmail(profile.email)){ showGate('unavailable'); return; }
   showReady(); pickupBrief();
 }
 

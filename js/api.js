@@ -71,6 +71,7 @@ if(!sb || !sb.auth){
     getOrCreateConversation(){ return Promise.resolve({ error: err }); },
     getMessages(){ return Promise.resolve([]); },
     sendMessage(){ return Promise.resolve({ error: err }); },
+    subscribeChatMessages(){ return { unsubscribe(){} }; },
     adminListOrders(){ return Promise.resolve([]); },
     adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
     adminListUsers(){ return Promise.resolve([]); },
@@ -875,6 +876,76 @@ const API = {
       const { error } = await sb.from('addresses').update({ is_default:true }).eq('id', id);
       return { error: error || null };
     }catch(error){ return { error }; }
+  },
+
+  /* ---- Buyer ↔ Seller chat ---- */
+  async getMyConversations(){
+    try{
+      const {data,error}=await sb.rpc('my_conversations');
+      if(error) return [];
+      return data||[];
+    }catch(_){return [];}
+  },
+
+  async getOrCreateConversation(factoryId){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session||!session.user) return {error:{message:'not authenticated'}};
+      const {data,error}=await sb.from('conversations')
+        .insert({buyer_profile_id:session.user.id,factory_id:factoryId})
+        .select().single();
+      if(error){
+        if(error.code==='23505'){
+          const {data:existing,error:selErr}=await sb.from('conversations')
+            .select('*').eq('buyer_profile_id',session.user.id).eq('factory_id',factoryId).single();
+          if(selErr) return {error:selErr};
+          return {conversation:existing,error:null};
+        }
+        return {error};
+      }
+      return {conversation:data,error:null};
+    }catch(error){return {error};}
+  },
+
+  async getMessages(conversationId,opts){
+    try{
+      const limit=(opts&&opts.limit)||50;
+      let q=sb.from('messages').select('id,body,sender_profile_id,created_at')
+        .eq('conversation_id',conversationId)
+        .order('created_at',{ascending:false}).limit(limit);
+      if(opts&&opts.before) q=q.lt('created_at',opts.before);
+      const {data,error}=await q;
+      if(error) return [];
+      return (data||[]).reverse();
+    }catch(_){return [];}
+  },
+
+  async sendMessage(conversationId,body){
+    try{
+      const {data:{session}}=await sb.auth.getSession();
+      if(!session||!session.user) return {error:{message:'not authenticated'}};
+      const {data,error}=await sb.from('messages')
+        .insert({conversation_id:conversationId,sender_profile_id:session.user.id,body})
+        .select().single();
+      if(error) return {error};
+      try{
+        sb.functions.invoke('chat-notify-email',{
+          body:{conversationId,preview:body.slice(0,200)},
+          headers:{Authorization:'Bearer '+session.access_token}
+        });
+      }catch(_){}
+      return {message:data,error:null};
+    }catch(error){return {error};}
+  },
+
+  subscribeChatMessages(conversationId,onMessage){
+    const channel=sb.channel('chat:'+conversationId)
+      .on('postgres_changes',{
+        event:'INSERT',schema:'public',table:'messages',
+        filter:'conversation_id=eq.'+conversationId
+      },payload=>{try{onMessage(payload.new);}catch(_){}})
+      .subscribe();
+    return {unsubscribe(){sb.removeChannel(channel);}};
   },
 
   /* ---- Admin: platform-wide order management ---- */

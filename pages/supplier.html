@@ -94,7 +94,7 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
         <div class="metric"><span>${T('sp.inBusiness')}</span><b>${has(f.years)?`${esc(f.years)} ${T('sp.years')}`:esc(ask)}</b></div>
       </div>
       <div class="sup-actions">
-        <button class="btn btn-green" data-contact-factory>${IC.msg||''} ${T('Contact Supplier')}</button>
+        <button class="btn btn-green" data-contact-factory>${IC.msg||''} ${T('Message supplier')}</button>
         <button class="btn btn-out fav" data-fac-fav>${IC.bookmark} ${T('Save Supplier')}</button>
         <button class="btn btn-out" data-share>${T('Share')}</button>
       </div>
@@ -125,18 +125,27 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     facFav.addEventListener('click',()=>{const on=Store.toggleSaved(f.id);facFav.classList.toggle('on',on);toast(on?T('sp.saved'):T('sp.removed'));});
     document.querySelector('[data-share]').addEventListener('click',()=>{navigator.clipboard&&navigator.clipboard.writeText(location.href);toast(T('sp.linkCopied'));});
     document.querySelectorAll('[data-contact-factory]').forEach(b=>b.addEventListener('click',()=>{
-      window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
-        `${T('sp.emailSupplier')}: ${supplierName}`,
-        `${T('sp.emailLocation')}: ${location}`,
-        `${T('MOQ')}: ${value(f.moq)}`,
-        `${T('sp.emailLead')}: ${value(f.lead)}`,
-      ]});
+      if(f.databaseId && window.ARCANA_chatDrawer){
+        window.ARCANA_chatDrawer.open({factoryId:f.databaseId, factoryName:supplierName, factoryLogo:f.logo_img||f.img});
+      } else {
+        window.ARCANA_contactEmail({subjectPrefix:'Product Request', bodyLines:[
+          `${T('sp.emailSupplier')}: ${supplierName}`,
+          `${T('sp.emailLocation')}: ${location}`,
+          `${T('MOQ')}: ${value(f.moq)}`,
+          `${T('sp.emailLead')}: ${value(f.lead)}`,
+        ]});
+      }
     }));
     const productGrid=document.querySelector('.prod-grid');
     if(productGrid)window.ARCANA_wireCards(productGrid);
   }
   render();
   window.ARCANA_onLang(render);
+
+  const convoParam=new URLSearchParams(window.location.search).get('convo');
+  if(convoParam && window.ARCANA_chatDrawer){
+    window.ARCANA_chatDrawer.openConversation(convoParam, supplierName);
+  }
 };
 </script>
 </body>
