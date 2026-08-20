@@ -601,6 +601,7 @@
 .acct-chat-convo .cc-ic img{width:100%;height:100%;object-fit:cover}
 .acct-chat-convo b{font-size:13px;display:block}
 .acct-chat-convo span{font-size:11px;color:var(--muted)}
+.cc-badge{background:var(--gold);color:#fff;border-radius:var(--radius-pill);font-size:10px;font-weight:700;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;flex-shrink:0;margin-left:auto}
 .acct-chat-thread{display:flex;flex-direction:column;min-height:440px}
 .acct-chat-thread-head{padding:16px 20px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px}
 .acct-chat-messages{flex:1;padding:16px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:400px}

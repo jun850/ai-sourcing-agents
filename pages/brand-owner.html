@@ -259,7 +259,8 @@ window.ARCANA_PAGE=async function({toast}){
       const name=esc(c.factory_name||c.buyer_company||c.buyer_name||'');
       const initials=(name[0]||'?').toUpperCase();
       const preview=c.last_message?esc(c.last_message.slice(0,40)):'';
-      return `<div class="acct-chat-convo${c.id===chatConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}"><div class="cc-ic">${initials}</div><div><b>${name}</b><span>${preview}</span></div></div>`;
+      const unread=c.unread_count>0?`<span class="cc-badge">${c.unread_count>99?'99+':c.unread_count}</span>`:'';
+      return `<div class="acct-chat-convo${c.id===chatConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}"><div class="cc-ic">${initials}</div><div><b>${name}</b><span>${preview}</span></div>${unread}</div>`;
     }).join('');
     chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>{
       el.addEventListener('click',()=>openChatThread(el.dataset.convoId,el.dataset.name));
@@ -288,6 +289,10 @@ window.ARCANA_PAGE=async function({toast}){
       chatThreadMessages.appendChild(div);
     });
     chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+    api.markConversationRead(convoId);
+    const badge=chatConvoList.querySelector('[data-convo-id="'+convoId+'"] .cc-badge');
+    if(badge) badge.remove();
+    if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
     chatSub=api.subscribeChatMessages(convoId,msg=>{
       if(msg.sender_profile_id===chatUserId) return;
       const div=document.createElement('div');
@@ -295,6 +300,8 @@ window.ARCANA_PAGE=async function({toast}){
       div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
       chatThreadMessages.appendChild(div);
       chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+      api.markConversationRead(convoId);
+      if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
     });
   }
 

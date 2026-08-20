@@ -922,6 +922,8 @@
         <a class="tb-app" href="${HOME}">Browse the marketplace ${IC.chevR}</a>
       </div></div>`
       : "";
+    const chatDest = seller ? P("dashboard.html") + "?tab=chat" : P("brand-owner.html") + "#chat";
+    const chatIcon = s ? `<a class="ic-link chat-ic" href="${chatDest}" aria-label="Messages">${IC.msg}<span class="badge-count" data-chat-badge hidden></span></a>` : "";
     const cartIcon = seller
       ? ""
       : `<a class="ic-link cart-ic" href="${P("cart.html")}" aria-label="Cart">${IC.cart}<span class="badge-count" data-cart-badge hidden></span></a><span class="hdr-div"></span>`;
@@ -936,6 +938,7 @@
     ${brand()}
     <button class="kat-btn" data-kat aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="nav.categories">Categories</span>${IC.caret}</button>
     ${searchBox(ph)}
+    ${chatIcon}
     ${cartIcon}
     ${authCluster()}
     ${katPanel()}
@@ -1118,7 +1121,25 @@
       b.textContent = s;
       b.hidden = s === 0;
     });
+    syncChatBadge();
   }
+  let _chatBadgeTimer = null;
+  function syncChatBadge() {
+    const api = window.ARCANA_API;
+    if (!api || !api.getUnreadCount || !Store.session()) return;
+    api.getUnreadCount().then(count => {
+      document.querySelectorAll("[data-chat-badge]").forEach(b => {
+        b.textContent = count > 99 ? "99+" : count;
+        b.hidden = count === 0;
+      });
+    });
+  }
+  function startChatBadgePolling() {
+    if (_chatBadgeTimer) return;
+    syncChatBadge();
+    _chatBadgeTimer = setInterval(syncChatBadge, 30000);
+  }
+  window.ARCANA_syncChatBadge = syncChatBadge;
 
   /* ---------- toast ---------- */
   let toastEl;
@@ -1183,7 +1204,10 @@
               <div class="chat-status"><i></i> Atelix verified</div>
             </div>
           </div>
-          <button type="button" class="chat-x" id="chatDrawerClose" aria-label="${esc(T('Close'))}">&times;</button>
+          <div style="display:flex;gap:4px;align-items:center">
+            <button type="button" class="chat-x" id="chatDrawerExpand" aria-label="Expand" title="Expand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+            <button type="button" class="chat-x" id="chatDrawerClose" aria-label="${esc(T('Close'))}">&times;</button>
+          </div>
         </div>
         <div class="chat-log" id="chatDrawerLog" aria-live="polite" aria-relevant="additions"></div>
         <div class="chat-input">
@@ -1201,6 +1225,16 @@
       sendBtn.addEventListener('click', doSend);
       input.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }});
       document.addEventListener('keydown', e => { if(e.key==='Escape' && panel.classList.contains('in')) close(); });
+      const expandBtn = document.getElementById('chatDrawerExpand');
+      const collapseSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 14h6v6M14 4h6v6M10 14l-7 7M21 3l-7 7"/></svg>';
+      const expandSVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+      expandBtn.addEventListener('click', () => {
+        const expanded = panel.classList.toggle('chat-expanded');
+        expandBtn.innerHTML = expanded ? collapseSVG : expandSVG;
+        expandBtn.title = expanded ? 'Collapse' : 'Expand';
+        expandBtn.setAttribute('aria-label', expanded ? 'Collapse' : 'Expand');
+        scrollBottom();
+      });
     }
 
     function renderMsg(msg, who){
@@ -1240,6 +1274,9 @@
     function close(){
       cleanup();
       panel.classList.remove('in');
+      panel.classList.remove('chat-expanded');
+      const expandBtn = document.getElementById('chatDrawerExpand');
+      if(expandBtn){ expandBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>'; expandBtn.title = 'Expand'; }
       const fab = document.querySelector('.cop-fab');
       if(fab) fab.style.display = '';
     }
@@ -1267,11 +1304,15 @@
         messages.forEach(m => renderMsg(m, m.sender_profile_id === currentUserId ? 'me' : 'them'));
         scrollBottom();
       }
+      api().markConversationRead(conversationId);
+      if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
       activeSub = api().subscribeChatMessages(conversationId, msg => {
         if(msg.sender_profile_id === currentUserId) return;
         if(log.querySelector('[style*="text-align:center"]')) log.innerHTML = '';
         renderMsg(msg, 'them');
         scrollBottom();
+        api().markConversationRead(conversationId);
+        if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
       });
     }
 
