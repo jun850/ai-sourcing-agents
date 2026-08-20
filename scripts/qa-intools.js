@@ -79,11 +79,16 @@ async function inspect(scenario) {
     const evaluate = async (expression) => (await cdp.send("Runtime.evaluate", { returnByValue: true, awaitPromise: true, expression })).result.value;
     const pause = () => new Promise((resolve) => setTimeout(resolve, 180));
     const views = {};
-    for (const view of ["dashboard", "pages", "widgets", "products", "suppliers", "shipping", "media", "history"]) {
+    for (const view of ["dashboard", "pages", "widgets", "products", "suppliers", "chats", "shipping", "media", "history"]) {
       await evaluate(`document.querySelector('[data-view="${view}"]')?.click()`);
       await pause();
       views[view] = await evaluate(`({heading:document.querySelector('[data-workspace] h1')?.textContent.trim()||'',error:Boolean(document.querySelector('[data-workspace] .notice-danger'))})`);
     }
+
+    await evaluate(`document.querySelector('[data-view="chats"]')?.click()`); await pause();
+    const chats = await evaluate(`({heading:document.querySelector('[data-workspace] h1')?.textContent.trim()||'',supplier:document.querySelector('[data-chat-list] .chat-row strong')?.textContent.trim()||'',history:document.querySelectorAll('[data-chat-messages] .chat-message').length,reply:Boolean(document.querySelector('[data-chat-form] textarea')),sendLabel:document.querySelector('[data-chat-form] button')?.textContent.trim()||''})`);
+    await evaluate(`(()=>{const field=document.querySelector('[data-chat-form] textarea');if(field){field.value='QA reply';document.querySelector('[data-chat-form]')?.requestSubmit();}return true;})()`); await pause();
+    const chatReply = await evaluate(`({toast:[...document.querySelectorAll('.toast')].some(node=>node.textContent.includes('Reply sent')),composer:Boolean(document.querySelector('[data-chat-form]'))})`);
 
     await evaluate(`document.querySelector('[data-view="pages"]')?.click()`); await pause();
     await evaluate(`document.querySelector('[data-edit-id]')?.click()`); await pause();
@@ -128,7 +133,7 @@ async function inspect(scenario) {
     await evaluate(`document.querySelector('[data-confirm] [value="cancel"]')?.click()`);
 
     editorSmoke = { pagesHeading: views.pages.heading, editor: Boolean(pageEditor.preview), languages: pageEditor.languages };
-    featureSmoke = { views, pageEditor, widgetEditor, productEditor, inlineSupplier, productImageSave, supplierEditor, supplierImageSave, shippingEditor, shippingSave, media, mediaConfirm, historyConfirm };
+    featureSmoke = { views, chats, chatReply, pageEditor, widgetEditor, productEditor, inlineSupplier, productImageSave, supplierEditor, supplierImageSave, shippingEditor, shippingSave, media, mediaConfirm, historyConfirm };
   }
   const { result } = await cdp.send("Runtime.evaluate", {
     returnByValue: true,
@@ -154,8 +159,9 @@ async function inspect(scenario) {
   }
   if (scenario.auth === "admin" && scenario.width >= 1024 && (!data.shell || !data.hasContentNav || editorSmoke?.pagesHeading !== "Pages" || !editorSmoke?.editor || !["EN", "JA", "ZH"].every((language) => editorSmoke.languages.includes(language)))) issues.push("desktop admin shell or localized page editor smoke failed");
   if (scenario.auth === "admin" && scenario.width >= 1024) {
-    const expectedViews = ["dashboard", "pages", "widgets", "products", "suppliers", "shipping", "media", "history"];
+    const expectedViews = ["dashboard", "pages", "widgets", "products", "suppliers", "chats", "shipping", "media", "history"];
     if (expectedViews.some((view) => featureSmoke?.views?.[view]?.heading.toLowerCase() !== view || featureSmoke?.views?.[view]?.error)) issues.push("one or more Intools views failed to load");
+    if (featureSmoke?.chats?.heading !== "Supplier chats" || !featureSmoke?.chats?.supplier || featureSmoke?.chats?.history !== 2 || !featureSmoke?.chats?.reply || featureSmoke?.chats?.sendLabel !== "Send reply" || !featureSmoke?.chatReply?.toast) issues.push("supplier chat history or reply composer smoke failed");
     if (featureSmoke?.pageEditor?.route !== "/privacy" || featureSmoke?.pageEditor?.template !== "policy" || !featureSmoke?.pageEditor?.preview || !featureSmoke?.pageEditor?.archive) issues.push("page editor did not preserve route, template, preview, or revision actions");
     if (featureSmoke?.widgetEditor?.name !== "New supplier discount" || featureSmoke?.widgetEditor?.type !== "discount" || featureSmoke?.widgetEditor?.zone !== "managed_page_before_content" || featureSmoke?.widgetEditor?.style !== "brass" || featureSmoke?.widgetEditor?.target !== "route" || featureSmoke?.widgetEditor?.route !== "/privacy" || !featureSmoke?.widgetEditor?.revisionActions) issues.push("widget editor did not preserve configuration or revision actions");
     if (featureSmoke?.productEditor?.supplier !== "f1" || !featureSmoke?.productEditor?.supplierLabel?.includes("Mori Textile") || !featureSmoke?.productEditor?.addSupplier || !featureSmoke?.productEditor?.supplierHelp?.includes("owns this SKU") || featureSmoke?.productEditor?.category !== "fabrics" || featureSmoke?.productEditor?.status !== "active" || featureSmoke?.productEditor?.application !== "Dress" || featureSmoke?.productEditor?.unit !== "kg" || featureSmoke?.productEditor?.pricing !== "quote" || featureSmoke?.productEditor?.imageUrl !== "https://example.com/cotton-twill.jpg" || !featureSmoke?.productEditor?.gallery?.includes("cotton-twill-detail.jpg") || featureSmoke?.productEditor?.mainLabel !== "Main" || featureSmoke?.productEditor?.optionNames?.join(',') !== "Color,Length" || !featureSmoke?.productEditor?.optionValues?.[0]?.includes("Natural") || !featureSmoke?.productEditor?.uploadAccept?.includes("image/webp") || !featureSmoke?.productEditor?.assignments.includes("buyer@example.com") || !featureSmoke?.productEditor?.archive) issues.push("product editor did not preserve supplier linkage, ordered gallery, options, or assignments");
@@ -181,6 +187,7 @@ async function inspect(scenario) {
   const migration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260813170000_atelix_intools.sql"), "utf8");
   const supplierImagesMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260813174500_supplier_brand_images.sql"), "utf8");
   const shippingMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260814220000_country_shipping_and_product_media.sql"), "utf8");
+  const chatsMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260820120000_intools_supplier_chats.sql"), "utf8");
   const contractIssues = [];
   const requiredAdminSupplierContracts = ["Atelix Admin", "intoolsSaveSupplier", "intoolsListProducts", "brand_emails", "intoolsSaveProduct", "intoolsArchiveProduct"];
   for (const contract of requiredAdminSupplierContracts) if (!adminSupplier.includes(contract)) contractIssues.push(`admin supplier contract missing: ${contract}`);
@@ -194,6 +201,7 @@ async function inspect(scenario) {
   for (const contract of ["$10 default", "overrides the $10 default"]) if (!intoolsSource.includes(contract)) contractIssues.push(`Intools shipping fallback copy missing: ${contract}`);
   if (/aal2|requires an AAL2/i.test(migration + intoolsSource)) contractIssues.push("MFA/AAL2 requirement remains in the Intools release");
   for (const contract of ["image_callout", "p_name text", "verify_state_change", "intools_save_product", "intools_save_supplier"]) if (!migration.includes(contract)) contractIssues.push(`migration contract missing: ${contract}`);
+  for (const contract of ["intools_list_supplier_chats", "intools_get_supplier_chat", "intools_send_supplier_chat_message", "intools_require_admin", "GRANT EXECUTE ON FUNCTION public.intools_send_supplier_chat_message"]) if (!chatsMigration.includes(contract)) contractIssues.push(`supplier chat contract missing: ${contract}`);
   const results = [{ scenario: "source-contracts", issues: contractIssues, data: { adminSupplier: true, passwordAndMagicLink: true, noMfa: true } }];
   console.log(contractIssues.length ? `FAIL source-contracts: ${contractIssues.join("; ")}` : "PASS source-contracts");
   for (const scenario of scenarios) {

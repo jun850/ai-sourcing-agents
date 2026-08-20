@@ -108,6 +108,9 @@ if(!sb || !sb.auth){
     intoolsListAudit(){ return Promise.resolve({ items:[], error:err }); },
     intoolsListOrders(){ return Promise.resolve({ items:[], error:err }); },
     intoolsGetOrderDetail(){ return Promise.resolve({ order:null, error:err }); },
+    intoolsListSupplierChats(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsGetSupplierChat(){ return Promise.resolve({ chat:null, error:err }); },
+    intoolsSendSupplierChatMessage(){ return Promise.resolve({ message:null, error:err }); },
     getPlatformSetting(){ return Promise.resolve(null); },
     intoolsUpdatePlatformSetting(){ return Promise.resolve({ error:err }); },
     createStripeCheckout(){ return Promise.resolve({ error:err }); },
@@ -1146,6 +1149,18 @@ const API = {
   async intoolsGetOrderDetail(orderNo){
     try{const {data,error}=await sb.rpc('intools_get_order_detail',{p_order_no:orderNo});return {order:data||null,error:error||null};}
     catch(error){return {order:null,error};}
+  },
+  async intoolsListSupplierChats(){
+    try{const {data,error}=await sb.rpc('intools_list_supplier_chats');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsGetSupplierChat(conversationId){
+    try{const {data,error}=await sb.rpc('intools_get_supplier_chat',{p_conversation_id:conversationId});return {chat:data||null,error:error||null};}
+    catch(error){return {chat:null,error};}
+  },
+  async intoolsSendSupplierChatMessage(conversationId,body){
+    try{const {data,error}=await sb.rpc('intools_send_supplier_chat_message',{p_conversation_id:conversationId,p_body:body});return {message:data||null,error:error||null};}
+    catch(error){return {message:null,error};}
   },
   async getPlatformSetting(key){
     try{const {data,error}=await sb.rpc('get_platform_setting',{p_key:key});if(error)return null;return data;}
