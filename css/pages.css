@@ -595,14 +595,15 @@
 .acct-chat-wrap{display:grid;grid-template-columns:280px 1fr;min-height:480px;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden;background:#fff}
 .acct-chat-list{border-right:1px solid var(--line);overflow-y:auto;max-height:580px;background:var(--panel)}
 .acct-chat-list-head{padding:14px 20px;font-weight:600;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}
-.acct-chat-convo{display:flex;align-items:center;gap:12px;padding:14px 20px;cursor:pointer;border-left:3px solid transparent;transition:background .12s}
+.acct-chat-convo{display:flex;align-items:center;gap:12px;width:100%;padding:14px 20px;cursor:pointer;border:0;border-left:3px solid transparent;background:transparent;color:inherit;font:inherit;text-align:left;transition:background .12s}
 .acct-chat-convo:hover{background:rgba(46,74,58,.04)}
 .acct-chat-convo.on{background:var(--green-l);border-left-color:var(--green)}
+.acct-chat-convo:focus-visible{outline:3px solid var(--green);outline-offset:-3px}
 .acct-chat-convo .cc-ic{width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-weight:700;font-size:15px;color:var(--green);flex-shrink:0;overflow:hidden}
 .acct-chat-convo .cc-ic img{width:100%;height:100%;object-fit:cover}
-.acct-chat-convo div:nth-child(2){min-width:0;flex:1}
+.acct-chat-convo .cc-copy{min-width:0;flex:1}
 .acct-chat-convo b{font-size:13.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.acct-chat-convo span{font-size:11.5px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.acct-chat-convo .cc-copy > span{font-size:11.5px;color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 .cc-badge{background:var(--gold);color:#fff;border-radius:var(--radius-pill);font-size:10px;font-weight:700;min-width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;margin-left:auto}
 .acct-chat-thread{display:flex;flex-direction:column;min-height:480px}
 .acct-chat-thread-head{padding:16px 24px;border-bottom:1px solid var(--line);font-weight:600;font-size:14px;background:#fff}

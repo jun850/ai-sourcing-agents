@@ -257,32 +257,84 @@ window.ARCANA_PAGE=async function({toast}){
   const chatThreadInput=document.getElementById('chatThreadInput');
   const chatMsgInput=document.getElementById('chatThreadMsgInput');
   const chatSendBtn=document.getElementById('chatThreadSend');
-  let chatSub=null, chatConvoId=null, chatUserId=profile?.id;
+  const CHAT_PAGE_SIZE=50;
+  let chatSub=null, chatConvoId=null, chatUserId=profile?.id, chatLoadVersion=0, chatConversations=[];
+  let chatOldestMessageAt=null, chatHistoryExhausted=false, chatHistoryLoading=false;
 
-  async function loadChatInbox(){
-    const convos=await api.getMyConversations();
-    if(!convos.length){
+  function renderChatConversationList(){
+    if(!chatConversations.length){
       chatConvoList.innerHTML='<p class="muted" style="padding:20px;font-size:13px">'+T('No messages yet')+'</p>';
       return;
     }
-    chatConvoList.innerHTML=convos.map(c=>{
+    chatConvoList.innerHTML=chatConversations.map(c=>{
       const name=esc(c.factory_name||c.buyer_company||c.buyer_name||'');
       const initials=(name[0]||'?').toUpperCase();
       const preview=c.last_message?esc(c.last_message.slice(0,40)):'';
       const unread=c.unread_count>0?`<span class="cc-badge">${c.unread_count>99?'99+':c.unread_count}</span>`:'';
-      return `<div class="acct-chat-convo${c.id===chatConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}"><div class="cc-ic">${initials}</div><div><b>${name}</b><span>${preview}</span></div>${unread}</div>`;
+      return `<button type="button" class="acct-chat-convo${c.id===chatConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}" aria-label="Open conversation with ${esc(name)}"><span class="cc-ic" aria-hidden="true">${initials}</span><span class="cc-copy"><b>${name}</b><span>${preview}</span></span>${unread}</button>`;
     }).join('');
     chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>{
       el.addEventListener('click',()=>openChatThread(el.dataset.convoId,el.dataset.name));
     });
+  }
+
+  function syncChatPreview(convoId,body,createdAt){
+    const conversation=chatConversations.find(c=>c.id===convoId);
+    if(!conversation) return;
+    conversation.last_message=body;
+    conversation.last_message_at=createdAt||new Date().toISOString();
+    conversation.unread_count=0;
+    chatConversations.sort((a,b)=>new Date(b.last_message_at||b.created_at)-new Date(a.last_message_at||a.created_at));
+    renderChatConversationList();
+  }
+
+  function makeChatMessage(message){
+    const div=document.createElement('div');
+    div.className='acct-chat-msg '+(message.sender_profile_id===chatUserId?'mine':'theirs');
+    div.innerHTML=esc(message.body)+'<span>'+new Date(message.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+    return div;
+  }
+
+  function renderChatMessages(messages){
+    chatThreadMessages.innerHTML='';
+    messages.forEach(message=>chatThreadMessages.appendChild(makeChatMessage(message)));
+    chatOldestMessageAt=messages[0]?.created_at||null;
+    chatHistoryExhausted=messages.length<CHAT_PAGE_SIZE;
+    chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+  }
+
+  async function loadOlderChatMessages(){
+    if(chatHistoryLoading||chatHistoryExhausted||!chatConvoId||!chatOldestMessageAt) return;
+    const convoId=chatConvoId;
+    const loadVersion=chatLoadVersion;
+    chatHistoryLoading=true;
+    const previousHeight=chatThreadMessages.scrollHeight;
+    const previousTop=chatThreadMessages.scrollTop;
+    const messages=await api.getMessages(convoId,{limit:CHAT_PAGE_SIZE,before:chatOldestMessageAt});
+    chatHistoryLoading=false;
+    if(loadVersion!==chatLoadVersion||chatConvoId!==convoId) return;
+    if(!messages.length){chatHistoryExhausted=true;return;}
+    const fragment=document.createDocumentFragment();
+    messages.forEach(message=>fragment.appendChild(makeChatMessage(message)));
+    chatThreadMessages.prepend(fragment);
+    chatOldestMessageAt=messages[0].created_at;
+    chatHistoryExhausted=messages.length<CHAT_PAGE_SIZE;
+    chatThreadMessages.scrollTop=previousTop+(chatThreadMessages.scrollHeight-previousHeight);
+  }
+
+  async function loadChatInbox(){
+    chatConversations=await api.getMyConversations();
+    renderChatConversationList();
+    if(!chatConversations.length) return;
     const convoParam=new URLSearchParams(location.search).get('convo');
     if(convoParam){
-      const match=convos.find(c=>c.id===convoParam);
+      const match=chatConversations.find(c=>c.id===convoParam);
       if(match) openChatThread(convoParam, match.factory_name||match.buyer_company||match.buyer_name||'');
     }
   }
 
   async function openChatThread(convoId,name){
+    const loadVersion=++chatLoadVersion;
     if(chatSub){chatSub.unsubscribe();chatSub=null;}
     chatConvoId=convoId;
     chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>el.classList.toggle('on',el.dataset.convoId===convoId));
@@ -293,18 +345,11 @@ window.ARCANA_PAGE=async function({toast}){
     chatThreadMessages.hidden=false;
     chatMsgInput.placeholder=T('Type a message…');
     chatMsgInput.focus();
-    const msgs=await api.getMessages(convoId);
-    chatThreadMessages.innerHTML='';
-    msgs.forEach(m=>{
-      const div=document.createElement('div');
-      div.className='acct-chat-msg '+(m.sender_profile_id===chatUserId?'mine':'theirs');
-      div.innerHTML=esc(m.body)+'<span>'+new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-      chatThreadMessages.appendChild(div);
-    });
-    chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+    const msgs=await api.getMessages(convoId,{limit:CHAT_PAGE_SIZE});
+    if(loadVersion!==chatLoadVersion || chatConvoId!==convoId) return;
+    renderChatMessages(msgs);
     api.markConversationRead(convoId);
-    const badge=chatConvoList.querySelector('[data-convo-id="'+convoId+'"] .cc-badge');
-    if(badge) badge.remove();
+    syncChatPreview(convoId,chatConversations.find(c=>c.id===convoId)?.last_message||'',chatConversations.find(c=>c.id===convoId)?.last_message_at);
     if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
     chatSub=api.subscribeChatMessages(convoId,msg=>{
       if(msg.sender_profile_id===chatUserId) return;
@@ -313,6 +358,7 @@ window.ARCANA_PAGE=async function({toast}){
       div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
       chatThreadMessages.appendChild(div);
       chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+      syncChatPreview(convoId,msg.body,msg.created_at);
       api.markConversationRead(convoId);
       if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
     });
@@ -321,17 +367,25 @@ window.ARCANA_PAGE=async function({toast}){
   async function sendChatMsg(){
     const body=(chatMsgInput.value||'').trim();
     if(!body||!chatConvoId) return;
+    const sentConvoId=chatConvoId;
+    const sentLoadVersion=chatLoadVersion;
     chatMsgInput.value='';
     const div=document.createElement('div');
     div.className='acct-chat-msg mine';
     div.innerHTML=esc(body)+'<span>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
     chatThreadMessages.appendChild(div);
     chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
-    const {error}=await api.sendMessage(chatConvoId,body);
+    const {error}=await api.sendMessage(sentConvoId,body);
     if(error && window.ARCANA_toast) window.ARCANA_toast(T('Could not send message'));
+    else {
+      syncChatPreview(sentConvoId,body,new Date().toISOString());
+      const messages=await api.getMessages(sentConvoId);
+      if(chatConvoId===sentConvoId && chatLoadVersion===sentLoadVersion) renderChatMessages(messages);
+    }
   }
   chatSendBtn.addEventListener('click',sendChatMsg);
   chatMsgInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMsg();}});
+  chatThreadMessages.addEventListener('scroll',()=>{if(chatThreadMessages.scrollTop<=48) loadOlderChatMessages();});
 
   const chatTab=document.getElementById('tab-chat');
   let chatLoaded=false;
