@@ -72,10 +72,20 @@
       <section class="panel acct-panel" id="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
         <div class="acct-panel-head"><h2 id="chatPanelTitle">Messages</h2><p class="st-sub" id="chatPanelSub">Your conversations with suppliers.</p></div>
         <div class="acct-chat-wrap" id="chatInbox">
-          <div class="acct-chat-list" id="chatConvoList"></div>
+          <div class="acct-chat-list" id="chatConvoList">
+            <div class="acct-chat-sk" aria-label="Loading conversations">
+              <div class="acct-chat-sk-row"><div class="acct-chat-sk-av"></div><div class="acct-chat-sk-lines"><i></i><i></i></div></div>
+              <div class="acct-chat-sk-row"><div class="acct-chat-sk-av"></div><div class="acct-chat-sk-lines"><i></i><i></i></div></div>
+              <div class="acct-chat-sk-row"><div class="acct-chat-sk-av"></div><div class="acct-chat-sk-lines"><i></i><i></i></div></div>
+            </div>
+          </div>
           <div class="acct-chat-thread" id="chatThread">
-            <div class="acct-chat-thread-head" id="chatThreadHead">Select a conversation</div>
-            <div class="acct-chat-messages" id="chatThreadMessages"></div>
+            <div class="acct-chat-thread-head" id="chatThreadHead"></div>
+            <div class="acct-chat-empty" id="chatThreadEmpty">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Select a conversation to view messages</span>
+            </div>
+            <div class="acct-chat-messages" id="chatThreadMessages" hidden></div>
             <div class="acct-chat-input-row" id="chatThreadInput" hidden>
               <input type="text" placeholder="Type a message…" maxlength="2000" id="chatThreadMsgInput">
               <button class="btn btn-green" id="chatThreadSend">Send</button>
@@ -278,6 +288,9 @@ window.ARCANA_PAGE=async function({toast}){
     chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>el.classList.toggle('on',el.dataset.convoId===convoId));
     chatThreadHead.textContent=name;
     chatThreadInput.hidden=false;
+    const emptyEl=document.getElementById('chatThreadEmpty');
+    if(emptyEl) emptyEl.hidden=true;
+    chatThreadMessages.hidden=false;
     chatMsgInput.placeholder=T('Type a message…');
     chatMsgInput.focus();
     const msgs=await api.getMessages(convoId);
