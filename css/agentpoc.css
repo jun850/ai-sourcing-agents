@@ -164,6 +164,19 @@
   position:relative;
 }
 
+/* RFQ workspace: one quiet desktop shell, collapsing to a native drawer-sized
+   navigation area on small screens. It deliberately uses the same paper and
+   hairline vocabulary as the existing Athelia surface. */
+.apoc-workspace{width:100%;max-width:1180px;margin:0 24px 32px;display:grid;grid-template-columns:244px minmax(0,1fr);background:var(--paper);border-radius:var(--r-panel);box-shadow:var(--shadow-panel);overflow:hidden;min-height:720px}
+.apoc-workspace>.apoc-panel{margin:0;max-width:none;border-radius:0;box-shadow:none;min-width:0}
+.apoc-sidebar{background:rgba(255,255,255,.42);border-right:1px solid var(--paper-line);padding:18px 12px;display:flex;flex-direction:column;gap:16px}
+.apoc-new-thread,.apoc-primary{border:0;border-radius:var(--r-field);background:var(--ink);color:var(--paper);font:600 .84rem var(--font-sans);padding:11px 13px;cursor:pointer;text-align:left}
+.apoc-workspace-nav{display:grid;grid-template-columns:1fr 1fr;gap:4px;border-bottom:1px solid var(--paper-line);padding-bottom:12px}
+.apoc-workspace-nav button{border:0;background:transparent;color:var(--ink-soft);font:600 .75rem var(--font-sans);padding:8px 6px;border-radius:8px;cursor:pointer;text-align:left}.apoc-workspace-nav button.is-active{background:var(--white);color:var(--ink);box-shadow:var(--shadow-card)}
+.apoc-workspace-nav span{float:right;font-family:var(--font-mono);font-size:.68rem}.apoc-sidebar-list{display:flex;flex-direction:column;gap:4px;overflow:auto}.apoc-work-item{border:0;background:transparent;color:var(--ink);text-align:left;padding:10px;border-radius:10px;cursor:pointer;font:inherit}.apoc-work-item:hover,.apoc-work-item.is-selected{background:var(--white)}.apoc-work-item b,.apoc-work-item small{display:block}.apoc-work-item b{font-size:.75rem;line-height:1.35;font-weight:600}.apoc-work-item small{font-size:.66rem;color:var(--ink-soft);margin-top:3px}.apoc-sidebar-empty{margin:4px 8px;color:var(--ink-soft);font-size:.72rem;line-height:1.45}
+.apoc-header>div:first-child{min-width:0}.apoc-header h1{font-size:1rem}.apoc-header p{margin:3px 0 0;color:var(--ink-soft);font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:35ch}
+.apoc-rfq-review{background:var(--white);border:1px solid var(--paper-line);border-radius:var(--r-card);padding:18px;display:grid;gap:12px}.apoc-rfq-review h2{font-size:1rem;margin:0;letter-spacing:-.01em}.apoc-rfq-review p{color:var(--ink-soft);font-size:.82rem;line-height:1.45;margin:0}.apoc-kicker{font-family:var(--font-mono);font-size:.65rem!important;text-transform:uppercase;letter-spacing:.06em}.apoc-rfq-choice,.apoc-rfq-row{border:1px solid var(--paper-line);border-radius:10px;padding:11px;display:flex;gap:10px;align-items:flex-start}.apoc-rfq-choice{cursor:pointer}.apoc-rfq-choice input{width:18px;height:18px;margin:1px 0}.apoc-rfq-choice b,.apoc-rfq-choice small,.apoc-rfq-row b,.apoc-rfq-row span{display:block}.apoc-rfq-choice b,.apoc-rfq-row b{font-size:.8rem}.apoc-rfq-choice small,.apoc-rfq-row span{font-size:.72rem;color:var(--ink-soft);margin-top:3px}.apoc-rfq-actions{display:flex;justify-content:flex-end;gap:8px}.apoc-secondary{border:1px solid var(--paper-line);border-radius:var(--r-field);background:var(--white);color:var(--ink);font:600 .8rem var(--font-sans);padding:10px 12px;cursor:pointer}.apoc-primary{text-align:center}.apoc-status{font-family:var(--font-mono);text-transform:capitalize}.apoc-status-awaiting_supplier{color:var(--sage-700)}.apoc-status-supplier_replied{color:var(--ink)}.apoc-status-needs_research{color:var(--danger)}
+
 .apoc-header{
   display:flex;
   align-items:center;
@@ -671,6 +684,7 @@
 
 /* ---------- responsive ---------- */
 @media (max-width: 720px){
+  .apoc-workspace{grid-template-columns:1fr;margin:0 12px 20px;min-height:0;border-radius:20px}.apoc-sidebar{border-right:0;border-bottom:1px solid var(--paper-line);padding:12px;display:grid;grid-template-columns:auto 1fr;align-items:center}.apoc-new-thread{width:max-content}.apoc-workspace-nav{border:0;padding:0}.apoc-sidebar-list{grid-column:1/-1;max-height:154px}.apoc-workspace>.apoc-panel{border-radius:0}
   .apoc-ambient-head{ padding:20px 16px 10px; }
   .apoc-back-home{ left:16px; }
   .apoc-panel{ margin:0 12px 20px; border-radius:20px; }

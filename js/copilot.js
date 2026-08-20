@@ -38,7 +38,7 @@ const CERTS = [
   {k:'WRAP',      re:/\bwrap\b/},
   {k:'bluesign',  re:/bluesign/},
 ];
-const REGIONS = ['Guangdong','Zhejiang','Jiangsu','Shandong','Tirupur','Tamil Nadu','Tokyo','China','Japan','India','Vietnam','Turkey'];
+const REGIONS = ['Guangdong','Zhejiang','Jiangsu','Shandong','Tirupur','Tamil Nadu','Tokyo','China','Japan','India','Indonesia','Vietnam','Turkey','Bangladesh','Pakistan','South Korea','Taiwan','Thailand','Italy','Portugal','United States'];
 const STOP = new Set('a an the for with and or of to in on need want looking source sourcing me my our i we that this fabric fabrics material materials please find get some any under over below within around about'.split(' '));
 
 /* ---------- parse plain-English brief → structured intent ---------- */
@@ -50,7 +50,7 @@ function parse(text){
   for(const c of CATS){ if(c.re.test(t)){ intent.cat=c.cat; break; } }
   for(const m of MATERIALS){ if(m.re.test(t) && !intent.materials.includes(m.comp)) intent.materials.push(m.comp); }
   // organic/recycled cotton/poly shouldn't also double-count the plain fibre
-  if(intent.materials.includes('organic cotton')) intent.materials = intent.materials.filter(x=>x!=='cotton'||true);
+  if(intent.materials.includes('organic cotton')) intent.materials = intent.materials.filter(x=>x!=='cotton');
 
   let m;
   if((m = t.match(/(\d{2,4})\s*(?:–|-|to)\s*(\d{2,4})\s*g(?:sm|\/?m2?)/))) intent.gsm = {min:+m[1], max:+m[2]};
@@ -165,6 +165,26 @@ function match(intent, opts){
   opts = opts||{};
   const pool = opts.pool || window.ARCANA_PRODUCTS || [];
   let out = pool.map(p => scoreProduct(p, intent)).filter(Boolean);
+  // An explicit brief constraint is a gate, not a "close enough" suggestion.
+  // This prevents the LLM from receiving a product that it would have to
+  // explain away (for example an over-budget fabric or a supplier in a
+  // different requested country). If nothing clears the gates, the caller
+  // enters the honest no-match/research path instead.
+  const meetsHardConstraints = r => {
+    const p=r.p, f=r.f, comp=textValue(p.comp).toLowerCase(), loc=`${textValue(p.loc)} ${textValue(p.country)} ${textValue(f&&f.region)} ${textValue(f&&f.loc)}`.toLowerCase();
+    if(intent.materials.length && !intent.materials.some(material=>comp.includes(textValue(material).toLowerCase()))) return false;
+    if(intent.gsm){ const g=gsmOf(p); if(!g || g.max<intent.gsm.min || g.min>intent.gsm.max) return false; }
+    if(intent.priceMax!=null && !(Number(p.price)>0 && Number(p.price)<=intent.priceMax)) return false;
+    if(intent.moqMax!=null && !(moqNum(p.moq)<=intent.moqMax)) return false;
+    if(intent.lowMoq && !(moqNum(p.moq)<=300)) return false;
+    if(intent.leadMax!=null){ const days=leadDaysMax(f); if(days==null || days>intent.leadMax) return false; }
+    if(intent.fastLead){ const days=leadDaysMax(f); if(days==null || days>14) return false; }
+    if(intent.certs.length && !intent.certs.every(cert=>f&&Array.isArray(f.certs)&&f.certs.some(value=>textValue(value).toLowerCase().includes(textValue(cert).toLowerCase())))) return false;
+    if(intent.region && !loc.includes(intent.region.toLowerCase())) return false;
+    if(intent.oem && !(p.cat==='oem'||p.badge==='oem')) return false;
+    return true;
+  };
+  out = out.filter(meetsHardConstraints);
   // when no hard constraints, keep only relevant ones so results feel intentional
   const hardConstraints = intent.materials.length || intent.gsm || intent.priceMax!=null ||
     intent.moqMax!=null || intent.lowMoq || intent.leadMax!=null || intent.certs.length || intent.region || intent.oem;

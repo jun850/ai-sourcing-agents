@@ -34,9 +34,12 @@ const el = {
   hero: $('hero'), gate: $('gate'), gateLogin: $('gateLogin'),
   transcript: $('transcript'),
   composerForm: $('composerForm'), composerInput: $('composerInput'), sendBtn: $('sendBtn'),
-  approveBtn: $('approveBtn'), suggestions: $('suggestions'),
+  suggestions: $('suggestions'),
   wishlistBtn: $('wishlistBtn'), wishlistCount: $('wishlistCount'),
   cartBtn: $('cartBtn'), cartCount: $('cartCount'),
+  threadList:$('threadList'), rfqList:$('rfqList'), rfqCount:$('rfqCount'), newThreadBtn:$('newThreadBtn'),
+  workspaceLabel:$('workspaceLabel'), rfqReview:$('rfqReview'), rfqSelection:$('rfqSelection'),
+  dispatchRfqBtn:$('dispatchRfqBtn'), saveResearchBtn:$('saveResearchBtn'),
 };
 
 const state = {
@@ -47,6 +50,10 @@ const state = {
   candidates: [],   // current deterministic matches (product objects)
   lastRef: null,    // product the conversation is currently "about"
   lastResale: null, // {amount, currency} carried across turns
+  threadId:null,
+  threads:[],
+  rfqs:[],
+  selectedRfq:null,
 };
 
 /* ================= helpers ================= */
@@ -86,14 +93,55 @@ function appendUser(text){
   const d = document.createElement('div');
   d.className = 'apoc-msg is-user';
   d.innerHTML = `<div class="apoc-bubble">${escapeHtml(text)}</div>`;
-  el.transcript.appendChild(d); scrollToBottom();
+  el.transcript.appendChild(d); persistTurn('buyer',text); scrollToBottom();
 }
 function appendAgent(text){
   const d = document.createElement('div');
   d.className = 'apoc-msg is-agent';
   d.innerHTML = `<div class="apoc-bubble">${escapeHtml(text)}</div>`;
-  el.transcript.appendChild(d); scrollToBottom();
+  el.transcript.appendChild(d); persistTurn('agent',text); scrollToBottom();
   return d;
+}
+
+async function persistTurn(role,content){
+  if(!state.threadId || !window.ARCANA_API?.saveAtheliaTurn) return;
+  await window.ARCANA_API.saveAtheliaTurn(state.threadId,role,content);
+}
+
+function titleFor(text){ return String(text||'New sourcing request').replace(/\s+/g,' ').trim().slice(0,52); }
+function updateRoute(params={}){
+  const url=new URL(location.href); url.search=''; Object.entries(params).forEach(([key,value])=>{if(value)url.searchParams.set(key,value);}); history.replaceState({},'',url);
+}
+function renderWorkspace(){
+  el.threadList.innerHTML=state.threads.map(t=>`<button class="apoc-work-item${t.id===state.threadId?' is-selected':''}" data-thread="${escapeHtml(t.id)}"><b>${escapeHtml(t.title)}</b><small>${new Date(t.updated_at).toLocaleDateString()}</small></button>`).join('')||'<p class="apoc-sidebar-empty">Your sourcing chats will appear here.</p>';
+  el.rfqList.innerHTML=state.rfqs.map(r=>`<button class="apoc-work-item" data-rfq="${escapeHtml(r.id)}"><b>${escapeHtml(r.case_no)} · ${escapeHtml(r.title)}</b><small class="apoc-status apoc-status-${escapeHtml(r.status)}">${escapeHtml(r.status.replace(/_/g,' '))}</small></button>`).join('')||'<p class="apoc-sidebar-empty">No RFQs yet.</p>';
+  el.rfqCount.textContent=state.rfqs.length;
+  el.threadList.querySelectorAll('[data-thread]').forEach(b=>b.addEventListener('click',()=>openThread(b.dataset.thread)));
+  el.rfqList.querySelectorAll('[data-rfq]').forEach(b=>b.addEventListener('click',()=>openRfq(b.dataset.rfq)));
+}
+async function refreshWorkspace(){
+  const api=window.ARCANA_API; if(!api) return;
+  const [threads,rfqs]=await Promise.all([api.getAtheliaThreads(),api.getAtheliaCases()]); state.threads=threads; state.rfqs=rfqs; renderWorkspace();
+}
+async function newThread(){
+  const result=await window.ARCANA_API.createAtheliaThread(); if(result.error||!result.thread) return;
+  state.threadId=result.thread.id; state.history=[]; state.brief=''; state.candidates=[]; el.transcript.innerHTML=''; el.rfqReview.hidden=true;
+  el.workspaceLabel.textContent=result.thread.title; updateRoute({thread:state.threadId}); await refreshWorkspace(); if(el.hero)el.hero.hidden=false; el.composerInput.focus();
+}
+function openThread(id){
+  const thread=state.threads.find(item=>item.id===id); if(!thread)return;
+  state.threadId=id; state.selectedRfq=null; state.history=[]; el.transcript.innerHTML=''; el.rfqReview.hidden=true; el.workspaceLabel.textContent=thread.title;
+  (thread.athelia_thread_messages||[]).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).forEach(message=>{if(message.role==='buyer')appendUserLoaded(message.content);else appendAgentLoaded(message.content); state.history.push({role:message.role==='buyer'?'user':'assistant',content:message.content});});
+  updateRoute({thread:id}); renderWorkspace(); if(el.hero)el.hero.hidden=!!state.history.length;
+}
+function appendUserLoaded(text){const d=document.createElement('div');d.className='apoc-msg is-user';d.innerHTML=`<div class="apoc-bubble">${escapeHtml(text)}</div>`;el.transcript.appendChild(d);}
+function appendAgentLoaded(text){const d=document.createElement('div');d.className='apoc-msg is-agent';d.innerHTML=`<div class="apoc-bubble">${escapeHtml(text)}</div>`;el.transcript.appendChild(d);}
+function openRfq(id){
+  const rfq=state.rfqs.find(item=>item.id===id);if(!rfq)return; state.selectedRfq=rfq; el.workspaceLabel.textContent=`${rfq.case_no} · ${rfq.title}`; el.transcript.innerHTML=''; el.rfqReview.hidden=false;
+  el.rfqReview.querySelector('#rfqReviewTitle').textContent=rfq.title;
+  el.rfqReview.querySelector('#rfqReviewCopy').textContent=`${rfq.status.replace(/_/g,' ')} · ${(rfq.rfq_supplier_requests||[]).length} supplier${(rfq.rfq_supplier_requests||[]).length===1?'':'s'}`;
+  el.rfqSelection.innerHTML=(rfq.rfq_supplier_requests||[]).map(item=>`<div class="apoc-rfq-row"><b>${escapeHtml(item.products?.name||'Selected product')}</b><span>${escapeHtml(item.factories?.name||'Supplier')} · ${escapeHtml(item.status.replace(/_/g,' '))}</span></div>`).join('');
+  el.dispatchRfqBtn.hidden=true; el.saveResearchBtn.hidden=true; updateRoute({rfq:id});
 }
 function showTyping(){
   const d = document.createElement('div');
@@ -203,6 +251,38 @@ function appendDrafts(drafts){
   }).join('');
   el.transcript.appendChild(wrap);
   scrollToBottom();
+}
+
+function showRfqReview(drafts){
+  const usable=(drafts||[]).map(d=>({product:findProduct(d.productId),body:d.message})).filter(item=>item.product&&item.product.factoryId);
+  if(!usable.length) return;
+  state.selectedRfq=null;
+  el.rfqReview.hidden=false;
+  el.rfqReview.querySelector('#rfqReviewTitle').textContent='Choose suppliers to contact';
+  el.rfqReview.querySelector('#rfqReviewCopy').textContent='Messages are sent only after approval. Supplier estimates and replies arrive in the linked chat.';
+  el.rfqSelection.innerHTML=usable.map((item,index)=>`<label class="apoc-rfq-choice"><input type="checkbox" data-rfq-product="${escapeHtml(item.product.id)}" data-rfq-body="${escapeHtml(item.body)}" ${index===0?'checked':''}><span><b>${escapeHtml(item.product.name)}</b><small>${escapeHtml(item.product.seller)} · ${escapeHtml(item.product.loc||'')}</small></span></label>`).join('');
+  el.dispatchRfqBtn.hidden=false; el.saveResearchBtn.hidden=false; scrollToBottom();
+}
+async function dispatchSelectedRfq(){
+  const choices=[...el.rfqSelection.querySelectorAll('[data-rfq-product]:checked')].map(input=>({productId:input.dataset.rfqProduct,body:input.dataset.rfqBody}));
+  if(!choices.length){ appendAgent('Select at least one verified supplier first.'); return; }
+  el.dispatchRfqBtn.disabled=true;
+  const brief={text:state.brief,history:state.history.filter(item=>item.role==='user').slice(-8)};
+  const title=titleFor(state.brief||choices[0].productId);
+  const created=await window.ARCANA_API.createAtheliaCase({threadId:state.threadId,title,brief,status:'draft'});
+  if(created.error||!created.rfq){ appendAgent('I could not prepare that RFQ. Please try again.'); el.dispatchRfqBtn.disabled=false; return; }
+  const requests=choices.map(choice=>{const p=findProduct(choice.productId);return {product_id:p.databaseId||p.id,body:choice.body};});
+  const sent=await window.ARCANA_API.dispatchAtheliaRfq(created.rfq.id,requests);
+  if(sent.error){ appendAgent('The RFQ was saved as a draft, but it was not sent. Please try again.'); el.dispatchRfqBtn.disabled=false; await refreshWorkspace(); return; }
+  appendAgent(`Sent ${requests.length} RFQ${requests.length===1?'':'s'} to selected suppliers. I’ll show their replies here as they arrive.`);
+  el.rfqReview.hidden=true; await refreshWorkspace(); openRfq(created.rfq.id);
+}
+async function saveResearchCase(){
+  const title=titleFor(state.brief||'Unmatched sourcing request');
+  const created=await window.ARCANA_API.createAtheliaCase({threadId:state.threadId,title,brief:{text:state.brief},status:'needs_research'});
+  if(created.error||!created.rfq){ appendAgent('I could not save the research request.'); return; }
+  const subject=encodeURIComponent(`${created.rfq.case_no}: ${title}`),body=encodeURIComponent(`RFQ case: ${created.rfq.case_no}\n\n${state.brief}\n\nPlease help us research verified sourcing options.`);
+  await refreshWorkspace(); window.location.href=`mailto:info@arcanawangsa.com?subject=${subject}&body=${body}`;
 }
 
 /* ================= real actions ================= */
@@ -451,6 +531,13 @@ async function handleChat(text){
   const intent = C.parse(matchText);
   const ranked = C.match(intent, {limit:8});
   state.candidates = ranked.map(r=>r.p);
+  if(!state.candidates.length && kind==='sourcing'){
+    const msg='I could not find a verified catalogue match for that brief. I can save it for research and prepare an email to the Atelix sourcing team.';
+    appendAgent(msg); logAgent(msg);
+    el.rfqReview.hidden=false; el.rfqReview.querySelector('#rfqReviewTitle').textContent='No verified match yet';
+    el.rfqReview.querySelector('#rfqReviewCopy').textContent='Save this brief as a research case, then contact the Atelix sourcing team.';
+    el.rfqSelection.innerHTML=''; el.dispatchRfqBtn.hidden=true; el.saveResearchBtn.hidden=false; return;
+  }
 
   // Compute a real benchmark when the buyer is asking about price.
   let benchmark = null;
@@ -520,7 +607,7 @@ async function requestDrafts(targetIds){
     const payload = await callAgent('draft', { brief: state.brief || (state.history[state.history.length-1]||{}).content || '', matches, lang });
     stop();
     if(payload.intro){ appendAgent(payload.intro); logAgent(payload.intro); }
-    appendDrafts(payload.drafts||[]);
+    appendDrafts(payload.drafts||[]); showRfqReview(payload.drafts||[]);
   }catch(err){
     stop();
     if(err.reason === 'not_available'){ showGate('unavailable'); return; }
@@ -529,7 +616,7 @@ async function requestDrafts(targetIds){
       ? `Here are inquiry drafts for each supplier — copy them into the supplier chat on each product page.`
       : `Here's an inquiry draft — copy it into the supplier chat on the product page.`;
     appendAgent(m); logAgent(m);
-    appendDrafts(fallback);
+    appendDrafts(fallback); showRfqReview(fallback);
   }
 }
 // Kept deliberately simple: only the greeting/sign-off are localized, the
@@ -552,7 +639,6 @@ function offerActions(){
   el.suggestions.innerHTML = chips.map(c=>`<button class="apoc-chip" type="button">${escapeHtml(c)}</button>`).join('');
   el.suggestions.hidden = false;
   el.suggestions.querySelectorAll('.apoc-chip').forEach((b,i)=> b.addEventListener('click', ()=>submit(chips[i])));
-  el.approveBtn.classList.toggle('is-visible', state.candidates.length>0);
 }
 
 /* ================= main turn router ================= */
@@ -609,7 +695,13 @@ async function checkAuthAndInit(){
     try{ profile = await api.getSessionProfile(); }catch(_){}
   }
   if(!profile){ showGate('signin'); return; }
-  showReady(); pickupBrief();
+  showReady(); await refreshWorkspace();
+  const params=new URLSearchParams(location.search), requested=params.get('thread'), rfq=params.get('rfq');
+  if(rfq){ openRfq(rfq); return; }
+  if(requested && state.threads.some(thread=>thread.id===requested)) openThread(requested);
+  else if(state.threads[0]) openThread(state.threads[0].id);
+  else await newThread();
+  pickupBrief();
 }
 
 // A brief handed off from the site-wide Athelia FAB: run it, then clear it.
@@ -625,10 +717,14 @@ function init(){
   el.composerForm.addEventListener('submit', e=>{ e.preventDefault(); submit(el.composerInput.value); });
   el.composerInput.addEventListener('input', ()=>{ el.sendBtn.disabled = !el.composerInput.value.trim() || !state.ready || state.busy; });
   document.querySelectorAll('.apoc-example').forEach(b=> b.addEventListener('click', ()=>submit(b.dataset.example)));
-  el.approveBtn.addEventListener('click', ()=>{
-    const id = state.lastRef || (state.candidates[0] && state.candidates[0].id);
-    if(id) doAddToCart(id, defaultQty(id));
-  });
+  el.newThreadBtn.addEventListener('click', newThread);
+  el.dispatchRfqBtn.addEventListener('click', dispatchSelectedRfq);
+  el.saveResearchBtn.addEventListener('click', saveResearchCase);
+  document.querySelectorAll('[data-workspace-view]').forEach(button=>button.addEventListener('click',()=>{
+    const rfqs=button.dataset.workspaceView==='rfqs';
+    document.querySelectorAll('[data-workspace-view]').forEach(item=>item.classList.toggle('is-active',item===button));
+    el.threadList.hidden=rfqs; el.rfqList.hidden=!rfqs;
+  }));
   el.cartBtn.addEventListener('click', ()=>{ if(actions() && actions().isLoggedIn()) location.href = '../pages/cart.html'; });
   el.wishlistBtn.addEventListener('click', ()=>{ if(actions() && actions().isLoggedIn()) location.href = '../pages/wishlist.html'; });
 

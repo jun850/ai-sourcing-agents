@@ -27,9 +27,20 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <div class="apoc-live"><span class="apoc-live-dot"></span>live</div>
 </div>
 
-<main class="apoc-panel" id="apocPanel">
+<main class="apoc-workspace" id="apocPanel">
+  <aside class="apoc-sidebar" id="agentSidebar" aria-label="Athelia workspace">
+    <button class="apoc-new-thread" id="newThreadBtn" type="button">New sourcing</button>
+    <nav class="apoc-workspace-nav" aria-label="Agent workspace">
+      <button class="is-active" type="button" data-workspace-view="chats">Chats</button>
+      <button type="button" data-workspace-view="rfqs">RFQs <span id="rfqCount">0</span></button>
+    </nav>
+    <div class="apoc-sidebar-list" id="threadList" aria-label="Saved sourcing chats"></div>
+    <div class="apoc-sidebar-list" id="rfqList" aria-label="RFQ cases" hidden></div>
+  </aside>
+
+  <section class="apoc-panel">
   <header class="apoc-header">
-    <h1>AI Sourcing Agent</h1>
+    <div><h1>Athelia</h1><p id="workspaceLabel">New sourcing request</p></div>
     <div class="apoc-header-actions">
       <button class="apoc-icon-btn" id="wishlistBtn" type="button" aria-label="Wishlist">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6c-1.8-1.5-4.4-1.3-6 .4L12 7.8l-2.8-2.8c-1.6-1.7-4.2-1.9-6-.4-2 1.7-2.1 4.8-.3 6.6l8.4 8.6c.4.4 1 .4 1.4 0l8.4-8.6c1.8-1.8 1.7-4.9-.3-6.6z"/></svg>
@@ -46,8 +57,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
   <div class="apoc-body" id="apocBody">
     <section class="apoc-hero" id="hero" hidden>
-      <h2>Athelia - Smart Sourcing Agent</h2>
-      <p>AI Sourcing agent that help you to save time while finding the right partner or materials for your next collection</p>
+      <h2>What are you sourcing?</h2>
+      <p>Describe a material, product, or OEM brief. Athelia searches verified Atelix partners and keeps the supplier conversation organized after you send an RFQ.</p>
     </section>
 
     <section class="apoc-gate" id="gate" hidden>
@@ -57,12 +68,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </section>
 
     <div class="apoc-transcript" id="transcript" aria-live="polite"></div>
+    <section class="apoc-rfq-review" id="rfqReview" hidden aria-labelledby="rfqReviewTitle">
+      <div><p class="apoc-kicker">RFQ draft</p><h2 id="rfqReviewTitle">Choose suppliers to contact</h2></div>
+      <p id="rfqReviewCopy">Select the verified matches you want to contact. You review every message before it is sent.</p>
+      <div id="rfqSelection"></div>
+      <div class="apoc-rfq-actions"><button class="apoc-secondary" id="saveResearchBtn" type="button">Need research instead</button><button class="apoc-primary" id="dispatchRfqBtn" type="button">Send selected RFQs</button></div>
+    </section>
   </div>
 
   <footer class="apoc-composer">
     <div class="apoc-suggestions" id="suggestions" hidden></div>
     <div class="apoc-composer-row">
-      <button class="apoc-approve-btn" id="approveBtn" type="button">Add top pick to cart</button>
       <form class="apoc-composer-form" id="composerForm">
         <input id="composerInput" type="text" autocomplete="off" placeholder="Ask about a price, describe what you're sourcing, or tell Athelia what to do…" aria-label="Message Athelia">
         <button class="apoc-send-btn" id="sendBtn" type="submit" aria-label="Send" disabled>
@@ -71,6 +87,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </form>
     </div>
   </footer>
+  </section>
 </main>
 
 <script defer src="../js/data.js"></script>

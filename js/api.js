@@ -71,6 +71,12 @@ if(!sb || !sb.auth){
     getOrCreateConversation(){ return Promise.resolve({ error: err }); },
     getMessages(){ return Promise.resolve([]); },
     sendMessage(){ return Promise.resolve({ error: err }); },
+    getAtheliaThreads(){ return Promise.resolve([]); },
+    createAtheliaThread(){ return Promise.resolve({ thread:null, error:err }); },
+    saveAtheliaTurn(){ return Promise.resolve({ error:err }); },
+    getAtheliaCases(){ return Promise.resolve([]); },
+    createAtheliaCase(){ return Promise.resolve({ rfq:null, error:err }); },
+    dispatchAtheliaRfq(){ return Promise.resolve({ requests:[], error:err }); },
     subscribeChatMessages(){ return { unsubscribe(){} }; },
     markConversationRead(){ return Promise.resolve(); },
     getUnreadCount(){ return Promise.resolve(0); },
@@ -160,7 +166,7 @@ const PRODUCT_INPUT_FIELDS = [
   'sku','name','category','unit_type','pricing_mode','price','moq','factory_id',
   'loc','comp','description','subcategory','construction','applications','season',
   'color_family','origin_country','lead_time','handling_notes','gsm','fabric_width',
-  'roll_length','style_code','listing_status','is_private','img','images','badge'
+  'roll_length','style_code','agent_metadata','listing_status','is_private','img','images','badge'
 ];
 const PRODUCT_TEXT_FIELDS = new Set(PRODUCT_INPUT_FIELDS.filter(key=>
   !['price','moq','factory_id','is_private'].includes(key)
@@ -201,7 +207,7 @@ function mapPublicProduct(p){
     id:p.sku,databaseId:p.id,name:localizedCopy(p.copy_i18n,'name',p.name),description:localizedCopy(p.copy_i18n,'description',p.description),copyI18n:p.copy_i18n||{},
     img:media[0]?.thumb_url||media[0]?.public_url||images[0]||p.img,images,media,faqs:p.faqs||[],
     comp:p.comp,spec:p.spec||p.specification,subcategory:p.subcategory,construction:p.construction,constructionSlug:p.construction_slug,applications:p.applications,season:p.season,color_family:p.color_family,
-    origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,
+    origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,agentMetadata:p.agent_metadata||{},
     price:Number(p.price),unit:p.unit_type,moq:p.moq!=null?`${+p.moq} ${UNIT_LABEL[p.unit_type]||p.unit_type}`:'',seller:p.supplier_name||supplier.name||'',
     factoryId:p.factory_id||supplier.id||null,factorySlug:p.supplier_slug||supplier.slug||null,supplierVerified:p.supplier_verified??supplier.verify_state==='verified',loc:p.supplier_city||supplier.loc||p.loc,country:p.supplier_region||supplier.region||'',badge:p.badge||'',cat:p.category,
     pricingMode:p.pricing_mode,catalogPrices:p.catalog_prices||{},createdAt:p.created_at||null,updatedAt:p.updated_at||null,isPrivate:p.is_private===true,options:(window.ATELIX_normalizeProductOptions||((rows)=>rows||[]))(p.product_variants||[])
@@ -407,7 +413,7 @@ const API = {
     }
     const [prodRes, facRes, usdRes, jpyRes, cnyRes] = await Promise.all([
       sb.from('products')
-        .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,created_at,updated_at,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
+        .select('id,sku,name,description,copy_i18n,comp,subcategory,construction,construction_slug,applications,season,color_family,origin_country,lead_time,handling_notes,gsm,fabric_width,roll_length,style_code,agent_metadata,price,pricing_mode,unit_type,moq,badge,img,images,loc,category,listing_status,created_at,updated_at,product_variants(option_name,option_value,sort_order),factories(id,slug,name,region)')
         .eq('listing_status','active').eq('is_private',false).order('created_at',{ascending:false}).order('updated_at',{ascending:false}).order('sku',{ascending:true}),
       (async()=>{const result=await sb.rpc('public_list_catalog_factories',{p_locale:catalogLocale()});return result.error?sb.from('factories').select('*,supplier_taxonomy_memberships(l2,l3,is_primary)').eq('verify_state','verified'):result;})(),
       sb.rpc('catalog_public_prices',{p_currency:'USD'}),
@@ -425,7 +431,7 @@ const API = {
 
     const factories = (facRes.data||[]).map(mapPublicFactory);
     const products = (prodRes.data||[]).map(p=>({
-      id:p.sku,databaseId:p.id,name:localizedCopy(p.copy_i18n,'name',p.name),img:(p.images&&p.images[0])||p.img,images:p.images||[],description:localizedCopy(p.copy_i18n,'description',p.description),copyI18n:p.copy_i18n||{},comp:p.comp,subcategory:p.subcategory,construction:p.construction,constructionSlug:p.construction_slug,applications:p.applications,season:p.season,color_family:p.color_family,origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,
+      id:p.sku,databaseId:p.id,name:localizedCopy(p.copy_i18n,'name',p.name),img:(p.images&&p.images[0])||p.img,images:p.images||[],description:localizedCopy(p.copy_i18n,'description',p.description),copyI18n:p.copy_i18n||{},comp:p.comp,subcategory:p.subcategory,construction:p.construction,constructionSlug:p.construction_slug,applications:p.applications,season:p.season,color_family:p.color_family,origin_country:p.origin_country,lead_time:p.lead_time,handling_notes:p.handling_notes,gsm:p.gsm,fabric_width:p.fabric_width,roll_length:p.roll_length,style_code:p.style_code,agentMetadata:p.agent_metadata||{},
       price: Number(p.price), unit: p.unit_type,
       moq: p.moq != null ? `${+p.moq} ${UNIT_LABEL[p.unit_type] || p.unit_type}` : '',
       seller: p.factories ? p.factories.name : '', factoryId:p.factories?.id||null, factorySlug:p.factories?.slug||null, loc: p.loc,
@@ -941,6 +947,32 @@ const API = {
       sb.functions.invoke('chat-notify-email',{body:{conversationId,preview:body.slice(0,200),notificationId:data?.notification_id||null},headers:{Authorization:'Bearer '+session.access_token}}).catch(()=>{});
       return {message:data?.message||null,notificationId:data?.notification_id||null,error:null};
     }catch(error){return {error};}
+  },
+
+  /* ---- Athelia: private sourcing history and RFQ cases ---- */
+  async getAtheliaThreads(){
+    try{const {data,error}=await sb.from('athelia_threads').select('id,title,brief,created_at,updated_at,athelia_thread_messages(id,role,content,created_at)').order('updated_at',{ascending:false});return error?[]:(data||[]);}
+    catch(_){return [];}
+  },
+  async createAtheliaThread({title='New sourcing request',brief={}}={}){
+    try{const {data:{session}}=await sb.auth.getSession();if(!session?.user)return {thread:null,error:{message:'not authenticated'}};const {data,error}=await sb.from('athelia_threads').insert({buyer_profile_id:session.user.id,title,brief}).select().single();return {thread:data||null,error:error||null};}
+    catch(error){return {thread:null,error};}
+  },
+  async saveAtheliaTurn(threadId,role,content){
+    try{const {data,error}=await sb.from('athelia_thread_messages').insert({thread_id:threadId,role,content});return {message:data||null,error:error||null};}
+    catch(error){return {message:null,error};}
+  },
+  async getAtheliaCases(){
+    try{const {data,error}=await sb.from('rfq_cases').select('id,case_no,title,brief,status,created_at,updated_at,rfq_supplier_requests(id,status,sent_at,first_reply_at,last_activity_at,product_id,factory_id,conversation_id,products(sku,name),factories(name,slug))').order('updated_at',{ascending:false});return error?[]:(data||[]);}
+    catch(_){return [];}
+  },
+  async createAtheliaCase({threadId=null,title,brief,status='draft'}={}){
+    try{const {data:{session}}=await sb.auth.getSession();if(!session?.user)return {rfq:null,error:{message:'not authenticated'}};const {data,error}=await sb.from('rfq_cases').insert({buyer_profile_id:session.user.id,thread_id:threadId,title,brief,status}).select().single();return {rfq:data||null,error:error||null};}
+    catch(error){return {rfq:null,error};}
+  },
+  async dispatchAtheliaRfq(caseId,requests){
+    try{const {data,error}=await sb.rpc('dispatch_athelia_rfq',{p_case_id:caseId,p_requests:requests});return {requests:data||[],error:error||null};}
+    catch(error){return {requests:[],error};}
   },
 
   subscribeChatMessages(conversationId,onMessage){
