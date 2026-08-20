@@ -933,8 +933,25 @@ const API = {
       const params={p_conversation_id:conversationId, p_limit:limit};
       if(opts&&opts.before) params.p_before=opts.before;
       const {data,error}=await sb.rpc('get_conversation_messages',params);
-      if(error) return [];
-      return (data||[]).reverse();
+      if(!error) return (data||[]).reverse();
+
+      // The inbox preview and message list must not diverge when PostgREST's
+      // RPC schema cache is briefly stale. The messages policy permits the
+      // same authenticated conversation participants to read this fallback.
+      console.warn('[Chat] Message RPC failed; using participant read fallback',error);
+      let query=sb.from('messages')
+        .select('id,conversation_id,sender_profile_id,body,created_at')
+        .eq('conversation_id',conversationId)
+        .gte('created_at',new Date(Date.now()-30*24*60*60*1000).toISOString())
+        .order('created_at',{ascending:false})
+        .limit(Math.min(Math.max(limit,1),100));
+      if(opts&&opts.before) query=query.lt('created_at',opts.before);
+      const {data:fallback,error:fallbackError}=await query;
+      if(fallbackError){
+        console.error('[Chat] Participant message fallback failed',fallbackError);
+        return [];
+      }
+      return (fallback||[]).reverse();
     }catch(_){return [];}
   },
 
