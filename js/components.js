@@ -1240,6 +1240,8 @@
     function close(){
       cleanup();
       panel.classList.remove('in');
+      const fab = document.querySelector('.cop-fab');
+      if(fab) fab.style.display = '';
     }
 
     async function openConvo(conversationId, supplierName){
@@ -1254,6 +1256,8 @@
       nameEl.textContent = supplierName || T('Messages');
       log.innerHTML = '';
       panel.classList.add('in');
+      const fab = document.querySelector('.cop-fab');
+      if(fab) fab.style.display = 'none';
       input.focus();
       const messages = await api().getMessages(conversationId);
       if(messages.length===0){
