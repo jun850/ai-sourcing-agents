@@ -912,11 +912,9 @@ const API = {
   async getMessages(conversationId,opts){
     try{
       const limit=(opts&&opts.limit)||50;
-      let q=sb.from('messages').select('id,body,sender_profile_id,created_at')
-        .eq('conversation_id',conversationId)
-        .order('created_at',{ascending:false}).limit(limit);
-      if(opts&&opts.before) q=q.lt('created_at',opts.before);
-      const {data,error}=await q;
+      const params={p_conversation_id:conversationId, p_limit:limit};
+      if(opts&&opts.before) params.p_before=opts.before;
+      const {data,error}=await sb.rpc('get_conversation_messages',params);
       if(error) return [];
       return (data||[]).reverse();
     }catch(_){return [];}
