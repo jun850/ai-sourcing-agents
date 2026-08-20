@@ -611,10 +611,13 @@
 .acct-chat-empty svg{width:48px;height:48px;opacity:.35}
 .acct-chat-empty span{font-size:13.5px}
 .acct-chat-messages{flex:1;padding:20px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:400px;background:var(--bg)}
-.acct-chat-msg{max-width:70%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.45}
+.acct-chat-msg{display:flex;flex-direction:column;gap:3px;max-width:70%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.45}
 .acct-chat-msg.mine{align-self:flex-end;background:var(--green);color:#fff;border-bottom-right-radius:4px}
 .acct-chat-msg.theirs{align-self:flex-start;background:#fff;border:1px solid var(--line);border-bottom-left-radius:4px}
-.acct-chat-msg span{display:block;font-size:10px;opacity:.6;margin-top:4px}
+.acct-chat-msg-author{font-size:10.5px;font-weight:700;line-height:1.2}
+.acct-chat-msg.mine .acct-chat-msg-author{color:rgba(255,255,255,.84)}
+.acct-chat-msg.theirs .acct-chat-msg-author{color:var(--muted)}
+.acct-chat-msg-time{font-size:10px;line-height:1.2;opacity:.7;margin-top:2px}
 .acct-chat-input-row{display:flex;gap:10px;padding:14px 24px;border-top:1px solid var(--line);background:#fff}
 .acct-chat-input-row input{flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-family:inherit;font-size:13.5px}
 .acct-chat-input-row input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-l)}

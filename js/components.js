@@ -1213,7 +1213,7 @@
     const esc = (x) => String(x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
     const api = () => window.ARCANA_API;
     let panel, log, input, sendBtn, nameEl, avEl, closeBtn;
-    let activeConvoId = null, activeSub = null, currentUserId = null;
+    let activeConvoId = null, activeSub = null, currentUserId = null, currentUserName = null, currentSupplierName = null;
     let built = false;
 
     function build(){
@@ -1266,14 +1266,18 @@
       });
     }
 
-    function renderMsg(msg, who){
+    function renderMsg(msg, who, author){
       const div = document.createElement('div');
       div.className = 'chat-msg ' + who;
+      const label = document.createElement('span');
+      label.className = 'chat-msg-author';
+      label.textContent = author;
+      div.appendChild(label);
       const p = document.createElement('p');
       p.textContent = msg.body;
       div.appendChild(p);
       const ts = document.createElement('span');
-      ts.style.cssText = 'font-size:10px;opacity:.6;margin-top:3px;display:block';
+      ts.className = 'chat-msg-time';
       ts.textContent = new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
       div.appendChild(ts);
       log.appendChild(div);
@@ -1285,7 +1289,7 @@
       const body = (input.value||'').trim();
       if(!body || !activeConvoId) return;
       input.value = '';
-      renderMsg({body, created_at: new Date().toISOString()}, 'me');
+      renderMsg({body, created_at: new Date().toISOString()}, 'me', `${T('Buyer')} · ${currentUserName||T('Buyer')}`);
       scrollBottom();
       const {error} = await api().sendMessage(activeConvoId, body);
       if(error){
@@ -1298,6 +1302,8 @@
       if(activeSub){ activeSub.unsubscribe(); activeSub = null; }
       activeConvoId = null;
       currentUserId = null;
+      currentUserName = null;
+      currentSupplierName = null;
     }
 
     function close(){
@@ -1318,6 +1324,8 @@
       const profile = await api().getSessionProfile();
       if(!profile) return openChatGate();
       currentUserId = profile.id;
+      currentUserName = profile.company_name || profile.full_name || profile.name || T('Buyer');
+      currentSupplierName = supplierName || T('Supplier');
       activeConvoId = conversationId;
       nameEl.textContent = supplierName || T('Messages');
       log.innerHTML = '';
@@ -1330,7 +1338,10 @@
         log.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--muted);font-size:13px">'+esc(T('No messages yet'))+'</div>';
       } else {
         log.innerHTML = '';
-        messages.forEach(m => renderMsg(m, m.sender_profile_id === currentUserId ? 'me' : 'them'));
+        messages.forEach(m => {
+          const mine=m.sender_profile_id===currentUserId;
+          renderMsg(m,mine?'me':'them',`${mine?T('Buyer'):T('Supplier')} · ${mine?currentUserName:currentSupplierName}`);
+        });
         scrollBottom();
       }
       api().markConversationRead(conversationId);
@@ -1338,7 +1349,7 @@
       activeSub = api().subscribeChatMessages(conversationId, msg => {
         if(msg.sender_profile_id === currentUserId) return;
         if(log.querySelector('[style*="text-align:center"]')) log.innerHTML = '';
-        renderMsg(msg, 'them');
+        renderMsg(msg, 'them', `${T('Supplier')} · ${currentSupplierName}`);
         scrollBottom();
         api().markConversationRead(conversationId);
         if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();

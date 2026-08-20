@@ -1734,6 +1734,15 @@
           const dSendBtn=document.getElementById('dashChatSend');
           let dSub=null, dConvoId=null, dUserId=profile?.id;
 
+          function makeDashChatMessage(message,buyerName){
+            const mine=message.sender_profile_id===dUserId;
+            const supplierName=profile?.company_name||profile?.full_name||profile?.name||T('Supplier');
+            const div=document.createElement('div');
+            div.className='acct-chat-msg '+(mine?'mine':'theirs');
+            div.innerHTML='<span class="acct-chat-msg-author">'+esc((mine?T('Supplier'):T('Buyer'))+' · '+(mine?supplierName:(buyerName||T('Buyer'))))+'</span>'+esc(message.body)+'<span class="acct-chat-msg-time">'+new Date(message.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+            return div;
+          }
+
           async function loadDashChat(){
             const convos=await api.getMyConversations();
             if(!convos.length){
@@ -1770,12 +1779,7 @@
             dMsgInput.focus();
             const msgs=await api.getMessages(convoId);
             dMessages.innerHTML='';
-            msgs.forEach(m=>{
-              const div=document.createElement('div');
-              div.className='acct-chat-msg '+(m.sender_profile_id===dUserId?'mine':'theirs');
-              div.innerHTML=esc(m.body)+'<span>'+new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-              dMessages.appendChild(div);
-            });
+            msgs.forEach(m=>dMessages.appendChild(makeDashChatMessage(m,name)));
             dMessages.scrollTop=dMessages.scrollHeight;
             api.markConversationRead(convoId);
             const badge=dConvoList.querySelector('[data-convo-id="'+convoId+'"] .cc-badge');
@@ -1783,10 +1787,7 @@
             if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
             dSub=api.subscribeChatMessages(convoId,msg=>{
               if(msg.sender_profile_id===dUserId) return;
-              const div=document.createElement('div');
-              div.className='acct-chat-msg theirs';
-              div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-              dMessages.appendChild(div);
+              dMessages.appendChild(makeDashChatMessage(msg,name));
               dMessages.scrollTop=dMessages.scrollHeight;
               api.markConversationRead(convoId);
               if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
@@ -1797,10 +1798,7 @@
             const body=(dMsgInput.value||'').trim();
             if(!body||!dConvoId) return;
             dMsgInput.value='';
-            const div=document.createElement('div');
-            div.className='acct-chat-msg mine';
-            div.innerHTML=esc(body)+'<span>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-            dMessages.appendChild(div);
+            dMessages.appendChild(makeDashChatMessage({sender_profile_id:dUserId,body,created_at:new Date().toISOString()},dThreadHead.textContent));
             dMessages.scrollTop=dMessages.scrollHeight;
             const {error}=await api.sendMessage(dConvoId,body);
             if(error && window.ARCANA_toast) window.ARCANA_toast(T('Could not send message'));

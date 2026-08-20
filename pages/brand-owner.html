@@ -290,8 +290,11 @@ window.ARCANA_PAGE=async function({toast}){
 
   function makeChatMessage(message){
     const div=document.createElement('div');
-    div.className='acct-chat-msg '+(message.sender_profile_id===chatUserId?'mine':'theirs');
-    div.innerHTML=esc(message.body)+'<span>'+new Date(message.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+    const isBuyer=message.sender_profile_id===chatUserId;
+    const buyerName=profile?.company_name||profile?.full_name||profile?.name||T('Buyer');
+    const supplierName=chatThreadHead.textContent||T('Supplier');
+    div.className='acct-chat-msg '+(isBuyer?'mine':'theirs');
+    div.innerHTML='<span class="acct-chat-msg-author">'+esc((isBuyer?T('Buyer'):T('Supplier'))+' · '+(isBuyer?buyerName:supplierName))+'</span>'+esc(message.body)+'<span class="acct-chat-msg-time">'+new Date(message.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
     return div;
   }
 
@@ -353,10 +356,7 @@ window.ARCANA_PAGE=async function({toast}){
     if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
     chatSub=api.subscribeChatMessages(convoId,msg=>{
       if(msg.sender_profile_id===chatUserId) return;
-      const div=document.createElement('div');
-      div.className='acct-chat-msg theirs';
-      div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-      chatThreadMessages.appendChild(div);
+      chatThreadMessages.appendChild(makeChatMessage(msg));
       chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
       syncChatPreview(convoId,msg.body,msg.created_at);
       api.markConversationRead(convoId);
@@ -370,10 +370,7 @@ window.ARCANA_PAGE=async function({toast}){
     const sentConvoId=chatConvoId;
     const sentLoadVersion=chatLoadVersion;
     chatMsgInput.value='';
-    const div=document.createElement('div');
-    div.className='acct-chat-msg mine';
-    div.innerHTML=esc(body)+'<span>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
-    chatThreadMessages.appendChild(div);
+    chatThreadMessages.appendChild(makeChatMessage({sender_profile_id:chatUserId,body,created_at:new Date().toISOString()}));
     chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
     const {error}=await api.sendMessage(sentConvoId,body);
     if(error && window.ARCANA_toast) window.ARCANA_toast(T('Could not send message'));
