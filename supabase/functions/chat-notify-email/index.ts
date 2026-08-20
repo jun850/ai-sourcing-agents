@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }
-  const { conversationId, preview } = body || {};
+  const { conversationId, preview, notificationId } = body || {};
   if (!conversationId) return new Response("Missing conversationId", { status: 400 });
 
   const { data: convo, error: convoErr } = await admin
@@ -36,7 +36,9 @@ Deno.serve(async (req) => {
   const factory: any = convo.factories;
   const buyerProfile: any = convo.profiles;
   const isSeller = factory && user.id === factory.owner_profile_id;
-  if (!isBuyer && !isSeller) return new Response("Forbidden", { status: 403 });
+  const { data: senderProfile } = await admin.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
+  const isAdmin = senderProfile?.role === "admin";
+  if (!isBuyer && !isSeller && !isAdmin) return new Response("Forbidden", { status: 403 });
 
   // recipient is the OTHER participant
   const recipientId = isBuyer ? factory?.owner_profile_id : convo.buyer_profile_id;
@@ -46,11 +48,16 @@ Deno.serve(async (req) => {
     });
   }
 
+  const { data: preference } = await admin.from("notification_preferences").select("transactional_email").eq("profile_id", recipientId).maybeSingle();
+  if (preference && !preference.transactional_email) {
+    if (notificationId) await admin.from("notification_deliveries").update({ status: "skipped", delivered_at: new Date().toISOString() }).eq("notification_id", notificationId).eq("channel", "email");
+    return new Response(JSON.stringify({ ok: true, skipped: true }), { headers: { "Content-Type": "application/json" } });
+  }
   const { data: recipientAuth } = await admin.auth.admin.getUserById(recipientId);
   const recipientEmail = recipientAuth?.user?.email;
   if (!recipientEmail) return new Response("Recipient has no email", { status: 404 });
 
-  const senderName = isBuyer
+  const senderName = isAdmin ? (senderProfile?.full_name || "Atelix") : isBuyer
     ? (buyerProfile?.company_name || buyerProfile?.full_name || "A brand owner")
     : (factory?.name || "A supplier");
   const linkPath = isBuyer
@@ -82,8 +89,11 @@ Deno.serve(async (req) => {
 
   if (!resp.ok) {
     const errText = await resp.text();
+    if (notificationId) await admin.from("notification_deliveries").update({ status: "failed", error: errText.slice(0, 500) }).eq("notification_id", notificationId).eq("channel", "email");
     return new Response(`Email send failed: ${errText}`, { status: 502 });
   }
+
+  if (notificationId) await admin.from("notification_deliveries").update({ status: "sent", delivered_at: new Date().toISOString() }).eq("notification_id", notificationId).eq("channel", "email");
 
   return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json" } });
 });

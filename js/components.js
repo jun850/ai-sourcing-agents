@@ -857,6 +857,34 @@
     if (s) return accountMenu(s);
     return `<a class="btn-login" href="${P("login.html")}" data-i18n="auth.login">Log in</a><a class="btn-daftar" href="${P("signup.html")}" data-i18n="auth.signup">Sign up</a>`;
   }
+  let notificationSubscription = null;
+  function notificationCluster() {
+    if (!Store.session()) return "";
+    return `<div class="notif-cluster" data-notifications>
+      <button class="ic-link notif-btn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-label="Notifications"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><span class="badge-count" data-notification-badge hidden></span></button>
+      <section class="notification-pop" role="dialog" aria-label="Notifications" hidden><header><div><h2>Notifications</h2><p>Updates for your sourcing work.</p></div><button type="button" class="notif-read" data-notification-read>Mark all read</button></header><div class="notification-list" data-notification-list aria-live="polite"></div><footer><button type="button" data-notification-preferences>Notification settings</button></footer></section>
+    </div>`;
+  }
+  const notificationEscape = value => String(value == null ? "" : value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char]));
+  function notificationTime(value) { try { return new Intl.DateTimeFormat(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}).format(new Date(value)); } catch (_) { return ""; } }
+  function bindNotificationUI(scope=document) {
+    const cluster=scope.querySelector("[data-notifications]");
+    if(!cluster || cluster.dataset.bound) return;
+    cluster.dataset.bound="1";
+    const api=window.ARCANA_API,button=cluster.querySelector(".notif-btn"),panel=cluster.querySelector(".notification-pop"),list=cluster.querySelector("[data-notification-list]"),badge=cluster.querySelector("[data-notification-badge]");
+    const setBadge=count=>{badge.hidden=!count;badge.textContent=count>99?"99+":String(count||"");};
+    const render=rows=>{list.innerHTML=rows.length?rows.map(row=>`<a class="notification-row${row.read_at?"":" is-unread"}" href="${notificationEscape(row.href||"/")}" data-notification-id="${notificationEscape(row.id)}"><span class="notification-kind" aria-hidden="true">${row.kind==="chat"?"✦":row.kind==="order"?"□":"•"}</span><span><strong>${notificationEscape(row.title)}</strong><small>${notificationEscape(row.body)}</small><time>${notificationEscape(notificationTime(row.created_at))}</time></span></a>`).join(""):`<div class="notification-empty"><strong>No notifications yet</strong><p>Messages, order updates, and consented offers will appear here.</p></div>`;list.querySelectorAll("[data-notification-id]").forEach(link=>link.addEventListener("click",()=>api.markNotificationsRead?.([link.dataset.notificationId])));};
+    const load=async()=>{const [rows,count]=await Promise.all([api.getNotifications?.()||[],api.getNotificationUnreadCount?.()||0]);render(rows);setBadge(count);};
+    const close=()=>{panel.hidden=true;button.setAttribute("aria-expanded","false");};
+    button.addEventListener("click",event=>{event.stopPropagation();const open=panel.hidden;panel.hidden=!open;button.setAttribute("aria-expanded",String(open));if(open)load();});
+    cluster.querySelector("[data-notification-read]").addEventListener("click",async()=>{await api.markNotificationsRead?.();await load();});
+    cluster.querySelector("[data-notification-preferences]").addEventListener("click",async()=>{const pref=await api.getNotificationPreferences?.()||{};const next=confirm("Allow marketing notifications in Atelix?\n\nChoose OK to opt in, or Cancel to keep them off.");await api.saveNotificationPreferences?.({...pref,marketing_in_app:next,marketing_email:next});toast(next?"Marketing notifications enabled.":"Marketing notifications remain off.");});
+    document.addEventListener("click",event=>{if(!cluster.contains(event.target))close();});
+    document.addEventListener("keydown",event=>{if(event.key==="Escape"&&!panel.hidden){close();button.focus();}});
+    load();
+    if(notificationSubscription) notificationSubscription.unsubscribe?.();
+    notificationSubscription=api.subscribeNotifications?.(notification=>{setBadge(Number(badge.textContent||0)+1);if(!panel.hidden)load();toast(notification.title);});
+  }
   function accountMenu(s) {
     const initials = s.name
       .split(" ")
@@ -940,6 +968,7 @@
     ${searchBox(ph)}
     ${chatIcon}
     ${cartIcon}
+    ${notificationCluster()}
     ${authCluster()}
     ${katPanel()}
   </div>`;
@@ -2618,6 +2647,7 @@
     }
     // account menu + auth cluster handlers (logout, saved link)
     bindAuthUI(document);
+    bindNotificationUI(document);
     // search submit + suggestions + image search live in wireSearch()
   }
 
@@ -2657,11 +2687,11 @@
     const hdrIn = document.querySelector(".hdr-in");
     if (!hdrIn) return;
     hdrIn
-      .querySelectorAll(".btn-login,.btn-daftar,.acct")
+      .querySelectorAll(".btn-login,.btn-daftar,.acct,.notif-cluster")
       .forEach((n) => n.remove());
     const panel = hdrIn.querySelector("[data-kat-panel]");
     const tmp = document.createElement("div");
-    tmp.innerHTML = authCluster();
+    tmp.innerHTML = notificationCluster() + authCluster();
     const added = [...tmp.childNodes];
     added.forEach((n) => hdrIn.insertBefore(n, panel));
     // localize freshly-inserted nodes to the active language
@@ -2680,6 +2710,7 @@
         });
     });
     bindAuthUI(hdrIn);
+    bindNotificationUI(hdrIn);
     syncBadges();
   }
 

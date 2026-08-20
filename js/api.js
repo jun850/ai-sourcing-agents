@@ -74,6 +74,12 @@ if(!sb || !sb.auth){
     subscribeChatMessages(){ return { unsubscribe(){} }; },
     markConversationRead(){ return Promise.resolve(); },
     getUnreadCount(){ return Promise.resolve(0); },
+    getNotifications(){ return Promise.resolve([]); },
+    getNotificationUnreadCount(){ return Promise.resolve(0); },
+    markNotificationsRead(){ return Promise.resolve({ error:err }); },
+    getNotificationPreferences(){ return Promise.resolve({}); },
+    saveNotificationPreferences(){ return Promise.resolve({ error:err }); },
+    subscribeNotifications(){ return { unsubscribe(){} }; },
     adminListOrders(){ return Promise.resolve([]); },
     adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
     adminListUsers(){ return Promise.resolve([]); },
@@ -113,6 +119,9 @@ if(!sb || !sb.auth){
     intoolsListSupplierChats(){ return Promise.resolve({ items:[], error:err }); },
     intoolsGetSupplierChat(){ return Promise.resolve({ chat:null, error:err }); },
     intoolsSendSupplierChatMessage(){ return Promise.resolve({ message:null, error:err }); },
+    intoolsListNotificationCampaigns(){ return Promise.resolve({ items:[], error:err }); },
+    intoolsSaveNotificationCampaign(){ return Promise.resolve({ campaign:null, error:err }); },
+    intoolsSendNotificationCampaign(){ return Promise.resolve({ result:null, error:err }); },
     getPlatformSetting(){ return Promise.resolve(null); },
     intoolsUpdatePlatformSetting(){ return Promise.resolve({ error:err }); },
     createStripeCheckout(){ return Promise.resolve({ error:err }); },
@@ -928,18 +937,11 @@ const API = {
   async sendMessage(conversationId,body){
     try{
       const {data:{session}}=await sb.auth.getSession();
-      if(!session||!session.user) return {error:{message:'not authenticated'}};
-      const {data,error}=await sb.from('messages')
-        .insert({conversation_id:conversationId,sender_profile_id:session.user.id,body})
-        .select().single();
+      if(!session?.user)return {error:{message:'not authenticated'}};
+      const {data,error}=await sb.rpc('send_chat_message',{p_conversation_id:conversationId,p_body:body});
       if(error) return {error};
-      try{
-        sb.functions.invoke('chat-notify-email',{
-          body:{conversationId,preview:body.slice(0,200)},
-          headers:{Authorization:'Bearer '+session.access_token}
-        });
-      }catch(_){}
-      return {message:data,error:null};
+      sb.functions.invoke('chat-notify-email',{body:{conversationId,preview:body.slice(0,200),notificationId:data?.notification_id||null},headers:{Authorization:'Bearer '+session.access_token}}).catch(()=>{});
+      return {message:data?.message||null,notificationId:data?.notification_id||null,error:null};
     }catch(error){return {error};}
   },
 
@@ -963,6 +965,37 @@ const API = {
       if(error) return 0;
       return typeof data==='number'?data:0;
     }catch(_){ return 0; }
+  },
+  /* ---- Notification center ---- */
+  async getNotifications(limit=50){
+    try{const {data,error}=await sb.rpc('my_notifications',{p_limit:limit});return error?[]:(data||[]);}
+    catch(_){return [];}
+  },
+  async getNotificationUnreadCount(){
+    try{const {data,error}=await sb.rpc('notification_unread_count');return error?0:Number(data||0);}
+    catch(_){return 0;}
+  },
+  async markNotificationsRead(ids=null){
+    try{const {data,error}=await sb.rpc('mark_notifications_read',{p_ids:ids});return {count:data||0,error:error||null};}
+    catch(error){return {count:0,error};}
+  },
+  async getNotificationPreferences(){
+    try{const {data,error}=await sb.rpc('my_notification_preferences');return error?{}:(data||{});}
+    catch(_){return {};}
+  },
+  async saveNotificationPreferences(preferences){
+    try{const {data,error}=await sb.rpc('save_notification_preferences',{p_preferences:preferences});return {preferences:data||null,error:error||null};}
+    catch(error){return {preferences:null,error};}
+  },
+  subscribeNotifications(onNotification){
+    let channel=null,closed=false;
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(closed||!session?.user) return;
+      channel=sb.channel('notifications:'+session.user.id)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'notifications',filter:'profile_id=eq.'+session.user.id},payload=>{try{onNotification(payload.new);}catch(_){}})
+        .subscribe();
+    }).catch(()=>{});
+    return {unsubscribe(){closed=true;if(channel)sb.removeChannel(channel);}};
   },
 
   /* ---- Admin: platform-wide order management ---- */
@@ -1175,6 +1208,18 @@ const API = {
   async intoolsSendSupplierChatMessage(conversationId,body){
     try{const {data,error}=await sb.rpc('intools_send_supplier_chat_message',{p_conversation_id:conversationId,p_body:body});return {message:data||null,error:error||null};}
     catch(error){return {message:null,error};}
+  },
+  async intoolsListNotificationCampaigns(){
+    try{const {data,error}=await sb.rpc('intools_list_notification_campaigns');return {items:data||[],error:error||null};}
+    catch(error){return {items:[],error};}
+  },
+  async intoolsSaveNotificationCampaign({id=null,payload}){
+    try{const {data,error}=await sb.rpc('intools_save_notification_campaign',{p_id:id,p_payload:payload});return {campaign:data||null,error:error||null};}
+    catch(error){return {campaign:null,error};}
+  },
+  async intoolsSendNotificationCampaign(id){
+    try{const {data,error}=await sb.rpc('intools_send_notification_campaign',{p_id:id});return {result:data||null,error:error||null};}
+    catch(error){return {result:null,error};}
   },
   async getPlatformSetting(key){
     try{const {data,error}=await sb.rpc('get_platform_setting',{p_key:key});if(error)return null;return data;}
