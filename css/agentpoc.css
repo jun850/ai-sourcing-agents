@@ -434,6 +434,10 @@
 
 /* ---------- transcript ---------- */
 .apoc-transcript{ display:flex; flex-direction:column; gap:10px; }
+.apoc-agent-turn{align-self:flex-start;display:flex;flex-direction:column;gap:8px;max-width:100%;}
+.apoc-agent-turn .apoc-grid,.apoc-agent-turn .apoc-benchmark,.apoc-agent-turn .apoc-drafts{margin:0;}
+.apoc-rfq-turn{display:grid;gap:10px;max-width:min(720px,100%);padding:12px;border:1px solid var(--paper-line);border-radius:12px;background:var(--white);}
+.apoc-research-offer{justify-items:start;}
 .apoc-msg{ display:flex; max-width:78%; }
 .apoc-msg.is-user{ align-self:flex-end; justify-content:flex-end; }
 .apoc-msg.is-agent{ align-self:flex-start; }

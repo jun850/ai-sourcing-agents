@@ -967,15 +967,15 @@ const API = {
 
   /* ---- Athelia: private sourcing history and RFQ cases ---- */
   async getAtheliaThreads(){
-    try{const {data,error}=await sb.from('athelia_threads').select('id,title,brief,created_at,updated_at,athelia_thread_messages(id,role,content,created_at)').order('updated_at',{ascending:false});return error?[]:(data||[]);}
+    try{const {data,error}=await sb.from('athelia_threads').select('id,title,brief,created_at,updated_at,athelia_thread_messages(id,role,content,metadata,created_at)').order('updated_at',{ascending:false});return error?[]:(data||[]);}
     catch(_){return [];}
   },
   async createAtheliaThread({title='New sourcing request',brief={}}={}){
     try{const {data:{session}}=await sb.auth.getSession();if(!session?.user)return {thread:null,error:{message:'not authenticated'}};const {data,error}=await sb.from('athelia_threads').insert({buyer_profile_id:session.user.id,title,brief}).select().single();return {thread:data||null,error:error||null};}
     catch(error){return {thread:null,error};}
   },
-  async saveAtheliaTurn(threadId,role,content){
-    try{const {data,error}=await sb.from('athelia_thread_messages').insert({thread_id:threadId,role,content});return {message:data||null,error:error||null};}
+  async saveAtheliaTurn(threadId,role,content,metadata={}){
+    try{const {data,error}=await sb.from('athelia_thread_messages').insert({thread_id:threadId,role,content,metadata});return {message:data||null,error:error||null};}
     catch(error){return {message:null,error};}
   },
   async getAtheliaCases(){

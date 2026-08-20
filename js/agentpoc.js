@@ -66,7 +66,6 @@ function products(){ return window.ARCANA_PRODUCTS || []; }
 function findProduct(id){ return products().find(p=>p.id===id) || null; }
 function Copilot(){ return window.ARCANA_Copilot; }
 function actions(){ return window.ATELIX_agentActions; }
-function jpy(n){ return '¥' + Math.round(Number(n)||0).toLocaleString('ja-JP'); }
 function usd(n){ return '$' + (Number(n)||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 function enforceUsdReply(reply,candidates){
   const prices=(candidates||[]).map(p=>Number(p&&p.price)).filter(n=>Number.isFinite(n)&&n>0);
@@ -103,17 +102,31 @@ function appendUser(text){
   d.innerHTML = `<div class="apoc-bubble">${escapeHtml(text)}</div>`;
   el.transcript.appendChild(d); persistTurn('buyer',text); scrollToBottom();
 }
-function appendAgent(text){
+function renderAgentTurn(text, metadata={}){
+  const turn = document.createElement('div');
+  turn.className = 'apoc-agent-turn';
   const d = document.createElement('div');
   d.className = 'apoc-msg is-agent';
   d.innerHTML = `<div class="apoc-bubble">${escapeHtml(text)}</div>`;
-  el.transcript.appendChild(d); persistTurn('agent',text); scrollToBottom();
-  return d;
+  turn.appendChild(d);
+  const productIds=Array.isArray(metadata.productIds)?metadata.productIds:[];
+  const matched=productIds.map(findProduct).filter(Boolean);
+  if(matched.length) turn.appendChild(productCardsNode(matched));
+  if(metadata.benchmark) turn.appendChild(benchmarkNode(metadata.benchmark));
+  if(Array.isArray(metadata.rfqDrafts)) turn.appendChild(rfqDraftNode(metadata.rfqDrafts));
+  if(metadata.researchOffer) turn.appendChild(researchOfferNode());
+  el.transcript.appendChild(turn);
+  return turn;
+}
+function appendAgent(text, metadata={}){
+  const turn=renderAgentTurn(text,metadata);
+  persistTurn('agent',text,metadata); scrollToBottom();
+  return turn;
 }
 
-async function persistTurn(role,content){
+async function persistTurn(role,content,metadata={}){
   if(!state.threadId || !window.ARCANA_API?.saveAtheliaTurn) return;
-  await window.ARCANA_API.saveAtheliaTurn(state.threadId,role,content);
+  await window.ARCANA_API.saveAtheliaTurn(state.threadId,role,content,metadata);
 }
 
 function titleFor(text){ return String(text||'New sourcing request').replace(/\s+/g,' ').trim().slice(0,52); }
@@ -139,11 +152,11 @@ async function newThread(){
 function openThread(id){
   const thread=state.threads.find(item=>item.id===id); if(!thread)return;
   state.threadId=id; state.selectedRfq=null; state.history=[]; el.transcript.innerHTML=''; el.rfqReview.hidden=true; el.workspaceLabel.textContent=thread.title;
-  (thread.athelia_thread_messages||[]).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).forEach(message=>{if(message.role==='buyer')appendUserLoaded(message.content);else appendAgentLoaded(message.content); state.history.push({role:message.role==='buyer'?'user':'assistant',content:message.content});});
+  (thread.athelia_thread_messages||[]).sort((a,b)=>new Date(a.created_at)-new Date(b.created_at)).forEach(message=>{if(message.role==='buyer')appendUserLoaded(message.content);else appendAgentLoaded(enforceUsdReply(message.content,products()),message.metadata||{}); state.history.push({role:message.role==='buyer'?'user':'assistant',content:message.content});});
   updateRoute({thread:id}); renderWorkspace(); if(el.hero)el.hero.hidden=!!state.history.length;
 }
 function appendUserLoaded(text){const d=document.createElement('div');d.className='apoc-msg is-user';d.innerHTML=`<div class="apoc-bubble">${escapeHtml(text)}</div>`;el.transcript.appendChild(d);}
-function appendAgentLoaded(text){const d=document.createElement('div');d.className='apoc-msg is-agent';d.innerHTML=`<div class="apoc-bubble">${escapeHtml(text)}</div>`;el.transcript.appendChild(d);}
+function appendAgentLoaded(text,metadata={}){renderAgentTurn(text,metadata);}
 function openRfq(id){
   const rfq=state.rfqs.find(item=>item.id===id);if(!rfq)return; state.selectedRfq=rfq; el.workspaceLabel.textContent=`${rfq.case_no} · ${rfq.title}`; el.transcript.innerHTML=''; el.rfqReview.hidden=false;
   el.rfqReview.querySelector('#rfqReviewTitle').textContent=rfq.title;
@@ -192,20 +205,17 @@ function cardHtml(p){
   </article>`;
 }
 
-function appendCards(list){
-  if(!list.length) return;
+function productCardsNode(list){
   const grid = document.createElement('div');
   grid.className = 'apoc-grid apoc-turn-cards';
   grid.innerHTML = list.map(cardHtml).join('');
-  el.transcript.appendChild(grid);
   grid.querySelectorAll('[data-product-id]').forEach(card=>{
     const id = card.dataset.productId;
     card.querySelector('[data-wish]').addEventListener('click', e=>{ e.preventDefault(); doWishlist(id); });
     card.querySelector('[data-add]').addEventListener('click', e=>{ e.preventDefault(); doAddToCart(id, defaultQty(id)); });
   });
-  scrollToBottom();
+  return grid;
 }
-
 /* ================= inline benchmark card (real numbers) ================= */
 
 function benchmarkCardHtml(rc){
@@ -215,14 +225,14 @@ function benchmarkCardHtml(rc){
   }
   const verdictLabel = { value:'below market', typical:'in line with market', premium:'above market' }[rc.verdict] || rc.verdict;
   const shareLine = rc.perUnitShare!=null
-    ? `<div class="apoc-bm-row"><span>Material cost / ${escapeHtml(rc.product.unit)}</span><b>${jpy(rc.product.jpy)} · ${(rc.perUnitShare*100).toFixed(1)}% of ${jpy(rc.resaleJPY)} resale</b></div>`
+    ? `<div class="apoc-bm-row"><span>Material cost / ${escapeHtml(rc.product.unit)}</span><b>${usd(rc.product.usd)} · ${(rc.perUnitShare*100).toFixed(1)}% of resale</b></div>`
     : '';
   return `
   <div class="apoc-benchmark" data-product-id="${escapeHtml(rc.product.id)}">
     <div class="apoc-bm-head">${escapeHtml(rc.product.name)} — <span class="apoc-bm-verdict apoc-bm-${escapeHtml(rc.verdict)}">${escapeHtml(verdictLabel)}</span></div>
     <div class="apoc-bm-grid">
-      <div class="apoc-bm-row"><span>This fabric</span><b>${usd(rc.product.usd)} · ${jpy(rc.product.jpy)}/${escapeHtml(rc.product.unit)}</b></div>
-      <div class="apoc-bm-row"><span>Peer median (${bm.n} ${escapeHtml(bm.label)})</span><b>${usd(bm.usd.median)} · ${jpy(bm.jpy.median)}</b></div>
+      <div class="apoc-bm-row"><span>This fabric</span><b>${usd(rc.product.usd)}/${escapeHtml(rc.product.unit)}</b></div>
+      <div class="apoc-bm-row"><span>Peer median (${bm.n} ${escapeHtml(bm.label)})</span><b>${usd(bm.usd.median)}</b></div>
       <div class="apoc-bm-row"><span>Peer range</span><b>${usd(bm.usd.min)}–${usd(bm.usd.max)}</b></div>
       <div class="apoc-bm-row"><span>Percentile</span><b>${rc.percentile==null?'—':rc.percentile+'th (cheaper than '+(100-rc.percentile)+'% of peers)'}</b></div>
       ${shareLine}
@@ -232,23 +242,21 @@ function benchmarkCardHtml(rc){
     </div>
   </div>`;
 }
-function appendBenchmark(rc){
+function benchmarkNode(rc){
   const wrap = document.createElement('div');
   wrap.innerHTML = benchmarkCardHtml(rc);
   const node = wrap.firstElementChild;
-  el.transcript.appendChild(node);
   const addBtn = node.querySelector('[data-bm-add]');
   if(addBtn) addBtn.addEventListener('click', ()=> doAddToCart(rc.product.id, defaultQty(rc.product.id)));
-  scrollToBottom();
+  return node;
 }
-
 /* ================= inline drafted inquiries ================= */
 
-function appendDrafts(drafts){
+function rfqDraftNode(drafts){
   const valid = drafts.filter(d=>findProduct(d.productId));
-  if(!valid.length) return;
+  if(!valid.length) return document.createElement('div');
   const wrap = document.createElement('div');
-  wrap.className = 'apoc-drafts';
+  wrap.className = 'apoc-drafts apoc-rfq-turn';
   wrap.innerHTML = valid.map(d=>{
     const p = findProduct(d.productId);
     return `
@@ -257,33 +265,44 @@ function appendDrafts(drafts){
       <textarea data-body rows="4">${escapeHtml(d.message)}</textarea>
     </div>`;
   }).join('');
-  el.transcript.appendChild(wrap);
-  scrollToBottom();
+  const usable=valid.filter(d=>{const p=findProduct(d.productId);return p&&p.factoryId;});
+  if(usable.length){
+    const actions=document.createElement('div');
+    actions.className='apoc-rfq-actions';
+    actions.innerHTML='<button class="apoc-secondary" type="button" data-research>Need research instead</button><button class="apoc-primary" type="button" data-dispatch>Send selected RFQs</button>';
+    wrap.appendChild(actions);
+    wrap.querySelectorAll('.apoc-draft').forEach((draft,index)=>{
+      const check=document.createElement('label');
+      check.className='apoc-rfq-choice';
+      check.innerHTML=`<input type="checkbox" data-rfq-product="${escapeHtml(draft.dataset.draftId)}" ${index===0?'checked':''}><span><b>Include this supplier</b><small>The editable inquiry above is sent only after approval.</small></span>`;
+      draft.appendChild(check);
+    });
+    actions.querySelector('[data-dispatch]').addEventListener('click',()=>dispatchRfqFromTurn(wrap));
+    actions.querySelector('[data-research]').addEventListener('click',()=>saveResearchCase());
+  }
+  return wrap;
 }
-
-function showRfqReview(drafts){
-  const usable=(drafts||[]).map(d=>({product:findProduct(d.productId),body:d.message})).filter(item=>item.product&&item.product.factoryId);
-  if(!usable.length) return;
-  state.selectedRfq=null;
-  el.rfqReview.hidden=false;
-  el.rfqReview.querySelector('#rfqReviewTitle').textContent='Choose suppliers to contact';
-  el.rfqReview.querySelector('#rfqReviewCopy').textContent='Messages are sent only after approval. Supplier estimates and replies arrive in the linked chat.';
-  el.rfqSelection.innerHTML=usable.map((item,index)=>`<label class="apoc-rfq-choice"><input type="checkbox" data-rfq-product="${escapeHtml(item.product.id)}" data-rfq-body="${escapeHtml(item.body)}" ${index===0?'checked':''}><span><b>${escapeHtml(item.product.name)}</b><small>${escapeHtml(item.product.seller)} · ${escapeHtml(item.product.loc||'')}</small></span></label>`).join('');
-  el.dispatchRfqBtn.hidden=false; el.saveResearchBtn.hidden=false; scrollToBottom();
+function researchOfferNode(){
+  const node=document.createElement('div');
+  node.className='apoc-rfq-turn apoc-research-offer';
+  node.innerHTML='<button class="apoc-secondary" type="button">Save for sourcing research</button>';
+  node.querySelector('button').addEventListener('click',()=>saveResearchCase());
+  return node;
 }
-async function dispatchSelectedRfq(){
-  const choices=[...el.rfqSelection.querySelectorAll('[data-rfq-product]:checked')].map(input=>({productId:input.dataset.rfqProduct,body:input.dataset.rfqBody}));
+async function dispatchRfqFromTurn(turn){
+  const choices=[...turn.querySelectorAll('[data-rfq-product]:checked')].map(input=>({productId:input.dataset.rfqProduct,body:input.closest('.apoc-draft').querySelector('[data-body]').value.trim()})).filter(choice=>choice.body);
   if(!choices.length){ appendAgent('Select at least one verified supplier first.'); return; }
-  el.dispatchRfqBtn.disabled=true;
+  const dispatch=turn.querySelector('[data-dispatch]'); if(dispatch) dispatch.disabled=true;
   const brief={text:state.brief,history:state.history.filter(item=>item.role==='user').slice(-8)};
   const title=titleFor(state.brief||choices[0].productId);
   const created=await window.ARCANA_API.createAtheliaCase({threadId:state.threadId,title,brief,status:'draft'});
-  if(created.error||!created.rfq){ appendAgent('I could not prepare that RFQ. Please try again.'); el.dispatchRfqBtn.disabled=false; return; }
+  if(created.error||!created.rfq){ appendAgent('I could not prepare that RFQ. Please try again.'); if(dispatch) dispatch.disabled=false; return; }
   const requests=choices.map(choice=>{const p=findProduct(choice.productId);return {product_id:p.databaseId||p.id,body:choice.body};});
   const sent=await window.ARCANA_API.dispatchAtheliaRfq(created.rfq.id,requests);
-  if(sent.error){ appendAgent('The RFQ was saved as a draft, but it was not sent. Please try again.'); el.dispatchRfqBtn.disabled=false; await refreshWorkspace(); return; }
+  if(sent.error){ appendAgent('The RFQ was saved as a draft, but it was not sent. Please try again.'); if(dispatch) dispatch.disabled=false; await refreshWorkspace(); return; }
   appendAgent(`Sent ${requests.length} RFQ${requests.length===1?'':'s'} to selected suppliers. I’ll show their replies here as they arrive.`);
-  el.rfqReview.hidden=true; await refreshWorkspace(); openRfq(created.rfq.id);
+  turn.querySelectorAll('textarea,input,button').forEach(control=>control.disabled=true);
+  await refreshWorkspace();
 }
 async function saveResearchCase(){
   const title=titleFor(state.brief||'Unmatched sourcing request');
@@ -541,10 +560,7 @@ async function handleChat(text){
   state.candidates = ranked.map(r=>r.p);
   if(!state.candidates.length && kind==='sourcing'){
     const msg='I could not find a verified catalogue match for that brief. I can save it for research and prepare an email to the Atelix sourcing team.';
-    appendAgent(msg); logAgent(msg);
-    el.rfqReview.hidden=false; el.rfqReview.querySelector('#rfqReviewTitle').textContent='No verified match yet';
-    el.rfqReview.querySelector('#rfqReviewCopy').textContent='Save this brief as a research case, then contact the Atelix sourcing team.';
-    el.rfqSelection.innerHTML=''; el.dispatchRfqBtn.hidden=true; el.saveResearchBtn.hidden=false; return;
+    appendAgent(msg,{researchOffer:true}); logAgent(msg); return;
   }
 
   // Compute a real benchmark when the buyer is asking about price.
@@ -568,14 +584,13 @@ async function handleChat(text){
     });
     stop();
     const reply=enforceUsdReply(payload.reply,state.candidates);
-    appendAgent(reply); logAgent(reply);
-    if(benchmark && benchmark.benchmark && !benchmark.benchmark.insufficient) appendBenchmark(benchmark);
     // Show cards for every product the agent surfaced — its `show` list PLUS any
     // candidate the reply names inline (ids like "FAB-154" or the product name),
     // so a product mentioned in prose always renders an add-to-cart card.
-    const showIds = Array.from(new Set([...(payload.show||[]), ...referencedInReply(payload.reply)]));
+    const showIds = Array.from(new Set([...(payload.show||[]), ...referencedInReply(reply)]));
     const show = showIds.map(findProduct).filter(Boolean);
-    if(show.length){ appendCards(show); state.lastRef = show[0].id; }
+    appendAgent(reply,{productIds:show.map(p=>p.id),benchmark:benchmark&&benchmark.benchmark&&!benchmark.benchmark.insufficient?benchmark:null}); logAgent(reply);
+    if(show.length) state.lastRef = show[0].id;
     if(payload.draftFor && payload.draftFor.length) requestDrafts(payload.draftFor);
     offerActions();
   }catch(err){
@@ -584,10 +599,8 @@ async function handleChat(text){
     if(err.reason === 'unauthorized'){ showGate('signin'); return; }
     // Honest degradation: still surface the real, deterministic data we computed.
     const msg = `I couldn't reach the model just now, but here's what the live catalog shows.`;
-    appendAgent(msg); logAgent(msg);
-    if(benchmark && benchmark.benchmark && !benchmark.benchmark.insufficient) appendBenchmark(benchmark);
     const top = state.candidates.slice(0,5);
-    if(top.length) appendCards(top);
+    appendAgent(msg,{productIds:top.map(p=>p.id),benchmark:benchmark&&benchmark.benchmark&&!benchmark.benchmark.insufficient?benchmark:null}); logAgent(msg);
     offerActions();
   }
 }
@@ -615,8 +628,8 @@ async function requestDrafts(targetIds){
   try{
     const payload = await callAgent('draft', { brief: state.brief || (state.history[state.history.length-1]||{}).content || '', matches, lang });
     stop();
-    if(payload.intro){ appendAgent(payload.intro); logAgent(payload.intro); }
-    appendDrafts(payload.drafts||[]); showRfqReview(payload.drafts||[]);
+    const intro=payload.intro || 'Here are inquiry drafts for the selected suppliers. Review and send only the ones you approve.';
+    appendAgent(intro,{rfqDrafts:payload.drafts||[]}); logAgent(intro);
   }catch(err){
     stop();
     if(err.reason === 'not_available'){ showGate('unavailable'); return; }
@@ -624,8 +637,7 @@ async function requestDrafts(targetIds){
     const m = targets.length>1
       ? `Here are inquiry drafts for each supplier — copy them into the supplier chat on each product page.`
       : `Here's an inquiry draft — copy it into the supplier chat on the product page.`;
-    appendAgent(m); logAgent(m);
-    appendDrafts(fallback); showRfqReview(fallback);
+    appendAgent(m,{rfqDrafts:fallback}); logAgent(m);
   }
 }
 // Kept deliberately simple: only the greeting/sign-off are localized, the
@@ -727,8 +739,6 @@ function init(){
   el.composerInput.addEventListener('input', ()=>{ el.sendBtn.disabled = !el.composerInput.value.trim() || !state.ready || state.busy; });
   document.querySelectorAll('.apoc-example').forEach(b=> b.addEventListener('click', ()=>submit(b.dataset.example)));
   el.newThreadBtn.addEventListener('click', newThread);
-  el.dispatchRfqBtn.addEventListener('click', dispatchSelectedRfq);
-  el.saveResearchBtn.addEventListener('click', saveResearchCase);
   document.querySelectorAll('[data-workspace-view]').forEach(button=>button.addEventListener('click',()=>{
     const rfqs=button.dataset.workspaceView==='rfqs';
     document.querySelectorAll('[data-workspace-view]').forEach(item=>item.classList.toggle('is-active',item===button));
