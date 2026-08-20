@@ -68,6 +68,14 @@ function Copilot(){ return window.ARCANA_Copilot; }
 function actions(){ return window.ATELIX_agentActions; }
 function jpy(n){ return '¥' + Math.round(Number(n)||0).toLocaleString('ja-JP'); }
 function usd(n){ return '$' + (Number(n)||0).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function enforceUsdReply(reply,candidates){
+  const prices=(candidates||[]).map(p=>Number(p&&p.price)).filter(n=>Number.isFinite(n)&&n>0);
+  return String(reply||'').replace(/(?:¥|￥|jpy|yen)\s*([\d,.]+)/gi,(_match,raw)=>{
+    const quoted=Number(String(raw).replace(/,/g,''));
+    const canonical=prices.find(price=>Math.abs(price-quoted)<0.0001);
+    return canonical!=null ? usd(canonical) : 'USD pricing shown on the product card';
+  });
+}
 function scrollToBottom(){ requestAnimationFrame(()=>{ window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'}); }); }
 function trimCandidate(p){ return { id:p.id, name:p.name, seller:p.seller, loc:p.loc, price:p.price, unit:p.unit, moq:p.moq, spec:p.spec, comp:p.comp, certs:p.certs||[] }; }
 
@@ -559,7 +567,8 @@ async function handleChat(text){
       benchmark,
     });
     stop();
-    appendAgent(payload.reply); logAgent(payload.reply);
+    const reply=enforceUsdReply(payload.reply,state.candidates);
+    appendAgent(reply); logAgent(reply);
     if(benchmark && benchmark.benchmark && !benchmark.benchmark.insufficient) appendBenchmark(benchmark);
     // Show cards for every product the agent surfaced — its `show` list PLUS any
     // candidate the reply names inline (ids like "FAB-154" or the product name),
