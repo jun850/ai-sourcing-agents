@@ -930,15 +930,9 @@ const API = {
   async getMessages(conversationId,opts){
     try{
       const limit=(opts&&opts.limit)||50;
-      const params={p_conversation_id:conversationId, p_limit:limit};
-      if(opts&&opts.before) params.p_before=opts.before;
-      const {data,error}=await sb.rpc('get_conversation_messages',params);
-      if(!error) return (data||[]).reverse();
-
-      // The inbox preview and message list must not diverge when PostgREST's
-      // RPC schema cache is briefly stale. The messages policy permits the
-      // same authenticated conversation participants to read this fallback.
-      console.warn('[Chat] Message RPC failed; using participant read fallback',error);
+      // Use the same participant-protected source as the supplier inbox. This
+      // makes initial profile loads render the full existing thread without
+      // requiring a new message to refresh an RPC result.
       let query=sb.from('messages')
         .select('id,conversation_id,sender_profile_id,body,created_at')
         .eq('conversation_id',conversationId)
@@ -946,11 +940,16 @@ const API = {
         .order('created_at',{ascending:false})
         .limit(Math.min(Math.max(limit,1),100));
       if(opts&&opts.before) query=query.lt('created_at',opts.before);
-      const {data:fallback,error:fallbackError}=await query;
-      if(fallbackError){
-        console.error('[Chat] Participant message fallback failed',fallbackError);
-        return [];
-      }
+      const {data,error}=await query;
+      if(!error) return (data||[]).reverse();
+
+      // Keep the hardened RPC as a backup for a temporarily unavailable table
+      // read; it has the same participant authorization boundary.
+      console.warn('[Chat] Participant message read failed; using RPC fallback',error);
+      const params={p_conversation_id:conversationId, p_limit:limit};
+      if(opts&&opts.before) params.p_before=opts.before;
+      const {data:fallback,error:fallbackError}=await sb.rpc('get_conversation_messages',params);
+      if(fallbackError){console.error('[Chat] Message RPC fallback failed',fallbackError);return [];}
       return (fallback||[]).reverse();
     }catch(_){return [];}
   },
