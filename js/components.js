@@ -1157,6 +1157,174 @@
   }
   window.ARCANA_contactEmail = contactEmail;
 
+  /* ---------- buyer ↔ seller chat drawer ---------- */
+  (function buildChatDrawer(){
+    const T = (k) => (window.ARCANA_T || (x=>x))(k);
+    const esc = (x) => String(x).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+    const api = () => window.ARCANA_API;
+    let panel, log, input, sendBtn, nameEl, avEl, closeBtn;
+    let activeConvoId = null, activeSub = null, currentUserId = null;
+    let built = false;
+
+    function build(){
+      if(built) return;
+      built = true;
+      panel = document.createElement('div');
+      panel.className = 'chat-panel';
+      panel.id = 'atelixChatDrawer';
+      panel.setAttribute('role','dialog');
+      panel.setAttribute('aria-modal','false');
+      panel.setAttribute('aria-label',T('Messages'));
+      panel.innerHTML = `
+        <div class="chat-head">
+          <div class="chat-who">
+            <div class="chat-av" id="chatDrawerAv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="20" height="20"><path d="M3 21V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H7l-4 4z"/></svg></div>
+            <div><b id="chatDrawerName"></b>
+              <div class="chat-status"><i></i> Atelix verified</div>
+            </div>
+          </div>
+          <button type="button" class="chat-x" id="chatDrawerClose" aria-label="${esc(T('Close'))}">&times;</button>
+        </div>
+        <div class="chat-log" id="chatDrawerLog" aria-live="polite" aria-relevant="additions"></div>
+        <div class="chat-input">
+          <input type="text" placeholder="${esc(T('Type a message…'))}" aria-label="${esc(T('Type a message…'))}" maxlength="2000" id="chatDrawerInput">
+          <button class="btn btn-green" id="chatDrawerSend">${esc(T('Send'))}</button>
+        </div>`;
+      document.body.appendChild(panel);
+      log = document.getElementById('chatDrawerLog');
+      input = document.getElementById('chatDrawerInput');
+      sendBtn = document.getElementById('chatDrawerSend');
+      nameEl = document.getElementById('chatDrawerName');
+      avEl = document.getElementById('chatDrawerAv');
+      closeBtn = document.getElementById('chatDrawerClose');
+      closeBtn.addEventListener('click', close);
+      sendBtn.addEventListener('click', doSend);
+      input.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }});
+      document.addEventListener('keydown', e => { if(e.key==='Escape' && panel.classList.contains('in')) close(); });
+    }
+
+    function renderMsg(msg, who){
+      const div = document.createElement('div');
+      div.className = 'chat-msg ' + who;
+      const p = document.createElement('p');
+      p.textContent = msg.body;
+      div.appendChild(p);
+      const ts = document.createElement('span');
+      ts.style.cssText = 'font-size:10px;opacity:.6;margin-top:3px;display:block';
+      ts.textContent = new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      div.appendChild(ts);
+      log.appendChild(div);
+    }
+
+    function scrollBottom(){ log.scrollTop = log.scrollHeight; }
+
+    async function doSend(){
+      const body = (input.value||'').trim();
+      if(!body || !activeConvoId) return;
+      input.value = '';
+      renderMsg({body, created_at: new Date().toISOString()}, 'me');
+      scrollBottom();
+      const {error} = await api().sendMessage(activeConvoId, body);
+      if(error){
+        const toast = window.ARCANA_toast;
+        if(toast) toast(T('Could not send message'));
+      }
+    }
+
+    function cleanup(){
+      if(activeSub){ activeSub.unsubscribe(); activeSub = null; }
+      activeConvoId = null;
+      currentUserId = null;
+    }
+
+    function close(){
+      cleanup();
+      panel.classList.remove('in');
+    }
+
+    async function openConvo(conversationId, supplierName){
+      build();
+      cleanup();
+      const session = Store.session();
+      if(!session) return openChatGate();
+      const profile = await api().getSessionProfile();
+      if(!profile) return openChatGate();
+      currentUserId = profile.id;
+      activeConvoId = conversationId;
+      nameEl.textContent = supplierName || T('Messages');
+      log.innerHTML = '';
+      panel.classList.add('in');
+      input.focus();
+      const messages = await api().getMessages(conversationId);
+      if(messages.length===0){
+        log.innerHTML = '<div style="text-align:center;padding:32px 16px;color:var(--muted);font-size:13px">'+esc(T('No messages yet'))+'</div>';
+      } else {
+        log.innerHTML = '';
+        messages.forEach(m => renderMsg(m, m.sender_profile_id === currentUserId ? 'me' : 'them'));
+        scrollBottom();
+      }
+      activeSub = api().subscribeChatMessages(conversationId, msg => {
+        if(msg.sender_profile_id === currentUserId) return;
+        if(log.querySelector('[style*="text-align:center"]')) log.innerHTML = '';
+        renderMsg(msg, 'them');
+        scrollBottom();
+      });
+    }
+
+    async function open({factoryId, factoryName, factoryLogo}){
+      build();
+      const session = Store.session();
+      if(!session) return openChatGate(factoryId);
+      const {conversation, error} = await api().getOrCreateConversation(factoryId);
+      if(error || !conversation){ window.ARCANA_toast && window.ARCANA_toast(T('Could not send message')); return; }
+      await openConvo(conversation.id, factoryName);
+    }
+
+    /* auth gate for chat */
+    let chatGateEl = null;
+    function ensureChatGate(){
+      if(chatGateEl) return chatGateEl;
+      const wrap = document.createElement('div');
+      wrap.className = 'modal-overlay cop-gate-overlay';
+      wrap.hidden = true;
+      const next = encodeURIComponent(location.pathname + location.search + '#chat');
+      wrap.innerHTML = `
+        <div class="modal-box cop-gate cop-invite" role="dialog" aria-modal="true" aria-labelledby="chatGateTitle" aria-describedby="chatGateDesc">
+          <button type="button" class="cop-gate-x" data-chatgate-close aria-label="${esc(T('Close'))}">&times;</button>
+          <div style="text-align:center;padding:16px 0 8px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" width="56" height="56"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3 id="chatGateTitle">${esc(T('Sign in to message this supplier'))}</h3>
+          <p id="chatGateDesc" class="muted">${esc(T('Create a free Atelix account to chat directly with verified suppliers.'))}</p>
+          <div class="modal-actions" style="justify-content:center">
+            <a class="btn btn-out" href="${P('login.html')}?next=${next}">${esc(T('Log in'))}</a>
+            <a class="btn btn-green" href="${P('signup.html')}">${esc(T('Sign up free'))}</a>
+          </div>
+          <button type="button" class="cop-gate-later" data-chatgate-close>${esc(T('Continue browsing'))}</button>
+        </div>`;
+      document.body.appendChild(wrap);
+      const closeGate = () => { wrap.classList.remove('in'); setTimeout(()=>{ wrap.hidden = true; }, 180); };
+      wrap.querySelectorAll('[data-chatgate-close]').forEach(b => b.addEventListener('click', closeGate));
+      wrap.addEventListener('pointerdown', e => { if(e.target===wrap) closeGate(); });
+      document.addEventListener('keydown', e => { if(e.key==='Escape' && !wrap.hidden) closeGate(); });
+      chatGateEl = wrap;
+      return wrap;
+    }
+    function openChatGate(){
+      const wrap = ensureChatGate();
+      wrap.hidden = false;
+      requestAnimationFrame(()=>requestAnimationFrame(()=>wrap.classList.add('in')));
+      const btn = wrap.querySelector('.btn-out');
+      if(btn) btn.focus();
+    }
+
+    window.ARCANA_chatDrawer = {
+      open, close,
+      openConversation(conversationId, name){ return openConvo(conversationId, name); },
+      isOpen(){ return !!(panel && panel.classList.contains('in')); }
+    };
+  })();
+
   /* ---------- floating Athelia launcher (buyer surfaces) ---------- */
   function buildCopilotFab() {
     if (!window.ARCANA_Copilot) return;

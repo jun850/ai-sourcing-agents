@@ -226,8 +226,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
           ${purchasable
             ? `<button class="btn btn-gold" type="button" id="addBtn">${IC.cart} <span class="cta-full">${T('Add to Cart')}</span><span class="cta-short">+ Cart</span></button><button class="btn btn-green" type="button" id="buyBtn">${T('Buy Now')}</button>
                ${swatchable?`<button class="btn btn-out" type="button" id="swatchBtn">${IC.cart} ${T('Add swatch')} · ${money(4)}</button>`:''}
-               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} <span class="cta-full">${T('Contact supplier')}</span></button>`
-            : `${swatchable?`<button class="btn btn-out" type="button" id="swatchBtn">${IC.cart} ${T('Add swatch')} · ${money(4)}</button>`:''}<a class="btn btn-gold" id="emailBtn" href="${contactHref(T('Product quote request'),null)}">${IC.msg} ${T('Contact supplier')}</a>`}
+               <button class="btn btn-out" type="button" id="emailBtn">${IC.msg} <span class="cta-full">${T('Message supplier')}</span></button>`
+            : `${swatchable?`<button class="btn btn-out" type="button" id="swatchBtn">${IC.cart} ${T('Add swatch')} · ${money(4)}</button>`:''}<button class="btn btn-gold" type="button" id="emailBtn">${IC.msg} ${T('Message supplier')}</button>`}
         </div>
         <div class="pdp-mini">
           <button class="fav pdp-save" data-fav-id="${p.id}" aria-pressed="${Store.isSaved(p.id)}">${IC.heart} <span>${T('Wishlist')}</span></button>
@@ -300,9 +300,13 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     const swatch=document.getElementById('swatchBtn');
     if(swatch) swatch.addEventListener('click',()=>{Store.addToCart(p.id,1,selectedOptions,'swatch');toast(`${TR(p.name)} — ${T('Swatch added to cart')}`,{href:'cart.html',label:T('View cart')});});
     const emailBtn=document.getElementById('emailBtn');
-    if(emailBtn) emailBtn.addEventListener('click', ()=>{
-      if(emailBtn.tagName==='A') emailBtn.href=contactHref(T('Product quote request'),null);
-      else window.ARCANA_contactEmail({subjectPrefix:T('Product request'), bodyLines:productLines(qi?.value)});
+    if(emailBtn) emailBtn.addEventListener('click', e=>{
+      e.preventDefault();
+      if(p.factoryId && window.ARCANA_chatDrawer){
+        window.ARCANA_chatDrawer.open({factoryId:p.factoryId, factoryName:seller, factoryLogo:factory&&(factory.logo_img||factory.img)});
+      } else {
+        window.ARCANA_contactEmail({subjectPrefix:T('Product request'), bodyLines:productLines(qi?.value)});
+      }
     });
 
     // ── Product options wiring ──
@@ -351,7 +355,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     // ── OEM package wiring ──
     const oemBtn=document.getElementById('oemContactBtn');
     if(oemBtn) oemBtn.addEventListener('click', ()=>{
-      window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi?.value)});
+      if(p.factoryId && window.ARCANA_chatDrawer){
+        window.ARCANA_chatDrawer.open({factoryId:p.factoryId, factoryName:seller, factoryLogo:factory&&(factory.logo_img||factory.img)});
+      } else {
+        window.ARCANA_contactEmail({subjectPrefix:T('OEM request'), bodyLines:productLines(qi?.value)});
+      }
     });
 
     // ── Wishlist + share wiring ──
@@ -413,6 +421,11 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
 
   build();
   window.ARCANA_onLang(build);
+
+  const convoParam=new URLSearchParams(location.search).get('convo');
+  if(convoParam && window.ARCANA_chatDrawer){
+    window.ARCANA_chatDrawer.openConversation(convoParam, seller);
+  }
 };
 </script>
 </body>

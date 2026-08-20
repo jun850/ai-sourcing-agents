@@ -36,6 +36,7 @@
         <button type="button" role="tab" id="tab-profile" aria-controls="profile" aria-selected="true" tabindex="0" data-account-tab="profile" class="acct-nav-item on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg> Profile</button>
         <button type="button" role="tab" id="tab-address" aria-controls="address" aria-selected="false" tabindex="-1" data-account-tab="address" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg> Address Book</button>
         <button type="button" role="tab" id="tab-orders" aria-controls="orders" aria-selected="false" tabindex="-1" data-account-tab="orders" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h9l4 4v14H6z"/><path d="M9 13l2 2 4-4"/></svg> Orders</button>
+        <button type="button" role="tab" id="tab-chat" aria-controls="chat" aria-selected="false" tabindex="-1" data-account-tab="chat" class="acct-nav-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Messages</button>
       </nav>
     </aside>
 
@@ -66,6 +67,21 @@
         <div class="acct-panel-head"><h2>Order History</h2><p class="st-sub">Your recent orders, quotes and purchases.</p></div>
         <div class="ord-tbl" id="ordTbl"></div>
         <a class="link-arrow acct-source-link" href="category.html">Source more materials <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </section>
+
+      <section class="panel acct-panel" id="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
+        <div class="acct-panel-head"><h2 id="chatPanelTitle">Messages</h2><p class="st-sub" id="chatPanelSub">Your conversations with suppliers.</p></div>
+        <div class="acct-chat-wrap" id="chatInbox">
+          <div class="acct-chat-list" id="chatConvoList"></div>
+          <div class="acct-chat-thread" id="chatThread">
+            <div class="acct-chat-thread-head" id="chatThreadHead">Select a conversation</div>
+            <div class="acct-chat-messages" id="chatThreadMessages"></div>
+            <div class="acct-chat-input-row" id="chatThreadInput" hidden>
+              <input type="text" placeholder="Type a message…" maxlength="2000" id="chatThreadMsgInput">
+              <button class="btn btn-green" id="chatThreadSend">Send</button>
+            </div>
+          </div>
+        </div>
       </section>
 
     </div>
@@ -223,6 +239,84 @@ window.ARCANA_PAGE=async function({toast}){
       <div class="ord-cell"><span>Ordered</span><b>${o.date}</b></div>
       <span class="badge ${o.cls} ord-status">${o.status}</span>
     </a>`).join('') : '<p class="muted acct-empty-copy">No orders yet.</p>';
+
+  /* ---- Chat inbox wiring ---- */
+  const chatConvoList=document.getElementById('chatConvoList');
+  const chatThreadHead=document.getElementById('chatThreadHead');
+  const chatThreadMessages=document.getElementById('chatThreadMessages');
+  const chatThreadInput=document.getElementById('chatThreadInput');
+  const chatMsgInput=document.getElementById('chatThreadMsgInput');
+  const chatSendBtn=document.getElementById('chatThreadSend');
+  let chatSub=null, chatConvoId=null, chatUserId=profile?.id;
+
+  async function loadChatInbox(){
+    const convos=await api.getMyConversations();
+    if(!convos.length){
+      chatConvoList.innerHTML='<p class="muted" style="padding:20px;font-size:13px">'+T('No messages yet')+'</p>';
+      return;
+    }
+    chatConvoList.innerHTML=convos.map(c=>{
+      const name=esc(c.factory_name||c.buyer_company||c.buyer_name||'');
+      const initials=(name[0]||'?').toUpperCase();
+      const preview=c.last_message?esc(c.last_message.slice(0,40)):'';
+      return `<div class="acct-chat-convo${c.id===chatConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}"><div class="cc-ic">${initials}</div><div><b>${name}</b><span>${preview}</span></div></div>`;
+    }).join('');
+    chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>{
+      el.addEventListener('click',()=>openChatThread(el.dataset.convoId,el.dataset.name));
+    });
+    const convoParam=new URLSearchParams(location.search).get('convo');
+    if(convoParam){
+      const match=convos.find(c=>c.id===convoParam);
+      if(match) openChatThread(convoParam, match.factory_name||match.buyer_company||match.buyer_name||'');
+    }
+  }
+
+  async function openChatThread(convoId,name){
+    if(chatSub){chatSub.unsubscribe();chatSub=null;}
+    chatConvoId=convoId;
+    chatConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>el.classList.toggle('on',el.dataset.convoId===convoId));
+    chatThreadHead.textContent=name;
+    chatThreadInput.hidden=false;
+    chatMsgInput.placeholder=T('Type a message…');
+    chatMsgInput.focus();
+    const msgs=await api.getMessages(convoId);
+    chatThreadMessages.innerHTML='';
+    msgs.forEach(m=>{
+      const div=document.createElement('div');
+      div.className='acct-chat-msg '+(m.sender_profile_id===chatUserId?'mine':'theirs');
+      div.innerHTML=esc(m.body)+'<span>'+new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+      chatThreadMessages.appendChild(div);
+    });
+    chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+    chatSub=api.subscribeChatMessages(convoId,msg=>{
+      if(msg.sender_profile_id===chatUserId) return;
+      const div=document.createElement('div');
+      div.className='acct-chat-msg theirs';
+      div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+      chatThreadMessages.appendChild(div);
+      chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+    });
+  }
+
+  async function sendChatMsg(){
+    const body=(chatMsgInput.value||'').trim();
+    if(!body||!chatConvoId) return;
+    chatMsgInput.value='';
+    const div=document.createElement('div');
+    div.className='acct-chat-msg mine';
+    div.innerHTML=esc(body)+'<span>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+    chatThreadMessages.appendChild(div);
+    chatThreadMessages.scrollTop=chatThreadMessages.scrollHeight;
+    const {error}=await api.sendMessage(chatConvoId,body);
+    if(error && window.ARCANA_toast) window.ARCANA_toast(T('Could not send message'));
+  }
+  chatSendBtn.addEventListener('click',sendChatMsg);
+  chatMsgInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMsg();}});
+
+  const chatTab=document.getElementById('tab-chat');
+  let chatLoaded=false;
+  if(chatTab) chatTab.addEventListener('click',()=>{if(!chatLoaded){chatLoaded=true;loadChatInbox();}});
+  if(location.hash==='#chat'){chatLoaded=true;loadChatInbox();}
 
 };
 </script>

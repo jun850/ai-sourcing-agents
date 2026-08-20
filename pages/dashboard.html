@@ -445,6 +445,23 @@
             </div>
           </div>
 
+          <!-- Messages (buyer enquiries) -->
+          <section class="panel" id="dashChat" style="margin-top:20px" hidden>
+            <div class="mh"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" width="20" height="20"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><h4>Messages</h4></div>
+            <p class="mdesc">Buyer messages and enquiries.</p>
+            <div class="acct-chat-wrap" id="dashChatInbox">
+              <div class="acct-chat-list" id="dashChatConvoList"></div>
+              <div class="acct-chat-thread" id="dashChatThread">
+                <div class="acct-chat-thread-head" id="dashChatThreadHead">Select a conversation</div>
+                <div class="acct-chat-messages" id="dashChatMessages"></div>
+                <div class="acct-chat-input-row" id="dashChatInput" hidden>
+                  <input type="text" placeholder="Type a message…" maxlength="2000" id="dashChatMsgInput">
+                  <button class="btn btn-green" id="dashChatSend">Send</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- SKU manager (real CRUD, toggled from the SKU Setup card) -->
           <section
             class="panel"
@@ -1691,6 +1708,86 @@
                 df.querySelector("textarea").value = "";
               });
           });
+        }
+
+        /* ---- Dashboard chat inbox ---- */
+        const dashChatSection=document.getElementById('dashChat');
+        if(dashChatSection){
+          dashChatSection.hidden=false;
+          const T=window.ARCANA_T||(x=>x);
+          const esc=x=>String(x).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]);
+          const dConvoList=document.getElementById('dashChatConvoList');
+          const dThreadHead=document.getElementById('dashChatThreadHead');
+          const dMessages=document.getElementById('dashChatMessages');
+          const dInputRow=document.getElementById('dashChatInput');
+          const dMsgInput=document.getElementById('dashChatMsgInput');
+          const dSendBtn=document.getElementById('dashChatSend');
+          let dSub=null, dConvoId=null, dUserId=profile?.id;
+
+          async function loadDashChat(){
+            const convos=await api.getMyConversations();
+            if(!convos.length){
+              dConvoList.innerHTML='<p class="muted" style="padding:20px;font-size:13px">'+T('No messages yet')+'</p>';
+              return;
+            }
+            dConvoList.innerHTML=convos.map(c=>{
+              const name=esc(c.buyer_company||c.buyer_name||c.factory_name||'');
+              const initials=(name[0]||'?').toUpperCase();
+              const preview=c.last_message?esc(c.last_message.slice(0,40)):'';
+              return `<div class="acct-chat-convo${c.id===dConvoId?' on':''}" data-convo-id="${c.id}" data-name="${esc(name)}"><div class="cc-ic">${initials}</div><div><b>${name}</b><span>${preview}</span></div></div>`;
+            }).join('');
+            dConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>{
+              el.addEventListener('click',()=>openDashThread(el.dataset.convoId,el.dataset.name));
+            });
+            const convoParam=new URLSearchParams(location.search).get('convo');
+            if(convoParam){
+              const match=convos.find(c=>c.id===convoParam);
+              if(match) openDashThread(convoParam, match.buyer_company||match.buyer_name||'');
+            }
+          }
+
+          async function openDashThread(convoId,name){
+            if(dSub){dSub.unsubscribe();dSub=null;}
+            dConvoId=convoId;
+            dConvoList.querySelectorAll('.acct-chat-convo').forEach(el=>el.classList.toggle('on',el.dataset.convoId===convoId));
+            dThreadHead.textContent=name;
+            dInputRow.hidden=false;
+            dMsgInput.placeholder=T('Type a message…');
+            dMsgInput.focus();
+            const msgs=await api.getMessages(convoId);
+            dMessages.innerHTML='';
+            msgs.forEach(m=>{
+              const div=document.createElement('div');
+              div.className='acct-chat-msg '+(m.sender_profile_id===dUserId?'mine':'theirs');
+              div.innerHTML=esc(m.body)+'<span>'+new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+              dMessages.appendChild(div);
+            });
+            dMessages.scrollTop=dMessages.scrollHeight;
+            dSub=api.subscribeChatMessages(convoId,msg=>{
+              if(msg.sender_profile_id===dUserId) return;
+              const div=document.createElement('div');
+              div.className='acct-chat-msg theirs';
+              div.innerHTML=esc(msg.body)+'<span>'+new Date(msg.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+              dMessages.appendChild(div);
+              dMessages.scrollTop=dMessages.scrollHeight;
+            });
+          }
+
+          async function sendDashMsg(){
+            const body=(dMsgInput.value||'').trim();
+            if(!body||!dConvoId) return;
+            dMsgInput.value='';
+            const div=document.createElement('div');
+            div.className='acct-chat-msg mine';
+            div.innerHTML=esc(body)+'<span>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</span>';
+            dMessages.appendChild(div);
+            dMessages.scrollTop=dMessages.scrollHeight;
+            const {error}=await api.sendMessage(dConvoId,body);
+            if(error && window.ARCANA_toast) window.ARCANA_toast(T('Could not send message'));
+          }
+          dSendBtn.addEventListener('click',sendDashMsg);
+          dMsgInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendDashMsg();}});
+          loadDashChat();
         }
 
       };
