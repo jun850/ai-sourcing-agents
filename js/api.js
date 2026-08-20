@@ -72,6 +72,8 @@ if(!sb || !sb.auth){
     getMessages(){ return Promise.resolve([]); },
     sendMessage(){ return Promise.resolve({ error: err }); },
     subscribeChatMessages(){ return { unsubscribe(){} }; },
+    markConversationRead(){ return Promise.resolve(); },
+    getUnreadCount(){ return Promise.resolve(0); },
     adminListOrders(){ return Promise.resolve([]); },
     adminUpdateOrderStatus(){ return Promise.resolve({ error: err }); },
     adminListUsers(){ return Promise.resolve([]); },
@@ -951,6 +953,18 @@ const API = {
     return {unsubscribe(){sb.removeChannel(channel);}};
   },
 
+  async markConversationRead(conversationId){
+    try{ await sb.rpc('mark_conversation_read',{conv_id:conversationId}); }catch(_){}
+  },
+
+  async getUnreadCount(){
+    try{
+      const {data,error}=await sb.rpc('my_unread_count');
+      if(error) return 0;
+      return typeof data==='number'?data:0;
+    }catch(_){ return 0; }
+  },
+
   /* ---- Admin: platform-wide order management ---- */
   async adminListOrders(){
     try{ const { data, error } = await sb.rpc('admin_list_orders'); if(error) return []; return data || []; }
@@ -1198,4 +1212,5 @@ const API = {
 };
 
 window.ARCANA_API = API;
+if(window.ARCANA_syncChatBadge) window.ARCANA_syncChatBadge();
 })();

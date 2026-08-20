@@ -175,6 +175,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
   .s-pop{transition:opacity .12s}
   .s-pop.in{transform:none}
 }
+.chat-ic{position:relative;flex-shrink:0}
+.chat-ic svg{width:22px;height:22px}
+.chat-ic:hover{color:var(--green)}
 .cart-ic{position:relative;flex-shrink:0}
 .cart-ic svg{width:24px;height:24px}
 .cart-ic:hover{color:var(--green)}
@@ -253,6 +256,9 @@ a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visibl
 .chat-input input{flex:1;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:14px}
 .chat-input input:focus{outline:none;border-color:var(--green);box-shadow:0 0 0 3px var(--green-l)}
 .chat-input .btn{padding:11px 16px}
+.chat-panel.chat-expanded{right:0;bottom:0;width:100vw;height:100vh;max-width:100vw;max-height:100vh;border-radius:0;border:none}
+@media(min-width:768px){.chat-panel.chat-expanded{right:24px;bottom:24px;width:min(680px,calc(100vw - 48px));height:calc(100vh - 80px);border-radius:16px;border:1px solid var(--line)}}
+.chat-x{display:flex;align-items:center;justify-content:center}
 @media(prefers-reduced-motion:reduce){.chat-panel{transition:opacity .12s}.chat-panel.in{transform:none}}
 
 /* ---------- Footer ---------- */
