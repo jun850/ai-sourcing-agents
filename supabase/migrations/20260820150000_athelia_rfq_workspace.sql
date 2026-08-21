@@ -67,6 +67,10 @@ ALTER TABLE public.athelia_thread_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rfq_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rfq_supplier_requests ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS athelia_threads_buyer_all ON public.athelia_threads;
+DROP POLICY IF EXISTS athelia_thread_messages_buyer_all ON public.athelia_thread_messages;
+DROP POLICY IF EXISTS rfq_cases_buyer_all ON public.rfq_cases;
+DROP POLICY IF EXISTS rfq_supplier_requests_participant_read ON public.rfq_supplier_requests;
 CREATE POLICY athelia_threads_buyer_all ON public.athelia_threads FOR ALL USING (buyer_profile_id=auth.uid()) WITH CHECK (buyer_profile_id=auth.uid());
 CREATE POLICY athelia_thread_messages_buyer_all ON public.athelia_thread_messages FOR ALL USING (EXISTS (SELECT 1 FROM public.athelia_threads t WHERE t.id=thread_id AND t.buyer_profile_id=auth.uid())) WITH CHECK (EXISTS (SELECT 1 FROM public.athelia_threads t WHERE t.id=thread_id AND t.buyer_profile_id=auth.uid()));
 CREATE POLICY rfq_cases_buyer_all ON public.rfq_cases FOR ALL USING (buyer_profile_id=auth.uid()) WITH CHECK (buyer_profile_id=auth.uid());
@@ -79,11 +83,13 @@ CREATE OR REPLACE FUNCTION public.athelia_touch_thread()
 RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$
 BEGIN UPDATE public.athelia_threads SET updated_at=now() WHERE id=NEW.thread_id; RETURN NEW; END;
 $$;
+DROP TRIGGER IF EXISTS athelia_thread_message_touch ON public.athelia_thread_messages;
 CREATE TRIGGER athelia_thread_message_touch AFTER INSERT ON public.athelia_thread_messages FOR EACH ROW EXECUTE FUNCTION public.athelia_touch_thread();
 CREATE OR REPLACE FUNCTION public.rfq_case_touch()
 RETURNS trigger LANGUAGE plpgsql SET search_path='' AS $$
 BEGIN UPDATE public.rfq_cases SET updated_at=now() WHERE id=NEW.rfq_case_id; RETURN NEW; END;
 $$;
+DROP TRIGGER IF EXISTS rfq_supplier_request_touch ON public.rfq_supplier_requests;
 CREATE TRIGGER rfq_supplier_request_touch AFTER INSERT OR UPDATE ON public.rfq_supplier_requests FOR EACH ROW EXECUTE FUNCTION public.rfq_case_touch();
 
 -- Supplier dashboards still use the established conversation composer. When a
@@ -105,6 +111,7 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+DROP TRIGGER IF EXISTS rfq_attach_unambiguous_reply_before_insert ON public.messages;
 CREATE TRIGGER rfq_attach_unambiguous_reply_before_insert BEFORE INSERT ON public.messages FOR EACH ROW EXECUTE FUNCTION public.rfq_attach_unambiguous_reply();
 
 CREATE OR REPLACE FUNCTION public.rfq_message_activity()
@@ -121,6 +128,7 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+DROP TRIGGER IF EXISTS rfq_message_activity_after_insert ON public.messages;
 CREATE TRIGGER rfq_message_activity_after_insert AFTER INSERT ON public.messages FOR EACH ROW EXECUTE FUNCTION public.rfq_message_activity();
 
 -- One deliberate action creates the supplier conversations, RFQ request rows,

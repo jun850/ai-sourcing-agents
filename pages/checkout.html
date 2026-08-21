@@ -85,7 +85,8 @@ window.ARCANA_PAGE = async function({ASSET,IC,Store,toast}){
     return;
   }
   const rates=await window.ARCANA_API.getShippingRates();
-  const paymentNote=`<strong>Secure payment with Stripe</strong><span>After you confirm the order, you’ll be redirected to Stripe Checkout to review and pay securely.</span>`;
+  const localCurrency=window.ATELIX_getDisplayCurrency?.();
+  const paymentNote=`<strong>Secure payment with Stripe</strong><span>After you confirm the order, you’ll be redirected to Stripe Checkout to review and pay securely.${localCurrency?' IDR prices are a local display estimate; Stripe confirms the final USD charge.':''}</span>`;
   const groups=[];
   cart.forEach(item=>{
     const product=M[item.id],key=product.factoryId||product.seller||'supplier';

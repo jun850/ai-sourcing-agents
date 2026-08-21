@@ -4,6 +4,7 @@
 
 -- 1. Fix intools_list_supplier_chats column names to match JS expectations
 DROP FUNCTION IF EXISTS public.intools_list_supplier_chats();
+DROP FUNCTION IF EXISTS public.intools_get_supplier_chat(uuid);
 
 CREATE OR REPLACE FUNCTION public.intools_list_supplier_chats()
 RETURNS TABLE (

@@ -1,6 +1,11 @@
 -- Atelix Intools: admin access to every buyer/supplier conversation.
 -- All reads and writes remain behind the confirmed-admin boundary.
 
+-- Earlier deployments may contain later variants with a different return type.
+DROP FUNCTION IF EXISTS public.intools_list_supplier_chats();
+DROP FUNCTION IF EXISTS public.intools_get_supplier_chat(uuid);
+DROP FUNCTION IF EXISTS public.intools_send_supplier_chat_message(uuid, text);
+
 CREATE OR REPLACE FUNCTION public.intools_list_supplier_chats()
 RETURNS jsonb
 LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = '' AS $$

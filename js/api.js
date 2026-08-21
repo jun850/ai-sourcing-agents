@@ -21,6 +21,7 @@ if(!sb || !sb.auth){
     resetRequest(){ return Promise.resolve({ data:null, error: err }); },
     resetConfirm(){ return Promise.resolve({ data:null, error: err }); },
     getSessionProfile(){ return Promise.resolve(null); },
+    acceptCurrentTerms(){ return Promise.resolve({ error: err }); },
     onChange(){ return { data:{ subscription:{ unsubscribe(){} } } }; },
     fetchCatalog(){ return Promise.reject(err); },
     fetchCatalogPage(){ return Promise.reject(err); },
@@ -294,13 +295,13 @@ const API = {
      'garment_manufacturer'. Signup metadata is consumed by the
      handle_new_user trigger to create the profiles row, and — for sellers
      with a factoryType — a pending factories row (self-service onboarding). */
-  async signUp({ email, password, role, companyName, country, fullName, factoryType }){
+  async signUp({ email, password, role, companyName, country, fullName, factoryType, termsVersion }){
     try{
       return await sb.auth.signUp({
         email, password,
         options: {
           emailRedirectTo: REDIRECT_LOGIN,
-          data: { role, company_name: companyName, country, full_name: fullName, factory_type: factoryType }
+          data: { role, company_name: companyName, country, full_name: fullName, factory_type: factoryType, terms_version: termsVersion }
         }
       });
     }catch(error){ return { data:null, error }; }
@@ -351,7 +352,7 @@ const API = {
       try{
         const { data:profile, error } = await sb
           .from('profiles')
-          .select('role, full_name, company_name, avatar_url')
+          .select('role, full_name, company_name, avatar_url, terms_version_accepted')
           .eq('id', user.id)
           .single();
         if(error || !profile){
@@ -362,12 +363,18 @@ const API = {
           email: user.email,
           role: profile.role || 'buyer',
           name: profile.company_name || profile.full_name || user.email || emailName,
-          avatarUrl: profile.avatar_url || null
+          avatarUrl: profile.avatar_url || null,
+          termsVersionAccepted: profile.terms_version_accepted || null
         };
       }catch(_){
         return { id:user.id, email:user.email, role:'buyer', name:emailName, avatarUrl:null };
       }
     }catch(_){ return null; }
+  },
+
+  async acceptCurrentTerms(){
+    try{const {error}=await sb.rpc('accept_atelix_terms',{p_version:'2026-08-21'});return {error:error||null};}
+    catch(error){return {error};}
   },
 
   onChange(cb){

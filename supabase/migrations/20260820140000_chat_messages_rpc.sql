@@ -2,6 +2,9 @@
 -- ARCANA — chat: SECURITY DEFINER RPC for reliable message loading + Intools
 -- ============================================================================
 
+DROP FUNCTION IF EXISTS public.get_conversation_messages(uuid, int, timestamptz);
+DROP FUNCTION IF EXISTS public.intools_list_supplier_chats();
+
 CREATE OR REPLACE FUNCTION public.get_conversation_messages(
   p_conversation_id uuid,
   p_limit int DEFAULT 50,

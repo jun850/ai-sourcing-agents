@@ -1066,7 +1066,8 @@
     const terms = P("terms.html"),
       privacy = P("privacy.html"),
       trust = P("trust-safety.html"),
-      contact = "mailto:info@arcanawangsa.com";
+      contact = "mailto:info@arcanawangsa.com",
+      phone = "tel:+62823444789";
     const soc = {
       x: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h3l-7 8 8 12h-6l-5-6-5 6H2l8-9L2 2h6l4 5z"/></svg>',
       li: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM3 9h3v12H3zM9 9h3v2a3.5 3.5 0 0 1 3-2c3 0 4 2 4 5v7h-3v-6c0-1.5-.5-2.5-2-2.5S12 14 12 15.5V21H9z"/></svg>',
@@ -1088,6 +1089,7 @@
       <a href="${terms}" data-i18n="ft.terms">Terms &amp; conditions</a>
       <a href="${privacy}" data-i18n="ft.privacy">Privacy policy</a>
       <a href="${contact}" data-i18n="ft.contact">Contact us</a>
+      <a href="${phone}">Call +62823444789</a>
     </div>
     <div class="sf-col">
       <h5 data-i18n="ft.follow">Follow us</h5>
@@ -2730,6 +2732,15 @@
   function bootstrapSession() {
     const api = window.ARCANA_API;
     if (!api || !api.getSessionProfile) return;
+    const termsVersion = "2026-08-21";
+    const isTermsPage = /\/terms(?:\.html)?$/.test(location.pathname);
+    const requireTerms = (profile) => {
+      if (!profile || isTermsPage || profile.termsVersionAccepted === termsVersion)
+        return true;
+      const next = location.pathname + location.search + location.hash;
+      location.replace(`${P("terms.html")}?accept=${termsVersion}&next=${encodeURIComponent(next)}`);
+      return false;
+    };
     const sync = () =>
       api
         .getSessionProfile()
@@ -2746,9 +2757,10 @@
             localStorage.removeItem("arcana_session");
           }
           refreshAuth();
+          return requireTerms(profile);
         })
-        .catch(() => {});
-    sync();
+        .catch(() => true);
+    window.ATELIX_termsReady = sync();
     if (api.onChange) {
       api.onChange((event, session) => {
         if (event === "SIGNED_OUT" || !session) {
@@ -2756,8 +2768,28 @@
           refreshAuth();
           return;
         }
-        sync();
+        window.ATELIX_termsReady = sync();
       });
+    }
+  }
+
+  /* Local currency is an optional display preference. The server only returns
+     the coarse Vercel country code; it never exposes or stores an IP address. */
+  async function bootstrapVisitorCurrency() {
+    const api = window.ARCANA_API;
+    if (!api || !api.getPlatformSetting || !window.ATELIX_setDisplayCurrency)
+      return false;
+    try {
+      const enabled = await api.getPlatformSetting("indonesia_local_currency_enabled");
+      if (String(enabled || "true").toLowerCase() === "false") return false;
+      const response = await fetch("/api/visitor-country", { credentials: "same-origin" });
+      if (!response.ok) return false;
+      const visitor = await response.json();
+      if (!window.ATELIX_setDisplayCurrency(visitor)) return false;
+      window.dispatchEvent(new CustomEvent("atelix:currencychange", { detail: visitor }));
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -3311,11 +3343,14 @@
     wire();
     wireSearch();
     buildCopilotFab();
+    window.ATELIX_currencyReady = bootstrapVisitorCurrency();
     bootstrapSession();
   });
   document.addEventListener("DOMContentLoaded", async () => {
     // Pages that render catalog data opt in with <body data-catalog> so the live
     // read completes before ARCANA_PAGE runs. Other pages render immediately.
+    if (window.ATELIX_termsReady && !(await window.ATELIX_termsReady)) return;
+    if (window.ATELIX_currencyReady) await window.ATELIX_currencyReady;
     if (document.body.hasAttribute("data-catalog") && !document.body.hasAttribute("data-catalog-defer")) await hydrateCatalog();
     if (window.ARCANA_PAGE)
       try {

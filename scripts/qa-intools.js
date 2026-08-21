@@ -191,7 +191,7 @@ async function inspect(scenario) {
   const migration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260813170000_atelix_intools.sql"), "utf8");
   const supplierImagesMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260813174500_supplier_brand_images.sql"), "utf8");
   const shippingMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260814220000_country_shipping_and_product_media.sql"), "utf8");
-  const chatsMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260820120000_intools_supplier_chats.sql"), "utf8");
+  const chatsMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260820120100_intools_supplier_chats.sql"), "utf8");
   const notificationsMigration = fs.readFileSync(path.join(projectRoot, "supabase/migrations/20260820130000_notification_center.sql"), "utf8");
   const contractIssues = [];
   const requiredAdminSupplierContracts = ["Atelix Admin", "intoolsSaveSupplier", "intoolsListProducts", "brand_emails", "intoolsSaveProduct", "intoolsArchiveProduct"];

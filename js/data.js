@@ -2064,9 +2064,10 @@ window.ARCANA_TERMS = {
 };
 /* currency: fixed demo FX + symbol + locale */
 window.ARCANA_FX = {
-  en:{rate:1, sym:'$', loc:'en-US', dec:2, increment:0.1},
-  ja:{rate:150, sym:'¥', loc:'ja-JP', dec:0, increment:100},
-  zh:{rate:7.2, sym:'¥', loc:'zh-CN', dec:1, increment:0.1}
+  en:{rate:1, sym:'$', loc:'en-US', dec:2, increment:0.1, code:'USD'},
+  ja:{rate:150, sym:'¥', loc:'ja-JP', dec:0, increment:100, code:'JPY'},
+  zh:{rate:7.2, sym:'¥', loc:'zh-CN', dec:1, increment:0.1, code:'CNY'},
+  idr:{rate:1, sym:'Rp', loc:'id-ID', dec:0, increment:100}
 };
 window.ATELIX_CONTACT_EMAIL = 'info@arcanawangsa.com';
 /* translate a data string (name/comp/loc/type/tag). lang from <html lang> if omitted. */
@@ -2164,27 +2165,43 @@ window.ATELIX_publicValue = function(value, lang){
   if(!present) return window.ARCANA_T('Contact supplier', lang);
   return Array.isArray(value) ? value.filter(Boolean).join(', ') : String(value);
 };
+/* The catalogue and order ledger use USD as their source of truth. A verified
+   visitor-currency override is display-only and is set by components.js. */
+window.ATELIX_displayCurrency = window.ATELIX_displayCurrency || null;
+window.ATELIX_setDisplayCurrency = function(currency){
+  const normalized = currency && String(currency.code || currency.currency || '').toUpperCase();
+  const rate = Number(currency && currency.rate);
+  if(normalized === 'IDR' && Number.isFinite(rate) && rate > 0){
+    window.ATELIX_displayCurrency = {code:'IDR',rate, sym:'Rp',loc:'id-ID',dec:0,increment:100};
+    return true;
+  }
+  window.ATELIX_displayCurrency = null;
+  return false;
+};
+window.ATELIX_getDisplayCurrency = function(){ return window.ATELIX_displayCurrency; };
+function atelixCurrencyFormat(lang){
+  if(!lang && window.ATELIX_displayCurrency) return window.ATELIX_displayCurrency;
+  const language = lang || (document.documentElement.lang || 'en');
+  return window.ARCANA_FX[language] || window.ARCANA_FX.en;
+}
 /* localise a USD amount to the active currency */
 window.ARCANA_money = function(usd, lang){
-  lang = lang || (document.documentElement.lang || 'en');
-  const f = window.ARCANA_FX[lang] || window.ARCANA_FX.en;
+  const f = atelixCurrencyFormat(lang);
   const raw = Number(usd||0) * f.rate;
   const increment = Number(f.increment)||0.01;
   const v = Math.ceil((raw - Number.EPSILON) / increment) * increment;
   return f.sym + v.toLocaleString(f.loc, {minimumFractionDigits:f.dec, maximumFractionDigits:f.dec});
 };
 window.ATELIX_currencyMoney = function(amount, lang){
-  lang = lang || (document.documentElement.lang || 'en');
-  const f = window.ARCANA_FX[lang] || window.ARCANA_FX.en;
+  const f = atelixCurrencyFormat(lang);
   return f.sym + Number(amount||0).toLocaleString(f.loc,{minimumFractionDigits:f.dec,maximumFractionDigits:f.dec});
 };
 window.ATELIX_productAmount = function(product, quantity, lang){
-  lang = lang || (document.documentElement.lang || 'en');
   quantity = Number(quantity == null ? 1 : quantity);
-  const currency = lang === 'ja' ? 'JPY' : lang === 'zh' ? 'CNY' : 'USD';
+  const f = atelixCurrencyFormat(lang);
+  const currency = f.code || (lang === 'ja' ? 'JPY' : lang === 'zh' ? 'CNY' : 'USD');
   const direct = product && product.catalogPrices && Number(product.catalogPrices[currency]);
   if(Number.isFinite(direct) && direct > 0) return direct*quantity;
-  const f = window.ARCANA_FX[lang] || window.ARCANA_FX.en;
   const raw = Number(product&&product.price||0)*f.rate;
   const increment = Number(f.increment)||0.01;
   return Math.ceil((raw-Number.EPSILON)/increment)*increment*quantity;

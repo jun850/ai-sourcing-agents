@@ -1068,6 +1068,7 @@
 .policy-switch a[aria-current="page"],.policy-switch a:hover{border-color:var(--green);color:var(--green)}
 .policy-summary{margin:22px 0;padding:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-sm)}
 .policy-summary p{color:var(--ink);font-size:14px;line-height:1.65}
+.policy-summary h2{margin:0;font:600 1.2rem/1.25 var(--sans)}.policy-summary h2+p{margin-top:8px}.policy-accept{display:flex;gap:9px;align-items:flex-start;margin:14px 0;font-size:14px;line-height:1.55;color:var(--ink);cursor:pointer}.policy-accept input{width:18px;height:18px;flex:0 0 auto;margin-top:2px;accent-color:var(--green)}.policy-accept-error{color:var(--danger)!important;font-weight:600}
 .policy-section{padding:25px 0;border-top:1px solid var(--line-2);scroll-margin-top:90px}
 .policy-section h2{font:600 1.35rem/1.25 var(--sans);letter-spacing:-.01em}
 .policy-section h3{margin-top:20px;font-size:15px}
