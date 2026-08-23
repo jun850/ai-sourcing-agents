@@ -4,6 +4,7 @@ import { AtelixLandingPage } from "./landing/landing";
 import { getSession, isSupabaseConfigured, signInWithMagicLink, supabase } from "./supabase";
 
 const Dashboard = lazy(() => import("./dashboard").then(({ Dashboard: Route }) => ({ default: Route })));
+const Intools = lazy(() => import("./intools").then(({ Intools: Route }) => ({ default: Route })));
 const SignUp = lazy(() => import("./registration").then(({ SignUp: Route }) => ({ default: Route })));
 const FooterPage = lazy(() => import("./footer-pages").then(({ FooterPage: Route }) => ({ default: Route })));
 
@@ -58,9 +59,9 @@ function AuthCallback(){
 export function App(){
   const [path,setPath]=useState(location.pathname); const [authReady,setAuthReady]=useState(false); const [authError,setAuthError]=useState("");
   useEffect(()=>{const listener=()=>setPath(location.pathname);addEventListener("popstate",listener);return()=>removeEventListener("popstate",listener)},[]);
-  useEffect(()=>{const section=path.startsWith("/dashboard")?"Dashboard":path==="/sign-up"?"Sign up":path==="/sign-in"?"Sign in":"Fashion sourcing";document.title=`${section} — Atelix`;},[path]);
+  useEffect(()=>{const section=path.startsWith("/dashboard")?"Dashboard":path==="/intools"?"Intools":path==="/sign-up"?"Sign up":path==="/sign-in"?"Sign in":"Fashion sourcing";document.title=`${section} — Atelix`;},[path]);
   useEffect(()=>{ let active=true; setAuthReady(false); setAuthError(""); if (!path.startsWith("/dashboard")) { setAuthReady(true); return; } void getSession().then((session)=>{ if (!active) return; if (!session) { const next=`/sign-in?next=${encodeURIComponent(path)}`; history.replaceState({},"",next); setPath("/sign-in"); } else setAuthReady(true); }).catch((cause)=>{ if (!active) return; setAuthError(cause instanceof Error?cause.message:"Could not verify your session."); setAuthReady(true); }); return()=>{active=false}; },[path]);
   if (!authReady) return <RouteLoading/>;
   if (authError && path.startsWith("/dashboard")) return <main id="main-content" className="auth"><section className="auth-card"><h1>Workspace unavailable</h1><p className="error" role="alert">{authError}</p></section></main>;
-  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><FooterPage path={path}/></>:<Landing/>;return <Suspense fallback={<RouteLoading/>}>{route}</Suspense>
+  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path==="/intools"?<Intools/>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><FooterPage path={path}/></>:<Landing/>;return <Suspense fallback={<RouteLoading/>}>{route}</Suspense>
 }
