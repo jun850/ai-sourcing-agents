@@ -1,2 +1,0 @@
-pip install playwright beautifulsoup4 pandas
-playwright install chromium

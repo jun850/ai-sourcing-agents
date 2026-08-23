@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const siteUrl = Deno.env.get("SITE_URL") || "https://marketplace-three-peach.vercel.app";
+  const siteUrl = Deno.env.get("SITE_URL") || "https://atelix.app";
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",

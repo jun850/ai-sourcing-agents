@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Athelia reads source material into a structured brief; Atelix's own catalog data supplies
+// The Atelix sourcing agent reads source material into a structured brief; Atelix's own catalog data supplies
 // every supplier, certification, MOQ, lead-time, and price shown to a buyer.
 // The preset owns the multimodal model and provider routing. Its name stays
 // stable here while the configuration can evolve in OpenRouter.
@@ -12,7 +12,6 @@ const MAX_PDF_BYTES = 30 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 30 * 1024 * 1024;
 const MODEL_TIMEOUT_MS = 75 * 1000;
 const MAX_DAILY_CALLS = 3;
-const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const PDF = "application/pdf";
 const CORS_HEADERS = {
@@ -318,25 +317,20 @@ async function handleRequest(req: Request) {
   if (files.some(file => file.size > (file.type === PDF ? MAX_PDF_BYTES : MAX_IMAGE_BYTES)) || totalBytes > MAX_TOTAL_BYTES) return json({ ok: false, reason: "file_size" }, 413);
   if (files.some(file => !IMAGE_TYPES.has(file.type) && file.type !== PDF)) return json({ ok: false, reason: "unsupported_file" }, 415);
 
-  let reservedUsage: any = null;
-  const unlimited = (user.email || "").toLowerCase() === UNLIMITED_EMAIL;
-  if (!unlimited) {
-    const { data, error } = await admin
-      .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_DAILY_CALLS })
-      .single();
-    if (error || !data) {
-      console.error("[design-match] Usage reservation failed", error);
-      return json({ ok: false, reason: "usage_unavailable", stage: "usage" }, 503);
-    }
-    reservedUsage = data;
-    if (!reservedUsage.allowed) return json({
-      ok: false,
-      reason: "limit_reached",
-      stage: "usage",
-      contact: "info@arcanawangsa.com",
-      usage: { callCount: reservedUsage.call_count, maxCalls: MAX_DAILY_CALLS }
-    }, 429);
+  const { data: reservedUsage, error: usageError } = await admin
+    .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_DAILY_CALLS })
+    .single();
+  if (usageError || !reservedUsage) {
+    console.error("[design-match] Usage reservation failed", usageError);
+    return json({ ok: false, reason: "usage_unavailable", stage: "usage" }, 503);
   }
+  if (!reservedUsage.allowed) return json({
+    ok: false,
+    reason: "limit_reached",
+    stage: "usage",
+    contact: "info@arcanawangsa.com",
+    usage: { callCount: reservedUsage.call_count, maxCalls: MAX_DAILY_CALLS }
+  }, 429);
 
   const parts: any[] = [];
   try {
@@ -349,7 +343,7 @@ async function handleRequest(req: Request) {
     return json({ ok: false, reason: "analysis_failed", stage: "file_upload", detail }, 502);
   }
 
-  const prompt = `You are Athelia's document intake and sourcing-analysis engine. Process every uploaded page in this order:
+  const prompt = `You are the Atelix document-intake and sourcing-analysis engine. Process every uploaded page in this order:
 1. OCR: read visible headings, annotations, tables, measurements, material labels, Pantone codes, and BOM rows. Put concise verbatim evidence snippets with page references in ocrEvidence.
 2. Classify the upload as exactly one documentType:
    - tech_pack: a garment technical package containing technical drawings, measurements, construction notes, specifications, or a bill of materials.
@@ -403,7 +397,7 @@ Return only JSON matching the schema. The resulting supported brief will be matc
   } catch (error) { console.error("[design-match] OpenRouter request failed", error); return json({ ok: false, reason: "analysis_failed", stage: "model_request" }, 502); }
   const tokensUsed = completion?.usage?.total_tokens
     ?? ((completion?.usage?.prompt_tokens || 0) + (completion?.usage?.completion_tokens || 0));
-  if (!unlimited && tokensUsed > 0) {
+  if (tokensUsed > 0) {
     const { error } = await admin.rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed });
     if (error) console.error("[design-match] Token accounting failed", error);
   }
@@ -439,7 +433,7 @@ Return only JSON matching the schema. The resulting supported brief will be matc
   ]);
   if (productResult.error || factoryResult.error) return json({ ok: false, reason: "catalog_unavailable" }, 503);
   const results = matchCatalog(brief, productResult.data || [], factoryResult.data || []);
-  return json({ ok: true, brief, results, usage: unlimited ? { unlimited: true } : {
+  return json({ ok: true, brief, results, usage: {
     callCount: reservedUsage.call_count, maxCalls: MAX_DAILY_CALLS
   }, document: {
     type: brief.documentType, confidence: brief.documentConfidence, summary: brief.documentSummary,

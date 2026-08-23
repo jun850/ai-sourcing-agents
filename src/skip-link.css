@@ -1,0 +1,31 @@
+.skip-link {
+  position: fixed;
+  top: 0;
+  left: 16px;
+  z-index: 100;
+  padding: 10px 16px;
+  border: 2px solid var(--dark, #123b27);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--dark, #123b27);
+  font-size: 14px;
+  font-weight: 700;
+  transform: translateY(-150%);
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(12px);
+  outline: 3px solid var(--accent, #88b863);
+  outline-offset: 3px;
+}
+
+#main-content {
+  scroll-margin-top: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}

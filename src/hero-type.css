@@ -1,0 +1,39 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap");
+
+.hero {
+  --hero-button-shadow: #1d5a3c2b;
+}
+.hero h1 {
+  max-width: 760px;
+  font-family: "Inter", Arial, sans-serif;
+  font-size: clamp(54px, 5.8vw, 84px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: .96;
+  text-wrap: balance;
+}
+.hero h1 em {
+  display: block;
+  margin-top: .04em;
+  font-family: inherit;
+  font-style: normal;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+}
+.hero .button {
+  transition: background-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.hero .button:hover,
+.hero .button:focus-visible {
+  background: var(--green);
+  box-shadow: 0 8px 18px var(--hero-button-shadow);
+  transform: translateY(-1px);
+}
+.hero .button:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .hero h1 { font-size: clamp(47px, 13vw, 68px); }
+}

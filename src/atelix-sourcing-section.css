@@ -1,0 +1,243 @@
+.atelix-section{--atelix-surface:#fff;--atelix-surface-muted:#f8faf8;--atelix-line:#dfe6df;--atelix-line-soft:#e5e9e5;--atelix-green:#4d8c63;--atelix-green-soft:#dff7e4;--atelix-shadow:0 8px 24px #17241c0d;width:min(1180px,calc(100% - 48px));margin:0 auto;padding:118px 0 90px;color:var(--ink)}
+.atelix-heading{max-width:900px;margin:0 auto 68px;text-align:center}.atelix-kicker,.atelix-label{color:var(--green);font-family:'DM Mono',monospace;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}.atelix-heading h2{margin:12px 0 18px;font-size:clamp(45px,5vw,72px);letter-spacing:-.055em;line-height:1.02;text-wrap:balance}.atelix-heading h2 em{font-family:'Playfair Display',Georgia,serif;font-weight:500}.atelix-heading>p:last-child{max-width:690px;margin:0 auto;color:var(--muted);font-size:18px;line-height:1.55;text-wrap:pretty}
+.atelix-matching{display:grid;grid-template-columns:minmax(250px,.78fr) minmax(0,1.35fr);gap:46px;align-items:center;padding:50px 48px;border:1px solid #dfe6df;border-radius:18px;background:rgba(255,255,255,.78);box-shadow:0 8px 24px #17241c0d;backdrop-filter:blur(12px)}
+.atelix-copy{padding:18px 0}.atelix-copy h3{max-width:13ch;margin:17px 0 19px;font-size:clamp(29px,3vw,42px);letter-spacing:-.055em;line-height:1.02;text-wrap:balance}.atelix-copy p{max-width:430px;margin:0;color:var(--muted);font-size:17px;line-height:1.58}.atelix-copy small{display:block;margin-top:24px;color:#829087;font-family:'DM Mono',monospace;font-size:10px;line-height:1.5}
+.atelix-chat{overflow:hidden;border:1px solid #dfe4e0;border-radius:16px;background:#fff;box-shadow:0 7px 18px #17241c0b}.atelix-chat-bar{display:flex;align-items:center;gap:10px;min-height:61px;padding:0 20px;border-bottom:1px solid #e1e6e2;background:#f8faf8}.atelix-chat-bar strong{font-size:16px;letter-spacing:-.02em}.atelix-chat-bar i{width:9px;height:9px;border-radius:50%;background:#5fba6b}.atelix-chat-body{padding:22px 20px 16px}.atelix-user-bubble{width:max-content;max-width:88%;margin-left:auto;padding:12px 16px;border-radius:18px 18px 4px 18px;background:#e6e8ec;color:#29313d;font-size:14px;line-height:1.4}.atelix-results{margin-top:17px;padding:15px;border:1px solid #d9e9dd;border-radius:16px;background:#f5faf6}.atelix-results-title{margin:0 0 11px;color:#27633f;font-size:14px;font-weight:700}.atelix-supplier{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 13px;border:1px solid #dfe5df;border-radius:8px;background:#fff}.atelix-supplier+.atelix-supplier{margin-top:8px}.atelix-supplier-name{display:flex;align-items:center;flex-wrap:wrap;gap:9px}.atelix-supplier-name strong{font-size:14px}.atelix-supplier-name span{padding:4px 8px;border-radius:6px;background:#dff7e4;color:#3e9d52;font-size:12px;white-space:nowrap}.atelix-supplier p,.atelix-supplier small{display:block;margin:4px 0 0;color:#69747e;font-size:12px;line-height:1.35}.atelix-supplier small{margin-top:2px;color:#87909a}.atelix-supplier button,.atelix-quality-visual button{flex:none;min-height:38px;padding:0 14px;border:0;border-radius:999px;background:var(--dark);color:#fff;font:inherit;font-size:12px;font-weight:600;cursor:default;transition:none}.atelix-supplier button:hover,.atelix-quality-visual button:hover{background:var(--green);transform:translateY(-1px)}.atelix-composer{display:flex;align-items:center;gap:10px;margin-top:16px;padding:7px 8px 7px 13px;border:1px solid transparent;border-radius:9px;background:#f8faf8}.atelix-composer:focus-within{outline:0;border-color:transparent}.atelix-composer textarea{min-width:0;flex:1;resize:none;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;line-height:1.4}.atelix-composer textarea::placeholder{color:#78847d}.atelix-composer button{display:grid;flex:none;width:37px;height:37px;place-items:center;border:0;border-radius:50%;background:var(--green);color:#fff;cursor:default;transition:none}.atelix-composer button:disabled{opacity:1;background:var(--green);color:#fff}.atelix-demo-status{min-height:16px;margin:9px 2px 0;color:#849087;font-family:'DM Mono',monospace;font-size:10px}
+.atelix-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:16px}.atelix-feature{display:flex;min-height:390px;flex-direction:column;justify-content:space-between;overflow:hidden;padding:31px 28px 0;border:1px solid #dfe6df;border-radius:16px;background:#fff;box-shadow:0 8px 24px #17241c0a}.atelix-feature-copy>svg{color:#4d8c63}.atelix-feature h3{max-width:12ch;margin:17px 0 17px;font-size:23px;letter-spacing:-.045em;line-height:1.08;text-wrap:balance}.atelix-feature p{margin:0;color:var(--muted);font-size:15px;line-height:1.48}.atelix-tracking-visual{position:relative;width:80%;min-height:154px;margin:24px 0 0 auto;padding:21px 17px 15px;border:1px solid #dfe9e1;border-radius:14px 14px 0 0;background:#f9fbf9;transform:rotate(-2deg);box-shadow:0 5px 12px #17241c0d;cursor:default;transition:transform 220ms cubic-bezier(.22,1,.36,1),box-shadow 220ms ease}.atelix-tracking-visual:hover,.atelix-tracking-visual:focus-visible{transform:translateY(-6px) rotate(0deg);box-shadow:0 12px 22px #17241c18;outline:0}.atelix-mini-badge{display:flex;align-items:center;gap:10px;color:#3d4b44}.atelix-supplier-signal{display:grid;width:26px;height:26px;place-items:center;border-radius:8px;background:#e1f2e4;color:#4d8c63;transition:background 180ms ease,transform 180ms ease}.atelix-tracking-visual:hover .atelix-supplier-signal,.atelix-tracking-visual:focus-visible .atelix-supplier-signal{background:#cce7d2;transform:scale(1.08)}.atelix-mini-badge strong{display:grid;gap:1px;font-size:15px;line-height:1.18}.atelix-mini-badge strong b{font-weight:700}.atelix-mini-badge strong span{color:#53635a;font-size:13px;font-weight:500}.atelix-bars{display:grid;gap:7px;margin-top:19px}.atelix-bars i{display:block;height:7px;border-radius:10px;background:#d9f5df;transform:scaleX(.92);transform-origin:left;transition:transform 220ms cubic-bezier(.22,1,.36,1)}.atelix-bars i:nth-child(2){width:76%;background:#e4f3e5}.atelix-bars i:nth-child(3){width:58%;background:#dce9fb}.atelix-tracking-visual:hover .atelix-bars i,.atelix-tracking-visual:focus-visible .atelix-bars i{animation:atelix-supplier-scan 480ms cubic-bezier(.22,1,.36,1) both}.atelix-tracking-visual:hover .atelix-bars i:nth-child(2),.atelix-tracking-visual:focus-visible .atelix-bars i:nth-child(2){animation-delay:70ms}.atelix-tracking-visual:hover .atelix-bars i:nth-child(3),.atelix-tracking-visual:focus-visible .atelix-bars i:nth-child(3){animation-delay:140ms}.atelix-tracking-visual>span{display:block;margin-top:18px;color:#748078;font-size:11px;font-weight:500} @keyframes atelix-supplier-scan{from{transform:scaleX(.72);opacity:.55}to{transform:scaleX(1);opacity:1}}.atelix-chart{height:170px;margin:22px -28px 0;background:linear-gradient(135deg,#fff 10%,#f4faf5);border-top:1px solid #e5e9e5;clip-path:inset(0);position:relative}.atelix-chart:before{position:absolute;inset:0;background:linear-gradient(90deg,transparent 24%,#e5e9e566 25%,transparent 26%,transparent 49%,#e5e9e566 50%,transparent 51%,transparent 74%,#e5e9e566 75%,transparent 76%),linear-gradient(0deg,transparent 24%,#e5e9e566 25%,transparent 26%,transparent 49%,#e5e9e566 50%,transparent 51%,transparent 74%,#e5e9e566 75%,transparent 76%);content:''}.atelix-chart-area{position:absolute;right:20px;bottom:0;left:20px;display:flex;align-items:flex-end;justify-content:space-around;height:145px}.atelix-chart-area i{width:18px;border-radius:5px 5px 0 0;background:#2f7650}.atelix-chart-area i:nth-child(2n){background:#4f9866}.atelix-quality-visual{margin:22px -2px 0;padding:16px;border:1px solid #e4e9e5;border-radius:10px;background:#f9fbf9;color:#435047}.atelix-quality-visual>svg{color:#4d8c63}.atelix-quality-visual p{margin:10px 0 18px;color:#435047;font-size:13px}.atelix-quality-visual>div{padding:12px;border:1px solid #e5e9e5;border-radius:9px;background:#fff}.atelix-quality-visual>div>span{display:block;font-size:12px}.atelix-quality-visual small{display:flex;align-items:center;gap:7px;margin:15px 0;color:#536059;font-size:11px}.atelix-quality-visual small i{width:8px;height:8px;border-radius:50%;background:#5cbe70}.atelix-quality-visual small i:nth-of-type(2){margin-left:5px;background:#74ad7d}.atelix-quality-visual button{width:100%;min-height:31px;background:var(--green);font-size:12px}
+@media(max-width:900px){.atelix-section{padding:92px 0 72px}.atelix-matching{grid-template-columns:1fr;gap:28px;padding:36px 30px}.atelix-copy{padding:0}.atelix-copy h3{max-width:none}.atelix-copy p{max-width:650px}.atelix-feature-grid{grid-template-columns:1fr 1fr}.atelix-feature:last-child{grid-column:1/-1;min-height:340px}.atelix-feature:last-child .atelix-quality-visual{width:min(320px,100%);margin-left:auto}}
+@media(max-width:600px){.atelix-section{width:calc(100% - 32px);padding:75px 0 50px}.atelix-heading{margin-bottom:42px;text-align:left}.atelix-heading h2{font-size:clamp(39px,12vw,58px)}.atelix-heading>p:last-child{font-size:16px}.atelix-matching{padding:27px 18px;border-radius:15px}.atelix-chat-body{padding:15px 12px 12px}.atelix-chat-bar{min-height:53px;padding:0 15px}.atelix-user-bubble{max-width:100%;font-size:13px}.atelix-supplier{align-items:flex-start;flex-direction:column}.atelix-supplier button{width:100%}.atelix-feature-grid{grid-template-columns:1fr;margin-top:12px}.atelix-feature,.atelix-feature:last-child{grid-column:auto;min-height:350px;padding:27px 22px 0}.atelix-feature h3{font-size:25px}.atelix-feature p{font-size:15px}.atelix-chart{margin-inline:-22px}.atelix-quality-visual{margin-top:20px}}
+@media(prefers-reduced-motion:reduce){.atelix-supplier button,.atelix-composer button{transition:none}.atelix-feature,.atelix-chat *,.atelix-tracking-visual,.atelix-tracking-visual *,.atelix-chart,.atelix-chart *{animation:none!important;transition:none!important}.atelix-tracking-visual:hover,.atelix-tracking-visual:focus-visible{transform:rotate(-2deg);box-shadow:0 5px 12px #17241c0d}.atelix-chart:hover,.atelix-chart:focus-visible{background:linear-gradient(145deg,#fff 18%,#f5faf6);box-shadow:none}}
+
+/* The trend artwork is a small data surface: keep its label, line, and bars in one tidy plot. */
+.atelix-chart{height:194px;margin:22px -28px 0;padding:17px 20px 0;background:linear-gradient(145deg,#fff 18%,#f5faf6);clip-path:inset(0);overflow:hidden;transition:background 220ms ease,box-shadow 220ms ease}
+.atelix-chart:before{inset:48px 0 0;background:linear-gradient(90deg,transparent 24%,#dce9df99 25%,transparent 26%,transparent 49%,#dce9df99 50%,transparent 51%,transparent 74%,#dce9df99 75%,transparent 76%),linear-gradient(0deg,transparent 24%,#dce9df99 25%,transparent 26%,transparent 49%,#dce9df99 50%,transparent 51%,transparent 74%,#dce9df99 75%,transparent 76%)}
+.atelix-chart-header{position:relative;z-index:3;display:flex;align-items:center;justify-content:space-between;gap:12px;color:#53635a;font-size:10px;font-weight:600;line-height:1.2}.atelix-chart-header b{color:#6f9e79;font-size:9px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.atelix-chart-line{position:absolute;z-index:1;right:20px;bottom:25px;left:20px;width:calc(100% - 40px);height:125px;overflow:visible}.atelix-chart-line polyline{fill:none!important;stroke:#4d8c63!important;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;transition:stroke-width 180ms ease}.atelix-chart:hover,.atelix-chart:focus-visible{outline:0;background:#f0f8f1;box-shadow:inset 0 3px 0 #d7eadb}.atelix-chart:hover .atelix-chart-line polyline,.atelix-chart:focus-visible .atelix-chart-line polyline{stroke-width:4}
+.atelix-chart-area{z-index:2;height:125px}.atelix-chart-area i{transform-origin:bottom;transition:filter 180ms ease}.atelix-chart-area i:nth-child(2n){background:#5c9b69}.atelix-chart:hover .atelix-chart-area i,.atelix-chart:focus-visible .atelix-chart-area i{animation:atelix-chart-bar-hover 480ms cubic-bezier(.22,1,.36,1) both;filter:saturate(1.1)}.atelix-chart:hover .atelix-chart-area i:nth-child(2),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(2){animation-delay:50ms}.atelix-chart:hover .atelix-chart-area i:nth-child(3),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(3){animation-delay:100ms}.atelix-chart:hover .atelix-chart-area i:nth-child(4),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(4){animation-delay:150ms}.atelix-chart:hover .atelix-chart-area i:nth-child(5),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(5){animation-delay:200ms}.atelix-chart:hover .atelix-chart-area i:nth-child(6),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(6){animation-delay:250ms}.atelix-chart:hover .atelix-chart-area i:nth-child(7),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(7){animation-delay:300ms}
+.atelix-chart-note{position:absolute;z-index:3;right:20px;bottom:12px;color:#6f9e79;font-size:9px;opacity:0;transform:translateY(4px);transition:opacity 180ms ease,transform 180ms ease}.atelix-chart:hover .atelix-chart-note,.atelix-chart:focus-visible .atelix-chart-note{opacity:1;transform:translateY(0)}
+@keyframes atelix-chart-bar-hover{from{transform:scaleY(.42)}to{transform:scaleY(1)}}
+@media(prefers-reduced-motion:reduce){.atelix-chart,.atelix-chart *{animation:none!important;transition:none!important}.atelix-chart:hover,.atelix-chart:focus-visible{background:linear-gradient(145deg,#fff 18%,#f5faf6);box-shadow:none}.atelix-chart-note{opacity:0!important;transform:none!important}}
+
+/* Match the reference state change: quiet signal at rest, complete trend on hover. */
+.atelix-chart{height:170px;padding:0;margin:22px -28px 0;background:linear-gradient(135deg,#fff 10%,#f4faf5)}.atelix-chart-line{right:20px;bottom:0;left:20px;width:calc(100% - 40px);height:145px}.atelix-chart-line polyline{opacity:.22;stroke:#4d8c63!important;stroke-dasharray:470;stroke-dashoffset:205;transition:opacity 420ms ease,stroke-dashoffset 520ms cubic-bezier(.22,1,.36,1),stroke-width 180ms ease}.atelix-chart-area{height:145px}.atelix-chart-area i{transform:scaleY(.42)}.atelix-chart:hover .atelix-chart-line polyline,.atelix-chart:focus-visible .atelix-chart-line polyline{opacity:1;stroke-dashoffset:0}.atelix-chart:hover .atelix-chart-area i,.atelix-chart:focus-visible .atelix-chart-area i{animation:atelix-chart-bar-hover 520ms cubic-bezier(.22,1,.36,1) both}.atelix-chart:hover .atelix-chart-area i:nth-child(2),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(2){animation-delay:50ms}.atelix-chart:hover .atelix-chart-area i:nth-child(3),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(3){animation-delay:100ms}.atelix-chart:hover .atelix-chart-area i:nth-child(4),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(4){animation-delay:150ms}.atelix-chart:hover .atelix-chart-area i:nth-child(5),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(5){animation-delay:200ms}.atelix-chart:hover .atelix-chart-area i:nth-child(6),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(6){animation-delay:250ms}.atelix-chart:hover .atelix-chart-area i:nth-child(7),.atelix-chart:focus-visible .atelix-chart-area i:nth-child(7){animation-delay:300ms}
+.atelix-feature{padding-bottom:22px}.atelix-chart{height:188px;margin-bottom:0;border-radius:0 0 12px 12px;border-bottom:1px solid #dfe6df}.atelix-chart-line{bottom:16px;height:140px}.atelix-chart-area{bottom:16px;height:140px}
+@media(prefers-reduced-motion:reduce){.atelix-chart:hover .atelix-chart-line polyline,.atelix-chart:focus-visible .atelix-chart-line polyline{opacity:.22;stroke-dashoffset:205}.atelix-chart-area i{transform:scaleY(.42)}}
+
+/* Shared section tokens keep the landing artwork aligned with the Atelix palette. */
+.atelix-matching,.atelix-feature{border-color:var(--atelix-line);background:var(--atelix-surface);box-shadow:var(--atelix-shadow)}
+.atelix-chat{border-color:var(--atelix-line);background:var(--atelix-surface)}
+.atelix-chat-bar,.atelix-composer{background:var(--atelix-surface-muted)}
+.atelix-feature-copy>svg,.atelix-quality-visual>svg{color:var(--atelix-green)}
+.atelix-supplier-name span{background:var(--atelix-green-soft)}
+.atelix-chart{background:linear-gradient(135deg,var(--atelix-surface) 10%,#f4faf5);transition:box-shadow 220ms ease}
+.atelix-chart::after{position:absolute;z-index:0;inset:0;content:"";pointer-events:none;background:#f0f8f1;opacity:0;transition:opacity 220ms ease}
+.atelix-chart:hover,.atelix-chart:focus-visible{background:linear-gradient(135deg,var(--atelix-surface) 10%,#f4faf5);box-shadow:inset 0 3px 0 #d7eadb}
+.atelix-chart:hover::after,.atelix-chart:focus-visible::after{opacity:1}
+@media(prefers-reduced-motion:reduce){.atelix-chart,.atelix-chart::after{transition:none}.atelix-chart:hover::after,.atelix-chart:focus-visible::after{opacity:1}}
+
+/* Keep sourcing intelligence as a contained section, not a viewport-wide panel. */
+section.atelix-section#sourcing-intelligence {
+  width: min(1180px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+@media (max-width: 600px) {
+  section.atelix-section#sourcing-intelligence {
+    width: calc(100% - 32px);
+  }
+}
+
+/* Tracking artwork: show the lifted, complete state at rest and revert to the
+   quieter tilted state when the user hovers or focuses the illustration. */
+.atelix-tracking-visual {
+  transform: translateY(-6px) rotate(0deg);
+  box-shadow: 0 12px 22px #17241c18;
+}
+
+.atelix-tracking-visual:hover,
+.atelix-tracking-visual:focus-visible {
+  transform: rotate(-2deg);
+  box-shadow: 0 5px 12px #17241c0d;
+}
+
+.atelix-supplier-signal {
+  background: #cce7d2;
+  transform: scale(1.08);
+}
+
+.atelix-tracking-visual:hover .atelix-supplier-signal,
+.atelix-tracking-visual:focus-visible .atelix-supplier-signal {
+  background: #e1f2e4;
+  transform: scale(1);
+}
+
+.atelix-bars i {
+  transform: scaleX(1);
+}
+
+.atelix-tracking-visual:hover .atelix-bars i,
+.atelix-tracking-visual:focus-visible .atelix-bars i {
+  animation-name: atelix-supplier-revert;
+}
+
+@keyframes atelix-supplier-revert {
+  from {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  to {
+    transform: scaleX(.72);
+    opacity: .55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelix-tracking-visual,
+  .atelix-tracking-visual:hover,
+  .atelix-tracking-visual:focus-visible {
+    transform: translateY(-6px) rotate(0deg);
+    box-shadow: 0 12px 22px #17241c18;
+  }
+
+  .atelix-supplier-signal,
+  .atelix-tracking-visual:hover .atelix-supplier-signal,
+  .atelix-tracking-visual:focus-visible .atelix-supplier-signal {
+    background: #cce7d2;
+    transform: scale(1.08);
+  }
+
+  .atelix-bars i,
+  .atelix-tracking-visual:hover .atelix-bars i,
+  .atelix-tracking-visual:focus-visible .atelix-bars i {
+    transform: scaleX(1);
+  }
+}
+
+/* Keep the network artwork deliberately compact and use stacked segments to
+   make the improving supplier-performance signal legible at a glance. */
+.atelix-chart {
+  width: 72%;
+  margin-right: 0;
+  margin-left: auto;
+  border-radius: 12px 0 0 12px;
+}
+
+.atelix-chart-area i {
+  display: flex;
+  flex-direction: column-reverse;
+  width: 20px;
+  overflow: hidden;
+  background: transparent !important;
+}
+
+.atelix-chart-area i b {
+  display: block;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.atelix-chart-area i b:nth-child(1) {
+  background: #2f7650;
+}
+
+.atelix-chart-area i b:nth-child(2) {
+  background: #629b6d;
+}
+
+.atelix-chart-area i b:nth-child(3) {
+  background: #a8cba9;
+}
+
+.atelix-chart-line polyline {
+  opacity: .58;
+  stroke-dashoffset: 0;
+}
+
+.atelix-chart:hover .atelix-chart-line polyline,
+.atelix-chart:focus-visible .atelix-chart-line polyline {
+  opacity: 1;
+  stroke-dashoffset: 0;
+}
+
+@media (max-width: 600px) {
+  .atelix-chart {
+    width: 100%;
+    margin-left: 0;
+    border-radius: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelix-chart-line polyline,
+  .atelix-chart:hover .atelix-chart-line polyline,
+  .atelix-chart:focus-visible .atelix-chart-line polyline {
+    opacity: .58;
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Keep every feature illustration optically centered. The chart is its own
+   contained artwork surface so the trend line and stacked bars read as one
+   deliberate data visual rather than bleeding into the card. */
+.atelix-feature > .atelix-tracking-visual,
+.atelix-feature > .atelix-chart,
+.atelix-feature > .atelix-quality-visual {
+  align-self: center;
+  margin-inline: auto;
+}
+
+.atelix-chart {
+  width: min(100%, 360px);
+  height: 188px;
+  margin-top: 24px;
+  margin-bottom: 0;
+  padding: 0;
+  border: 1px solid var(--atelix-line);
+  border-radius: 14px;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, var(--atelix-surface) 8%, #f4faf5);
+  clip-path: none;
+  overflow: hidden;
+}
+
+.atelix-chart::before {
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 24%, #dce9df99 25%, transparent 26%, transparent 49%, #dce9df99 50%, transparent 51%, transparent 74%, #dce9df99 75%, transparent 76%),
+    linear-gradient(0deg, transparent 24%, #dce9df99 25%, transparent 26%, transparent 49%, #dce9df99 50%, transparent 51%, transparent 74%, #dce9df99 75%, transparent 76%);
+}
+
+.atelix-chart-line {
+  z-index: 1;
+  right: 14px;
+  bottom: 16px;
+  left: 14px;
+  width: calc(100% - 28px);
+  height: 145px;
+  pointer-events: none;
+}
+
+.atelix-chart-line polyline {
+  stroke-dasharray: none;
+  stroke-dashoffset: 0;
+}
+
+.atelix-chart-area {
+  z-index: 2;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  height: 132px;
+}
+
+.atelix-chart:hover,
+.atelix-chart:focus-visible {
+  border-color: #c9ddcf;
+}
+
+@media (max-width: 600px) {
+  .atelix-chart {
+    width: min(100%, 360px);
+    margin-inline: auto;
+  }
+}

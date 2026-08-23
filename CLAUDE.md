@@ -1,16 +1,7 @@
-# ARCANA
+# Atelix implementation guidance
 
-## Design Context
+Build only the broker-led sourcing workflow defined in `PRODUCT.md`, using the Green Room system in `DESIGN.md`. Reuse existing Vite routes and components and do not introduce unrequested page sections.
 
-Before any UI work, read **PRODUCT.md** (strategy) and **DESIGN.md** (visual system) at the project root. The `.impeccable/design.json` sidecar carries tonal ramps, shadow/motion tokens, and drop-in component snippets.
+Keep identity, roles, RFQs, suppliers, invoices, and payments server-authoritative. Apply database changes additively, preserve historical order/payment data, and never edit already-applied migrations. Models are drafting aids only; deterministic eligibility and approved database facts come first. Stripe Checkout is server-computed and webhook-settled.
 
-- **Register:** product · **Platform:** web
-- **What it is:** Tokopedia-for-fashion-sourcing — a two-sided B2B marketplace where apparel brand owners (primary, buy-side) source fabrics, trims, accessories, and OEM packages from verified factories (sell-side) and pay directly. 7 pages: home, category, product, supplier profile, supplier dashboard, OEM cart, brand-owner profile.
-- **Personality:** modern, minimal, precise — emotion is *calm control*.
-- **Core principles:** trust is the interface · specs before persuasion · seamless path to purchase · calm under complexity · serve both sides without confusing either.
-- **Visual system ("The Material Archive"):** forest-green `#2e4a3a` (buyer/trust) + brass `#b0863c` (money action/seller) on warm off-white `#f7f6f3`; Inter across titles and UI; hairline borders, flat-by-default, macro fabric photography as hero.
-- **Two-Signal Rule:** green = buyer/trust, brass = money action/seller. Blue/red are status-only, never CTAs.
-- **Anti-references:** not a cheap bulk-wholesale portal, not a generic SaaS dashboard, not trend-chasing consumer fashion.
-- **Accessibility:** target WCAG 2.1 AAA (≥7:1 body) — audit `muted` #6e6e68 and `brass` on white; darken toward ink where they miss.
-
-Stack: vanilla HTML/CSS/JS. Shared header/footer + interactivity injected by `js/components.js`; tokens in `css/styles.css`, layouts in `css/pages.css`. Assets in `assets/` (Diffui-generated, not hotlinked).
+Before handoff, separate evidence for lint/build, local database/RLS tests, local HTTP routes, browser/accessibility checks, Git state, migrations, and deployment. Never claim an untested layer.

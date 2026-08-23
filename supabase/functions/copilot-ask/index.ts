@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Athelia's LLM layer. The deterministic match engine (js/copilot.js)
+// Atelix's LLM layer. The deterministic match engine (js/copilot.js)
 // always runs client-side for free; this function only adds a natural-language
 // summary on top of matches it is GIVEN — it never invents products, prices,
 // certs, or suppliers, and it never returns matches of its own. That keeps the
@@ -14,7 +14,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MAX_CALLS = 3;
 const MAX_TOKENS = 128000;
-const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
 // OpenRouter resolves the model, provider routing, and shared policy through
 // this account-managed preset. Keep the credential server-side only.
 const MODEL = "@preset/marketplace-copilot";
@@ -24,7 +23,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SYSTEM_PROMPT = `You are Atelix's Athelia, a calm procurement assistant inside a B2B fashion-sourcing marketplace. A brand-owner buyer described what they're sourcing; a deterministic engine already ranked verified catalog matches against that brief.
+const SYSTEM_PROMPT = `You are Atelix, a calm sourcing assistant inside a B2B fashion-sourcing workspace. A brand-owner buyer described what they're sourcing; a deterministic engine already ranked verified catalog matches against that brief.
 
 Write ONE short paragraph (max 55 words, plain text, no markdown, no bullet points) summarizing the results for the buyer. Rules:
 - Reference ONLY the brief and matches given to you. Never invent materials, prices, GSM, MOQ, certifications, suppliers, or lead times beyond what is listed.
@@ -87,8 +86,6 @@ Deno.serve(async (req) => {
   const matches = sanitizeMatches(body?.matches);
   if (!text) return jsonResponse({ ok: false, reason: "missing_text" }, 400);
 
-  const unlimited = (user.email || "").toLowerCase() === UNLIMITED_EMAIL;
-
   // ---- Shared cap check; reserve atomically before spending model tokens. ----
   const { data: usageRow } = await admin
     .from("copilot_usage")
@@ -101,7 +98,7 @@ Deno.serve(async (req) => {
   const callCount = isToday ? usageRow!.call_count : 0;
   const totalTokens = isToday ? usageRow!.total_tokens : 0;
 
-  if (!unlimited && totalTokens >= MAX_TOKENS) {
+  if (totalTokens >= MAX_TOKENS) {
     return jsonResponse({
       ok: false, reason: "limit_reached",
       contact: "info@arcanawangsa.com",
@@ -114,23 +111,19 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, reason: "llm_not_configured" });
   }
 
-  let reservedUsage: any = null;
-  if (!unlimited) {
-    const { data, error } = await admin
-      .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_CALLS })
-      .single();
-    if (error || !data) {
-      console.error("[copilot-ask] Usage reservation failed", error);
-      return jsonResponse({ ok: false, reason: "usage_unavailable" }, 503);
-    }
-    reservedUsage = data;
-    if (!reservedUsage.allowed) return jsonResponse({
-      ok: false,
-      reason: "limit_reached",
-      contact: "info@arcanawangsa.com",
-      usage: { callCount: reservedUsage.call_count, totalTokens: reservedUsage.total_tokens, maxCalls: MAX_CALLS, maxTokens: MAX_TOKENS },
-    }, 429);
+  const { data: reservedUsage, error: usageError } = await admin
+    .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_CALLS })
+    .single();
+  if (usageError || !reservedUsage) {
+    console.error("[copilot-ask] Usage reservation failed", usageError);
+    return jsonResponse({ ok: false, reason: "usage_unavailable" }, 503);
   }
+  if (!reservedUsage.allowed) return jsonResponse({
+    ok: false,
+    reason: "limit_reached",
+    contact: "info@arcanawangsa.com",
+    usage: { callCount: reservedUsage.call_count, totalTokens: reservedUsage.total_tokens, maxCalls: MAX_CALLS, maxTokens: MAX_TOKENS },
+  }, 429);
 
   const userContent = JSON.stringify({ brief: text, readAs: intent, matches });
 
@@ -186,18 +179,12 @@ Deno.serve(async (req) => {
     ?? ((completion?.usage?.prompt_tokens || 0) + (completion?.usage?.completion_tokens || 0))
     ?? 0;
 
-  let tokenUsage: any = null;
-  if (!unlimited) {
-    const { data, error } = await admin
-      .rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed })
-      .single();
-    if (error) console.error("[copilot-ask] token accounting failed", error);
-    tokenUsage = data;
-  }
+  const { data: tokenUsage, error: tokenError } = await admin
+    .rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed })
+    .single();
+  if (tokenError) console.error("[copilot-ask] token accounting failed", tokenError);
 
-  const usage = unlimited
-    ? { unlimited: true, maxCalls: MAX_CALLS, maxTokens: MAX_TOKENS }
-    : { callCount: tokenUsage?.call_count ?? reservedUsage.call_count, totalTokens: tokenUsage?.total_tokens ?? reservedUsage.total_tokens + tokensUsed, maxCalls: MAX_CALLS, maxTokens: MAX_TOKENS };
+  const usage = { callCount: tokenUsage?.call_count ?? reservedUsage.call_count, totalTokens: tokenUsage?.total_tokens ?? reservedUsage.total_tokens + tokensUsed, maxCalls: MAX_CALLS, maxTokens: MAX_TOKENS };
 
   return jsonResponse({ ok: true, summary: summary.trim(), usage });
 });

@@ -1,0 +1,552 @@
+.atelix-header-hero-brand {
+  --atelix-header-ink: #121714;
+  --atelix-header-muted: #58615b;
+  --atelix-header-green: #1d5a3c;
+  --atelix-header-dark: #123b27;
+  --atelix-header-accent: #88b863;
+  --atelix-header-line: #dde2dd;
+  --atelix-header-paper: #fcfdfb;
+  --atelix-header-tint: #eff6e9;
+  --atelix-header-ease: cubic-bezier(.22, 1, .36, 1);
+  min-width: 0;
+}
+
+.atelix-header,
+.atelix-hero,
+.atelix-brand-rail {
+  --atelix-header-ink: #121714;
+  --atelix-header-muted: #58615b;
+  --atelix-header-green: #1d5a3c;
+  --atelix-header-dark: #123b27;
+  --atelix-header-accent: #88b863;
+  --atelix-header-line: #dde2dd;
+  --atelix-header-paper: #fcfdfb;
+  --atelix-header-tint: #eff6e9;
+  --atelix-header-ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+.atelix-header-hero-brand-main {
+  display: block;
+  min-width: 0;
+}
+
+.atelix-header,
+.atelix-header * {
+  box-sizing: border-box;
+}
+
+.atelix-header {
+  position: sticky;
+  top: max(10px, env(safe-area-inset-top));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  width: min(800px, calc(100% - 32px));
+  min-height: 64px;
+  margin: 10px auto 0;
+  padding: 0 8px 0 24px;
+  border: 1px solid rgba(221, 226, 221, .9);
+  border-radius: 999px;
+  background: rgba(252, 253, 251, .9);
+  box-shadow: 0 6px 8px rgba(18, 59, 39, .1);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  backdrop-filter: blur(16px) saturate(1.08);
+  color: var(--atelix-header-ink);
+  transform-origin: top center;
+  transition: transform 320ms var(--atelix-header-ease), box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.atelix-header.is-compact {
+  width: fit-content;
+  min-width: min(650px, calc(100% - 32px));
+  min-height: 54px;
+  transform: scale(.86);
+  box-shadow: 0 4px 8px rgba(18, 59, 39, .12);
+}
+
+.atelix-header-wordmark-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  color: var(--atelix-header-dark);
+  text-decoration: none;
+}
+
+.atelix-header-wordmark-link:focus-visible,
+.atelix-header-nav a:focus-visible,
+.atelix-header-join:focus-visible,
+.atelix-header-login:focus-visible,
+.atelix-header-menu:focus-visible,
+.atelix-header-close:focus-visible,
+.atelix-header-scrim:focus-visible,
+.atelix-hero-cta:focus-visible,
+.atelix-brand-rail-window:focus-visible {
+  outline: 3px solid var(--atelix-header-accent);
+  outline-offset: 3px;
+}
+
+.atelix-header-wordmark {
+  color: var(--atelix-header-dark);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -1.9px;
+  line-height: 1;
+}
+
+.atelix-header-wordmark > span {
+  color: var(--atelix-header-accent);
+}
+
+.atelix-header-nav {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: clamp(20px, 3vw, 38px);
+  margin-left: clamp(34px, 6vw, 76px);
+}
+
+.atelix-header-nav > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  color: var(--atelix-header-muted);
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.atelix-header-nav > a:hover {
+  color: var(--atelix-header-dark);
+}
+
+.atelix-header-desktop-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+}
+
+.atelix-header-join,
+.atelix-header-login {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  border: 1px solid var(--atelix-header-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--atelix-header-dark);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 180ms ease, background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.atelix-header-join {
+  cursor: pointer;
+}
+
+.atelix-header-join:hover {
+  border-color: #b9c7b9;
+  background: var(--atelix-header-tint);
+}
+
+.atelix-header-login {
+  border-color: var(--atelix-header-dark);
+  background: var(--atelix-header-dark);
+  color: #fff;
+}
+
+.atelix-header-login:hover {
+  background: var(--atelix-header-green);
+  transform: translateY(-1px);
+}
+
+.atelix-header-menu,
+.atelix-header-close,
+.atelix-header-scrim,
+.atelix-header-drawer-actions {
+  display: none;
+}
+
+.atelix-hero {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+  width: min(1180px, calc(100% - 48px));
+  min-height: 570px;
+  align-items: center;
+  gap: clamp(36px, 6vw, 82px);
+  margin: 0 auto;
+  padding: clamp(72px, 9vw, 112px) 0 clamp(54px, 7vw, 88px);
+}
+
+.atelix-hero-copy {
+  min-width: 0;
+}
+
+.atelix-hero h1 {
+  max-width: 760px;
+  margin: 0;
+  color: var(--atelix-header-ink);
+  font-family: "Inter", "DM Sans", Arial, sans-serif;
+  font-size: clamp(52px, 6vw, 84px);
+  font-weight: 700;
+  letter-spacing: -.04em;
+  line-height: .97;
+  text-wrap: balance;
+}
+
+.atelix-hero h1 span,
+.atelix-hero h1 em {
+  display: block;
+}
+
+.atelix-hero h1 em {
+  margin-top: .04em;
+  font: inherit;
+  font-style: normal;
+}
+
+.atelix-hero-copy > p {
+  max-width: 560px;
+  margin: 28px 0 32px;
+  color: var(--atelix-header-muted);
+  font-size: 18px;
+  line-height: 1.58;
+  text-wrap: pretty;
+}
+
+.atelix-hero-cta {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 19px;
+  border: 1px solid var(--atelix-header-dark);
+  border-radius: 999px;
+  background: var(--atelix-header-dark);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.atelix-hero-cta svg {
+  transition: transform 180ms var(--atelix-header-ease);
+}
+
+.atelix-hero-cta:hover {
+  background: var(--atelix-header-green);
+  box-shadow: 0 6px 8px rgba(18, 59, 39, .16);
+  transform: translateY(-1px);
+}
+
+.atelix-hero-cta:hover svg {
+  transform: translateX(3px);
+}
+
+.atelix-hero-art {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.atelix-hero-art img {
+  display: block;
+  width: min(100%, 720px);
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 18px rgba(29, 90, 60, .1));
+}
+
+.atelix-brand-rail {
+  width: 100%;
+  overflow: hidden;
+  padding: 18px 0;
+  border: 0;
+  background: transparent;
+}
+
+.atelix-brand-rail-inner {
+  display: flex;
+  width: min(1180px, calc(100% - 48px));
+  min-width: 0;
+  align-items: center;
+  gap: clamp(28px, 5vw, 68px);
+  margin: 0 auto;
+}
+
+.atelix-brand-rail-label {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--atelix-header-muted);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.atelix-brand-rail-window {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.atelix-brand-rail-track {
+  display: flex;
+  width: max-content;
+  align-items: center;
+  animation: atelix-brand-rail-run 34s linear infinite;
+}
+
+.atelix-brand-rail-track:hover,
+.atelix-brand-rail-window:focus .atelix-brand-rail-track,
+.atelix-brand-rail-window:focus-within .atelix-brand-rail-track {
+  animation-play-state: paused;
+}
+
+.atelix-brand-rail-item {
+  display: inline-flex;
+  min-width: max-content;
+  align-items: center;
+  justify-content: center;
+  padding: 0 28px;
+  color: #68716c;
+  white-space: nowrap;
+}
+
+.atelix-brand-rail-item img {
+  display: block;
+  width: auto;
+  height: clamp(20px, 2.8vw, 34px);
+  max-width: 150px;
+  object-fit: contain;
+}
+
+.atelix-brand-rail-item.is-1ldk img { height: 26px; }
+.atelix-brand-rail-item.is-amazon img,
+.atelix-brand-rail-item.is-shopee img { height: 30px; }
+.atelix-brand-rail-item.is-united-arrows img { height: 16px; max-width: 140px; }
+.atelix-brand-rail-item.is-incu img { height: 26px; }
+.atelix-brand-rail-item.is-club21 img { width: 38px; height: 38px; }
+
+@keyframes atelix-brand-rail-run {
+  to { transform: translateX(-50%); }
+}
+
+@media (max-width: 1100px) {
+  .atelix-header-nav { margin-left: 32px; }
+  .atelix-header-join,
+  .atelix-header-login { padding-inline: 16px; }
+  .atelix-hero { gap: 42px; }
+}
+
+@media (max-width: 900px) {
+  body.atelix-nav-is-open { overflow: hidden; }
+
+  .atelix-header.is-menu-open {
+    transform: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .atelix-header {
+    width: min(720px, calc(100% - 32px));
+    min-height: 56px;
+    padding-left: 18px;
+  }
+
+  .atelix-header.is-compact {
+    width: min(720px, calc(100% - 32px));
+    min-width: 0;
+    transform: scale(.94);
+  }
+
+  .atelix-header-nav {
+    position: fixed;
+    z-index: 2;
+    inset: 0 0 0 auto;
+    display: flex;
+    width: min(320px, calc(100% - 64px));
+    height: 100dvh;
+    min-height: 100vh;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: max(16px, env(safe-area-inset-top)) 0 28px;
+    border: 0;
+    border-radius: 0;
+    background: #fff;
+    box-shadow: -8px 0 8px rgba(18, 59, 39, .12);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(20px, 0, 0);
+    visibility: hidden;
+    transition: transform 260ms var(--atelix-header-ease), opacity 180ms ease, visibility 0s linear 260ms;
+  }
+
+  .atelix-header-nav.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .atelix-header-scrim {
+    position: fixed;
+    z-index: 1;
+    inset: 0;
+    display: block;
+    width: 100vw;
+    height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: rgba(18, 23, 20, .64);
+    cursor: default;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 220ms ease, visibility 0s linear 220ms;
+  }
+
+  .atelix-header.is-menu-open .atelix-header-scrim {
+    opacity: 1;
+    pointer-events: auto;
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  .atelix-header-close {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    align-self: flex-end;
+    margin: 0 10px 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--atelix-header-dark);
+    cursor: pointer;
+  }
+
+  .atelix-header-nav > a {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    padding: 0 26px;
+    color: var(--atelix-header-muted);
+    font-size: 18px;
+  }
+
+  .atelix-header-nav > a:hover { background: var(--atelix-header-tint); }
+
+  .atelix-header-drawer-actions {
+    display: grid;
+    gap: 12px;
+    margin: 24px 24px 0;
+  }
+
+  .atelix-header-drawer-actions .atelix-header-join,
+  .atelix-header-drawer-actions .atelix-header-login {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  .atelix-header-desktop-actions { display: none; }
+
+  .atelix-header-menu {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    place-items: center;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--atelix-header-dark);
+    cursor: pointer;
+  }
+
+  .atelix-hero {
+    grid-template-columns: 1fr;
+    width: min(720px, calc(100% - 40px));
+    min-height: 0;
+    gap: 38px;
+    padding-top: 72px;
+  }
+
+  .atelix-hero-art { order: -1; }
+  .atelix-hero-art img { width: min(100%, 580px); }
+
+  .atelix-brand-rail-inner {
+    display: block;
+    width: min(720px, calc(100% - 40px));
+  }
+
+  .atelix-brand-rail-label { margin-bottom: 14px; }
+}
+
+@media (max-width: 640px) {
+  .atelix-header,
+  .atelix-header.is-compact {
+    width: calc(100% - 24px);
+    min-height: 52px;
+    padding-left: 16px;
+  }
+
+  .atelix-header-wordmark { font-size: 23px; }
+
+  .atelix-header-nav { width: min(304px, calc(100% - 48px)); }
+
+  .atelix-hero {
+    width: calc(100% - 32px);
+    gap: 28px;
+    padding-top: 58px;
+    padding-bottom: 56px;
+  }
+
+  .atelix-hero h1 { font-size: clamp(46px, 13vw, 68px); }
+  .atelix-hero-copy > p { margin: 22px 0 26px; font-size: 16px; }
+  .atelix-hero-cta { width: 100%; }
+
+  .atelix-brand-rail { padding: 16px 0; }
+  .atelix-brand-rail-inner { width: calc(100% - 32px); }
+  .atelix-brand-rail-item { padding-inline: 20px; }
+}
+
+@media (pointer: coarse) {
+  .atelix-header-join,
+  .atelix-header-login,
+  .atelix-hero-cta { min-height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelix-header,
+  .atelix-header-nav,
+  .atelix-header-scrim,
+  .atelix-header-join,
+  .atelix-header-login,
+  .atelix-hero-cta,
+  .atelix-hero-cta svg {
+    transition: none !important;
+  }
+
+  .atelix-brand-rail-track {
+    animation: none !important;
+    transform: none !important;
+  }
+}

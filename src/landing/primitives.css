@@ -1,0 +1,270 @@
+:root {
+  --atelix-paper: var(--paper, #fcfdfb);
+  --atelix-surface: #ffffff;
+  --atelix-surface-tint: var(--tint, #eff6e9);
+  --atelix-ink: var(--ink, #121714);
+  --atelix-muted: var(--muted, #68716c);
+  --atelix-line: var(--line, #dde2dd);
+  --atelix-green: var(--green, #1d5a3c);
+  --atelix-dark: var(--dark, #123b27);
+  --atelix-accent: var(--accent, #88b863);
+  --atelix-focus: var(--focus-ring, #6c9d3f);
+  --atelix-radius-control: 999px;
+  --atelix-radius-surface: 14px;
+  --atelix-shadow-tight: 0 5px 10px rgba(18, 59, 39, 0.08);
+  --atelix-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --atelix-motion-micro: 180ms;
+  --atelix-z-skip: 100;
+}
+
+.atelix-page-container {
+  width: min(1180px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.atelix-section {
+  width: 100%;
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+
+.atelix-section-heading {
+  max-width: 46rem;
+  margin: 0 0 2.75rem;
+}
+
+.atelix-section-heading__title {
+  max-width: 22ch;
+  margin: 0;
+  color: var(--atelix-ink);
+  font-family: "DM Sans", Arial, sans-serif;
+  font-size: clamp(2.25rem, 5vw, 4.25rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.atelix-section-heading__title em {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 500;
+}
+
+.atelix-section-heading__description {
+  max-width: 68ch;
+  margin: 1.25rem 0 0;
+  color: var(--atelix-muted);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.atelix-surface {
+  border-radius: var(--atelix-radius-surface);
+  color: var(--atelix-ink);
+}
+
+.atelix-surface--plain {
+  background: var(--atelix-surface);
+}
+
+.atelix-surface--tinted {
+  background: var(--atelix-surface-tint);
+}
+
+.atelix-surface--glass {
+  border: 1px solid color-mix(in srgb, var(--atelix-line) 88%, transparent);
+  background: color-mix(in srgb, var(--atelix-surface) 84%, transparent);
+  box-shadow: var(--atelix-shadow-tight);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.atelix-action-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--atelix-radius-control);
+  color: var(--atelix-ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--atelix-motion-micro) ease-out,
+    border-color var(--atelix-motion-micro) ease-out,
+    color var(--atelix-motion-micro) ease-out,
+    transform var(--atelix-motion-micro) var(--atelix-ease-out);
+}
+
+.atelix-action-button--compact {
+  min-height: 2.25rem;
+  padding-inline: 0.8125rem;
+  font-size: 0.875rem;
+}
+
+.atelix-action-button--primary {
+  background: var(--atelix-green);
+  color: #ffffff;
+}
+
+.atelix-action-button--primary:hover {
+  background: var(--atelix-dark);
+  transform: translateY(-1px);
+}
+
+.atelix-action-button--secondary {
+  border-color: var(--atelix-line);
+  background: var(--atelix-surface);
+  color: var(--atelix-dark);
+}
+
+.atelix-action-button--secondary:hover {
+  border-color: var(--atelix-green);
+  background: var(--atelix-surface-tint);
+}
+
+.atelix-action-button--ghost {
+  color: var(--atelix-green);
+}
+
+.atelix-action-button--ghost:hover {
+  background: var(--atelix-surface-tint);
+}
+
+.atelix-action-button:focus-visible,
+.atelix-icon-label:focus-visible,
+.atelix-skip-link:focus-visible {
+  outline: 3px solid var(--atelix-focus);
+  outline-offset: 3px;
+}
+
+.atelix-action-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.atelix-action-button:disabled,
+.atelix-action-button--disabled,
+.atelix-demo-unavailable {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.atelix-action-button:disabled:hover,
+.atelix-action-button--disabled:hover {
+  background: inherit;
+  border-color: inherit;
+  color: inherit;
+  transform: none;
+}
+
+.atelix-icon-label {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--atelix-ink);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
+
+.atelix-icon-label__icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  color: var(--atelix-green);
+}
+
+.atelix-animated-reveal {
+  backface-visibility: hidden;
+}
+
+.atelix-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.atelix-skip-link {
+  position: fixed;
+  top: 0;
+  left: 1rem;
+  z-index: var(--atelix-z-skip);
+  padding: 0.625rem 1rem;
+  border: 2px solid var(--atelix-dark);
+  border-radius: var(--atelix-radius-control);
+  background: var(--atelix-surface);
+  color: var(--atelix-dark);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-150%);
+  transition: transform var(--atelix-motion-micro) ease-out;
+}
+
+.atelix-skip-link:focus-visible {
+  transform: translateY(0.75rem);
+}
+
+.atelix-demo-unavailable {
+  min-height: 2.5rem;
+  padding: 0.625rem 0.875rem;
+  border: 1px solid var(--atelix-line);
+  border-radius: var(--atelix-radius-control);
+  background: var(--atelix-surface);
+  color: var(--atelix-muted);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .atelix-page-container {
+    width: calc(100% - 32px);
+  }
+
+  .atelix-section {
+    padding-block: 3.75rem;
+  }
+
+  .atelix-section-heading {
+    margin-bottom: 2rem;
+  }
+
+  .atelix-section-heading__title {
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atelix-action-button,
+  .atelix-skip-link,
+  .atelix-animated-reveal {
+    transition: none;
+  }
+
+  .atelix-action-button:hover,
+  .atelix-action-button:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+@supports not (color: color-mix(in srgb, white, black)) {
+  .atelix-surface--glass {
+    border-color: var(--atelix-line);
+    background: rgba(255, 255, 255, 0.94);
+  }
+}

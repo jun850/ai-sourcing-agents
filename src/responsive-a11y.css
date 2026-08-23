@@ -1,0 +1,404 @@
+/* Responsive and accessibility layer. Loaded after the existing visual styles so the
+   current components keep their identity while gaining a shared mobile contract. */
+:root { --focus-ring: #6c9d3f; --mobile-gutter: 16px; }
+html { scroll-padding-top: 88px; }
+body { overflow-x: clip; }
+
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guide-utility a, .guide-utility button, .legal-utility a, .guide-toc a { min-height: 44px; }
+.button, .supplier-link { padding-inline: 16px; }
+.site-header .supplier-link { appearance: none; background: #fff; color: var(--dark); }
+.site-header .supplier-link:hover { background: #f7faf5; }
+
+.menu-toggle { display: none; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--dark); font: inherit; font-size: 20px; cursor: pointer; }
+.site-nav { display: flex; align-items: center; gap: 16px; }
+.site-header .site-nav > a { display: inline-flex; align-items: center; justify-content: center; }
+
+.brand-rail { overflow: hidden; padding: 24px 0; border: 0; background: transparent; }
+.brand-rail-inner { display: flex; align-items: center; gap: clamp(28px, 4vw, 64px); width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
+.brand-rail-label { flex: 0 0 auto; margin: 0; color: #4e5968; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.brand-rail-window { min-width: 0; flex: 1; overflow: hidden; }
+.brand-rail-track { display: flex; align-items: center; width: max-content; animation: brand-rail-run 34s linear infinite; }
+.brand-rail-track:hover, .brand-rail-track:focus-within { animation-play-state: paused; }
+.brand-rail-item { display: inline-flex; align-items: center; gap: 8px; min-width: max-content; padding: 0 28px; color: #777b80; font-size: 22px; font-weight: 700; letter-spacing: -.045em; white-space: nowrap; }
+.brand-rail-item img { display: block; width: auto; height: clamp(20px, 2.8vw, 38px); max-width: 150px; object-fit: contain; }
+.brand-rail-item--1ldk img { height: 26px; }
+.brand-rail-item--amazon img, .brand-rail-item--shopee img { height: 30px; }
+.brand-rail-item--united-arrows img { height: 16px; max-width: 140px; }
+.brand-rail-item--incu img { height: 26px; }
+.brand-rail-item--club21 img { width: 38px; height: 38px; }
+.brand-rail-item--1ldk { font-family: Georgia, serif; font-size: 21px; letter-spacing: -.08em; }
+.brand-rail-item--amazon { position: relative; font-family: Arial, sans-serif; font-size: 28px; letter-spacing: -.09em; }
+.brand-rail-item--amazon i { width: 28px; height: 8px; margin: 13px 0 0 -31px; border-bottom: 3px solid #f3b657; border-radius: 50%; transform: rotate(-5deg); }
+.brand-rail-item--shopee b { color: #ee5c48; font-size: 18px; }
+.brand-rail-item--united-arrows { font-size: 15px; letter-spacing: .08em; }
+.brand-rail-item--incu { font-size: 26px; letter-spacing: -.08em; }
+.brand-rail-item--club21 { font-size: 18px; letter-spacing: .06em; }
+@keyframes brand-rail-run { to { transform: translateX(-50%); } }
+
+.marquee-toolbar { display: flex !important; align-items: center; justify-content: space-between; gap: 16px; width: min(1180px, calc(100% - 48px)) !important; margin: 0 auto; animation: none !important; white-space: normal; }
+.marquee-toolbar p { margin: 0; color: var(--muted); font-size: 12px; font-weight: 700; }
+.marquee-toolbar button { min-height: 36px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--dark); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.marquee-track { display: flex; width: max-content !important; animation: run 28s linear infinite; }
+.marquee-track.is-paused, .marquee:hover .marquee-track, .marquee:focus-within .marquee-track { animation-play-state: paused; }
+
+.journey-card, .factory-grid article, .resource-card-grid article, .category-grid article, .comparison-grid article, .supplier-prepare-grid article { min-width: 0; }
+.journey-card p, .journey-card strong, .journey-card s { overflow-wrap: anywhere; }
+.rows p { flex-wrap: wrap; }
+.rows p strong { margin-left: auto; text-align: right; }
+.dots { position: relative; }
+
+.auth input, .auth textarea, .newsletter-field input { min-height: 44px; }
+.auth label { line-height: 1.35; }
+.auth input:focus-visible, .newsletter-field input:focus-visible { outline-offset: 0; }
+
+@media (max-width: 760px) {
+  .site-header { z-index: 20; width: calc(100% - 24px); min-height: 48px; height: auto; padding: 2px 4px 2px 10px; }
+  .site-header .wordmark { margin-right: auto; }
+  .site-header .site-nav { display: none; position: absolute; top: calc(100% + 8px); left: 0; right: 0; flex-direction: column; align-items: stretch; gap: 0; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: #fff; box-shadow: 0 14px 28px #17241c22; }
+  .site-header .site-nav.is-open { display: flex; }
+  .site-nav a { display: flex; align-items: center; padding: 0 13px; border-radius: 10px; color: var(--dark); font-size: 14px; }
+  .site-nav a:hover { background: var(--tint); }
+  .site-header .header-actions { align-items: center; gap: 3px; }
+  .site-header .supplier-link, .site-header .header-cta { min-height: 40px; }
+  .site-header .supplier-link { padding-inline: 10px; font-size: 10px; }
+  .site-header .header-cta { padding-inline: 11px; font-size: 10px; }
+  .menu-toggle { display: grid; }
+
+  .hero { width: calc(100% - 32px); min-height: 0; gap: 28px; padding: 42px 0 40px; }
+  .hero-art { order: -1; }
+  .hero-art img { max-width: 520px; margin: 0 auto; }
+  .hero h1 { font-size: clamp(44px, 13vw, 64px); line-height: .99; letter-spacing: -.045em; }
+  .lede { margin: 20px 0 24px; font-size: 16px; }
+  .hero .button { width: 100%; }
+
+  .marquee { padding: 12px 0; }
+  .marquee-toolbar { width: calc(100% - 32px) !important; }
+  .marquee-toolbar button { min-height: 40px; }
+  .marquee-track { animation-duration: 42s; }
+  .marquee .supplier-mark { min-height: 44px; padding-inline: 18px; }
+
+  .brand-rail { padding: 18px 0; }
+  .brand-rail-inner { display: block; width: calc(100% - 32px); }
+  .brand-rail-label { margin-bottom: 14px; font-size: 14px; }
+  .brand-rail-item { padding-inline: 20px; font-size: 18px; }
+  .brand-rail-item img { max-width: 120px; }
+  .brand-rail-item--amazon { font-size: 23px; }
+  .brand-rail-item--incu { font-size: 22px; }
+
+  .journey { padding-top: 68px; }
+  .journey-head, .directory, .faq { width: calc(100% - 32px); }
+  .journey-head h2, .directory h2, .faq h2 { font-size: clamp(40px, 12vw, 56px); letter-spacing: -.045em; }
+  .journey-head p, .directory > p { font-size: 16px; }
+  .journey-stage { width: calc(100% - 48px); margin-top: 38px; }
+  .journey-card, .journey-card.right { width: auto; margin-left: 31px; padding: 28px 22px; border-radius: 18px; opacity: 1 !important; }
+  .journey-card h3 { font-size: 26px; letter-spacing: -.035em; }
+  .journey-card .step { right: 20px; top: 18px; font-size: 52px; }
+  .preview { max-width: 100%; overflow: hidden; }
+  .input-sim { align-items: flex-start; flex-wrap: wrap; }
+  .input-sim svg:last-child { margin-left: 0; }
+  .rows p { align-items: flex-start; }
+  .rows p strong { max-width: 56%; }
+
+  .directory, .faq { padding-top: 68px; }
+  .factory-grid { gap: 14px; }
+  .factory-grid article { min-height: 0; padding: 22px; }
+  .faq { padding-bottom: 88px; }
+  .faq summary { gap: 14px; padding: 20px 0; font-size: 16px; }
+
+  .info-page { width: calc(100% - 32px); padding-top: 68px; }
+  .info-hero h1, .resource-hero h1, .supplier-guide-page header h1, .legal-page h1 { font-size: clamp(42px, 12vw, 58px); letter-spacing: -.045em; }
+  .info-hero > div, .resource-hero > div:not(.resource-actions), .supplier-guide-page header p { font-size: 16px; }
+  .info-sections article { grid-template-columns: 1fr; gap: 8px; padding: 28px 0; }
+  .info-sections h2, .info-sections p { grid-column: 1; }
+  .info-back { display: inline-flex; align-items: center; }
+  .resource-actions, .guide-utility, .legal-utility { align-items: stretch; flex-direction: column; gap: 12px; }
+  .resource-actions { justify-content: flex-start; }
+  .resource-actions .button, .resource-actions .resource-link { width: 100%; }
+  .process-list article { grid-template-columns: 44px minmax(0, 1fr); gap: 14px; }
+  .comparison-table { font-size: 14px; }
+  .legal-layout { grid-template-columns: 1fr; gap: 30px; }
+  .legal-layout nav { position: static; }
+
+  .landing-footer { margin-top: 24px; }
+  .footer-grid, .footer-bottom { width: calc(100% - 32px) !important; }
+  .footer-grid { grid-template-columns: 1fr !important; gap: 30px !important; padding: 48px 0 38px !important; }
+  .footer-intro, .footer-newsletter { grid-column: 1; }
+  .footer-links a { width: 100%; min-height: 40px; }
+  .newsletter-form { align-items: stretch; flex-direction: column; gap: 10px; }
+  .newsletter-field, .newsletter-form > button { width: 100%; min-height: 52px !important; }
+  .footer-bottom { align-items: flex-start; flex-direction: column; gap: 10px; padding: 22px 0 28px; }
+
+}
+
+@media (max-width: 380px) {
+  .site-header > .header-actions > .supplier-link { display: none; }
+  .site-header .header-cta { padding-inline: 9px; }
+  .hero { width: calc(100% - 24px); }
+  .journey-head, .directory, .faq, .footer-grid, .footer-bottom { width: calc(100% - 24px) !important; }
+}
+
+/* Keep the compact desktop header composition through tablet widths. The page
+   content can still stack at 760px; only the header needs the wider reference
+   treatment until the genuinely narrow 640px breakpoint. */
+@media (min-width: 641px) and (max-width: 760px) {
+  .site-header { width: fit-content; max-width: calc(100% - 32px); min-height: 42px; height: 42px; padding: 0 5px 0 14px; }
+  .site-header .wordmark { margin-right: 30px; }
+  .site-header .site-nav { display: flex; position: static; flex-direction: row; align-items: center; gap: 20px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  .site-nav a { display: inline-flex; align-items: center; min-height: 42px; padding: 0; color: #58615b; font-size: 11px; }
+  .site-header .header-actions { align-items: center; gap: 5px; margin-left: 30px; }
+  .site-header .supplier-link, .site-header .header-cta { min-height: 42px; font-size: 11px; }
+  .site-header .supplier-link { min-width: 118px; padding-inline: 12px; }
+  .site-header .header-cta { min-width: 64px; padding-inline: 12px; }
+  .menu-toggle { display: none; }
+
+  /* High-density desktop viewports can report 641-760 CSS pixels. Keep the
+     hero in its desktop composition there so artwork does not push the
+     headline below the fold. */
+  .hero { grid-template-columns: .95fr 1.05fr; width: calc(100% - 48px); min-height: 570px; gap: 36px; padding: 65px 0 36px; }
+  .hero-art { order: initial; }
+  .hero h1 { font-size: clamp(48px, 5.5vw, 76px); line-height: .96; letter-spacing: -.075em; }
+  .lede { margin: 27px 0 31px; font-size: 18px; }
+  .hero .button { width: auto; }
+}
+
+/* Mobile navigation follows the reference treatment: the page dims beneath a
+   right-side drawer, while the existing header remains the launch control. */
+.nav-scrim, .nav-close, .nav-actions { display: none; }
+
+/* Keep flexible preview rows inside their card instead of allowing long values
+   to establish a wider min-content size than the mobile viewport. */
+.preview { width: 100%; min-width: 0; }
+.rows > b, .rows > p { min-width: 0; }
+.rows > b > *, .rows > p > * { min-width: 0; overflow-wrap: anywhere; }
+.rows > p > strong, .rows > p > s { text-align: right; }
+
+/* The dashboard prompt has a transparent writing surface. Keep focus visible
+   on the composer as a whole instead of drawing a green rectangle around the
+   textarea itself. */
+.clean-prompt-form textarea,
+.clean-prompt-form textarea:focus,
+.clean-prompt-form textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+.clean-prompt-form > .MuiPaper-root:focus-within { border: 0 !important; box-shadow: 0 12px 30px rgba(32,41,54,.10) !important; }
+.conversation-composer textarea,
+.conversation-composer textarea:focus,
+.conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+.conversation-composer { position: relative; isolation: isolate; background: transparent !important; box-shadow: none !important; }
+.conversation-composer::before { content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: #fff; box-shadow: 0 12px 30px rgba(32,41,54,.10); pointer-events: none; }
+
+/* The conversation composer is intentionally borderless; focus is carried by
+   the surface shadow so the surrounding page stays transparent. */
+.conversation-composer textarea,
+.conversation-composer textarea:focus,
+.conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+
+@media (max-width: 760px) {
+  body.nav-is-open { overflow: hidden; }
+
+  .site-header.nav-open { transform: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .site-header.nav-open .nav-scrim { display: block; position: fixed; z-index: 1; inset: -100vh -100vw; width: 200vw; height: 300vh; padding: 0; border: 0; background: #101519d9; cursor: default; }
+  .site-header.nav-open .site-nav.is-open { z-index: 2; display: flex; position: fixed; inset: 0 0 0 auto; flex-direction: column; align-items: stretch; gap: 0; width: min(304px, calc(100% - 72px)); height: 100dvh; min-height: 100vh; padding: 16px 0 28px; border: 0; border-radius: 0; background: #fff; box-shadow: -12px 0 32px #1015191c; }
+  .site-header.nav-open .nav-close { display: grid; place-items: center; align-self: flex-end; width: 44px; height: 44px; margin: 0 8px 22px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--dark); font: inherit; font-size: 28px; line-height: 1; cursor: pointer; }
+  .site-header.nav-open .site-nav.is-open > a { display: flex; align-items: center; min-height: 44px; padding: 0 24px; border-radius: 0; color: #6b7073; font-size: 18px; font-weight: 500; }
+  .site-header.nav-open .site-nav.is-open > a + a { margin-top: 4px; }
+  .site-header.nav-open .nav-actions { display: grid; gap: 24px; margin: 22px 24px 0; }
+  .site-header.nav-open .nav-actions .supplier-link, .site-header.nav-open .nav-actions .header-cta { display: inline-flex; width: 100%; min-height: 44px; padding-inline: 16px; font-size: 14px; }
+  .site-header.nav-open .nav-actions .header-cta { background: #111827; color: #fff; }
+
+  .journey-stage { display: flex; flex-direction: column; gap: 64px; max-height: none; overflow: visible; }
+  .journey-card, .journey-card.right { width: calc(100% - 31px); max-width: calc(100% - 31px); margin: 0 0 0 31px; opacity: 1; }
+  .journey-card h3 { max-width: 100%; font-size: clamp(25px, 7.3vw, 30px); }
+  .journey-card > p { max-width: 100%; }
+  .preview { overflow: hidden; }
+  .rows > b, .rows > p { gap: 6px; padding-inline: 12px; font-size: 12px; }
+  .rows > p > em { flex: 0 1 auto; }
+}
+
+/* At true mobile widths the header only carries the brand and menu control.
+   Supplier and login actions stay available in the drawer, preventing the
+   burger from being pushed outside a zoomed or narrow viewport. */
+@media (max-width: 640px) {
+  .site-header { width: min(320px, calc(100% - 48px)); }
+  .site-header .header-actions { flex: 0 0 auto; margin-left: auto; }
+  .site-header .header-actions > .supplier-link,
+  .site-header .header-actions > .header-cta { display: none; }
+  .site-header .menu-toggle { display: grid; }
+}
+
+/* Keep the mobile timeline compact without flattening its card composition. */
+@media (max-width: 760px) {
+  .journey-card, .journey-card.right {
+    width: calc(100% - 31px);
+    max-width: 540px;
+    min-height: 0;
+    padding: 28px 22px;
+    border-radius: 24px;
+  }
+
+  .journey-card .preview { margin-top: 25px; }
+  .journey-dot-mobile { left: -28px !important; }
+}
+
+/* Medium desktop keeps the supplied reference scale; wide desktop returns to
+   the compact bar so the navigation never dominates a large monitor. */
+@media (min-width: 761px) and (max-width: 1199px) {
+  .site-header:not(.is-compact) { width: min(780px, calc(100% - 48px)); height: 84px; min-height: 84px; padding: 0 8px 0 28px; box-shadow: 0 14px 32px #19241d18; }
+  .site-header:not(.is-compact) .wordmark { margin-right: 52px; font-size: 34px; letter-spacing: -2.6px; }
+  .site-header:not(.is-compact) .site-nav { gap: 32px; }
+  .site-header:not(.is-compact) .site-nav a { min-height: 84px; font-size: 22px; }
+  .site-header:not(.is-compact) .header-actions { gap: 8px; margin-left: auto; }
+  .site-header:not(.is-compact) .supplier-link, .site-header:not(.is-compact) .header-cta { min-height: 84px; padding-inline: 28px; font-size: 22px; }
+  .site-header:not(.is-compact) .supplier-link { min-width: 236px; }
+  .site-header:not(.is-compact) .header-cta { min-width: 128px; padding-inline: 25px; }
+}
+
+/* Shared mobile/tablet drawer motion. It stays mounted so the panel and
+   backdrop can leave as smoothly as they enter. */
+@media (max-width: 900px) {
+  .site-header.nav-open { transform: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  /* A fixed descendant of the transformed sticky header uses that header as
+     its containing block while closed. Keep the hidden scrim inside the
+     header so it cannot create horizontal overflow; the open state removes
+     the header transform and expands the scrim back to the viewport. */
+  .site-header .nav-scrim { display: block; position: fixed; z-index: 1; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: #101519d9; cursor: default; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity 220ms ease, visibility 0s linear 220ms; }
+  .site-header.nav-open .nav-scrim { inset: 0; width: 100vw; height: 100dvh; opacity: 1; visibility: visible; pointer-events: auto; transition-delay: 0s; }
+  .site-header .site-nav { z-index: 2; display: flex; position: fixed; inset: 0 0 0 auto; flex-direction: column; align-items: stretch; gap: 0; width: min(304px, calc(100% - 72px)); height: 100dvh; min-height: 100vh; padding: 16px 0 28px; border: 0; border-radius: 0; background: #fff; box-shadow: -12px 0 32px #1015191c; opacity: 0; visibility: hidden; pointer-events: none; transform: translate3d(18px, 0, 0); transition: transform 240ms cubic-bezier(.22,1,.36,1), opacity 180ms ease, visibility 0s linear 240ms; }
+  .site-header .site-nav.is-open { opacity: 1; visibility: visible; pointer-events: auto; transform: translate3d(0, 0, 0); transition-delay: 0s; }
+  .site-header .nav-close { display: grid; place-items: center; align-self: flex-end; width: 44px; height: 44px; margin: 0 8px 22px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--dark); font: inherit; font-size: 28px; line-height: 1; cursor: pointer; }
+  .site-header .site-nav > a { display: flex; align-items: center; min-height: 44px; padding: 0 24px; border-radius: 0; color: #6b7073; font-size: 18px; font-weight: 500; }
+  .site-header .site-nav > a + a { margin-top: 4px; }
+  .site-header .nav-actions { display: grid; gap: 24px; margin: 22px 24px 0; }
+  .site-header .nav-actions .supplier-link, .site-header .nav-actions .header-cta { display: inline-flex; width: 100%; min-height: 44px; padding-inline: 16px; font-size: 14px; }
+  .site-header .nav-actions .header-cta { background: #111827; color: #fff; }
+  .site-header .header-actions > .supplier-link, .site-header .header-actions > .header-cta { display: none; }
+  .site-header .menu-toggle { display: grid; }
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .site-header { width: min(520px, calc(100% - 48px)); height: 48px; min-height: 48px; padding: 2px 4px 2px 14px; }
+  .site-header .wordmark { margin-right: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  .marquee-track { animation: none !important; transform: none !important; }
+  .brand-rail-track { animation: none !important; transform: none !important; }
+  .site-header .site-nav, .site-header .nav-scrim { transition: none !important; }
+}
+
+/* Shared public navigation: a fixed, centered capsule on desktop and the same
+   capsule with an anchored disclosure on mobile. The disclosure is bounded to
+   the header rather than becoming a second, full-height navigation surface. */
+.site-header {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 30;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  min-height: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 2px 5px 2px 16px;
+  transform: translateX(-50%);
+  transform-origin: center;
+  transition: box-shadow 220ms ease, background-color 220ms ease;
+}
+
+.site-header .wordmark { margin-right: 28px; }
+.site-header .header-actions { margin-left: 28px; }
+.site-header .site-nav { position: static; display: flex; align-items: center; gap: 18px; }
+.site-header .site-nav > a { display: inline-flex; align-items: center; min-height: 44px; color: #58615b; font-size: 11px; }
+.site-header .supplier-link,
+.site-header .header-cta { min-height: 34px; padding-block: 0; }
+.site-header .nav-scrim,
+.site-header .nav-close { display: none !important; }
+.site-header.nav-open { transform: translateX(-50%) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+
+@media (min-width: 761px) {
+  .site-header:not(.is-compact) .supplier-link,
+  .site-header:not(.is-compact) .header-cta { height: auto; min-height: 34px; }
+
+  .site-header:not(.is-compact) .supplier-link,
+  .site-header:not(.is-compact) .header-cta { padding-block: 0; }
+
+  .site-header .site-nav {
+    position: static;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: none;
+  }
+}
+
+@media (max-width: 760px) {
+  body.nav-is-open { overflow: visible; }
+
+  .site-header {
+    width: min(280px, calc(100% - 32px));
+    min-height: 48px;
+    height: 48px;
+    padding-left: 16px;
+  }
+
+  .site-header .wordmark { margin-right: auto; }
+  .site-header .header-actions { margin-left: auto; }
+  .site-header .header-actions > .supplier-link,
+  .site-header .header-actions > .header-cta { display: none; }
+  .site-header .menu-toggle { display: grid; }
+
+  .site-header .site-nav {
+    position: absolute !important;
+    inset: auto !important;
+    top: calc(100% + 10px) !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    z-index: 1;
+    display: grid !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 8px !important;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 8px 16px rgba(18, 23, 20, .12);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: transform 180ms cubic-bezier(.22, 1, .36, 1), opacity 150ms ease, visibility 0s linear 180ms;
+  }
+
+  .site-header .site-nav.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+    transition-delay: 0s;
+  }
+
+  .site-header .site-nav > a {
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--dark);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .site-header .site-nav > a:hover { background: var(--tint); }
+  .site-header .nav-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0 0; padding: 8px 0 0; border-top: 1px solid var(--line); }
+  .site-header .nav-actions .supplier-link,
+  .site-header .nav-actions .header-cta { display: inline-flex; width: 100%; min-height: 44px; padding-inline: 10px; font-size: 12px; }
+}

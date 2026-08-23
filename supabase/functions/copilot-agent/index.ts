@@ -1,7 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// Atelix Athelia agent — the authenticated, signed-in-only backend for the
+// Atelix sourcing agent — the authenticated, signed-in-only backend for the
 // live copilot agent. Same trust rule as copilot-ask: the deterministic engine
 // (js/copilot.js) computes every catalog FACT and NUMBER client-side; this
 // function's model only ever NARRATES the object it is given, never inventing a
@@ -19,7 +19,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const MAX_CALLS = 40;
 const MAX_TOKENS = 400000;
-const UNLIMITED_EMAIL = "jun@arcanawangsa.com";
 const MODEL = "@preset/marketplace-copilot";
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -27,7 +26,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const CHAT_SYSTEM_PROMPT = `You are Athelia, the sourcing agent inside Atelix, a B2B fashion-sourcing marketplace. You are talking to a signed-in brand-owner buyer. Reason over the WHOLE conversation so far — later messages refine earlier ones (a follow-up like "my budget is $10/m" narrows the previous request, it does not start a new one).
+const CHAT_SYSTEM_PROMPT = `You are the sourcing agent inside Atelix, a B2B fashion-sourcing workspace. You are talking to a signed-in brand-owner buyer. Reason over the WHOLE conversation so far — later messages refine earlier ones (a follow-up like "my budget is $10/m" narrows the previous request, it does not start a new one).
 
 A deterministic engine has already searched the LIVE catalog and given you CONTEXT as JSON:
 - "candidates": the real verified products that fit the conversation so far (id, name, seller, price, unit, moq, spec, comp, certs). This is the ONLY set of products you may reference or show. Never invent a product, price, spec, supplier, or number that is not in this JSON. Every candidate price is USD per its listed unit: quote it as US$ (never ¥, JPY, CNY, or a currency conversion).
@@ -45,7 +44,7 @@ Decide what to say and which products to surface. Reply with ONLY minified JSON,
 - "reply": speak naturally. If nothing fits the (possibly narrowed) request, say so honestly and suggest relaxing one constraint — do not show unrelated products.
 Tone: precise, calm, confident. Never salesy, no exclamation points.`;
 
-const DRAFT_SYSTEM_PROMPT = `You are Atelix's Athelia agent drafting supplier outreach for a signed-in buyer. A deterministic engine already found real, verified catalog matches (JSON below). You never invent products, prices, specs, sellers, MOQs, or certifications beyond what is given.
+const DRAFT_SYSTEM_PROMPT = `You are Atelix's sourcing agent drafting supplier outreach for a signed-in buyer. A deterministic engine already found real, verified catalog matches (JSON below). You never invent products, prices, specs, sellers, MOQs, or certifications beyond what is given.
 
 The input JSON includes "lang": one of "en", "ja", "zh". Write the ENTIRE message — greeting, body, and sign-off — in that language. Default to "en" (English) unless the buyer explicitly asked for another language; never guess a language from the supplier's own country. Keep product names, specs, MOQs, and numbers exactly as given — do not translate or alter facts, only the surrounding prose.
 
@@ -159,32 +158,26 @@ Deno.serve(async (req) => {
   const mode = ["chat", "draft", "revise"].includes(body?.mode) ? body.mode : null;
   if (!mode) return jsonResponse({ ok: false, reason: "invalid_mode" }, 400);
 
-  const unlimited = (user.email || "").toLowerCase() === UNLIMITED_EMAIL;
-
   // ---- Shared per-user daily cap: reserve a call before spending tokens. ----
-  let reservedUsage: any = null;
-  if (!unlimited) {
-    const { data: usageRow } = await admin
-      .from("copilot_usage")
-      .select("call_count, total_tokens, usage_date")
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    const today = new Date().toISOString().slice(0, 10);
-    const totalTokens = usageRow?.usage_date === today ? usageRow!.total_tokens : 0;
-    if (totalTokens >= MAX_TOKENS) {
-      return jsonResponse({ ok: false, reason: "limit_reached", contact: "info@arcanawangsa.com" }, 429);
-    }
-    const { data, error } = await admin
-      .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_CALLS })
-      .single();
-    if (error || !data) {
-      console.error("[copilot-agent] Usage reservation failed", error);
-      return jsonResponse({ ok: false, reason: "usage_unavailable" }, 503);
-    }
-    reservedUsage = data;
-    if (!reservedUsage.allowed) {
-      return jsonResponse({ ok: false, reason: "limit_reached", contact: "info@arcanawangsa.com" }, 429);
-    }
+  const { data: usageRow } = await admin
+    .from("copilot_usage")
+    .select("call_count, total_tokens, usage_date")
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  const today = new Date().toISOString().slice(0, 10);
+  const totalTokens = usageRow?.usage_date === today ? usageRow!.total_tokens : 0;
+  if (totalTokens >= MAX_TOKENS) {
+    return jsonResponse({ ok: false, reason: "limit_reached", contact: "info@arcanawangsa.com" }, 429);
+  }
+  const { data: reservedUsage, error: usageError } = await admin
+    .rpc("reserve_athelia_usage", { p_profile_id: user.id, p_max_calls: MAX_CALLS })
+    .single();
+  if (usageError || !reservedUsage) {
+    console.error("[copilot-agent] Usage reservation failed", usageError);
+    return jsonResponse({ ok: false, reason: "usage_unavailable" }, 503);
+  }
+  if (!reservedUsage.allowed) {
+    return jsonResponse({ ok: false, reason: "limit_reached", contact: "info@arcanawangsa.com" }, 429);
   }
 
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
@@ -223,7 +216,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${apiKey}`,
         "HTTP-Referer": "https://atelix.app",
-        "X-Title": "Atelix Athelia Agent",
+        "X-Title": "Atelix Sourcing Agent",
       },
       body: JSON.stringify({
         model: MODEL,
@@ -266,10 +259,8 @@ Deno.serve(async (req) => {
   const tokensUsed: number = completion?.usage?.total_tokens
     ?? ((completion?.usage?.prompt_tokens || 0) + (completion?.usage?.completion_tokens || 0))
     ?? 0;
-  if (!unlimited) {
-    const { error: tokenErr } = await admin.rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed });
-    if (tokenErr) console.error("[copilot-agent] token accounting failed", tokenErr);
-  }
+  const { error: tokenErr } = await admin.rpc("add_athelia_tokens", { p_profile_id: user.id, p_tokens: tokensUsed });
+  if (tokenErr) console.error("[copilot-agent] token accounting failed", tokenErr);
 
   if (mode === "chat") {
     const reply = trimStr(parsed.reply, 800);
