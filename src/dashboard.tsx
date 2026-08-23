@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { Avatar, Box, Button as MuiButton, Chip, CssBaseline, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Paper, ThemeProvider, Tooltip, Typography, createTheme, useMediaQuery, type SxProps, type Theme } from "@mui/material";
+import { Alert, Avatar, Box, Button as MuiButton, Checkbox, Chip, CircularProgress, CssBaseline, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Paper, Skeleton, ThemeProvider, Tooltip, Typography, createTheme, useMediaQuery, type SxProps, type Theme } from "@mui/material";
 import { Add, ArrowForward, CheckCircle, ChevronLeft, ChevronRight, Circle, Description, EditOutlined, Favorite, FileUploadOutlined, FolderOpen, Home, Image, Inbox, Inventory2, LibraryBooks, Menu as MenuIcon, SaveOutlined, Search, Settings, X } from "@mui/icons-material";
 import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
-import { createRfqCase, getSession, listRfqAttachments, listRfqCases, type RfqAttachment, type WorkspaceRfq, updateRfqCase, uploadRfqAttachment } from "./supabase";
+import { createRfqCase, getSession, getWorkspaceInvoiceDetail, listRfqAttachments, listRfqCases, listWorkspaceInvoices, startWorkspaceInvoiceCheckout, type RfqAttachment, type WorkspaceInvoice, type WorkspaceInvoiceDetail, type WorkspaceRfq, updateRfqCase, uploadRfqAttachment } from "./supabase";
 
 const dashboardTheme = createTheme({
   typography: { fontFamily: "'DM Sans', Arial, sans-serif", h1: { fontWeight: 500, letterSpacing: "-0.04em" }, h2: { fontWeight: 600, letterSpacing: "-0.035em" }, button: { fontWeight: 600, textTransform: "none" } },
@@ -13,7 +13,7 @@ const dashboardTheme = createTheme({
   components: { MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { borderRadius: 12, minHeight: 42, paddingInline: 16 } } }, MuiIconButton: { styleOverrides: { root: { borderRadius: 12 } } }, MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } }, MuiListItemButton: { styleOverrides: { root: { borderRadius: 12, minHeight: 44 } } } },
 });
 
-type DashboardView = "dashboard" | "new" | "products" | "favourites" | "messages" | "settings" | "library";
+type DashboardView = "dashboard" | "new" | "products" | "favourites" | "messages" | "invoices" | "settings" | "library";
 type UploadState = "ready" | "invalid";
 type UploadFile = { id: string; file: File; state: UploadState; message?: string };
 type BriefForm = { brief: string };
@@ -29,6 +29,7 @@ const navItems: Array<{ label: string; view: DashboardView; icon: typeof Home; h
   { label: "Products", view: "products", icon: Inventory2, href: "/dashboard/products" },
   { label: "Favourites", view: "favourites", icon: Favorite, href: "/dashboard/favourites" },
   { label: "Messages", view: "messages", icon: Inbox, href: "/dashboard/messages" },
+  { label: "Invoices", view: "invoices", icon: Description, href: "/dashboard/invoices" },
 ];
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const acceptedExtensions = /\.(jpe?g|png|webp|pdf)$/i;
@@ -208,7 +209,7 @@ function RfqWorkspace({ caseId, brief, initialFields, files, status, initialPhas
   return <Stack spacing={2.25} sx={{ width: "100%" }}><Box sx={{ display: "grid", gridTemplateColumns: draftingPhase ? { xs: "1fr", md: "minmax(0,1fr) minmax(0,1.6fr)" } : "minmax(0,1fr)", gap: 3, alignItems: "stretch" }}>{draftingPhase && <ConversationChatPanel brief={brief} phase={phase} messages={conversationMessages} onSend={sendConversationMessage} />}<Box sx={{ gridColumn: draftingPhase ? "auto" : "1 / -1", minWidth: 0, width: "100%" }}>{rightPanel}</Box></Box>{attachments.length > 0 && <RoundedSurface sx={{ p: 1.5, backgroundColor: "rgba(255,255,255,.62)" }}><Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: "wrap" }}><Description sx={{ color: "#82909d", fontSize: 18 }} /><Typography sx={{ color: "#647284", fontSize: 12 }}>Attached references</Typography>{attachments.map((attachment) => <Chip key={attachment.id} label={attachment.original_name} size="small" sx={{ color: "#647284", backgroundColor: "#eef2f5" }} />)}</Stack></RoundedSurface>}</Stack>;
 }
 
-function PlaceholderView({ view }: { view: Exclude<DashboardView, "dashboard" | "new"> }) {
+function PlaceholderView({ view }: { view: Exclude<DashboardView, "dashboard" | "new" | "invoices"> }) {
   const content = {
     products: ["Products", "Your sourced products will appear here once a product request is ready."],
     favourites: ["Favourites", "Save product references here when you find something worth returning to."],
@@ -224,6 +225,153 @@ function DashboardHome({ isNew, onStart, onMessage }: { isNew: boolean; onStart:
   return <Stack spacing={2.5} sx={{ minWidth: 0, width: "100%", maxWidth: 820, minHeight: { xs: "calc(100vh - 150px)", md: "calc(100vh - 120px)" }, rowGap: { xs: 2.25, md: 2.5 }, mx: "auto", justifyContent: "center", borderRadius: 6, background: "radial-gradient(circle at 50% 48%, rgba(190,219,249,.72), rgba(251,251,252,0) 58%)" }}><Box sx={{ minWidth: 0, width: "100%", maxWidth: 640, mx: "auto", boxSizing: "border-box", textAlign: "center" }}><Typography variant="h1" sx={{ display: "block", width: "100%", maxWidth: "100%", minWidth: 0, m: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", fontFamily: "inherit", fontSize: { xs: 32, sm: 40, md: 44 }, lineHeight: 1.08, color: "#202936" }}>{isNew ? "What product can we source?" : "Ready when you are"}</Typography><Typography sx={{ display: "block", width: "100%", maxWidth: "100%", minWidth: 0, mt: 1.25, color: "#7c8795", fontSize: { xs: 14, sm: 15 }, lineHeight: 1.5 }}>Our AI sourcing expert will help you find the best apparel manufacturers</Typography></Box><Box sx={{ width: "100%", maxWidth: 660, mx: "auto" }}><CleanPromptComposer onStart={onStart} onMessage={onMessage} /></Box></Stack>;
 }
 
+function invoiceMoney(cents: number) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+}
+function invoiceDate(value: string | null) {
+  if (!value) return "No due date";
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`);
+  return Number.isNaN(date.valueOf()) ? "No due date" : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+function invoiceStatusLabel(invoice: WorkspaceInvoice) {
+  if (invoice.effective_status === "overdue") return "Overdue";
+  if (invoice.status === "sent") return "Due";
+  return invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
+}
+function invoiceStatusColor(invoice: WorkspaceInvoice): "success" | "warning" | "error" | "default" {
+  if (invoice.effective_status === "overdue") return "error";
+  if (invoice.status === "sent") return "warning";
+  if (invoice.status === "paid") return "success";
+  return "default";
+}
+type PaymentReturnState = "success" | "cancelled" | "pending" | "failed";
+function paymentReturnState(): PaymentReturnState | null {
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("stripe_return") || params.get("payment") || params.get("checkout");
+  return value === "success" || value === "cancelled" || value === "pending" || value === "failed" ? value : null;
+}
+function paymentReturnSeverity(kind: PaymentReturnState | null): "success" | "info" | "warning" {
+  return kind === "success" ? "success" : kind === "cancelled" ? "info" : "warning";
+}
+function InvoiceSkeletonRows() {
+  return <Box aria-label="Loading invoices" role="status"><Stack spacing={1.25}>{[1, 2, 3].map((row) => <RoundedSurface key={row} sx={{ p: { xs: 1.5, sm: 2 } }}><Stack direction="row" spacing={1.5} alignItems="center"><Skeleton variant="circular" width={24} height={24} /><Box sx={{ flex: 1, minWidth: 0 }}><Skeleton width="42%" /><Skeleton width="68%" /></Box><Skeleton width={82} /></Stack></RoundedSurface>)}</Stack></Box>;
+}
+function WorkspaceInvoices({ path }: { path: string }) {
+  const detailId = path.match(/^\/dashboard\/invoices\/([^/]+)$/)?.[1] || "";
+  const [invoices, setInvoices] = useState<WorkspaceInvoice[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState("");
+  const [detail, setDetail] = useState<WorkspaceInvoiceDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
+  const [checkoutBusy, setCheckoutBusy] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [returnMessage, setReturnMessage] = useState("");
+  const [returnKind, setReturnKind] = useState<PaymentReturnState | null>(null);
+  const returnState = paymentReturnState();
+
+  const loadInvoices = useCallback(async () => {
+    setListLoading(true);
+    setListError("");
+    try {
+      const rows = await listWorkspaceInvoices();
+      setInvoices(rows);
+      setSelectedIds((current) => new Set([...current].filter((id) => rows.some((row) => row.id === id && row.status === "sent"))));
+    } catch (cause) {
+      setListError(cause instanceof Error ? cause.message : "Could not load your invoices.");
+    } finally {
+      setListLoading(false);
+    }
+  }, []);
+  const loadDetail = useCallback(async (id: string) => {
+    if (!id) { setDetail(null); setDetailError(""); return; }
+    setDetailLoading(true);
+    setDetailError("");
+    setDetail(null);
+    try {
+      setDetail(await getWorkspaceInvoiceDetail(id));
+    } catch (cause) {
+      setDetailError(cause instanceof Error ? cause.message : "Could not load this invoice.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+  useEffect(() => { void loadInvoices(); }, [loadInvoices]);
+  useEffect(() => { void loadDetail(detailId); }, [detailId, loadDetail]);
+  useEffect(() => {
+    if (!returnState) return;
+    const labels: Record<string, string> = { success: "Payment returned successfully. We’re checking the latest invoice status.", cancelled: "Payment was cancelled. Your invoices were not changed.", pending: "Payment is still processing. Invoice status will update after confirmation.", failed: "Payment could not be completed. Your invoices were not changed." };
+    setReturnMessage(labels[returnState]);
+    setReturnKind(returnState);
+    void (async () => {
+      await loadInvoices();
+      if (detailId) await loadDetail(detailId);
+      const url = new URL(window.location.href);
+      ["stripe_return", "payment", "checkout"].forEach((key) => url.searchParams.delete(key));
+      history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+    })();
+  }, [detailId, loadDetail, loadInvoices, returnState]);
+
+  const selectable = invoices.filter((invoice) => invoice.status === "sent");
+  const selectedInvoices = selectable.filter((invoice) => selectedIds.has(invoice.id));
+  const selectedTotal = selectedInvoices.reduce((sum, invoice) => sum + invoice.balance_cents, 0);
+  const allSelected = selectable.length > 0 && selectable.every((invoice) => selectedIds.has(invoice.id));
+  function toggleInvoice(id: string) {
+    setSelectedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+  }
+  function toggleAll() {
+    setSelectedIds(allSelected ? new Set() : new Set(selectable.map((invoice) => invoice.id)));
+  }
+  async function pay(invoiceIds: string[]) {
+    if (checkoutBusy || !invoiceIds.length) return;
+    setCheckoutBusy(true); setCheckoutError("");
+    try {
+      const checkout = await startWorkspaceInvoiceCheckout(invoiceIds);
+      await loadInvoices();
+      if (detailId) await loadDetail(detailId);
+      window.location.assign(checkout.url);
+    } catch (cause) {
+      setCheckoutError(cause instanceof Error ? cause.message : "Could not start payment.");
+      await loadInvoices();
+      if (detailId) await loadDetail(detailId);
+    } finally { setCheckoutBusy(false); }
+  }
+  const listErrorSurface = listError ? <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void loadInvoices()}>Retry</MuiButton>}>{listError}</Alert> : null;
+  if (detailId) {
+    return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
+      <MuiButton variant="text" onClick={() => navigate("/dashboard/invoices")} sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}>← Back to invoices</MuiButton>
+      {returnMessage && <Alert severity={paymentReturnSeverity(returnKind)} onClose={() => { setReturnMessage(""); setReturnKind(null); }} role="status">{returnMessage}</Alert>}
+      {checkoutError && <Alert severity="error" onClose={() => setCheckoutError("")} role="alert">{checkoutError}</Alert>}
+      {detailLoading && <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Stack spacing={1.5}><Skeleton width="35%" height={34} /><Skeleton width="58%" /><Skeleton width="100%" height={80} /></Stack></RoundedSurface>}
+      {detailError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void loadDetail(detailId)}>Retry</MuiButton>}>{detailError}</Alert>}
+      {detail && <Stack spacing={1.5}>
+        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" alignItems="flex-start" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1.25 }}><Box sx={{ minWidth: 0 }}><Typography variant="h1" sx={{ color: "#202936", fontSize: { xs: 27, sm: 34 }, overflowWrap: "anywhere" }}>{detail.invoice_no}</Typography><Typography sx={{ mt: .5, color: "#758091", fontSize: 13 }}>Due {invoiceDate(detail.due_date)}</Typography></Box><Chip label={invoiceStatusLabel(detail)} color={invoiceStatusColor(detail)} size="small" /></Stack>
+            <Divider />
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Total</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>{invoiceMoney(detail.total_cents)}</Typography></Box><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Balance</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>{invoiceMoney(detail.balance_cents)}</Typography></Box><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Currency</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>USD</Typography></Box></Box>
+            <MuiButton variant="contained" disabled={detail.status !== "sent" || checkoutBusy} onClick={() => void pay([detail.id])} startIcon={checkoutBusy ? <CircularProgress size={16} color="inherit" /> : undefined} sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}>{checkoutBusy ? "Opening payment…" : detail.status === "sent" ? "Pay invoice" : detail.status === "paid" ? "Paid" : "Payment unavailable"}</MuiButton>
+          </Stack>
+        </RoundedSurface>
+        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: 1.25, fontWeight: 700 }}>Line items</Typography>{detail.items.length ? <Stack spacing={1}>{detail.items.map((item, index) => <Box key={item.id || `${item.description}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 1, minWidth: 0 }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 13, overflowWrap: "anywhere" }}>{item.description}</Typography><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>{item.quantity} × {invoiceMoney(item.unit_amount_cents)}</Typography></Box><Typography sx={{ fontSize: 13, fontWeight: 700 }}>{invoiceMoney(item.line_total_cents)}</Typography></Box>)}</Stack> : <Typography sx={{ color: "#758091", fontSize: 13 }}>No line items were returned.</Typography>}</RoundedSurface>
+        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: 1.25, fontWeight: 700 }}>Payment history</Typography>{detail.payments.length ? <Stack spacing={1}>{detail.payments.map((payment, index) => <Box key={payment.id || `${payment.provider}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 1 }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 13 }}>{payment.provider}</Typography><Typography sx={{ color: "#8a94a2", fontSize: 11, overflowWrap: "anywhere" }}>{payment.reference || "Payment recorded"}</Typography></Box><Typography sx={{ fontSize: 13, fontWeight: 700 }}>{invoiceMoney(payment.amount_cents)}</Typography></Box>)}</Stack> : <Typography sx={{ color: "#758091", fontSize: 13 }}>No payments recorded yet.</Typography>}</RoundedSurface>
+        {detail.notes && <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: .75, fontWeight: 700 }}>Notes</Typography><Typography sx={{ color: "#758091", fontSize: 13, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.notes}</Typography></RoundedSurface>}
+      </Stack>}
+    </Stack>;
+  }
+  return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
+    <Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: .6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}>Invoices</Typography><Typography sx={{ mt: .75, maxWidth: 600, color: "#758091", fontSize: 14, lineHeight: 1.55 }}>Review invoices from your Atelix workspace and pay sent balances securely.</Typography></Box>
+    {returnMessage && <Alert severity={paymentReturnSeverity(returnKind)} onClose={() => { setReturnMessage(""); setReturnKind(null); }} role="status">{returnMessage}</Alert>}
+    {checkoutError && <Alert severity="error" onClose={() => setCheckoutError("")} role="alert">{checkoutError}</Alert>}
+    {listErrorSurface}
+    {listLoading ? <InvoiceSkeletonRows /> : !listError && !invoices.length ? <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No invoices yet</Typography><Typography sx={{ mt: .75, color: "#758091", fontSize: 13 }}>Invoices from your Atelix workspace will appear here when they are ready.</Typography></RoundedSurface> : !listError && <>
+      <RoundedSurface sx={{ p: { xs: 1.25, sm: 1.5 } }}><Stack direction="row" alignItems="center" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}><Box component="label" sx={{ display: "flex", alignItems: "center", minWidth: 0, cursor: selectable.length ? "pointer" : "default" }}><Checkbox checked={allSelected} indeterminate={selectedIds.size > 0 && !allSelected} disabled={!selectable.length || checkoutBusy} onChange={toggleAll} slotProps={{ input: { "aria-label": "Select all sent invoices" } }} /><Typography sx={{ fontSize: 13, fontWeight: 600 }}>Select sent invoices</Typography></Box><Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}><Typography sx={{ color: "#758091", fontSize: 12 }}>Selected balance</Typography><Typography sx={{ fontSize: 14, fontWeight: 700 }}>{invoiceMoney(selectedTotal)}</Typography><MuiButton size="small" variant="contained" disabled={!selectedIds.size || checkoutBusy} onClick={() => void pay([...selectedIds])} startIcon={checkoutBusy ? <CircularProgress size={15} color="inherit" /> : undefined}>{checkoutBusy ? "Opening…" : "Pay selected"}</MuiButton></Box></Stack></RoundedSurface>
+      <Box component="ul" aria-label="Invoices" sx={{ display: "grid", gap: 1.25, p: 0, m: 0, listStyle: "none" }}>{invoices.map((invoice) => { const selectableRow = invoice.status === "sent"; return <Box component="li" key={invoice.id}><RoundedSurface sx={{ p: { xs: 1.25, sm: 1.75 } }}><Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}><Checkbox checked={selectedIds.has(invoice.id)} disabled={!selectableRow || checkoutBusy} onChange={() => toggleInvoice(invoice.id)} slotProps={{ input: { "aria-label": `${selectableRow ? "Select" : "Invoice unavailable for payment"} ${invoice.invoice_no}` } }} sx={{ flex: "0 0 auto" }} /><Box sx={{ flex: 1, minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{invoice.invoice_no}</Typography><Typography sx={{ mt: .3, color: "#758091", fontSize: 12 }}>Due {invoiceDate(invoice.due_date)} · Balance {invoiceMoney(invoice.balance_cents)}</Typography></Box><Stack alignItems="flex-end" spacing={.5} sx={{ flex: "0 0 auto" }}><Chip label={invoiceStatusLabel(invoice)} color={invoiceStatusColor(invoice)} size="small" /><MuiButton size="small" onClick={() => navigate(`/dashboard/invoices/${encodeURIComponent(invoice.id)}`)} aria-label={`View ${invoice.invoice_no}`}>View</MuiButton></Stack></Stack></RoundedSurface></Box>; })}</Box>
+    </>}
+  </Stack>;
+}
+
 export function Dashboard({ path }: { path: string }) {
   const mobile = useMediaQuery(dashboardTheme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false); const [sidebarCollapsed, setSidebarCollapsed] = useState(false); const [message, setMessage] = useState("");
@@ -231,7 +379,7 @@ export function Dashboard({ path }: { path: string }) {
   const [rfq, setRfq] = useState<{ record: WorkspaceRfq; attachments: RfqAttachment[]; initialPhase?: RfqPhase } | null>(null); const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
   useEffect(() => { let active = true; void getSession().then((session) => { if (!active) return; const user = session?.user; const name = String(user?.user_metadata?.full_name || user?.email || "Workspace"); setProfile({ username: user?.email || "", name, role: "Buyer" }); }).catch(() => undefined); return () => { active = false; }; }, []);
   useEffect(() => { let active = true; void listRfqCases().then((cases) => { if (!active) return; setHistoryItems(cases.slice(0, 8)); }).catch((cause) => { if (active) setMessage(cause instanceof Error ? cause.message : "Could not load your RFQs."); }); return () => { active = false; }; }, []);
-  const view: DashboardView = path === "/dashboard/products" ? "products" : path === "/dashboard/favourites" ? "favourites" : path === "/dashboard/messages" ? "messages" : path === "/dashboard/settings" ? "settings" : path === "/dashboard/library" ? "library" : path === "/dashboard/new-product-request" || path === "/dashboard/new-rfq" ? "new" : "dashboard";
+  const view: DashboardView = path === "/dashboard/products" ? "products" : path === "/dashboard/favourites" ? "favourites" : path === "/dashboard/messages" ? "messages" : path === "/dashboard/invoices" || /^\/dashboard\/invoices\/[^/]+$/.test(path) ? "invoices" : path === "/dashboard/settings" ? "settings" : path === "/dashboard/library" ? "library" : path === "/dashboard/new-product-request" || path === "/dashboard/new-rfq" ? "new" : "dashboard";
   const workspaceOpen = Boolean(rfq && (view === "dashboard" || view === "new"));
   function go(item: typeof navItems[number]) { setMobileOpen(false); if (item.view === "new") setRfq(null); navigate(item.href); }
   async function startRfq(brief: string, files: UploadFile[]) {
@@ -244,6 +392,6 @@ export function Dashboard({ path }: { path: string }) {
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not save your sourcing brief."); }
   }
   async function restoreHistory(item: StoredRfq) { setMobileOpen(false); setMessage("Loading your RFQ…"); try { const attachments = await listRfqAttachments(item.id); setRfq({ record: item, attachments }); setMessage(""); navigate("/dashboard"); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not load your RFQ."); } }
-  function content() { if (rfq && (view === "dashboard" || view === "new")) { const summary = typeof rfq.record.brief.summary === "string" ? rfq.record.brief.summary : rfq.record.title; return <RfqWorkspace caseId={rfq.record.id} brief={summary} initialFields={fieldsFromBrief(rfq.record.brief)} files={rfq.attachments} status={rfq.record.status} initialPhase={rfq.initialPhase} onMessage={setMessage} />; } if (["products", "favourites", "messages", "settings", "library"].includes(view)) return <PlaceholderView view={view as Exclude<DashboardView, "dashboard" | "new">} />; return <DashboardHome isNew={view === "new"} onStart={(brief, files) => { void startRfq(brief, files); }} onMessage={setMessage} />; }
+  function content() { if (rfq && (view === "dashboard" || view === "new")) { const summary = typeof rfq.record.brief.summary === "string" ? rfq.record.brief.summary : rfq.record.title; return <RfqWorkspace caseId={rfq.record.id} brief={summary} initialFields={fieldsFromBrief(rfq.record.brief)} files={rfq.attachments} status={rfq.record.status} initialPhase={rfq.initialPhase} onMessage={setMessage} />; } if (view === "invoices") return <WorkspaceInvoices path={path} />; if (["products", "favourites", "messages", "settings", "library"].includes(view)) return <PlaceholderView view={view as Exclude<DashboardView, "dashboard" | "new" | "invoices">} />; return <DashboardHome isNew={view === "new"} onStart={(brief, files) => { void startRfq(brief, files); }} onMessage={setMessage} />; }
   return <ThemeProvider theme={dashboardTheme}><CssBaseline /><MotionConfig reducedMotion="user"><Box className="dashboard-root" sx={{ display: "flex", width: "100%", maxWidth: "100vw", minHeight: "100vh", overflowX: "hidden", color: "text.primary", backgroundColor: "#fbfbfc" }}>{!mobile && <Box component="aside" sx={{ width: sidebarCollapsed ? 76 : 264, height: "100vh", maxHeight: "100vh", flexShrink: 0, borderRight: "1px solid #ececef", backgroundColor: "#fff", transition: "width 220ms ease", overflow: "hidden" }}><Sidebar view={view} onNavigate={go} historyItems={historyItems} onRestore={(item) => { void restoreHistory(item); }} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((current) => !current)} /></Box>}<Box sx={{ minWidth: 0, width: 0, flex: 1 }}><Box component="header" sx={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", minWidth: 0, width: "100%", minHeight: 68, px: { xs: 2, sm: 4 }, borderBottom: "1px solid #f0f0f2", backgroundColor: "rgba(255,255,255,.84)" }}>{mobile && <IconButton onClick={() => setMobileOpen(true)} aria-label="Open navigation"><MenuIcon /></IconButton>}<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0, ml: mobile ? 1 : "auto", position: { xs: "absolute", sm: "static" }, right: { xs: 2, sm: "auto" } }}><Typography sx={{ display: { xs: "none", sm: "block" }, minWidth: 0, color: "#737b86", fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</Typography><Tooltip title={`${profile.name}${profile.role ? ` · ${profile.role}` : ""}`}><Avatar aria-label={`Signed in as ${profile.name}`} sx={{ width: 34, height: 34, flex: "0 0 auto", backgroundColor: "#e5e7eb", color: "#5d6672", fontSize: 13 }}>{initials(profile.name)}</Avatar></Tooltip></Box></Box><Box component="main" id="main" sx={{ width: "100%", maxWidth: workspaceOpen ? "none" : { xs: "calc(100vw - 32px)", sm: "min(1060px, calc(100% - 48px))" }, px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0, minWidth: 0, boxSizing: "border-box", mx: "auto", py: { xs: 3, sm: 4, md: 5 } }}>{content()}</Box>{message && <Box role="status" aria-live="polite" sx={{ position: "fixed", right: { xs: 16, sm: 24 }, bottom: 20, zIndex: 10, maxWidth: 420, px: 2, py: 1.5, borderRadius: 3, backgroundColor: "#344255", color: "#fff", boxShadow: "0 12px 28px rgba(44,56,73,.22)" }}><Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><Typography sx={{ fontSize: 13, color: "inherit" }}>{message}</Typography><IconButton size="small" aria-label="Dismiss message" onClick={() => setMessage("")} sx={{ color: "#fff" }}><X fontSize="small" /></IconButton></Stack></Box>}</Box><Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} ModalProps={{ keepMounted: true }}><Box sx={{ width: 280, height: "100%" }}><Sidebar view={view} onNavigate={go} historyItems={historyItems} onRestore={(item) => { void restoreHistory(item); }} mobile /></Box></Drawer></Box></MotionConfig></ThemeProvider>;
 }

@@ -25,6 +25,7 @@ export async function userFrom(req: Request) {
 }
 export async function requireAdmin(req: Request) {
   const user = await userFrom(req);
+  if (!user.email_confirmed_at) throw new Error("Forbidden");
   const { data } = await admin().from("profiles").select("role").eq("id", user.id).maybeSingle();
   if (data?.role !== "admin") throw new Error("Forbidden");
   return user;

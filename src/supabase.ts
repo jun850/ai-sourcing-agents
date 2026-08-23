@@ -26,6 +26,38 @@ export type WorkspaceRfq = {
   submitted_at: string | null;
   last_saved_at: string;
 };
+export type WorkspaceInvoiceStatus = "draft" | "sent" | "paid" | "cancelled" | "overdue";
+export type WorkspaceInvoice = {
+  id: string;
+  invoice_no: string;
+  status: "draft" | "sent" | "paid" | "cancelled";
+  effective_status: WorkspaceInvoiceStatus;
+  currency: "usd";
+  total_cents: number;
+  balance_cents: number;
+  due_date: string | null;
+  created_at: string;
+};
+export type WorkspaceInvoiceItem = {
+  id?: string;
+  description: string;
+  quantity: number;
+  unit_amount_cents: number;
+  tax_amount_cents: number;
+  line_total_cents: number;
+};
+export type WorkspaceInvoicePayment = {
+  id?: string;
+  provider: string;
+  reference: string | null;
+  amount_cents: number;
+  recorded_at: string;
+};
+export type WorkspaceInvoiceDetail = WorkspaceInvoice & {
+  notes: string | null;
+  items: WorkspaceInvoiceItem[];
+  payments: WorkspaceInvoicePayment[];
+};
 export type RfqAttachment = {
   id: string;
   rfq_case_id: string;
@@ -238,6 +270,30 @@ export async function uploadRfqAttachment(caseId: string, file: File) {
     rpcError(error);
   }
   return data as RfqAttachment;
+}
+
+export async function listWorkspaceInvoices() {
+  const { data, error } = await client().rpc("workspace_list_invoices");
+  rpcError(error);
+  return (data ?? []) as WorkspaceInvoice[];
+}
+export async function getWorkspaceInvoiceDetail(invoiceId: string) {
+  const { data, error } = await client().rpc("workspace_get_invoice_detail", {
+    p_invoice_id: invoiceId,
+  });
+  rpcError(error);
+  return data as WorkspaceInvoiceDetail;
+}
+export async function startWorkspaceInvoiceCheckout(invoiceIds: string[]) {
+  if (!invoiceIds.length) throw new Error("Select at least one invoice to pay.");
+  const { data, error } = await client().functions.invoke("stripe-checkout", {
+    body: { kind: "invoices", invoiceIds },
+  });
+  rpcError(error);
+  if (!data || typeof data.url !== "string" || !data.url) {
+    throw new Error("The payment page could not be created.");
+  }
+  return data as { url: string; environment?: string; amountCents?: number; discountCents?: number };
 }
 
 async function intoolsRpc<T>(
