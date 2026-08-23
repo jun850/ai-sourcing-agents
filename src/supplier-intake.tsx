@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Check, X } from "lucide-react";
-import { api } from "./api";
+import { submitSupplierIntake } from "./supabase";
 
 type SupplierValues = {
   companyName: string; contactName: string; email: string; countryCode: string; phone: string; address: string;
@@ -88,7 +88,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
     }
     setBusy(true);
     try {
-      await api<{ ok: true }>("/api/supplier-intake", { method: "POST", body: JSON.stringify(values) });
+      await submitSupplierIntake(values);
       setSubmitted(true);
     } catch (cause) {
       setServiceError(cause instanceof Error ? cause.message : "We could not record your intake. Please try again.");
