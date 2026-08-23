@@ -11,5 +11,6 @@ coverage/
 playwright-report/
 test-results/
 supabase/.temp/
+.phase6-rehearsal/
 *.tsbuildinfo
 *.log

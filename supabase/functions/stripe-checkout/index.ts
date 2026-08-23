@@ -75,8 +75,16 @@ async function checkoutInvoices(user: { id: string; email?: string | null }, inp
 async function checkoutOrder(user: { id: string; email?: string | null }, input: Extract<CheckoutRequest, { kind: "order" }>) {
   if (!input.orderNo || typeof input.orderNo !== "string") throw new Error("Order number is required");
   const db = admin();
-  const { data: order, error } = await db.from("orders").select("id,order_no,total,status,payment_path,buyer_profile_id").eq("order_no", input.orderNo).maybeSingle();
+  const { data: order, error } = await db
+    .from("orders")
+    .select("id,order_no,total,status,payment_path,buyer_profile_id,order_items(id,sku_snapshot,name_snapshot,seller_snapshot,unit_price,qty,line_total)")
+    .eq("order_no", input.orderNo)
+    .maybeSingle();
   if (error || !order || order.buyer_profile_id !== user.id || order.status !== "awaiting_payment" || order.payment_path !== "stripe") throw new Error("This order cannot be paid with Stripe");
+  const items = Array.isArray(order.order_items) ? order.order_items : [];
+  if (!items.length || items.some((item) => !item.sku_snapshot || !item.name_snapshot || !Number.isFinite(Number(item.line_total)))) {
+    throw new Error("This order has no valid immutable line snapshots");
+  }
   const { data: existing, error: existingError } = await db.from("stripe_payments").select("stripe_checkout_session_id,state").eq("order_id", order.id).maybeSingle();
   if (existingError) throw existingError;
   if (existing?.stripe_checkout_session_id && ["checkout_created", "processing"].includes(existing.state)) {

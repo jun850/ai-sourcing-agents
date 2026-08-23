@@ -6,7 +6,7 @@ Product UI on the web.
 
 ## Purpose
 
-Atelix is a broker-led fashion sourcing workspace for apparel, fabrics, trims, labels, accessories, and OEM or cut-and-sew production. A buyer begins with a prompt, image, or technical reference. Atelix turns that material into a traceable RFQ, supports human review and vetted supplier matching, and records the commercial handoff through invoices and Stripe-hosted payment.
+Atelix is a broker-led fashion sourcing workspace for apparel, fabrics, trims, labels, accessories, and OEM or cut-and-sew production. A buyer begins with a prompt, image, or technical reference. Atelix turns that material into a traceable RFQ, supports human review and vetted supplier matching, and records the commercial handoff through invoices and Stripe-hosted payment. The workflow continues through quality and logistics coordination, with each handoff retaining its evidence and owner.
 
 Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-serve supplier directory. Supplier identity, MOQ, capacity, certification, pricing, payment state, and production commitments come only from reviewed records and authoritative server systems.
 
@@ -24,6 +24,7 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Models may structure or summarize supplied facts, but never create commercial or supplier facts.
 - Supabase is authoritative for identity, roles, sourcing records, and permissions.
 - Stripe webhooks are authoritative for payment settlement.
+- Quality, logistics, invoice, and payment states are authoritative only when recorded by guarded server workflows.
 - Every consequential change is attributable and auditable.
 
 ## Accessibility

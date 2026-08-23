@@ -7,6 +7,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 ## Rules
 
 - Preserve the existing landing page, dashboard shell, motion language, rounded controls, and responsive drawer.
+- Design for the broker-led path from prompt or reference, through RFQ, human review, vetted matching, invoice/payment, quality, and logistics handoffs. Keep supplier and commercial facts inside reviewed, permissioned records.
 - Use the established neutral sans stack throughout product UI.
 - Keep one clear primary action per view; color communicates state rather than decoration.
 - Use existing components and tokens before adding variants. Do not add promotional strips or new content sections unless requested.
@@ -15,6 +16,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
 - Avoid nested cards, decorative gradients, glass effects, oversized rounding, and dashboard metric-card filler.
+- Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
 
 ## Accessibility target
 

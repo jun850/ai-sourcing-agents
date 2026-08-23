@@ -35,10 +35,10 @@ Deno.serve(async (req) => {
   const isBuyer = user.id === convo.buyer_profile_id;
   const factory: any = convo.factories;
   const buyerProfile: any = convo.profiles;
-  const isSeller = factory && user.id === factory.owner_profile_id;
+  const isSupplierOwner = factory && user.id === factory.owner_profile_id;
   const { data: senderProfile } = await admin.from("profiles").select("role, full_name").eq("id", user.id).maybeSingle();
   const isAdmin = senderProfile?.role === "admin";
-  if (!isBuyer && !isSeller && !isAdmin) return new Response("Forbidden", { status: 403 });
+  if (!isBuyer && !isSupplierOwner && !isAdmin) return new Response("Forbidden", { status: 403 });
 
   // recipient is the OTHER participant
   const recipientId = isBuyer ? factory?.owner_profile_id : convo.buyer_profile_id;

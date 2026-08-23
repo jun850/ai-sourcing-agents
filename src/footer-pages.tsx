@@ -585,10 +585,10 @@ function Alternative() {
       </section>
       <section className="resource-section">
         <div className="resource-wrap">
-          <h2>Marketplace listing vs. Atelix record</h2>
+          <h2>Listing-led sourcing vs. Atelix workflow</h2>
           <div className="comparison-table">
             <div>
-              <b>Marketplace listing</b>
+              <b>Listing-led sourcing</b>
               <span>Self-described profile</span>
               <span>One-off enquiry</span>
               <span>Scattered chat history</span>
