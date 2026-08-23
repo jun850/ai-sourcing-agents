@@ -27,6 +27,11 @@ const allowedRpcs = new Set([
   "intools_update_invoice", "intools_send_invoice", "intools_cancel_invoice",
   "intools_record_manual_payment", "intools_list_orders", "intools_get_order_detail",
   "intools_list_audit",
+  "intools_list_suppliers", "intools_get_supplier_detail", "intools_save_supplier",
+  "intools_save_supplier_with_images", "intools_archive_supplier",
+  "intools_supplier_import_dry_run", "intools_promote_supplier_import_rows",
+  "intools_promote_supplier_intake", "intools_set_supplier_broker_status",
+  "intools_generate_rfq_supplier_matches", "intools_set_rfq_supplier_match_status",
 ]);
 function configured() { return localIntoolsEnabled && Object.values(localConfig).every(Boolean) && localConfig.cookieSecret.length >= 32; }
 function base64url(value) { return Buffer.from(value).toString("base64url"); }

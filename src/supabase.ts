@@ -127,6 +127,141 @@ export type IntoolsOrder = {
   payment_declared_at?: string | null;
   payment_verified_at?: string | null;
 };
+export type IntoolsSupplier = {
+  id: string;
+  slug: string;
+  name: string;
+  type: string;
+  region: string | null;
+  loc: string | null;
+  verify_state: "unverified" | "pending" | "verified";
+  years: number | null;
+  moq: string | null;
+  lead: string | null;
+  capacity: string | null;
+  certs: string[] | null;
+  tags: string[] | null;
+  sales: string | null;
+  phone: string | null;
+  web: string | null;
+  founded: number | null;
+  employees: string | null;
+  area: string | null;
+  port: string | null;
+  bio: string | null;
+  img: string | null;
+  logo_img?: string | null;
+  page_img?: string | null;
+  copy_i18n?: Record<string, unknown>;
+  owner_profile_id: string | null;
+  archived_at: string | null;
+  created_at: string;
+  updated_at: string;
+  product_count?: number;
+  source_system?: string | null;
+  source_record_id?: string | null;
+  source_reference?: string | null;
+  provenance_url?: string | null;
+  provenance_sha256?: string | null;
+  provenance_captured_at?: string | null;
+  source_payload?: Record<string, unknown>;
+  broker_status?: "review" | "approved" | "rejected" | "archived";
+  curation_locked?: boolean;
+  broker_reviewed_by?: string | null;
+  broker_reviewed_at?: string | null;
+  imported_at?: string | null;
+};
+export type IntoolsSupplierProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  category: string;
+  listing_status: string;
+  is_private?: boolean;
+};
+export type IntoolsSupplierRfq = {
+  id: string;
+  rfq_case_id: string;
+  case_no?: string | null;
+  title?: string | null;
+  product_id?: string | null;
+  status: string;
+  sent_at: string;
+  last_activity_at: string;
+};
+export type IntoolsSupplierProvenance = {
+  field_name: string;
+  source_url: string | null;
+  value_origin: string;
+  observed_at: string;
+};
+export type IntoolsSupplierSourceContact = {
+  contact_type: string;
+  normalized_value: string;
+  source_url: string | null;
+  validation_status: string;
+  usage_status?: string;
+  outreach_allowed?: boolean;
+};
+export type IntoolsSupplierDetail = IntoolsSupplier & {
+  products: IntoolsSupplierProduct[];
+  rfq_associations: IntoolsSupplierRfq[];
+  provenance: IntoolsSupplierProvenance[];
+  source_contacts: IntoolsSupplierSourceContact[];
+  audit: IntoolsInvoiceAudit[];
+  intake?: Record<string, unknown> | null;
+};
+export type IntoolsSupplierPayload = Partial<
+  Pick<
+    IntoolsSupplier,
+    | "slug"
+    | "name"
+    | "type"
+    | "region"
+    | "loc"
+    | "verify_state"
+    | "years"
+    | "moq"
+    | "lead"
+    | "capacity"
+    | "certs"
+    | "tags"
+    | "sales"
+    | "phone"
+    | "web"
+    | "founded"
+    | "employees"
+    | "area"
+    | "port"
+    | "bio"
+    | "img"
+    | "logo_img"
+    | "page_img"
+    | "owner_profile_id"
+  >
+> & { copy_i18n?: Record<string, unknown> };
+export type IntoolsSupplierImportInput = {
+  source_system: string;
+  source_record_id: string;
+  source_url?: string | null;
+  supplier: IntoolsSupplierPayload;
+  provenance?: Array<Record<string, unknown>>;
+};
+export type IntoolsSupplierImportRow = IntoolsSupplierImportInput & {
+  row_number: number;
+};
+export type IntoolsSupplierImportResult = {
+  run_id: string;
+  status: string;
+  rows: Array<{
+    row_number: number;
+    status: "accepted" | "rejected" | "ambiguous" | "promoted" | "failed";
+    source_record_id: string;
+    supplier_id?: string | null;
+    candidate_ids?: string[];
+    errors?: Array<{ path: string; message: string }>;
+  }>;
+};
 export type IntoolsInvoiceItemPayload = {
   description: string;
   quantity: number;
@@ -357,6 +492,80 @@ export async function loginLocalIntools(username: string, password: string) {
 export async function listIntoolsInvoices(status: string | null = null) {
   return intoolsRpc<IntoolsInvoice[]>("intools_list_invoices", {
     p_status: status,
+  });
+}
+export async function listIntoolsSuppliers() {
+  return intoolsRpc<IntoolsSupplier[]>("intools_list_suppliers");
+}
+export async function getIntoolsSupplierDetail(supplierId: string) {
+  return intoolsRpc<IntoolsSupplierDetail>("intools_get_supplier_detail", {
+    p_supplier_id: supplierId,
+  });
+}
+export async function saveIntoolsSupplier(
+  supplierId: string | null,
+  payload: IntoolsSupplierPayload,
+  expectedUpdatedAt: string | null = null,
+) {
+  const hasImages = "logo_img" in payload || "page_img" in payload;
+  return intoolsRpc<IntoolsSupplier>(
+    hasImages ? "intools_save_supplier_with_images" : "intools_save_supplier",
+    {
+      p_supplier_id: supplierId,
+      p_payload: payload,
+      p_expected_updated_at: expectedUpdatedAt,
+    },
+  );
+}
+export async function archiveIntoolsSupplier(
+  supplierId: string,
+  expectedUpdatedAt: string,
+  restore = false,
+) {
+  return intoolsRpc<IntoolsSupplier>("intools_archive_supplier", {
+    p_supplier_id: supplierId,
+    p_expected_updated_at: expectedUpdatedAt,
+    p_restore: restore,
+  });
+}
+export async function setIntoolsSupplierBrokerStatus(
+  supplierId: string,
+  status: "review" | "approved" | "rejected" | "archived",
+  curationLocked: boolean | null = null,
+) {
+  return intoolsRpc<IntoolsSupplier>("intools_set_supplier_broker_status", {
+    p_supplier_id: supplierId,
+    p_status: status,
+    p_curation_locked: curationLocked,
+  });
+}
+export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string) {
+  return intoolsRpc<Array<Record<string, unknown>>>("intools_generate_rfq_supplier_matches", {
+    p_case_id: rfqCaseId,
+  });
+}
+export async function runIntoolsSupplierImportDryRun(
+  rows: IntoolsSupplierImportRow[],
+  overwrite = false,
+) {
+  return intoolsRpc<IntoolsSupplierImportResult>(
+    "intools_supplier_import_dry_run",
+    { p_rows: rows, p_overwrite: overwrite },
+  );
+}
+export async function promoteIntoolsSupplierImportRows(
+  runId: string,
+  rowNumbers: number[],
+  overwrite = false,
+) {
+  return intoolsRpc<IntoolsSupplierImportResult>(
+    "intools_promote_supplier_import_rows",
+    { p_run_id: runId, p_row_numbers: rowNumbers, p_overwrite: overwrite },
+  );
+}
+export async function promoteIntoolsSupplierIntake(intakeId: string) {
+  return intoolsRpc<IntoolsSupplier>("intools_promote_supplier_intake", {
+    p_intake_id: intakeId,
   });
 }
 export async function getIntoolsInvoiceDetail(invoiceId: string) {

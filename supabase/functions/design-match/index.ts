@@ -3,9 +3,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // The Atelix sourcing agent reads source material into a structured brief; Atelix's own catalog data supplies
 // every supplier, certification, MOQ, lead-time, and price shown to a buyer.
-// The preset owns the multimodal model and provider routing. Its name stays
-// stable here while the configuration can evolve in OpenRouter.
-const MODEL = "@preset/marketplace-copilot";
 const MAX_FILES = 8;
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_PDF_BYTES = 30 * 1024 * 1024;
@@ -180,7 +177,13 @@ function normalizeBrief(raw: any) {
 
 function matchCatalog(brief: ReturnType<typeof normalizeBrief>, products: any[], factories: any[]) {
   const briefWords = [brief.garmentType, brief.description, brief.construction.join(" "), brief.certifications.join(" "), brief.targetRegion, ...brief.bomItems.map((item: any) => `${item.name} ${item.specification} ${item.composition}`)].flatMap(terms);
-  const activeProducts = products.filter(p => p.listing_status === "active");
+  // The product query is intentionally rechecked against the independently
+  // canonical factory set. A nested join must never revive a private or
+  // archived supplier/product into a model-adjacent matching result.
+  const eligibleFactoryIds = new Set(factories.map(factory => factory.id));
+  const activeProducts = products.filter(product => product.listing_status === "active"
+    && product.is_private !== true && !product.archived_at
+    && product.factory?.id && eligibleFactoryIds.has(product.factory.id));
   const mapProduct = (product: any, score: number, matchQuality: "exact" | "partial") => ({
     id: product.sku, name: product.name, img: product.img, comp: product.comp,
     spec: product.spec, price: Number(product.price), unit: product.unit_type,
@@ -286,9 +289,10 @@ async function handleRequest(req: Request) {
   const jwt = (req.headers.get("Authorization") || "").replace("Bearer ", "");
   if (!jwt) return json({ ok: false, reason: "unauthorized" }, 401);
   const apiKey = Deno.env.get("OPENROUTER_API_KEY");
+  const model = Deno.env.get("OPENROUTER_MODEL");
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!apiKey || !supabaseUrl || !serviceKey) return json({ ok: false, reason: "analysis_unavailable" }, 503);
+  if (!apiKey || !model || !supabaseUrl || !serviceKey) return json({ ok: false, reason: "analysis_unavailable" }, 503);
 
   const admin = createClient(supabaseUrl, serviceKey);
   const { data: { user }, error: authError } = await admin.auth.getUser(jwt);
@@ -302,8 +306,8 @@ async function handleRequest(req: Request) {
     try { body = await req.json(); } catch { return json({ ok: false, reason: "invalid_brief" }, 400); }
     const brief = normalizeBrief(body?.brief);
     const [productResult, factoryResult] = await Promise.all([
-      admin.from("products").select("*, factory:factories(*)").eq("listing_status", "active").limit(500),
-      admin.from("factories").select("*").eq("verify_state", "verified").limit(300)
+      admin.from("products").select("*, factory:factories(*)").eq("listing_status", "active").eq("is_private", false).is("archived_at", null).limit(500),
+      admin.from("factories").select("*").eq("verify_state", "verified").eq("broker_status", "approved").is("archived_at", null).limit(300)
     ]);
     if (productResult.error || factoryResult.error) return json({ ok: false, reason: "catalog_unavailable" }, 503);
     return json({ ok: true, brief, results: matchCatalog(brief, productResult.data || [], factoryResult.data || []) });
@@ -369,7 +373,7 @@ Return only JSON matching the schema. The resulting supported brief will be matc
       },
       signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
       body: JSON.stringify({
-        model: MODEL,
+        model,
         messages: [{
           role: "user",
           content: [{ type: "text", text: prompt }, ...parts],
@@ -428,8 +432,8 @@ Return only JSON matching the schema. The resulting supported brief will be matc
   }
 
   const [productResult, factoryResult] = await Promise.all([
-    admin.from("products").select("*, factory:factories(*)").eq("listing_status", "active").limit(500),
-    admin.from("factories").select("*").eq("verify_state", "verified").limit(300)
+    admin.from("products").select("*, factory:factories(*)").eq("listing_status", "active").eq("is_private", false).is("archived_at", null).limit(500),
+    admin.from("factories").select("*").eq("verify_state", "verified").eq("broker_status", "approved").is("archived_at", null).limit(300)
   ]);
   if (productResult.error || factoryResult.error) return json({ ok: false, reason: "catalog_unavailable" }, 503);
   const results = matchCatalog(brief, productResult.data || [], factoryResult.data || []);

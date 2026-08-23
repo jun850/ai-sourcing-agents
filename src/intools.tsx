@@ -55,6 +55,7 @@ import {
   type IntoolsManualPaymentPayload,
   type IntoolsOrder,
 } from "./supabase";
+import { IntoolsSuppliers } from "./intools-suppliers";
 
 const intoolsTheme = createTheme({
   typography: {
@@ -87,7 +88,7 @@ const intoolsTheme = createTheme({
   },
 });
 
-type Tab = "invoices" | "orders" | "audit";
+type Tab = "invoices" | "orders" | "audit" | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
   description: string;
@@ -1307,7 +1308,9 @@ export function Intools() {
   const [access, setAccess] = useState<
     "loading" | "allowed" | "permission" | "error"
   >("loading");
-  const [tab, setTab] = useState<Tab>("invoices");
+  const supplierRoute = /^\/intools\/suppliers(?:\/([^/]+))?$/.exec(location.pathname);
+  const supplierId = supplierRoute?.[1] ? decodeURIComponent(supplierRoute[1]) : null;
+  const [tab, setTab] = useState<Tab>(() => (supplierRoute ? "suppliers" : "invoices"));
   const [filter, setFilter] = useState("all");
   const [invoices, setInvoices] = useState<IntoolsInvoice[]>([]);
   const [selected, setSelected] = useState<IntoolsInvoiceDetail | null>(null);
@@ -1315,6 +1318,9 @@ export function Intools() {
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
+  useEffect(() => {
+    if (supplierRoute) setTab("suppliers");
+  }, [supplierId]);
   async function loadInvoices(status = filter) {
     setLoadingInvoices(true);
     setError("");
@@ -1358,7 +1364,8 @@ export function Intools() {
       if (!active) return;
       if (local.authenticated) {
         setReady(true);
-        void loadInvoices();
+        if (supplierRoute) setAccess("allowed");
+        else void loadInvoices();
         return;
       }
       if (local.available) {
@@ -1375,7 +1382,8 @@ export function Intools() {
         return;
       }
       setReady(true);
-      void loadInvoices();
+      if (supplierRoute) setAccess("allowed");
+      else void loadInvoices();
     })().catch(() => {
       if (active) setAccess("error");
     });
@@ -1484,7 +1492,7 @@ export function Intools() {
               <Typography
                 sx={{ mt: 0.6, color: "text.secondary", fontSize: 14 }}
               >
-                Private operations for invoices and orders. Every consequential
+                Private operations for invoices, orders, and supplier records. Every consequential
                 change is recorded.
               </Typography>
             </Box>
@@ -1500,6 +1508,7 @@ export function Intools() {
                   ["invoices", "Invoices"],
                   ["orders", "Orders"],
                   ["audit", "Audit history"],
+                  ["suppliers", "Suppliers"],
                 ] as const
               ).map(([value, label]) => (
                 <Button
@@ -1510,6 +1519,7 @@ export function Intools() {
                     setTab(value);
                     setSelected(null);
                     setCreating(false);
+                    navigate(value === "suppliers" ? "/intools/suppliers" : "/intools");
                   }}
                   variant={tab === value ? "contained" : "outlined"}
                 >
@@ -1598,6 +1608,13 @@ export function Intools() {
             )}
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
+            {tab === "suppliers" && (
+              <IntoolsSuppliers
+                supplierId={supplierId}
+                onOpen={(id) => navigate(`/intools/suppliers/${encodeURIComponent(id)}`)}
+                onBack={() => navigate("/intools/suppliers")}
+              />
+            )}
           </Stack>
         </Box>
       </Box>
