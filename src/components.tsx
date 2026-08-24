@@ -3,6 +3,35 @@ import { Mail } from "lucide-react";
 import { SupplierIntakeModal } from "./supplier-intake";
 import "./skip-link.css";
 
+const COPY_GUARD_EXEMPT = new Set(["INPUT", "TEXTAREA", "SELECT"]);
+function isCopyGuardExempt(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return COPY_GUARD_EXEMPT.has(target.tagName) || target.isContentEditable;
+}
+
+export function CopyGuard({ children }: { children: ReactNode }) {
+  useEffect(() => {
+    function blockClipboardEvent(event: ClipboardEvent) {
+      if (isCopyGuardExempt(event.target)) return;
+      event.preventDefault();
+    }
+    function blockContextMenu(event: MouseEvent) {
+      if (isCopyGuardExempt(event.target)) return;
+      event.preventDefault();
+    }
+    document.addEventListener("copy", blockClipboardEvent);
+    document.addEventListener("cut", blockClipboardEvent);
+    document.addEventListener("contextmenu", blockContextMenu);
+    return () => {
+      document.removeEventListener("copy", blockClipboardEvent);
+      document.removeEventListener("cut", blockClipboardEvent);
+      document.removeEventListener("contextmenu", blockContextMenu);
+    };
+  }, []);
+
+  return <div className="copy-guard">{children}</div>;
+}
+
 export function SkipLink() {
   function focusMainContent() {
     const target = document.getElementById("main-content");

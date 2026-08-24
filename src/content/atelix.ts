@@ -811,25 +811,50 @@ export const atelixContent = {
         id: "what-is-atelix",
         question: "What is Atelix?",
         answer:
-          "Atelix is a fashion-sourcing broker. You provide the brief; we help structure the RFQ and keep the working steps visible.",
+          "Atelix is an AI-powered sourcing partner connecting global brands with Asia's best suppliers. We help you procure from trusted factories with faster deliveries, supporting you from initial concept through shipment. We source what you need in less than three days, at up to 5x lower cost than a typical sourcing agent. Our team is based across Southeast Asia and East Asia.",
       },
       {
-        id: "ai-or-people",
-        question: "Am I working with AI or people?",
+        id: "how-different",
+        question:
+          "How is Atelix different from a mediocre sourcing agent? I've been disappointed multiple times using sourcing agents.",
         answer:
-          "Both. AI helps structure a brief, while the sourcing work and progress updates remain guided by the Atelix team.",
+          "We understand — that frustration is exactly why we built Atelix. Most sourcing agents take your money upfront, then go quiet for months. We don't charge a dime until we deliver results. By pairing dedicated human expertise with AI-powered tracking, we keep communication transparent and your project moving, with no hidden fees and no surprises.",
       },
       {
         id: "factory-direct",
-        question: "Why not just go factory direct?",
+        question: "Why not just go directly to factories I found online?",
         answer:
-          "A good fit depends on the brief, production capacity, quality requirements, and timing. We help make that evaluation clearer before you commit.",
+          "Going factory-direct can look like a shortcut to better prices, but it often means higher minimum order quantities, no negotiating leverage, and hidden quality risks. Most factories outsource key components anyway, so you end up managing a tangle of sub-suppliers, language barriers, and rigid terms on your own, while still paying top dollar for smaller order volumes. We don't just bridge that gap; we upgrade your entire supply chain. Our on-the-ground team and AI-powered market intelligence unlock pricing you can't get alone, verify true in-house manufacturing, and run strict quality control before a single dollar leaves your hands. The result is total transparency, zero friction, and maximum value: factory-level pricing without the factory headaches.",
       },
       {
         id: "what-can-i-source",
-        question: "What can I source through Atelix?",
+        question: "What types of products can I source through Atelix?",
         answer:
-          "The MVP is designed for fashion and apparel sourcing briefs, including garments, relevant materials, and reference-led product development.",
+          "Name the product, and our team, backed by Atelix's AI tools, handles the rest. We dig past the surface to match your needs and find the best price in as little as 48 hours.",
+      },
+      {
+        id: "where-do-you-source",
+        question: "Where do you source from?",
+        answer:
+          "We go straight to where your category thrives, with established relationships across hubs in China, Indonesia, Vietnam, Malaysia, and Japan. Backed by decades of family business networks and our founder's apparel industry experience and on-the-ground partnerships, we navigate local compliance, cross-border logistics, and strict quality control without missing a beat. We don't just find suppliers; we tap into established relationships to unlock elite factory access and consistent standards across Asia. Tell us what you're building, and we'll connect you to the right region.",
+      },
+      {
+        id: "how-long",
+        question: "How long does the process usually take?",
+        answer:
+          "It depends on what you're sourcing. For popular categories like fashion, skincare, beauty, and electronics, expect roughly 1-2 months from RFQ to bulk production. Japan typically requires at least 2 months to produce a Made-in-Japan product.",
+      },
+      {
+        id: "moq",
+        question: "Do you have a minimum order quantity (MOQ)?",
+        answer:
+          "We match you with factories that fit your desired MOQ. It varies by product and country of manufacturing, but we can go as low as 12 pieces per item.",
+      },
+      {
+        id: "shipping-and-qc",
+        question: "Can you help with cross-border shipping and quality control (QC)?",
+        answer:
+          "We take your product all the way to the finish line, from the factory door to your doorstep. We coordinate freight forwarding, customs clearance, and shipping under your preferred terms (EXW, FOB, CIF, or full DDP). Before your shipment ever leaves, our team walks the factory floor in person to conduct hands-on quality control inspections. No blind trust, no freight headaches, just reliable logistics and quality products delivered to you.",
       },
     ],
   },
