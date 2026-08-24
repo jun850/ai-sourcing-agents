@@ -47,7 +47,6 @@ import {
   Description,
   EditOutlined,
   ErrorOutlined,
-  Favorite,
   FileUploadOutlined,
   FolderOpen,
   Home,
@@ -189,12 +188,6 @@ const navItems: Array<{
     view: "products",
     icon: Inventory2,
     href: "/dashboard/products",
-  },
-  {
-    label: "Favourites",
-    view: "favourites",
-    icon: Favorite,
-    href: "/dashboard/favourites",
   },
   {
     label: "Messages",
