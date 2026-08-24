@@ -58,7 +58,6 @@ export type WorkspaceInvoice = {
   due_date: string | null;
   created_at: string;
   rfq_case_id: string | null;
-  order_id: string | null;
 };
 export type WorkspaceInvoiceItem = {
   id?: string;
@@ -590,6 +589,12 @@ export async function getWorkspaceRfqProduction(caseId: string) {
   rpcError(error);
   return (data ?? { quote: null, order: null, invoice: null }) as WorkspaceRfqProduction;
 }
+export type WorkspaceSelectedSupplier = { rfq_case_id: string; factory_name: string; factory_region: string | null };
+export async function listWorkspaceSelectedSuppliers() {
+  const { data, error } = await client().rpc("workspace_list_selected_suppliers");
+  rpcError(error);
+  return (data ?? []) as WorkspaceSelectedSupplier[];
+}
 
 async function intoolsRpc<T>(
   name: string,
@@ -737,7 +742,7 @@ export type IntoolsRfqSupplierMatch = {
 };
 export type IntoolsRfqQuote = {
   id: string;
-  status: "draft" | "published" | "selected" | "declined";
+  status: "draft" | "published" | "selected" | "declined" | "withdrawn";
   unit_price_cents: number;
   moq: number;
   lead_time_days: number;
@@ -796,6 +801,9 @@ export async function upsertIntoolsRfqQuote(quoteId: string | null, payload: Int
 }
 export async function publishIntoolsRfqQuote(quoteId: string) {
   return intoolsRpc<IntoolsRfqQuote>("intools_publish_rfq_quote", { p_quote_id: quoteId });
+}
+export async function declineIntoolsRfqQuote(quoteId: string) {
+  return intoolsRpc<IntoolsRfqQuote>("intools_decline_rfq_quote", { p_quote_id: quoteId });
 }
 export async function confirmIntoolsRfqOrder(input: { caseId: string; quoteId: string; qty: number; shipCountry?: string | null; shipAddress?: string | null; incoterms?: string | null }) {
   return intoolsRpc<{ order_id: string; order_no: string; total: number }>("intools_confirm_rfq_order", {

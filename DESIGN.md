@@ -16,12 +16,18 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   screens, and no product-card/pill stack. Product detail is a read-only split
   surface: immutable snapshot fields and order history on the left, one
   stage-aware next action plus a prefilled-RFQ reorder action on the right.
+- Products use a quiet 52px filter row: search, status tabs, supplier filter,
+  and sort. Stage state uses a small semantic dot and text label; the selected
+  tab and consequential actions use moss. Product detail uses a 64px back
+  toolbar, a 350px stage rail on desktop, and a stacked rail on narrow screens.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
 - Avoid nested cards, decorative gradients, glass effects, oversized rounding, and dashboard metric-card filler.
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
+- Opening an RFQ from Requests keeps the Requests navigation item selected and
+  preserves that request context on refresh/deep link.
 - The dashboard prompt remains the first screen. The RFQ workspace then uses a
   split conversation + live RFQ review layout, followed by Requests, invoice,
   and sourced Product records tied back to the RFQ.

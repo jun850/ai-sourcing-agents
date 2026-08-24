@@ -41,6 +41,7 @@ import {
   assertIntoolsAdmin,
   confirmIntoolsRfqOrder,
   createIntoolsInvoice,
+  declineIntoolsRfqQuote,
   generateIntoolsRfqSupplierMatches,
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
@@ -1923,6 +1924,8 @@ function RfqReviewPanel({
   const [openQuoteFor, setOpenQuoteFor] = useState<string | null>(null);
   const [orderForm, setOrderForm] = useState({ qty: "", shipCountry: "", shipAddress: "", incoterms: "" });
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [matchSearch, setMatchSearch] = useState("");
+  const [showAllMatches, setShowAllMatches] = useState(false);
 
   async function loadCases(nextFilter = statusFilter) {
     setLoading(true); setError("");
@@ -1945,7 +1948,7 @@ function RfqReviewPanel({
       setMatches(nextMatches); setQuotes(nextQuotes); setOrder(nextOrder);
     } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not load this RFQ."); }
   }
-  function selectCase(caseId: string) { setSelectedId(caseId); setOpenQuoteFor(null); void loadDetail(caseId); }
+  function selectCase(caseId: string) { setSelectedId(caseId); setOpenQuoteFor(null); setMatchSearch(""); setShowAllMatches(false); void loadDetail(caseId); }
 
   function supplierFor(factoryId: string) { return suppliers.find((item) => item.id === factoryId) || null; }
   function quoteForFactory(factoryId: string) { return (quotes || []).find((quote) => quote.factory_id === factoryId) || null; }
@@ -1964,7 +1967,26 @@ function RfqReviewPanel({
     catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not publish this quote."); }
     finally { setBusyKey(null); }
   }
+  async function declineQuote(quoteId: string) {
+    if (!selected) return;
+    setBusyKey(quoteId);
+    try { await declineIntoolsRfqQuote(quoteId); await loadDetail(selected.id); await loadCases(); }
+    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not decline this quote."); }
+    finally { setBusyKey(null); }
+  }
+  const publishedQuotes = (quotes || []).filter((quote) => quote.status === "published" || quote.status === "selected");
+  const quoteCapReached = publishedQuotes.length >= 3;
   const selectedQuote = (quotes || []).find((quote) => quote.status === "selected") || null;
+  const matchesFiltered = (matches || []).filter((match) => {
+    if (!matchSearch.trim()) return true;
+    const factory = supplierFor(match.factory_id);
+    const needle = matchSearch.trim().toLowerCase();
+    return factory?.name.toLowerCase().includes(needle) || factory?.region?.toLowerCase().includes(needle);
+  });
+  const matchesApproved = matchesFiltered.filter((match) => match.status !== "suggested");
+  const matchesSuggested = matchesFiltered.filter((match) => match.status === "suggested");
+  const suggestedVisible = showAllMatches ? matchesSuggested : matchesSuggested.slice(0, 15);
+  const matchesVisible = [...matchesApproved, ...suggestedVisible];
   async function confirmOrder() {
     if (!selected || !selectedQuote) return;
     setBusyKey("confirm-order");
@@ -1995,7 +2017,10 @@ function RfqReviewPanel({
           <Typography sx={{ mt: .3, fontSize: 11.5, color: "text.secondary", fontFamily: "'DM Mono', monospace" }}>{item.case_no}</Typography>
           <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: .75 }}>
             <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{item.buyer_name}</Typography>
-            <Chip size="small" label={displayStatus(item.status)} />
+            <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
+              {item.quote_count > 0 && <Chip size="small" variant="outlined" label={`${item.quote_count} quoted`} />}
+              <Chip size="small" label={displayStatus(item.status)} />
+            </Stack>
           </Stack>
         </Surface>) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No RFQs in this state</Typography></Surface>}
       </Stack>
@@ -2026,8 +2051,16 @@ function RfqReviewPanel({
         {detailError && <Alert severity="error">{detailError}</Alert>}
 
         <Surface sx={{ p: 2 }}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}><Typography sx={{ fontWeight: 700, fontSize: 14 }}>Supplier matches</Typography><Button size="small" startIcon={<Refresh fontSize="small" />} onClick={() => void loadDetail(selected.id)}>Refresh</Button></Stack>
-          {matches === null ? <LoadingRows /> : matches.length ? <Stack spacing={1} sx={{ mt: 1.25 }}>{matches.map((match) => { const factory = supplierFor(match.factory_id); const quote = quoteForFactory(match.factory_id); return <Box key={match.id} sx={{ p: 1.5, border: "1px solid #eef0f3", borderRadius: 2 }}>
+          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+            <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Supplier matches</Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Chip size="small" label={`Published quotes ${publishedQuotes.length}/3`} color={quoteCapReached ? "warning" : "default"} />
+              <Button size="small" startIcon={<Refresh fontSize="small" />} onClick={() => void loadDetail(selected.id)}>Refresh</Button>
+            </Stack>
+          </Stack>
+          <Typography sx={{ mt: .5, fontSize: 12, color: "text.secondary" }}>The buyer sees up to 3 published quotes side by side. Publishing a 4th is blocked — decline one first to make room.</Typography>
+          {matches !== null && matches.length > 0 && <TextField size="small" placeholder="Search suppliers by name or region" value={matchSearch} onChange={(event) => setMatchSearch(event.target.value)} sx={{ mt: 1.25, width: "100%", maxWidth: 340 }} />}
+          {matches === null ? <LoadingRows /> : matches.length ? <Stack spacing={1} sx={{ mt: 1.25 }}>{matchesVisible.map((match) => { const factory = supplierFor(match.factory_id); const quote = quoteForFactory(match.factory_id); const canPublishMore = !quoteCapReached; return <Box key={match.id} sx={{ p: 1.5, border: quote?.status === "selected" ? "1px solid #4b7657" : "1px solid #eef0f3", borderRadius: "10px", backgroundColor: quote?.status === "selected" ? "#f7fbf7" : "transparent" }}>
             <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
               <Box><Typography sx={{ fontWeight: 700, fontSize: 13 }}>{factory?.name || match.factory_id}</Typography><Typography sx={{ fontSize: 11.5, color: "text.secondary" }}>{factory?.region}</Typography></Box>
               <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
@@ -2040,12 +2073,15 @@ function RfqReviewPanel({
                 <Typography sx={{ fontSize: 12.5 }}>{money(quote.unit_price_cents)} · MOQ {quote.moq} · {quote.lead_time_days}d lead <StatusChip status={quote.status} /></Typography>
                 <Stack direction="row" spacing={1}>
                   {quote.status === "draft" && <Button size="small" onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>Edit</Button>}
-                  {quote.status === "draft" && <Button size="small" variant="contained" disabled={busyKey === quote.id} onClick={() => void publishQuote(quote.id)}>Publish</Button>}
+                  {quote.status === "draft" && <Tooltip title={canPublishMore ? "" : "3 quotes already published — decline one first"}><span><Button size="small" variant="contained" disabled={busyKey === quote.id || !canPublishMore} onClick={() => void publishQuote(quote.id)}>Publish</Button></span></Tooltip>}
+                  {quote.status === "published" && <Button size="small" color="error" disabled={busyKey === quote.id} onClick={() => void declineQuote(quote.id)}>Decline</Button>}
                 </Stack>
-              </Stack> : <Button size="small" variant="outlined" onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>{openQuoteFor === match.factory_id ? "Close" : "Add quote"}</Button>}
+              </Stack> : <Tooltip title={canPublishMore ? "" : "3 quotes already published — decline one first"}><span><Button size="small" variant="outlined" disabled={!canPublishMore} onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>{openQuoteFor === match.factory_id ? "Close" : "Add quote"}</Button></span></Tooltip>}
               {openQuoteFor === match.factory_id && <Box sx={{ mt: 1 }}><RfqQuoteForm caseId={selected.id} factoryId={match.factory_id} existing={quote} onSaved={() => { setOpenQuoteFor(null); void loadDetail(selected.id); }} onMessage={setDetailError} /></Box>}
             </Box>}
-          </Box>; })}</Stack> : <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary" }}>No eligible suppliers found for this brief yet.</Typography>}
+          </Box>; })}
+            {!showAllMatches && matchesSuggested.length > 15 && <Button size="small" onClick={() => setShowAllMatches(true)}>Show {matchesSuggested.length - 15} more suggested suppliers</Button>}
+          </Stack> : <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary" }}>No eligible suppliers found for this brief yet.</Typography>}
         </Surface>
 
         {selectedQuote && <Surface sx={{ p: 2 }}>
