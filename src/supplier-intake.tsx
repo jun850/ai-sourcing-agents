@@ -21,23 +21,27 @@ type SupplierValues = {
   companyName: string; contactName: string; email: string; phone: string; address: string;
   yearsInBusiness: string; website: string; language: string; companyOverview: string; categories: string[];
   leadTime: string; moq: string; monthlyCapacity: string; externalQc: string; exportsAbroad: string;
-  certifications: string; thirdPartyQc: string; rawMaterials: string; catalog: string;
+  certifications: string; thirdPartyQc: string; catalog: string;
   paymentTerms: string; notes: string;
 };
 
 const initialValues: SupplierValues = {
   companyName: "", contactName: "", email: "", phone: "", address: "", yearsInBusiness: "", website: "",
   language: "", companyOverview: "", categories: [], leadTime: "", moq: "", monthlyCapacity: "", externalQc: "", exportsAbroad: "",
-  certifications: "", thirdPartyQc: "", rawMaterials: "", catalog: "", paymentTerms: "", notes: "",
+  certifications: "", thirdPartyQc: "", catalog: "", paymentTerms: "", notes: "",
 };
 
 const languages = ["English", "Indonesian", "Mandarin", "Vietnamese", "Japanese", "Malay"];
 const categories = [
   "Textile / Garment / Apparel", "Essential Oil / Skincare / Fragrance", "Furniture / Homegoods",
-  "Hardware / Utilities", "Electronics", "Other",
+  "Hardware / Utilities", "Electronics", "Beauty / Skincare / Lifestyle", "Other",
 ];
 
 type Props = { open: boolean; onClose: () => void; returnFocusRef: RefObject<HTMLButtonElement | null> };
+
+function OptionalLabel({ label }: { label: string }) {
+  return <>{label} <Box component="span" sx={{ color: "text.secondary", fontWeight: 400 }}>(optional)</Box></>;
+}
 
 function RadioField({ label, name, options, value, error, row = true, onChange }: { label: string; name: string; options: string[]; value: string; error?: string; row?: boolean; onChange: (value: string) => void }) {
   return (
@@ -121,7 +125,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
       ["phone", "Add a contact phone number."], ["address", "Add your company address."], ["yearsInBusiness", "Add the years you have been in business."],
       ["language", "Choose a communication language."], ["companyOverview", "Tell us briefly about your company."], ["leadTime", "Add a typical lead time."],
       ["moq", "Add your minimum MOQ."], ["monthlyCapacity", "Add your monthly capacity."], ["externalQc", "Choose an option."], ["exportsAbroad", "Choose an option."],
-      ["thirdPartyQc", "Choose an option."], ["rawMaterials", "Choose an option."], ["catalog", "Choose an option."], ["paymentTerms", "Add your preferred payment terms."],
+      ["thirdPartyQc", "Choose an option."], ["catalog", "Choose an option."], ["paymentTerms", "Add your preferred payment terms."],
     ];
     required.forEach(([key, message]) => { if (!String(values[key]).trim()) next[key] = message; });
     if (values.email && !/^\S+@\S+\.\S+$/.test(values.email)) next.email = "Use a valid work email.";
@@ -160,7 +164,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
   const hasErrors = Object.values(errors).some(Boolean);
 
   return <AnimatePresence>{open && <motion.div className="supplier-intake-backdrop" role="presentation" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={reduced ? undefined : { opacity: 0 }} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><motion.div ref={dialogRef} className="supplier-intake-dialog" role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`} aria-describedby={`${formId}-description`} tabIndex={-1} initial={reduced ? false : { y: 18, scale: .985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduced ? undefined : { opacity: 0, y: 12, scale: .985 }} transition={{ duration: .2 }} onKeyDown={handleDialogKeyDown}>
-    <header className="supplier-intake-header"><div><h2 id={`${formId}-title`}>Join Atelix as Supplier</h2><p id={`${formId}-description`}>A short 5-minute form so we can understand your capabilities and explore partnership opportunities. Qualified suppliers will be introduced to relevant global buyers in our network.</p></div><button type="button" className="supplier-intake-close" onClick={onClose} aria-label="Close supplier intake dialog"><X size={24} aria-hidden="true" /></button></header>
+    <header className="supplier-intake-header"><div><h2 id={`${formId}-title`}>Join Atelix as Supplier</h2><p id={`${formId}-description`}>Takes about five minutes to complete. We'll use your answers to understand what you make and how you operate — suppliers who qualify get introduced directly to buyers actively sourcing through Atelix.</p></div><button type="button" className="supplier-intake-close" onClick={onClose} aria-label="Close supplier intake dialog"><X size={24} aria-hidden="true" /></button></header>
     {submitted ? <div className="supplier-intake-success" role="status"><span className="supplier-success-mark"><Check size={20} aria-hidden="true" /></span><h3>Thanks — your details are recorded.</h3><p>We’ll review your capabilities and contact you separately if there’s a fit for an Atelix sourcing conversation.</p><button type="button" className="supplier-intake-success-close" onClick={onClose}>Close</button></div> : <form id={`${formId}-form`} className="supplier-intake-form" onSubmit={submit} noValidate><div className="supplier-intake-body">
       {(serviceError || hasErrors) && <Stack spacing={1.5} sx={{ mb: 4 }}>
         {serviceError && <Alert severity="error" role="alert">{serviceError}</Alert>}
@@ -175,7 +179,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
           <TextField label="Contact phone" required fullWidth type="tel" value={values.phone} onChange={(event) => setValue("phone", event.target.value)} error={!!errors.phone} helperText={errors.phone} autoComplete="tel" />
           <TextField label="Address" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.address} onChange={(event) => setValue("address", event.target.value)} error={!!errors.address} helperText={errors.address} autoComplete="street-address" />
           <TextField label="Years in business" required fullWidth inputMode="numeric" value={values.yearsInBusiness} onChange={(event) => setValue("yearsInBusiness", event.target.value)} error={!!errors.yearsInBusiness} helperText={errors.yearsInBusiness} />
-          <TextField label="Company website" fullWidth type="url" placeholder="https://" value={values.website} onChange={(event) => setValue("website", event.target.value)} helperText="Optional" autoComplete="url" />
+          <TextField label={<OptionalLabel label="Company website" />} fullWidth type="url" placeholder="https://" value={values.website} onChange={(event) => setValue("website", event.target.value)} autoComplete="url" />
         </FieldGrid>
       </Section>
 
@@ -197,12 +201,11 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
           <TextField label="Max monthly order capacity" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50,000 units / 20 MT" value={values.monthlyCapacity} onChange={(event) => setValue("monthlyCapacity", event.target.value)} error={!!errors.monthlyCapacity} helperText={errors.monthlyCapacity} />
           <RadioField label="Open to external quality control?" name="externalQc" options={["Yes", "No", "Maybe"]} value={values.externalQc} error={errors.externalQc} onChange={(value) => setValue("externalQc", value)} />
           <RadioField label="Has the company exported to the USA?" name="exportsAbroad" options={["Yes", "No"]} value={values.exportsAbroad} error={errors.exportsAbroad} onChange={(value) => setValue("exportsAbroad", value)} />
-          <TextField label="Certifications" fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. Sedex, WRAP, OEKO-TEX" helperText="Optional" value={values.certifications} onChange={(event) => setValue("certifications", event.target.value)} />
+          <TextField label={<OptionalLabel label="Certifications" />} fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. Sedex, WRAP, OEKO-TEX" value={values.certifications} onChange={(event) => setValue("certifications", event.target.value)} />
           <RadioField label="Does the company accept third-party quality control?" name="thirdPartyQc" options={["Yes", "No"]} value={values.thirdPartyQc} error={errors.thirdPartyQc} onChange={(value) => setValue("thirdPartyQc", value)} />
-          <RadioField label="Looking to source raw materials at lower price + premium quality?" name="rawMaterials" options={["Interested", "Not really"]} value={values.rawMaterials} error={errors.rawMaterials} onChange={(value) => setValue("rawMaterials", value)} />
           <RadioField label="Do you have a product catalog?" name="catalog" options={["Yes", "No"]} value={values.catalog} error={errors.catalog} onChange={(value) => setValue("catalog", value)} />
-          <TextField label="Preferred payment terms" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 30% deposit, 70% before shipment" value={values.paymentTerms} onChange={(event) => setValue("paymentTerms", event.target.value)} error={!!errors.paymentTerms} helperText={errors.paymentTerms} />
-          <TextField label="Anything else we should know?" fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} helperText="Optional" value={values.notes} onChange={(event) => setValue("notes", event.target.value)} />
+          <TextField label="Preferred payment terms" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50% deposit, 50% before shipment" value={values.paymentTerms} onChange={(event) => setValue("paymentTerms", event.target.value)} error={!!errors.paymentTerms} helperText={errors.paymentTerms} />
+          <TextField label={<OptionalLabel label="Anything else we should know?" />} fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} value={values.notes} onChange={(event) => setValue("notes", event.target.value)} />
         </FieldGrid>
       </Section>
     </div><footer className="supplier-intake-footer"><button className="supplier-intake-submit" type="submit" disabled={busy}>{busy ? "Recording intake…" : <>Submit supplier intake <ArrowRight size={18} aria-hidden="true" /></>}</button></footer></form>}
