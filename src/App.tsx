@@ -36,7 +36,29 @@ export function sanitizeInternalPath(value: string | null | undefined, fallback 
 }
 
 function RouteLoading() {
-  return <main id="main-content" className="route-loading" aria-live="polite">Loading…</main>;
+  return (
+    <main
+      id="main-content"
+      className="route-loading"
+      aria-busy="true"
+      aria-label="Content pending"
+    >
+      <div className="route-skeleton" aria-hidden="true">
+        <div className="route-skeleton-bar" />
+        <div className="route-skeleton-grid">
+          <div className="route-skeleton-rail">
+            <i /><i /><i /><i />
+          </div>
+          <div className="route-skeleton-panel">
+            <i className="route-skeleton-title" />
+            <i className="route-skeleton-copy" />
+            <i className="route-skeleton-copy route-skeleton-copy-short" />
+            <div className="route-skeleton-rows"><i /><i /><i /></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 function Landing(){ return <><SkipLink/><CopyGuard><AtelixLandingPage/></CopyGuard></>; }
@@ -89,7 +111,7 @@ function SignIn(){
   const emailField = <TextField id="email" name="email" label="Work email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} slotProps={{ htmlInput: { required: true } }} fullWidth/>;
   const ErrorAlert = error ? <Alert severity="error" role="alert">{error}</Alert> : null;
   const NoticeAlert = notice ? <Alert severity="success" role="status">{notice}</Alert> : null;
-  return <><SkipLink/><main id="main-content" className="auth"><section className="auth-card auth-login" aria-labelledby="sign-in-title"><a href="/" className="wordmark">atelix<span>.</span></a><header className="auth-header"><p className="auth-eyebrow">Private sourcing workspace</p><h1 id="sign-in-title">{method === "password" ? "Welcome back" : linkSent ? "Check your email" : "Sign in with a magic link"}</h1><p>{method === "password" ? "Sign in to continue your sourcing work." : linkSent ? <>If <strong>{email.trim()}</strong> is eligible, a magic link will arrive shortly.</> : "We’ll email you a secure link — no password needed."}</p></header>{method === "password" ? <form className="auth-login-form" onSubmit={submitPassword}>{emailField}<TextField id="password" type="password" name="password" label="Password" autoComplete="current-password" slotProps={{ htmlInput: { required: true } }} fullWidth/>{ErrorAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>{busy ? "Signing in…" : "Log in"}</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("magic-link")} disabled={busy}>Use a magic link instead</button></form> : linkSent ? <div className="auth-login-form">{ErrorAlert}{NoticeAlert}<button className="auth-method-link" type="button" onClick={() => setLinkSent(false)} disabled={busy}>Use a different email</button><button className="auth-method-link" type="button" onClick={() => void sendMagicLink()} disabled={busy}>Send another link</button></div> : <form className="auth-login-form" onSubmit={(event) => { event.preventDefault(); void sendMagicLink(); }}>{emailField}{ErrorAlert}{NoticeAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>{busy ? "Sending…" : "Send magic link"}</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("password")} disabled={busy}>Use password instead</button></form>}<p className="auth-footnote">New to Atelix? <a href="/sign-up">Request access</a></p></section></main></>;
+  return <><SkipLink/><main id="main-content" className="auth"><section className="auth-card auth-login" aria-labelledby="sign-in-title"><a href="/" className="wordmark">atelix<span>.</span></a><header className="auth-header"><p className="auth-eyebrow">Private sourcing workspace</p><h1 id="sign-in-title">{method === "password" ? "Welcome back" : linkSent ? "Check your email" : "Sign in with a magic link"}</h1><p>{method === "password" ? "Sign in to continue your sourcing work." : linkSent ? <>If <strong>{email.trim()}</strong> is eligible, a magic link will arrive shortly.</> : "We’ll email you a secure link — no password needed."}</p></header>{method === "password" ? <form className="auth-login-form" onSubmit={submitPassword}>{emailField}<TextField id="password" type="password" name="password" label="Password" autoComplete="current-password" slotProps={{ htmlInput: { required: true } }} fullWidth/>{ErrorAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>Log in</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("magic-link")} disabled={busy}>Use a magic link instead</button></form> : linkSent ? <div className="auth-login-form">{ErrorAlert}{NoticeAlert}<button className="auth-method-link" type="button" onClick={() => setLinkSent(false)} disabled={busy}>Use a different email</button><button className="auth-method-link" type="button" onClick={() => void sendMagicLink()} disabled={busy}>Send another link</button></div> : <form className="auth-login-form" onSubmit={(event) => { event.preventDefault(); void sendMagicLink(); }}>{emailField}{ErrorAlert}{NoticeAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>Send magic link</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("password")} disabled={busy}>Use password instead</button></form>}<p className="auth-footnote">New to Atelix? <a href="/sign-up">Request access</a></p></section></main></>;
 }
 function AuthCallback(){
   const [error,setError]=useState("");

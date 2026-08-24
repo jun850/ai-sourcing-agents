@@ -4588,6 +4588,20 @@ function InvoiceSkeletonRows() {
     </Box>
   );
 }
+
+function RfqSkeleton({ detail = false }: { detail?: boolean }) {
+  return (
+    <Box aria-busy="true" aria-label="RFQ pending" sx={{ width: "100%" }}>
+      <Stack spacing={1.25} aria-hidden="true">
+        <Skeleton variant="text" width={detail ? "34%" : "26%"} height={44} />
+        <Skeleton variant="text" width={detail ? "58%" : "42%"} />
+        {[1, 2, 3, 4].map((row) => (
+          <Skeleton key={row} variant="rounded" height={detail ? 92 : 72} />
+        ))}
+      </Stack>
+    </Box>
+  );
+}
 function WorkspaceInvoices({ path }: { path: string }) {
   const detailId = path.match(/^\/dashboard\/invoices\/([^/]+)$/)?.[1] || "";
   const [invoices, setInvoices] = useState<WorkspaceInvoice[]>([]);
@@ -5249,6 +5263,8 @@ export function Dashboard({ path }: { path: string }) {
     initialPhase?: RfqPhase;
   } | null>(null);
   const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [rfqLoading, setRfqLoading] = useState(false);
   useEffect(() => {
     let active = true;
     void getSession()
@@ -5279,6 +5295,9 @@ export function Dashboard({ path }: { path: string }) {
               ? cause.message
               : "Could not load your RFQs.",
           );
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
       });
     return () => {
       active = false;
@@ -5290,18 +5309,20 @@ export function Dashboard({ path }: { path: string }) {
     const item = historyItems.find((entry) => entry.id === requestDetailId);
     if (!item || rfq?.record.id === item.id) return;
     let active = true;
-    setMessage("Loading your RFQ…");
+    setRfqLoading(true);
     void listRfqAttachments(item.id)
       .then((attachments) => {
         if (!active) return;
         setRfq({ record: item, attachments });
-        setMessage("");
       })
       .catch((cause) => {
         if (!active) return;
         setMessage(
           cause instanceof Error ? cause.message : "Could not load your RFQ.",
         );
+      })
+      .finally(() => {
+        if (active) setRfqLoading(false);
       });
     return () => {
       active = false;
@@ -5363,7 +5384,7 @@ export function Dashboard({ path }: { path: string }) {
   }
   async function restoreHistory(item: StoredRfq) {
     setMobileOpen(false);
-    setMessage("Loading your RFQ…");
+    setRfqLoading(true);
     try {
       const attachments = await listRfqAttachments(item.id);
       setRfq({ record: item, attachments });
@@ -5373,6 +5394,8 @@ export function Dashboard({ path }: { path: string }) {
       setMessage(
         cause instanceof Error ? cause.message : "Could not load your RFQ.",
       );
+    } finally {
+      setRfqLoading(false);
     }
   }
   async function reorderProduct(product: WorkspaceProduct) {
@@ -5402,6 +5425,8 @@ export function Dashboard({ path }: { path: string }) {
     }
   }
   function content() {
+    if (view === "requests" && (historyLoading || rfqLoading))
+      return <RfqSkeleton detail={Boolean(requestDetailId)} />;
     if (
       rfq &&
       (view === "dashboard" || view === "new" || Boolean(requestDetailId))

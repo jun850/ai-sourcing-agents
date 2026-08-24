@@ -437,7 +437,7 @@ function AccessDenied({
                 </Alert>
               )}
               <Button type="submit" variant="contained" disabled={busy}>
-                {busy ? "Signing in…" : "Sign in locally"}
+                Sign in locally
               </Button>
             </Stack>
           </Box>
@@ -996,7 +996,7 @@ function InvoiceDetail({
                 />
                 <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
                   <Button type="submit" variant="contained" disabled={busy}>
-                    {busy ? "Saving…" : "Save draft"}
+                    Save draft
                   </Button>
                 </Stack>
               </Stack>
@@ -2218,7 +2218,7 @@ function KnowledgePanel() {
               {form.file ? `${form.file.name} · ${formatBytes(form.file.size)}` : "Markdown or TXT · max 25 MB"}
             </Typography>
             <Button type="submit" variant="contained" disabled={uploading} startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <Add />}>
-              {uploading ? "Uploading…" : "Upload document"}
+              Upload document
             </Button>
           </Stack>
           {(error || message) && (
@@ -2621,7 +2621,7 @@ function RfqOpsPanel({
                 variant="contained"
                 disabled={busy || status === selected.case.status}
               >
-                {busy ? "Saving…" : "Update status"}
+                Update status
               </Button>
             </Box>
           </Stack>
@@ -2840,7 +2840,7 @@ function RfqOpsPanel({
                     Cancel
                   </Button>
                   <Button type="submit" variant="contained" disabled={busy}>
-                    {busy ? "Saving…" : "Save quote"}
+                    Save quote
                   </Button>
                 </Stack>
               </Box>
@@ -3516,7 +3516,7 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
     <TextField size="small" label="Certification note (optional, e.g. pending renewal)" value={draft.certificationNote} onChange={(event) => setDraft((current) => ({ ...current, certificationNote: event.target.value }))} />
     <TextField size="small" label="Internal notes (optional)" value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} multiline minRows={2} />
     <FormControlLabel control={<Checkbox size="small" checked={draft.recommended} onChange={(event) => setDraft((current) => ({ ...current, recommended: event.target.checked }))} />} label="Mark as recommended" />
-    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{busy ? "Saving…" : existing ? "Save changes" : "Save draft quote"}</Button>
+    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{existing ? "Save changes" : "Save draft quote"}</Button>
   </Stack>;
 }
 

@@ -22,6 +22,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   toolbar, a 350px stage rail on desktop, and a stacked rail on narrow screens.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
+- Loading states use layout-shaped skeletons within the existing route or list surface. Do not render visible loading sentences or swap stable action labels for progress wording; keep `aria-busy` on the affected region or control and stop shimmer when reduced motion is requested.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
 - Avoid nested cards, decorative gradients, glass effects, oversized rounding, and dashboard metric-card filler.

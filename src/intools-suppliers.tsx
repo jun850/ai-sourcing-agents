@@ -217,7 +217,7 @@ function SupplierEditor({ supplier, onSaved, onCancel }: { supplier: IntoolsSupp
       <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}><TextField label="MOQ" value={draft.moq} onChange={(event) => set("moq", event.target.value)} fullWidth /><TextField label="Lead time" value={draft.lead} onChange={(event) => set("lead", event.target.value)} fullWidth /><TextField label="Capacity" value={draft.capacity} onChange={(event) => set("capacity", event.target.value)} fullWidth /></Stack>
       <TextField label="Website" value={draft.web} onChange={(event) => set("web", event.target.value)} fullWidth /><TextField label="Certifications (comma separated)" value={draft.certs} onChange={(event) => set("certs", event.target.value)} fullWidth /><TextField label="Tags (comma separated)" value={draft.tags} onChange={(event) => set("tags", event.target.value)} fullWidth /><TextField label="Internal bio" value={draft.bio} onChange={(event) => set("bio", event.target.value)} multiline minRows={3} fullWidth />
       {error && <Alert severity="error" role="alert">{error}</Alert>}
-      <Stack direction="row" sx={{ justifyContent: "flex-end", gap: 1, flexWrap: "wrap" }}><Button onClick={onCancel} disabled={busy}>Cancel</Button><Button type="submit" variant="contained" startIcon={<Save />} disabled={busy}>{busy ? "Saving…" : "Save supplier"}</Button></Stack>
+      <Stack direction="row" sx={{ justifyContent: "flex-end", gap: 1, flexWrap: "wrap" }}><Button onClick={onCancel} disabled={busy}>Cancel</Button><Button type="submit" variant="contained" startIcon={<Save />} disabled={busy}>Save supplier</Button></Stack>
     </Stack>
   </Box>);
 }
