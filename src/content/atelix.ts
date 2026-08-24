@@ -810,52 +810,52 @@ export const atelixContent = {
     },
     items: [
       {
-        id: "network-origin",
-        question: "Where does Atelix's network actually come from?",
+        id: "what-is-atelix",
+        question: "What is Atelix?",
         answer:
-          "It didn't start from a cold list. Our foundation is over 30 years of family and business relationships in Asian manufacturing, built by one of our own team long before Atelix existed as a company. That's what gives us a real starting point instead of a directory: factories that already trust us, not factories we're introducing ourselves to for the first time. Since launch, we've expanded that foundation through warm introductions, factory to factory, into a working network across China, Vietnam, Japan, Malaysia, and Indonesia. The relationships are decades old. The network built on top of them is new and growing fast.",
+          "Atelix is an AI sourcing agent that connects global brands with trusted suppliers across Asia. We help you procure from vetted factories, with faster delivery and support from the initial brief through shipment. We can source what you need in as little as three days, at up to five times lower cost than traditional sourcing agents. Our team works across Southeast and East Asia.",
       },
       {
-        id: "five-countries",
-        question: "Why does Atelix source from five countries instead of one?",
+        id: "different-sourcing-agent",
+        question: "How is Atelix different from other sourcing agents? I've been disappointed before.",
         answer:
-          "Most sourcing brokers specialize in a single country because that's where their founders have relationships. That's a real advantage inside that one country, and a real limit outside it: your product might be a better fit for Vietnam's price point, Indonesia or Malaysia's MOQ flexibility, China's category depth, or Japan's precision manufacturing. Atelix's AI sourcing agent evaluates your product category, target price, MOQ, and timeline against a network that spans all five, built on relationships that predate the company, and recommends the market and factory combination that actually fits your order, not whichever country the broker happens to specialize in.",
+          "We understand how frustrating that can be, and it's one of the reasons we built Atelix. Many sourcing agents take payment upfront and then leave you waiting for months. We don't charge until we deliver results. By combining dedicated human expertise with AI-powered tracking, we keep communication transparent and progress moving. There are no hidden fees or surprises.",
       },
       {
-        id: "pricing",
-        question: "What does it cost?",
+        id: "factory-direct",
+        question: "Why not go directly to factories I find online?",
         answer:
-          "Atelix charges a fee on your production order value that starts at 13% for a new relationship or any order under $10,000, and steps down as your total spend with us grows across a rolling 12 months: 10% on the next portion up to $50,000, 7% up to $150,000, and 5% beyond that. It's a graduated rate, each slice of your spend is priced at its own tier, so your blended cost falls smoothly as you grow with us instead of hitting a wall or a sudden discount cliff. A brand sourcing $200,000 a year through Atelix pays a blended rate of roughly 7.4%, not the 13% headline figure. This fee covers factory matching, quality control at every production stage, and full logistics coordination, there's no separate invoice for any of it.",
+          "Going factory-direct can look like a shortcut to better prices, but it often means higher MOQs, less negotiating leverage, and hidden quality risks. Many factories outsource key components, leaving you to manage a complex network of sub-suppliers, language barriers, and rigid terms on your own—often while paying top dollar for smaller order volumes. We improve the entire sourcing process. Our on-the-ground team and AI market intelligence help unlock competitive pricing, verify true in-house manufacturing, and run strict quality control before your money is at risk. You get factory-level pricing with far less of the factory headache.",
       },
       {
         id: "what-can-i-source",
-        question: "What products can I source through Atelix?",
+        question: "What can I procure through Atelix?",
         answer:
-          "Fashion is where we're strongest, including raw materials, across Japan, China, Indonesia, and Vietnam, alongside a growing beauty and skincare category. We also source electronics and furniture out of China and Indonesia. Sourcing across five countries and multiple categories generally means a wider range of products and order sizes fit somewhere in the network than a single-category, single-country broker could offer.",
+          "You name the product, and our human team and AI sourcing agent handle the rest. We look beyond the surface of your brief to understand your requirements, match you with suitable suppliers, and find the best available price in as little as 48 hours.",
       },
       {
-        id: "moq",
-        question: "What's the minimum order quantity?",
+        id: "source-regions",
+        question: "Where do you source from?",
         answer:
-          "MOQs vary by country and factory. Vietnam, Malaysia, and Indonesia generally offer more flexibility on small first orders than typical Chinese or Japanese manufacturers, part of why we route across all five rather than defaulting to one. As you scale, you can grow volume without switching factories.",
+          "We source from the regions where your product category is strongest, with established relationships across China, Indonesia, Vietnam, Malaysia, and Japan. Backed by decades of family-business networks, the founder's apparel business, and boots-on-the-ground partnerships, we navigate local compliance, cross-border logistics, and strict quality control across Asia. Tell us what you're building, and we'll connect you with the right region and supplier network.",
       },
       {
         id: "how-long",
-        question: "How long does a typical order take, start to delivery?",
+        question: "How long does the process usually take?",
         answer:
-          "Around 1 to 2 months from sourcing samples through to full production. Exact timing depends on your product complexity and destination market, factory matching is typically fast, sampling and approval take the next chunk, then production and shipping fill out the rest.",
+          "It depends on what you're procuring. For popular categories such as fashion, skincare, beauty, and electronics, the journey from RFQ to bulk production typically takes one to two months. Made-in-Japan products generally require at least two months to produce.",
       },
       {
-        id: "something-goes-wrong",
-        question: "If something goes wrong with an order, what happens?",
+        id: "moq",
+        question: "Do you have a minimum order quantity (MOQ)?",
         answer:
-          "If an issue is caught during production, our team works with the factory immediately to identify the root cause and correct it while the run is still in progress, catching a problem mid-production is far cheaper and faster to fix than discovering it after the full order is complete. If an issue is only caught at final inspection, before shipment, we negotiate rework or replacement with the factory on your behalf before anything ships to you. You are not the one negotiating with the factory when something goes wrong, we are, because that's the entire point of using a sourcing partner instead of going direct.",
+          "We'll find factories that match your preferred MOQ. It depends on the product and country of manufacture, but some orders can start from as little as 12 pieces per item.",
       },
       {
         id: "logistics-customs",
-        question: "Does Atelix handle logistics and customs?",
+        question: "Can you help with cross-border shipping and quality control?",
         answer:
-          "Yes, export documentation and customs clearance are coordinated for you, so you're not managing freight forwarders across five different countries' processes on your own.",
+          "Yes. We take your product from the factory door to your doorstep, coordinating freight forwarding, customs clearance, and shipping under your preferred terms, including EXW, FOB, CIF, or full DDP. Our team also conducts hands-on, on-site quality control inspections before your shipment leaves the factory. No blind trust and no freight headaches—just transparent logistics and products delivered to you.",
       },
     ],
   },
