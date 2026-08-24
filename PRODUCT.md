@@ -41,6 +41,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Sign-up submissions are stored as Supabase `registration_requests` in
   `pending_review`; Intools exposes the queue and approval action only after
   the server confirms an administrator role.
+- Intools record queues keep the comparison task in one bounded list panel:
+  stable columns on desktop and compact structured rows on narrow screens.
+  Selecting a record opens its existing detail workflow; it does not create a
+  separate storefront-style card surface for every row.
 - The sign-up screen is an access-request workflow, not immediate self-serve
   account creation. It records the request, explains the human review gate,
   and only promises an email invitation after approval.

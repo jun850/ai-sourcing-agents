@@ -32,6 +32,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   contracts and preserve server-authoritative status boundaries.
 - Keep the Intools sign-up queue private, status-filterable, and explicit about
   the manual approval gate; never show it to non-admin users.
+- Intools operational records use one bounded, 14px-radius list panel with
+  row dividers and a quiet column header on desktop. Rows are rectangular,
+  never individually pill-shaped; hover and keyboard focus communicate the
+  active record without adding decorative card shadows.
 - The access-request form is a compact two-column workflow on desktop and a
   single-column workflow on narrow screens. Its header, fields, primary action,
   and login link stay in one surface; labels use a dedicated label row so

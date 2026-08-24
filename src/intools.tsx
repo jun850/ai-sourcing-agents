@@ -76,18 +76,18 @@ const intoolsTheme = createTheme({
     warning: { main: "#9a6a14" },
     error: { main: "#a33b36" },
   },
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: 12 },
   components: {
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 11, minHeight: 42, paddingInline: 16 },
+        root: { borderRadius: 10, minHeight: 42, paddingInline: 16 },
       },
     },
     MuiTextField: { defaultProps: { size: "small" } },
     MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
     MuiDialog: {
-      styleOverrides: { paper: { borderRadius: 16, maxWidth: 560 } },
+      styleOverrides: { paper: { borderRadius: 14, maxWidth: 560 } },
     },
   },
 });
@@ -182,7 +182,7 @@ function Surface({
       {...props}
       sx={{
         border: "1px solid #dfe4eb",
-        borderRadius: 3,
+        borderRadius: 1.75,
         backgroundColor: "#fff",
         ...sx,
       }}
@@ -368,43 +368,49 @@ function InvoiceList({
       </Surface>
     );
   return (
-    <Stack
-      component="ul"
-      aria-label="Invoices"
-      spacing={1}
-      sx={{ listStyle: "none", p: 0, m: 0 }}
-    >
-      {invoices.map((invoice) => (
-        <Box component="li" key={invoice.id}>
-          <Button
-            className="intools-row-button"
-            onClick={() => onSelect(invoice)}
-            fullWidth
-            sx={{
-              display: "block",
-              p: 0,
-              textAlign: "left",
-              color: "inherit",
-              borderRadius: 3,
-              textTransform: "none",
-              "&:hover": { backgroundColor: "transparent" },
-            }}
-            aria-current={selectedId === invoice.id ? "true" : undefined}
-          >
-            <Surface
-              interactive
+    <Surface sx={{ overflow: "hidden" }}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          display: { xs: "none", sm: "grid" },
+          gridTemplateColumns: "1.15fr 1.4fr .8fr .8fr auto",
+          gap: 1.5,
+          px: 2,
+          py: 1.25,
+          borderBottom: "1px solid #dfe4eb",
+          backgroundColor: "#f6f8fa",
+          color: "#526176",
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: ".04em",
+          textTransform: "uppercase",
+        }}
+      >
+        <Box>Invoice</Box><Box>Case</Box><Box>Total</Box><Box>Due</Box><Box>Status</Box>
+      </Box>
+      <Box component="ul" aria-label="Invoices" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {invoices.map((invoice) => (
+          <Box component="li" key={invoice.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+            <Button
+              className="intools-row-button"
+              onClick={() => onSelect(invoice)}
+              fullWidth
               sx={{
                 display: "grid",
-                gridTemplateColumns: {
-                  xs: "minmax(0,1fr) auto",
-                  sm: "1.15fr 1.4fr .8fr .8fr auto",
-                },
+                gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.15fr 1.4fr .8fr .8fr auto" },
                 alignItems: "center",
                 gap: { xs: 1, sm: 1.5 },
                 p: { xs: 1.5, sm: 2 },
-                borderColor: selectedId === invoice.id ? "#6fae86" : "#dfe4eb",
-                backgroundColor: selectedId === invoice.id ? "#f4faf5" : "#fff",
+                borderRadius: 0,
+                textAlign: "left",
+                color: "inherit",
+                textTransform: "none",
+                backgroundColor: selectedId === invoice.id ? "#f1f7f2" : "#fff",
+                transition: "background-color 180ms ease-out",
+                "&:hover": { backgroundColor: selectedId === invoice.id ? "#e9f3eb" : "#f7f9fb" },
+                "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
               }}
+              aria-current={selectedId === invoice.id ? "true" : undefined}
             >
               <Box sx={{ minWidth: 0 }}>
                 <Typography
@@ -469,11 +475,11 @@ function InvoiceList({
                 Due {shortDate(invoice.due_date)} · Balance{" "}
                 {money(invoice.balance_cents)}
               </Typography>
-            </Surface>
-          </Button>
-        </Box>
-      ))}
-    </Stack>
+            </Button>
+          </Box>
+        ))}
+      </Box>
+    </Surface>
   );
 }
 
@@ -1181,13 +1187,32 @@ function OrdersPanel() {
         </Box>
       </Surface>
     );
-  return (
-    <Stack spacing={1}>
-      {orders.length ? (
-        orders.map((order) => (
-          <Surface
+  return orders.length ? (
+    <Surface sx={{ overflow: "hidden" }}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          display: { xs: "none", sm: "grid" },
+          gridTemplateColumns: "1.1fr 1.5fr .8fr .8fr auto",
+          gap: 1.5,
+          px: 2,
+          py: 1.25,
+          borderBottom: "1px solid #dfe4eb",
+          backgroundColor: "#f6f8fa",
+          color: "#526176",
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: ".04em",
+          textTransform: "uppercase",
+        }}
+      >
+        <Box>Order</Box><Box>Items</Box><Box>Total</Box><Box>Placed</Box><Box>Status</Box>
+      </Box>
+      <Box component="ul" aria-label="Orders" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {orders.map((order) => (
+          <Box component="li" key={order.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+            <Button
             key={order.id}
-            component="button"
             onClick={() =>
               void getIntoolsOrderDetail(order.order_no)
                 .then(setSelected)
@@ -1200,7 +1225,6 @@ function OrdersPanel() {
                 )
             }
             sx={{
-              width: "100%",
               display: "grid",
               gridTemplateColumns: {
                 xs: "minmax(0,1fr) auto",
@@ -1210,9 +1234,13 @@ function OrdersPanel() {
               gap: 1.5,
               p: { xs: 1.5, sm: 2 },
               textAlign: "left",
-              cursor: "pointer",
               color: "inherit",
-              "&:hover": { borderColor: "#aeb9c8" },
+              borderRadius: 0,
+              textTransform: "none",
+              backgroundColor: "#fff",
+              transition: "background-color 180ms ease-out",
+              "&:hover": { backgroundColor: "#f7f9fb" },
+              "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
             }}
           >
             <Box>
@@ -1245,14 +1273,15 @@ function OrdersPanel() {
               {shortDate(order.placed_at)}
             </Typography>
             <StatusChip status={order.status} />
-          </Surface>
-        ))
-      ) : (
-        <Surface sx={{ p: 4, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 700 }}>No orders returned</Typography>
-        </Surface>
-      )}
-    </Stack>
+            </Button>
+          </Box>
+        ))}
+      </Box>
+    </Surface>
+  ) : (
+    <Surface sx={{ p: 4, textAlign: "center" }}>
+      <Typography sx={{ fontWeight: 700 }}>No orders returned</Typography>
+    </Surface>
   );
 }
 
@@ -1671,8 +1700,10 @@ function RegistrationRequestsPanel() {
         </Select>
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      {loading ? <LoadingRows /> : requests.length ? requests.map((request) => (
-        <Surface key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1 }}>
+      {loading ? <LoadingRows /> : requests.length ? <Surface sx={{ overflow: "hidden" }}>
+        <Box component="ul" aria-label="Sign-up requests" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {requests.map((request) => (
+        <Box component="li" key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1, "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
           <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}>
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{request.name} · {request.company_name}</Typography>
@@ -1685,8 +1716,10 @@ function RegistrationRequestsPanel() {
           </Stack>
           <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Sourcing: {request.sourcing} · Revenue: {request.annual_revenue}</Typography>
           <Typography sx={{ color: "text.secondary", fontSize: 12 }}>Submitted {shortDate(request.created_at)}</Typography>
-        </Surface>
-      )) : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
+        </Box>
+      ))}
+        </Box>
+      </Surface> : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
     </Stack>
   );
 }
