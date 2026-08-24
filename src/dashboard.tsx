@@ -274,7 +274,12 @@ function RfqWorkspace({ caseId, brief, initialFields, files, status, initialPhas
   const [fields, setFields] = useState<RfqFields>(initialFields);
   const [draft, setDraft] = useState<RfqFields>(initialFields);
   const [attachments, setAttachments] = useState<RfqAttachment[]>(files);
-  const [tab, setTab] = useState<RfqTab>(() => (restoredSubmitted ? "Timeline" : "RFQ"));
+  const [tab, setTab] = useState<RfqTab>(() => {
+    if (!restoredSubmitted) return "RFQ";
+    if (status === "quote_selected" || status === "in_production") return "Orders";
+    if (status === "buyer_review") return "Quotes";
+    return "Timeline";
+  });
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [checkCount, setCheckCount] = useState(0);
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
