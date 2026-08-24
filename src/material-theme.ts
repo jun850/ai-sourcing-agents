@@ -13,7 +13,12 @@ export const atelixMaterialTheme = createTheme({
   typography: { fontFamily: "'DM Sans', Arial, sans-serif", button: { fontWeight: 700, textTransform: "none" } },
   components: {
     MuiOutlinedInput: { styleOverrides: { root: { minHeight: 52, borderRadius: 10, backgroundColor: "#ffffff" } } },
-    MuiInputLabel: { styleOverrides: { root: { fontWeight: 700 } } },
+    MuiInputLabel: {
+      styleOverrides: {
+        root: { fontWeight: 700 },
+        asterisk: { display: "none" },
+      },
+    },
     MuiButton: { styleOverrides: { root: { minHeight: 52, borderRadius: 999 } } },
     MuiFormHelperText: { styleOverrides: { root: { marginLeft: 0, minHeight: "1.25em" } } },
   },

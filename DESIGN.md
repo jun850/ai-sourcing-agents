@@ -73,9 +73,14 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   one email field, then one six-digit code field after delivery. The message
   describes both available completion paths, preserves copy/paste and native
   one-time-code autofill, and uses the same moss action and quiet status style.
-- Auth forms use a shared 52px control height and an 18px label row. Registration
-  fields reserve a separate helper-text row so email, phone, and standard fields
-  align cleanly across both desktop columns and the single-column mobile layout.
+- Auth forms use a shared 52px control height, an 18px label row, and a compact
+  16px field gap across desktop columns and the single-column mobile layout.
+- Auth required fields rely on native validation and accessible field semantics,
+  without scattered visible asterisks. Registration collects an optional phone
+  number in one international-format field rather than a separate calling-code
+  control, keeping both columns on the same 52px outlined-field rhythm.
+- Auth labels remain in a stable 18px row above their outlined controls; they do
+  not float into or notch the border on focus, input, selection, or autofill.
 - Auth and supplier-intake forms use a shared Material 3-inspired control
   vocabulary: outlined text fields, select menus, searchable Autocomplete
   lookups, native-labelled radio/checkbox groups, inline status alerts, and
