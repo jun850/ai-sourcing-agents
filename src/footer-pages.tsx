@@ -42,7 +42,7 @@ const sourcingFaqs: FaqEntry[] = [
   },
   {
     q: "What products can I source through Atelix?",
-    a: "Fashion is where we're strongest, including raw materials, across Japan, China, Indonesia, and Vietnam, alongside a growing beauty and skincare category. We also source electronics and furniture out of China and Indonesia. Sourcing across five countries and multiple categories generally means a wider range of products and order sizes fit somewhere in the network than a single-category, single-country broker could offer.",
+    a: "Atelix helps you source apparel (T-shirts, activewear, hoodies, uniforms), fabrics and textiles (home linens, towels, curtains), leather goods and bags, trims, labels, accessories, footwear, beauty and skincare, electronics, furniture, and OEM or cut-and-sew products. We work with suppliers across China, Indonesia, Vietnam, Malaysia, and Japan, matching your product, quality, MOQ, and timeline requirements with the right manufacturing partner.",
   },
   {
     q: "What's the minimum order quantity?",
