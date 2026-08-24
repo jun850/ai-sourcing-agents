@@ -28,6 +28,7 @@ import {
 import {
   Add,
   ArrowBack,
+  ArrowForward,
   Close,
   Description,
   ErrorOutlined,
@@ -48,9 +49,14 @@ import {
   getIntoolsRfqOrder,
   getLocalIntoolsSession,
   getSession,
+  getUserDisplayName,
   loginLocalIntools,
   listIntoolsAudit,
   listIntoolsInvoices,
+  listIntoolsRfqs,
+  getIntoolsRfqDetail,
+  saveIntoolsRfqQuote,
+  updateIntoolsRfqStatus,
   listIntoolsRegistrationRequests,
   listIntoolsOrders,
   listIntoolsRfqCases,
@@ -68,6 +74,9 @@ import {
   type IntoolsInvoice,
   type IntoolsInvoiceAudit,
   type IntoolsInvoiceDetail,
+  type IntoolsRfq,
+  type IntoolsRfqDetail,
+  type LegacyIntoolsRfqQuotePayload,
   type IntoolsManualPaymentPayload,
   type IntoolsOrder,
   type IntoolsOrderDetail,
@@ -112,7 +121,14 @@ const intoolsTheme = createTheme({
   },
 });
 
-type Tab = "invoices" | "rfq" | "orders" | "audit" | "registrations" | "suppliers";
+type Tab =
+  | "invoices"
+  | "rfq"
+  | "rfqs"
+  | "orders"
+  | "audit"
+  | "registrations"
+  | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
   description: string;
@@ -120,6 +136,17 @@ type DraftLine = {
   unitAmount: string;
   taxAmount: string;
 };
+
+function initials(name: string) {
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "A"
+  );
+}
 type InvoiceFormState = {
   buyerProfileId: string;
   rfqCaseId: string;
@@ -157,6 +184,77 @@ function shortDate(value: string | null | undefined) {
 function navigate(path: string) {
   history.replaceState({}, "", path);
   dispatchEvent(new PopStateEvent("popstate"));
+}
+
+type IntoolsRoute = {
+  tab: Tab;
+  rfqId: string | null;
+  requestId: string | null;
+  invoiceId: string | null;
+  creatingInvoice: boolean;
+  supplierId: string | null;
+};
+
+function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
+  const supplier = /^\/intools\/suppliers(?:\/([^/]+))?$/.exec(pathname);
+  if (supplier)
+    return {
+      tab: "suppliers",
+      rfqId: null,
+      requestId: null,
+      invoiceId: null,
+      creatingInvoice: false,
+      supplierId: supplier[1] ? decodeURIComponent(supplier[1]) : null,
+    };
+  const rfq = /^\/intools\/rfq(?:\/([^/]+))?$/.exec(pathname);
+  if (rfq)
+    return {
+      tab: "rfq",
+      rfqId: rfq[1] ? decodeURIComponent(rfq[1]) : null,
+      requestId: null,
+      invoiceId: null,
+      creatingInvoice: false,
+      supplierId: null,
+    };
+  const invoice = /^\/intools\/invoices(?:\/([^/]+))?$/.exec(pathname);
+  if (invoice) {
+    const id = invoice[1] ? decodeURIComponent(invoice[1]) : null;
+    return {
+      tab: "invoices",
+      rfqId: null,
+      requestId: null,
+      invoiceId: id === "new" ? null : id,
+      creatingInvoice: id === "new",
+      supplierId: null,
+    };
+  }
+  const requests = /^\/intools\/requests(?:\/([^/]+))?$/.exec(pathname);
+  if (requests)
+    return {
+      tab: "rfqs",
+      rfqId: null,
+      requestId: requests[1] ? decodeURIComponent(requests[1]) : null,
+      invoiceId: null,
+      creatingInvoice: false,
+      supplierId: null,
+    };
+  const tab = pathname.match(/^\/intools\/(orders|audit|registrations)$/)?.[1] as
+    | Exclude<Tab, "invoices" | "rfq" | "rfqs" | "suppliers">
+    | undefined;
+  return {
+    tab: tab || "invoices",
+    rfqId: null,
+    requestId: null,
+    invoiceId: null,
+    creatingInvoice: false,
+    supplierId: null,
+  };
+}
+
+function intoolsTabPath(tab: Tab) {
+  if (tab === "invoices") return "/intools/invoices";
+  if (tab === "rfqs") return "/intools/requests";
+  return `/intools/${tab}`;
 }
 function displayStatus(status: string) {
   return status
@@ -406,18 +504,33 @@ function InvoiceList({
           textTransform: "uppercase",
         }}
       >
-        <Box>Invoice</Box><Box>Case</Box><Box>Total</Box><Box>Due</Box><Box>Status</Box>
+        <Box>Invoice</Box>
+        <Box>Case</Box>
+        <Box>Total</Box>
+        <Box>Due</Box>
+        <Box>Status</Box>
       </Box>
-      <Box component="ul" aria-label="Invoices" sx={{ listStyle: "none", p: 0, m: 0 }}>
+      <Box
+        component="ul"
+        aria-label="Invoices"
+        sx={{ listStyle: "none", p: 0, m: 0 }}
+      >
         {invoices.map((invoice) => (
-          <Box component="li" key={invoice.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+          <Box
+            component="li"
+            key={invoice.id}
+            sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}
+          >
             <Button
               className="intools-row-button"
               onClick={() => onSelect(invoice)}
               fullWidth
               sx={{
                 display: "grid",
-                gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.15fr 1.4fr .8fr .8fr auto" },
+                gridTemplateColumns: {
+                  xs: "minmax(0,1fr) auto",
+                  sm: "1.15fr 1.4fr .8fr .8fr auto",
+                },
                 alignItems: "center",
                 gap: { xs: 1, sm: 1.5 },
                 p: { xs: 1.5, sm: 2 },
@@ -427,8 +540,15 @@ function InvoiceList({
                 textTransform: "none",
                 backgroundColor: selectedId === invoice.id ? "#f1f7f2" : "#fff",
                 transition: "background-color 180ms ease-out",
-                "&:hover": { backgroundColor: selectedId === invoice.id ? "#e9f3eb" : "#f7f9fb" },
-                "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
+                "&:hover": {
+                  backgroundColor:
+                    selectedId === invoice.id ? "#e9f3eb" : "#f7f9fb",
+                },
+                "&:focus-visible": {
+                  outline: "3px solid #6fae86",
+                  outlineOffset: -3,
+                  zIndex: 1,
+                },
               }}
               aria-current={selectedId === invoice.id ? "true" : undefined}
             >
@@ -545,7 +665,9 @@ function InvoiceCreateForm({
       tax < 0 ||
       (dueDate !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate))
     ) {
-      setError("Add a buyer profile ID, valid item values in cents, and an optional YYYY-MM-DD due date.");
+      setError(
+        "Add a buyer profile ID, valid item values in cents, and an optional YYYY-MM-DD due date.",
+      );
       return;
     }
     setBusy(true);
@@ -1183,16 +1305,29 @@ function OrderDetail({
     setError("");
     setMessage("");
     try {
-      await updateIntoolsOrderStatus(order.order_no, nextStatus, note.trim() || null);
+      await updateIntoolsOrderStatus(
+        order.order_no,
+        nextStatus,
+        note.trim() || null,
+      );
       onChanged(await getIntoolsOrderDetail(order.order_no));
       setMessage("Order status updated and recorded in the activity history.");
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not update the order status.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not update the order status.",
+      );
     } finally {
       setBusy(false);
     }
   }
-  const buyer = order.buyer || { full_name: null, email: null, company_name: null, country: null };
+  const buyer = order.buyer || {
+    full_name: null,
+    email: null,
+    company_name: null,
+    country: null,
+  };
   const shippingEta =
     order.shipping_eta_min_days && order.shipping_eta_max_days
       ? `${order.shipping_eta_min_days}–${order.shipping_eta_max_days} days`
@@ -1201,112 +1336,432 @@ function OrderDetail({
         : "—";
   return (
     <Box>
-      <Button onClick={onBack} startIcon={<ArrowBack />} sx={{ mb: 1.5, px: 0 }}>
+      <Button
+        onClick={onBack}
+        startIcon={<ArrowBack />}
+        sx={{ mb: 1.5, px: 0 }}
+      >
         Back to orders
       </Button>
       <Surface sx={{ overflow: "hidden" }}>
         <Box sx={{ p: { xs: 2, sm: 3 }, borderBottom: "1px solid #dfe4eb" }}>
           <Stack
             direction={{ xs: "column", sm: "row" }}
-            sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 1.5 }}
+            sx={{
+              justifyContent: "space-between",
+              alignItems: { xs: "flex-start", sm: "center" },
+              gap: 1.5,
+            }}
           >
             <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h2" sx={{ fontSize: { xs: 24, sm: 30 }, overflowWrap: "anywhere" }}>
+              <Typography
+                variant="h2"
+                sx={{ fontSize: { xs: 24, sm: 30 }, overflowWrap: "anywhere" }}
+              >
                 {order.order_no}
               </Typography>
-              <Typography sx={{ mt: 0.4, color: "text.secondary", fontSize: 13 }}>
-                Placed {shortDate(order.placed_at)} · {buyer.company_name || buyer.full_name || "Buyer not named"}
+              <Typography
+                sx={{ mt: 0.4, color: "text.secondary", fontSize: 13 }}
+              >
+                Placed {shortDate(order.placed_at)} ·{" "}
+                {buyer.company_name || buyer.full_name || "Buyer not named"}
               </Typography>
             </Box>
             <StatusChip status={order.status} />
           </Stack>
         </Box>
 
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 310px" }, alignItems: "start" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 310px" },
+            alignItems: "start",
+          }}
+        >
           <Stack spacing={3} sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
             <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Order items</Typography>
-              <Stack component="ul" aria-label="Order items" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
-                {order.items.length ? order.items.map((item, index) => (
-                  <Box component="li" key={`${item.sku || item.name || "item"}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 2, py: 1.5, borderBottom: "1px solid #e8ecf1" }}>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{item.name || "Unnamed item"}</Typography>
-                      <Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
-                        {[item.seller, item.sku && `SKU ${item.sku}`, item.qty ? `${item.qty} × ${moneyValue(item.unit_price)}` : null].filter(Boolean).join(" · ") || "No item metadata returned"}
-                      </Typography>
-                      {(item.option_selection || item.buyer_note) && (
-                        <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
-                          {[item.option_selection, item.buyer_note].filter(Boolean).join(" · ")}
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
+                Order items
+              </Typography>
+              <Stack
+                component="ul"
+                aria-label="Order items"
+                spacing={0}
+                sx={{
+                  m: 0,
+                  mt: 1.25,
+                  p: 0,
+                  listStyle: "none",
+                  borderTop: "1px solid #e8ecf1",
+                }}
+              >
+                {order.items.length ? (
+                  order.items.map((item, index) => (
+                    <Box
+                      component="li"
+                      key={`${item.sku || item.name || "item"}-${index}`}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0,1fr) auto",
+                        gap: 2,
+                        py: 1.5,
+                        borderBottom: "1px solid #e8ecf1",
+                      }}
+                    >
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 14,
+                            fontWeight: 800,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {item.name || "Unnamed item"}
                         </Typography>
-                      )}
+                        <Typography
+                          sx={{
+                            mt: 0.25,
+                            color: "text.secondary",
+                            fontSize: 12,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {[
+                            item.seller,
+                            item.sku && `SKU ${item.sku}`,
+                            item.qty
+                              ? `${item.qty} × ${moneyValue(item.unit_price)}`
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ") || "No item metadata returned"}
+                        </Typography>
+                        {(item.option_selection || item.buyer_note) && (
+                          <Typography
+                            sx={{
+                              mt: 0.5,
+                              color: "text.secondary",
+                              fontSize: 12,
+                              overflowWrap: "anywhere",
+                            }}
+                          >
+                            {[item.option_selection, item.buyer_note]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Typography>
+                        )}
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontSize: 14,
+                          fontWeight: 800,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {moneyValue(item.line_total)}
+                      </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{moneyValue(item.line_total)}</Typography>
-                  </Box>
-                )) : <Typography sx={{ py: 1.5, color: "text.secondary", fontSize: 13 }}>No immutable line items returned.</Typography>}
+                  ))
+                ) : (
+                  <Typography
+                    sx={{ py: 1.5, color: "text.secondary", fontSize: 13 }}
+                  >
+                    No immutable line items returned.
+                  </Typography>
+                )}
               </Stack>
             </Box>
 
             <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Fulfillment</Typography>
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
+                Fulfillment
+              </Typography>
               {order.fulfillments.length ? (
-                <Stack component="ul" aria-label="Fulfillment records" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
+                <Stack
+                  component="ul"
+                  aria-label="Fulfillment records"
+                  spacing={0}
+                  sx={{
+                    m: 0,
+                    mt: 1.25,
+                    p: 0,
+                    listStyle: "none",
+                    borderTop: "1px solid #e8ecf1",
+                  }}
+                >
                   {order.fulfillments.map((fulfillment, index) => (
-                    <Box component="li" key={`${fulfillment.factory_name || "factory"}-${index}`} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1.2fr .8fr minmax(0,1fr)" }, gap: 1, py: 1.25, borderBottom: "1px solid #e8ecf1" }}>
-                      <Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{fulfillment.factory_name || "Supplier not identified"}</Typography>
-                      <Typography sx={{ color: "text.secondary", fontSize: 13 }}>{displayStatus(fulfillment.fulfillment_status || "pending")}</Typography>
-                      <Typography sx={{ color: "text.secondary", fontSize: 13, overflowWrap: "anywhere" }}>{fulfillment.tracking || "Tracking not recorded"}</Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : <Typography sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}>No fulfillment records returned.</Typography>}
-            </Box>
-
-            <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Activity</Typography>
-              {order.events.length ? (
-                <Stack component="ol" aria-label="Order activity" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
-                  {order.events.map((event, index) => (
-                    <Box component="li" key={`${event.created_at}-${index}`} sx={{ py: 1.25, borderBottom: "1px solid #e8ecf1" }}>
-                      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 0.5 }}>
-                        <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{displayStatus(event.status)}</Typography>
-                        <Typography sx={{ color: "text.secondary", fontSize: 12 }}>{shortDate(event.created_at)}</Typography>
-                      </Stack>
-                      <Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 13, overflowWrap: "anywhere" }}>
-                        {event.note || "No note recorded"}{event.created_by_name ? ` · ${event.created_by_name}` : ""}
+                    <Box
+                      component="li"
+                      key={`${fulfillment.factory_name || "factory"}-${index}`}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: {
+                          xs: "1fr",
+                          sm: "1.2fr .8fr minmax(0,1fr)",
+                        },
+                        gap: 1,
+                        py: 1.25,
+                        borderBottom: "1px solid #e8ecf1",
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          fontWeight: 700,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {fulfillment.factory_name || "Supplier not identified"}
+                      </Typography>
+                      <Typography
+                        sx={{ color: "text.secondary", fontSize: 13 }}
+                      >
+                        {displayStatus(
+                          fulfillment.fulfillment_status || "pending",
+                        )}
+                      </Typography>
+                      <Typography
+                        sx={{
+                          color: "text.secondary",
+                          fontSize: 13,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {fulfillment.tracking || "Tracking not recorded"}
                       </Typography>
                     </Box>
                   ))}
                 </Stack>
-              ) : <Typography sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}>No status activity returned.</Typography>}
+              ) : (
+                <Typography
+                  sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}
+                >
+                  No fulfillment records returned.
+                </Typography>
+              )}
+            </Box>
+
+            <Box>
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
+                Activity
+              </Typography>
+              {order.events.length ? (
+                <Stack
+                  component="ol"
+                  aria-label="Order activity"
+                  spacing={0}
+                  sx={{
+                    m: 0,
+                    mt: 1.25,
+                    p: 0,
+                    listStyle: "none",
+                    borderTop: "1px solid #e8ecf1",
+                  }}
+                >
+                  {order.events.map((event, index) => (
+                    <Box
+                      component="li"
+                      key={`${event.created_at}-${index}`}
+                      sx={{ py: 1.25, borderBottom: "1px solid #e8ecf1" }}
+                    >
+                      <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        sx={{ justifyContent: "space-between", gap: 0.5 }}
+                      >
+                        <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
+                          {displayStatus(event.status)}
+                        </Typography>
+                        <Typography
+                          sx={{ color: "text.secondary", fontSize: 12 }}
+                        >
+                          {shortDate(event.created_at)}
+                        </Typography>
+                      </Stack>
+                      <Typography
+                        sx={{
+                          mt: 0.25,
+                          color: "text.secondary",
+                          fontSize: 13,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {event.note || "No note recorded"}
+                        {event.created_by_name
+                          ? ` · ${event.created_by_name}`
+                          : ""}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography
+                  sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}
+                >
+                  No status activity returned.
+                </Typography>
+              )}
             </Box>
           </Stack>
 
-          <Box sx={{ p: { xs: 2, sm: 3 }, borderTop: { xs: "1px solid #dfe4eb", lg: 0 }, borderLeft: { lg: "1px solid #dfe4eb" }, backgroundColor: "#f6f8fa" }}>
+          <Box
+            sx={{
+              p: { xs: 2, sm: 3 },
+              borderTop: { xs: "1px solid #dfe4eb", lg: 0 },
+              borderLeft: { lg: "1px solid #dfe4eb" },
+              backgroundColor: "#f6f8fa",
+            }}
+          >
             <Stack spacing={2.5}>
               <Box>
-                <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Order summary</Typography>
+                <Typography
+                  component="h3"
+                  sx={{ fontSize: 15, fontWeight: 800 }}
+                >
+                  Order summary
+                </Typography>
                 <Stack spacing={0.85} sx={{ mt: 1.25 }}>
-                  {[["Subtotal", moneyValue(order.subtotal)], ["Service fee", moneyValue(order.fee)], ["Shipping", moneyValue(order.ship)], ["Quality control", moneyValue(order.qc_fee)], ["Insurance", moneyValue(order.ins_fee)]].map(([label, value]) => (
-                    <Stack key={label} direction="row" sx={{ justifyContent: "space-between", gap: 2 }}><Typography sx={{ color: "text.secondary", fontSize: 13 }}>{label}</Typography><Typography sx={{ fontSize: 13 }}>{value}</Typography></Stack>
+                  {[
+                    ["Subtotal", moneyValue(order.subtotal)],
+                    ["Service fee", moneyValue(order.fee)],
+                    ["Shipping", moneyValue(order.ship)],
+                    ["Quality control", moneyValue(order.qc_fee)],
+                    ["Insurance", moneyValue(order.ins_fee)],
+                  ].map(([label, value]) => (
+                    <Stack
+                      key={label}
+                      direction="row"
+                      sx={{ justifyContent: "space-between", gap: 2 }}
+                    >
+                      <Typography
+                        sx={{ color: "text.secondary", fontSize: 13 }}
+                      >
+                        {label}
+                      </Typography>
+                      <Typography sx={{ fontSize: 13 }}>{value}</Typography>
+                    </Stack>
                   ))}
                   <Divider sx={{ my: 0.35 }} />
-                  <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}><Typography sx={{ fontWeight: 800 }}>Total</Typography><Typography sx={{ fontWeight: 800 }}>{moneyValue(order.total)}</Typography></Stack>
+                  <Stack
+                    direction="row"
+                    sx={{ justifyContent: "space-between", gap: 2 }}
+                  >
+                    <Typography sx={{ fontWeight: 800 }}>Total</Typography>
+                    <Typography sx={{ fontWeight: 800 }}>
+                      {moneyValue(order.total)}
+                    </Typography>
+                  </Stack>
                 </Stack>
               </Box>
               <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
-                {[["Buyer", buyer.company_name || buyer.full_name || "—"], ["Email", buyer.email || "—"], ["Country", buyer.country || "—"], ["Payment", order.payment_verified_at ? `Verified ${shortDate(order.payment_verified_at)}` : order.payment_declared_at ? `Declared ${shortDate(order.payment_declared_at)}` : "Not recorded"], ["Shipping", order.shipping_service || "—"], ["Delivery estimate", shippingEta], ["Destination", order.ship_address || order.ship_country || "—"], ["Incoterms", order.incoterms || "—"]].map(([label, value]) => (
-                  <Box key={label}><Typography component="dt" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 700 }}>{label}</Typography><Typography component="dd" sx={{ m: 0, mt: 0.2, fontSize: 13, overflowWrap: "anywhere" }}>{value}</Typography></Box>
+                {[
+                  ["Buyer", buyer.company_name || buyer.full_name || "—"],
+                  ["Email", buyer.email || "—"],
+                  ["Country", buyer.country || "—"],
+                  [
+                    "Payment",
+                    order.payment_verified_at
+                      ? `Verified ${shortDate(order.payment_verified_at)}`
+                      : order.payment_declared_at
+                        ? `Declared ${shortDate(order.payment_declared_at)}`
+                        : "Not recorded",
+                  ],
+                  ["Shipping", order.shipping_service || "—"],
+                  ["Delivery estimate", shippingEta],
+                  [
+                    "Destination",
+                    order.ship_address || order.ship_country || "—",
+                  ],
+                  ["Incoterms", order.incoterms || "—"],
+                ].map(([label, value]) => (
+                  <Box key={label}>
+                    <Typography
+                      component="dt"
+                      sx={{
+                        color: "text.secondary",
+                        fontSize: 11,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {label}
+                    </Typography>
+                    <Typography
+                      component="dd"
+                      sx={{
+                        m: 0,
+                        mt: 0.2,
+                        fontSize: 13,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {value}
+                    </Typography>
+                  </Box>
                 ))}
               </Box>
-              <Box component="form" onSubmit={submitStatus} aria-labelledby="update-order-status-title" sx={{ pt: 2, borderTop: "1px solid #dfe4eb" }}>
+              <Box
+                component="form"
+                onSubmit={submitStatus}
+                aria-labelledby="update-order-status-title"
+                sx={{ pt: 2, borderTop: "1px solid #dfe4eb" }}
+              >
                 <Stack spacing={1.25}>
-                  <Box><Typography id="update-order-status-title" component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Update status</Typography><Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 12 }}>The change is added to the order history and buyer notification workflow.</Typography></Box>
-                  <TextField select label="New status" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} disabled={busy}>
-                    {orderStatuses.map((status) => <MenuItem key={status} value={status}>{displayStatus(status)}</MenuItem>)}
+                  <Box>
+                    <Typography
+                      id="update-order-status-title"
+                      component="h3"
+                      sx={{ fontSize: 15, fontWeight: 800 }}
+                    >
+                      Update status
+                    </Typography>
+                    <Typography
+                      sx={{ mt: 0.25, color: "text.secondary", fontSize: 12 }}
+                    >
+                      The change is added to the order history and buyer
+                      notification workflow.
+                    </Typography>
+                  </Box>
+                  <TextField
+                    select
+                    label="New status"
+                    value={nextStatus}
+                    onChange={(event) => setNextStatus(event.target.value)}
+                    disabled={busy}
+                  >
+                    {orderStatuses.map((status) => (
+                      <MenuItem key={status} value={status}>
+                        {displayStatus(status)}
+                      </MenuItem>
+                    ))}
                   </TextField>
-                  <TextField label="Update note" multiline minRows={3} value={note} onChange={(event) => setNote(event.target.value)} disabled={busy} helperText="Optional. This note is visible in the order activity." />
-                  {(message || error) && <Alert severity={error ? "error" : "success"} role={error ? "alert" : "status"}>{error || message}</Alert>}
-                  <Button type="submit" variant="contained" disabled={busy || nextStatus === order.status} startIcon={busy ? <CircularProgress size={16} color="inherit" /> : <Refresh />}>
+                  <TextField
+                    label="Update note"
+                    multiline
+                    minRows={3}
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    disabled={busy}
+                    helperText="Optional. This note is visible in the order activity."
+                  />
+                  {(message || error) && (
+                    <Alert
+                      severity={error ? "error" : "success"}
+                      role={error ? "alert" : "status"}
+                    >
+                      {error || message}
+                    </Alert>
+                  )}
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={busy || nextStatus === order.status}
+                    startIcon={
+                      busy ? (
+                        <CircularProgress size={16} color="inherit" />
+                      ) : (
+                        <Refresh />
+                      )
+                    }
+                  >
                     {busy ? "Updating…" : "Update order"}
                   </Button>
                 </Stack>
@@ -1355,7 +1810,23 @@ function OrdersPanel() {
         {error}
       </Alert>
     );
-  if (selected) return <OrderDetail order={selected} onBack={() => setSelected(null)} onChanged={(updated) => { setSelected(updated); setOrders((items) => items.map((item) => item.id === updated.id ? { ...item, status: updated.status } : item)); }} />;
+  if (selected)
+    return (
+      <OrderDetail
+        order={selected}
+        onBack={() => setSelected(null)}
+        onChanged={(updated) => {
+          setSelected(updated);
+          setOrders((items) =>
+            items.map((item) =>
+              item.id === updated.id
+                ? { ...item, status: updated.status }
+                : item,
+            ),
+          );
+        }}
+      />
+    );
   return orders.length ? (
     <Surface sx={{ overflow: "hidden" }}>
       <Box
@@ -1375,71 +1846,93 @@ function OrdersPanel() {
           textTransform: "uppercase",
         }}
       >
-        <Box>Order</Box><Box>Items</Box><Box>Total</Box><Box>Placed</Box><Box>Status</Box>
+        <Box>Order</Box>
+        <Box>Items</Box>
+        <Box>Total</Box>
+        <Box>Placed</Box>
+        <Box>Status</Box>
       </Box>
-      <Box component="ul" aria-label="Orders" sx={{ listStyle: "none", p: 0, m: 0 }}>
+      <Box
+        component="ul"
+        aria-label="Orders"
+        sx={{ listStyle: "none", p: 0, m: 0 }}
+      >
         {orders.map((order) => (
-          <Box component="li" key={order.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
-            <Button
+          <Box
+            component="li"
             key={order.id}
-            disabled={loadingDetail}
-            onClick={() => {
-              setLoadingDetail(true);
-              setError("");
-              void getIntoolsOrderDetail(order.order_no)
-                .then(setSelected)
-                .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not load order detail."))
-                .finally(() => setLoadingDetail(false));
-            }}
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "minmax(0,1fr) auto",
-                sm: "1.1fr 1.5fr .8fr .8fr auto",
-              },
-              alignItems: "center",
-              gap: 1.5,
-              p: { xs: 1.5, sm: 2 },
-              textAlign: "left",
-              color: "inherit",
-              borderRadius: 0,
-              textTransform: "none",
-              backgroundColor: "#fff",
-              transition: "background-color 180ms ease-out",
-              "&:hover": { backgroundColor: "#f7f9fb" },
-              "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
-            }}
+            sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}
           >
-            <Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
-                {order.order_no}
-              </Typography>
-              <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                {order.buyer_name || order.buyer_email || "Buyer not named"}
-              </Typography>
-            </Box>
-            <Typography
+            <Button
+              key={order.id}
+              disabled={loadingDetail}
+              onClick={() => {
+                setLoadingDetail(true);
+                setError("");
+                void getIntoolsOrderDetail(order.order_no)
+                  .then(setSelected)
+                  .catch((cause) =>
+                    setError(
+                      cause instanceof Error
+                        ? cause.message
+                        : "Could not load order detail.",
+                    ),
+                  )
+                  .finally(() => setLoadingDetail(false));
+              }}
               sx={{
-                display: { xs: "none", sm: "block" },
-                color: "text.secondary",
-                fontSize: 13,
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "minmax(0,1fr) auto",
+                  sm: "1.1fr 1.5fr .8fr .8fr auto",
+                },
+                alignItems: "center",
+                gap: 1.5,
+                p: { xs: 1.5, sm: 2 },
+                textAlign: "left",
+                color: "inherit",
+                borderRadius: 0,
+                textTransform: "none",
+                backgroundColor: "#fff",
+                transition: "background-color 180ms ease-out",
+                "&:hover": { backgroundColor: "#f7f9fb" },
+                "&:focus-visible": {
+                  outline: "3px solid #6fae86",
+                  outlineOffset: -3,
+                  zIndex: 1,
+                },
               }}
             >
-              {order.item_count} items
-            </Typography>
-            <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
-              {money(Math.round(Number(order.total || 0) * 100))}
-            </Typography>
-            <Typography
-              sx={{
-                display: { xs: "none", sm: "block" },
-                color: "text.secondary",
-                fontSize: 12,
-              }}
-            >
-              {shortDate(order.placed_at)}
-            </Typography>
-            <StatusChip status={order.status} />
+              <Box>
+                <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
+                  {order.order_no}
+                </Typography>
+                <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
+                  {order.buyer_name || order.buyer_email || "Buyer not named"}
+                </Typography>
+              </Box>
+              <Typography
+                sx={{
+                  display: { xs: "none", sm: "block" },
+                  color: "text.secondary",
+                  fontSize: 13,
+                }}
+              >
+                {order.item_count} items
+              </Typography>
+              <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
+                {money(Math.round(Number(order.total || 0) * 100))}
+              </Typography>
+              <Typography
+                sx={{
+                  display: { xs: "none", sm: "block" },
+                  color: "text.secondary",
+                  fontSize: 12,
+                }}
+              >
+                {shortDate(order.placed_at)}
+              </Typography>
+              <StatusChip status={order.status} />
             </Button>
           </Box>
         ))}
@@ -1503,25 +1996,760 @@ function AuditPanel() {
   );
 }
 
+type RfqQuoteFormState = {
+  matchId: string | null;
+  factoryId: string;
+  supplierName: string;
+  supplierRegion: string;
+  unitPrice: string;
+  quoteTotal: string;
+  quantity: string;
+  moq: string;
+  leadDays: string;
+  certifications: string;
+  quoteNotes: string;
+  recommended: boolean;
+};
+function quoteFormFrom(
+  detail: IntoolsRfqDetail,
+  matchId: string | null,
+): RfqQuoteFormState {
+  const quote = detail.quotes.find((item) => item.id === matchId);
+  return {
+    matchId,
+    factoryId: quote?.factory_id || "",
+    supplierName: quote?.supplier_name || "",
+    supplierRegion: quote?.supplier_region || "",
+    unitPrice: quote ? String(quote.unit_price_cents / 100) : "",
+    quoteTotal: quote?.quote_total_cents
+      ? String(quote.quote_total_cents / 100)
+      : "",
+    quantity: quote?.quantity ? String(quote.quantity) : "",
+    moq: quote?.moq ? String(quote.moq) : "",
+    leadDays: quote?.lead_days != null ? String(quote.lead_days) : "",
+    certifications: quote?.certifications.join(", ") || "",
+    quoteNotes: quote?.quote_notes || "",
+    recommended: Boolean(quote?.recommended),
+  };
+}
+
+function RfqOpsPanel({
+  routeCaseId,
+  onSelectCase,
+  onBack,
+}: {
+  routeCaseId: string | null;
+  onSelectCase: (id: string) => void;
+  onBack: () => void;
+}) {
+  const [rfqs, setRfqs] = useState<IntoolsRfq[]>([]);
+  const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState<IntoolsRfqDetail | null>(null);
+  const [suppliers, setSuppliers] = useState<
+    Array<{ id: string; name: string; region: string | null }>
+  >([]);
+  const [form, setForm] = useState<RfqQuoteFormState | null>(null);
+  const [status, setStatus] = useState("accepted");
+  const [note, setNote] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const load = async (nextFilter = filter) => {
+    setLoading(true);
+    setError("");
+    try {
+      setRfqs(await listIntoolsRfqs(nextFilter === "all" ? null : nextFilter));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load RFQs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
+    void load();
+    void listIntoolsSuppliers()
+      .then((rows) =>
+        setSuppliers(
+          rows.map((row) => ({
+            id: row.id,
+            name: row.name,
+            region: row.region,
+          })),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    if (!routeCaseId) {
+      if (selected) {
+        setSelected(null);
+        setForm(null);
+      }
+      return;
+    }
+    if (selected?.case.id === routeCaseId) return;
+    let active = true;
+    void getIntoolsRfqDetail(routeCaseId)
+      .then((detail) => {
+        if (!active) return;
+        setSelected(detail);
+        setStatus(detail.case.status);
+        setForm(null);
+      })
+      .catch((cause) => {
+        if (active)
+          setError(
+            cause instanceof Error ? cause.message : "Could not load this RFQ.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [routeCaseId, selected?.case.id]);
+  async function openRfq(row: IntoolsRfq) {
+    setError("");
+    try {
+      const detail = await getIntoolsRfqDetail(row.id);
+      setSelected(detail);
+      setStatus(detail.case.status);
+      setForm(null);
+      onSelectCase(row.id);
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not load this RFQ.",
+      );
+    }
+  }
+  async function saveQuote(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected || !form) return;
+    const unitPriceCents = Math.round(Number(form.unitPrice) * 100);
+    if (
+      !form.supplierName.trim() ||
+      !Number.isInteger(unitPriceCents) ||
+      unitPriceCents <= 0
+    ) {
+      setError("Supplier name and a positive unit price are required.");
+      return;
+    }
+    const payload: LegacyIntoolsRfqQuotePayload = {
+      factoryId: form.factoryId || null,
+      supplierName: form.supplierName.trim(),
+      supplierRegion: form.supplierRegion.trim() || null,
+      unitPriceCents,
+      quoteTotalCents: form.quoteTotal
+        ? Math.round(Number(form.quoteTotal) * 100)
+        : null,
+      quantity: form.quantity ? Number(form.quantity) : null,
+      moq: form.moq ? Number(form.moq) : null,
+      leadDays: form.leadDays ? Number(form.leadDays) : null,
+      certifications: form.certifications
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      quoteNotes: form.quoteNotes.trim() || null,
+      recommended: form.recommended,
+    };
+    setBusy(true);
+    setError("");
+    try {
+      const next = await saveIntoolsRfqQuote(
+        selected.case.id,
+        form.matchId,
+        payload,
+      );
+      setSelected(next);
+      setStatus(next.case.status);
+      setForm(null);
+      await load();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not save this quote.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function saveStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    setBusy(true);
+    setError("");
+    try {
+      const next = await updateIntoolsRfqStatus(
+        selected.case.id,
+        status,
+        note.trim() || null,
+      );
+      setSelected(next);
+      setForm(null);
+      setNote("");
+      await load();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not update this RFQ.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (selected)
+    return (
+      <Stack spacing={2}>
+        <Button
+          onClick={() => {
+            setSelected(null);
+            setForm(null);
+            onBack();
+          }}
+          startIcon={<ArrowBack />}
+          sx={{ alignSelf: "flex-start", px: 0 }}
+        >
+          Back to RFQs
+        </Button>
+        <Surface sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack spacing={2}>
+            <Stack
+              direction="row"
+              sx={{ flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 1 }}
+            >
+              <Box>
+                <Typography
+                  sx={{
+                    color: "#8793a0",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: ".08em",
+                  }}
+                >
+                  {selected.case.case_no}
+                </Typography>
+                <Typography
+                  variant="h2"
+                  sx={{ mt: 0.45, fontSize: { xs: 24, sm: 30 } }}
+                >
+                  {selected.case.title}
+                </Typography>
+                <Typography
+                  sx={{ mt: 0.45, color: "text.secondary", fontSize: 13 }}
+                >
+                  {selected.buyer_name ||
+                    selected.buyer_email ||
+                    "Buyer not named"}{" "}
+                  · {selected.buyer_email || "No email"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.75,
+                  color: "#5b8064",
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    backgroundColor: "#5b8064",
+                  }}
+                />
+                {selected.case.status.replaceAll("_", " ")}
+              </Box>
+            </Stack>
+            <Divider />
+            <Box
+              component="form"
+              onSubmit={saveStatus}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "180px minmax(0,1fr) auto",
+                },
+                gap: 1.25,
+                alignItems: "end",
+              }}
+            >
+              <TextField
+                select
+                label="Request status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+                size="small"
+              >
+                <MenuItem value="accepted">Accepted by Atelix</MenuItem>
+                <MenuItem value="quotes_ready">Quotes ready</MenuItem>
+                <MenuItem value="awaiting_payment">Awaiting payment</MenuItem>
+                <MenuItem value="sampling">Sampling</MenuItem>
+                <MenuItem value="production">Production</MenuItem>
+                <MenuItem value="quality">Quality & logistics</MenuItem>
+                <MenuItem value="completed">Completed</MenuItem>
+                <MenuItem value="closed">Closed</MenuItem>
+              </TextField>
+              <TextField
+                label="Internal status note"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                size="small"
+                placeholder="Optional audit note"
+              />
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={busy || status === selected.case.status}
+              >
+                {busy ? "Saving…" : "Update status"}
+              </Button>
+            </Box>
+          </Stack>
+        </Surface>
+        <Surface sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
+              <Box>
+                <Typography variant="h3" sx={{ fontSize: 20 }}>
+                  Supplier quotes
+                </Typography>
+                <Typography
+                  sx={{ mt: 0.3, color: "text.secondary", fontSize: 13 }}
+                >
+                  Enter a reviewed factory record or a manually confirmed
+                  factory name and commercial terms.
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                onClick={() => setForm(quoteFormFrom(selected, null))}
+                disabled={Boolean(form)}
+              >
+                Add quote
+              </Button>
+            </Stack>
+            {selected.quotes.map((quote) => (
+              <Box
+                key={quote.id}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    md: "minmax(0,1fr) 140px 120px auto",
+                  },
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: 1.5,
+                  borderTop: "1px solid #e8ecf1",
+                }}
+              >
+                <Box>
+                  <Typography sx={{ fontWeight: 800 }}>
+                    {quote.supplier_name}
+                  </Typography>
+                  <Typography
+                    sx={{ mt: 0.3, color: "text.secondary", fontSize: 12 }}
+                  >
+                    {quote.supplier_region || "Region not recorded"} ·{" "}
+                    {money(quote.unit_price_cents)} / unit · MOQ{" "}
+                    {quote.moq || "—"}
+                  </Typography>
+                </Box>
+                <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+                  {quote.lead_days != null
+                    ? `${quote.lead_days} days`
+                    : "Lead time —"}
+                </Typography>
+                <Box sx={{ color: "#5b8064", fontSize: 12, fontWeight: 700 }}>
+                  {quote.recommended ? "Recommended" : quote.status}
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setForm(quoteFormFrom(selected, quote.id))}
+                >
+                  Edit quote
+                </Button>
+              </Box>
+            ))}
+            {form && (
+              <Box
+                component="form"
+                onSubmit={saveQuote}
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2,minmax(0,1fr))",
+                  },
+                  gap: 1.25,
+                  pt: 1.5,
+                  borderTop: "1px solid #e8ecf1",
+                }}
+              >
+                <TextField
+                  select
+                  label="Factory record (optional)"
+                  value={form.factoryId}
+                  onChange={(event) => {
+                    const factory = suppliers.find(
+                      (item) => item.id === event.target.value,
+                    );
+                    setForm({
+                      ...form,
+                      factoryId: event.target.value,
+                      supplierName: factory?.name || form.supplierName,
+                      supplierRegion: factory?.region || form.supplierRegion,
+                    });
+                  }}
+                  size="small"
+                >
+                  <MenuItem value="">Manual factory name</MenuItem>
+                  {suppliers.map((supplier) => (
+                    <MenuItem key={supplier.id} value={supplier.id}>
+                      {supplier.name}
+                      {supplier.region ? ` · ${supplier.region}` : ""}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  label="Factory name"
+                  value={form.supplierName}
+                  onChange={(event) =>
+                    setForm({ ...form, supplierName: event.target.value })
+                  }
+                  size="small"
+                  required
+                />
+                <TextField
+                  label="Region"
+                  value={form.supplierRegion}
+                  onChange={(event) =>
+                    setForm({ ...form, supplierRegion: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="Unit price (USD)"
+                  type="number"
+                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                  value={form.unitPrice}
+                  onChange={(event) =>
+                    setForm({ ...form, unitPrice: event.target.value })
+                  }
+                  size="small"
+                  required
+                />
+                <TextField
+                  label="Quote total (USD)"
+                  type="number"
+                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
+                  value={form.quoteTotal}
+                  onChange={(event) =>
+                    setForm({ ...form, quoteTotal: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="Quantity"
+                  type="number"
+                  value={form.quantity}
+                  onChange={(event) =>
+                    setForm({ ...form, quantity: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="MOQ"
+                  type="number"
+                  value={form.moq}
+                  onChange={(event) =>
+                    setForm({ ...form, moq: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="Lead time (days)"
+                  type="number"
+                  value={form.leadDays}
+                  onChange={(event) =>
+                    setForm({ ...form, leadDays: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="Certifications, comma separated"
+                  value={form.certifications}
+                  onChange={(event) =>
+                    setForm({ ...form, certifications: event.target.value })
+                  }
+                  size="small"
+                />
+                <TextField
+                  label="Quote notes"
+                  value={form.quoteNotes}
+                  onChange={(event) =>
+                    setForm({ ...form, quoteNotes: event.target.value })
+                  }
+                  size="small"
+                  multiline
+                  minRows={2}
+                  sx={{ gridColumn: { sm: "1 / -1" } }}
+                />
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    gridColumn: { sm: "1 / -1" },
+                  }}
+                >
+                  <Checkbox
+                    checked={form.recommended}
+                    onChange={(event) =>
+                      setForm({ ...form, recommended: event.target.checked })
+                    }
+                    slotProps={{ input: { "aria-label": "Mark quote as recommended" } }}
+                  />
+                  <Typography sx={{ fontSize: 13 }}>
+                    Mark as recommended
+                  </Typography>
+                </Box>
+                <Stack direction="row" sx={{ justifyContent: "flex-end", gridColumn: { sm: "1 / -1" }, gap: 1 }}>
+                  <Button type="button" onClick={() => setForm(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="contained" disabled={busy}>
+                    {busy ? "Saving…" : "Save quote"}
+                  </Button>
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Surface>
+        {error && (
+          <Alert severity="error" role="alert">
+            {error}
+          </Alert>
+        )}
+      </Stack>
+    );
+  return (
+    <Stack spacing={2}>
+      <Stack
+        direction="row"
+        sx={{ flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, gap: 1.5 }}
+      >
+        <Select
+          size="small"
+          value={filter}
+          onChange={(event) => {
+            setFilter(event.target.value);
+            void load(event.target.value);
+          }}
+          aria-label="Filter RFQs by status"
+          sx={{ minWidth: 190 }}
+        >
+          <MenuItem value="all">All request statuses</MenuItem>
+          <MenuItem value="needs_research">Awaiting Atelix review</MenuItem>
+          <MenuItem value="accepted">Accepted by Atelix</MenuItem>
+          <MenuItem value="quotes_ready">Quotes ready</MenuItem>
+          <MenuItem value="awaiting_payment">Awaiting payment</MenuItem>
+          <MenuItem value="sampling">Sampling</MenuItem>
+          <MenuItem value="production">Production</MenuItem>
+          <MenuItem value="completed">Completed</MenuItem>
+        </Select>
+        <Button variant="outlined" onClick={() => void load()}>
+          Refresh requests
+        </Button>
+      </Stack>
+      {error && (
+        <Alert severity="error" role="alert">
+          {error}
+        </Alert>
+      )}
+      {loading ? (
+        <LoadingRows />
+      ) : (
+        <Surface sx={{ overflow: "hidden" }}>
+          <Box
+            sx={{
+              display: { xs: "none", sm: "grid" },
+              gridTemplateColumns: "1.2fr 1.2fr .8fr .8fr auto",
+              gap: 1.5,
+              px: 2,
+              py: 1.25,
+              backgroundColor: "#f6f8fa",
+              color: "#8793a0",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: ".04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Box>Request</Box>
+            <Box>Buyer</Box>
+            <Box>Status</Box>
+            <Box>Quotes</Box>
+            <Box />
+          </Box>
+          <Box
+            component="ul"
+            aria-label="RFQ requests"
+            sx={{ p: 0, m: 0, listStyle: "none" }}
+          >
+            {rfqs.map((row) => (
+              <Box
+                component="li"
+                key={row.id}
+                sx={{ borderTop: "1px solid #e8ecf1" }}
+              >
+                <Button
+                  fullWidth
+                  onClick={() => void openRfq(row)}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr auto",
+                      sm: "1.2fr 1.2fr .8fr .8fr auto",
+                    },
+                    gap: 1.5,
+                    p: 2,
+                    borderRadius: 0,
+                    textAlign: "left",
+                    color: "inherit",
+                    textTransform: "none",
+                    "&:hover": { backgroundColor: "#f7faf7" },
+                    "&:focus-visible": {
+                      outline: "3px solid #6fae86",
+                      outlineOffset: -3,
+                    },
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      sx={{ fontWeight: 800, overflowWrap: "anywhere" }}
+                    >
+                      {row.case_no}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        mt: 0.3,
+                        color: "text.secondary",
+                        fontSize: 12,
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {row.title}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    sx={{
+                      display: { xs: "none", sm: "block" },
+                      color: "text.secondary",
+                      fontSize: 13,
+                    }}
+                  >
+                    {row.buyer_name || row.buyer_email || "Buyer not named"}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#5b8064",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      textTransform: "capitalize",
+                    }}
+                  >
+                    {row.status.replaceAll("_", " ")}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      display: { xs: "none", sm: "block" },
+                      color: "text.secondary",
+                      fontSize: 13,
+                    }}
+                  >
+                    {row.quote_count}
+                  </Typography>
+                  <ArrowForward sx={{ color: "#6fae86", fontSize: 20 }} />
+                </Button>
+              </Box>
+            ))}
+          </Box>
+        </Surface>
+      )}
+    </Stack>
+  );
+}
+
 export function Intools() {
+  const [, setRouteVersion] = useState(0);
+  const route = parseIntoolsRoute();
   const [ready, setReady] = useState(false);
   const [access, setAccess] = useState<
     "loading" | "allowed" | "permission" | "error"
   >("loading");
-  const supplierRoute = /^\/intools\/suppliers(?:\/([^/]+))?$/.exec(location.pathname);
-  const supplierId = supplierRoute?.[1] ? decodeURIComponent(supplierRoute[1]) : null;
-  const [tab, setTab] = useState<Tab>(() => (supplierRoute ? "suppliers" : "invoices"));
+  const supplierId = route.supplierId;
+  const [tab, setTab] = useState<Tab>(route.tab);
   const [filter, setFilter] = useState("all");
   const [invoices, setInvoices] = useState<IntoolsInvoice[]>([]);
   const [selected, setSelected] = useState<IntoolsInvoiceDetail | null>(null);
   const [creating, setCreating] = useState(false);
-  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(null);
+  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(() => {
+    if (!route.creatingInvoice) return null;
+    const params = new URLSearchParams(location.search);
+    return {
+      rfqCaseId: params.get("rfqCaseId") || "",
+      buyerProfileId: params.get("buyerProfileId") || "",
+      orderId: params.get("orderId") || "",
+    };
+  });
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
+  const [operatorName, setOperatorName] = useState("");
   useEffect(() => {
-    if (supplierRoute) setTab("suppliers");
-  }, [supplierId]);
+    const listener = () => setRouteVersion((value) => value + 1);
+    addEventListener("popstate", listener);
+    return () => removeEventListener("popstate", listener);
+  }, []);
+  useEffect(() => {
+    if (location.pathname === "/intools") navigate("/intools/invoices");
+  }, []);
+  useEffect(() => {
+    setTab(route.tab);
+    if (route.creatingInvoice) {
+      const params = new URLSearchParams(location.search);
+      setInvoiceDraft({
+        rfqCaseId: params.get("rfqCaseId") || "",
+        buyerProfileId: params.get("buyerProfileId") || "",
+        orderId: params.get("orderId") || "",
+      });
+      setCreating(true);
+    } else if (route.tab !== "invoices") {
+      setCreating(false);
+      setInvoiceDraft(null);
+    }
+  }, [route.tab, route.creatingInvoice, route.invoiceId, route.rfqId, route.requestId, route.supplierId]);
+  useEffect(() => {
+    if (route.tab !== "invoices" || !route.invoiceId) {
+      setSelected(null);
+      return;
+    }
+    let active = true;
+    void getIntoolsInvoiceDetail(route.invoiceId)
+      .then((detail) => {
+        if (active) setSelected(detail);
+      })
+      .catch((cause) => {
+        if (active)
+          setError(cause instanceof Error ? cause.message : "Could not load invoice detail.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [route.tab, route.invoiceId]);
   async function loadInvoices(status = filter) {
     setLoadingInvoices(true);
     setError("");
@@ -1564,8 +2792,9 @@ export function Intools() {
       const local = await getLocalIntoolsSession();
       if (!active) return;
       if (local.authenticated) {
+        setOperatorName("Local administrator");
         setReady(true);
-        if (supplierRoute) setAccess("allowed");
+        if (route.tab !== "invoices") setAccess("allowed");
         else void loadInvoices();
         return;
       }
@@ -1584,8 +2813,11 @@ export function Intools() {
       }
       await assertIntoolsAdmin();
       if (!active) return;
+      const name = await getUserDisplayName(session.user);
+      if (!active) return;
+      setOperatorName(name);
       setReady(true);
-      if (supplierRoute) setAccess("allowed");
+      if (route.tab !== "invoices") setAccess("allowed");
       else void loadInvoices();
     })().catch(() => {
       if (active) setAccess("error");
@@ -1595,6 +2827,11 @@ export function Intools() {
     };
   }, []);
   function startInvoiceFromRfq(input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) {
+    const params = new URLSearchParams({
+      rfqCaseId: input.rfqCaseId,
+      buyerProfileId: input.buyerProfileId,
+    });
+    if (input.orderId) params.set("orderId", input.orderId);
     setInvoiceDraft({
       rfqCaseId: input.rfqCaseId,
       buyerProfileId: input.buyerProfileId,
@@ -1603,12 +2840,13 @@ export function Intools() {
     setSelected(null);
     setCreating(true);
     setTab("invoices");
-    navigate("/intools");
+    navigate(`/intools/invoices/new?${params.toString()}`);
   }
   async function selectInvoice(invoice: IntoolsInvoice) {
     setError("");
     try {
       setSelected(await getIntoolsInvoiceDetail(invoice.id));
+      navigate(`/intools/invoices/${encodeURIComponent(invoice.id)}`);
     } catch (cause) {
       setError(
         cause instanceof Error
@@ -1674,18 +2912,45 @@ export function Intools() {
               Intools
             </Typography>
           </Box>
-          <Tooltip title="Private administrator workspace">
-            <Avatar
-              sx={{
-                width: 34,
-                height: 34,
-                bgcolor: "#e5e7eb",
-                color: "#5d6672",
-              }}
+          <Stack direction="row" spacing={1.1} sx={{ alignItems: "center" }}>
+            <Box sx={{ minWidth: 0, textAlign: "right" }}>
+              <Typography
+                sx={{
+                  maxWidth: 180,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  lineHeight: 1.25,
+                }}
+              >
+                {operatorName || "Administrator"}
+              </Typography>
+              <Typography
+                sx={{ color: "text.secondary", fontSize: 11, lineHeight: 1.25 }}
+              >
+                Administrator
+              </Typography>
+            </Box>
+            <Tooltip
+              title={`${operatorName || "Administrator"} · Private administrator workspace`}
             >
-              <LockOutlined fontSize="small" />
-            </Avatar>
-          </Tooltip>
+              <Avatar
+                aria-label={`${operatorName || "Administrator"}, administrator`}
+                sx={{
+                  width: 34,
+                  height: 34,
+                  bgcolor: "#e5e7eb",
+                  color: "#45556b",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {initials(operatorName || "Administrator")}
+              </Avatar>
+            </Tooltip>
+          </Stack>
         </Box>
         <Box
           component="main"
@@ -1706,8 +2971,8 @@ export function Intools() {
               <Typography
                 sx={{ mt: 0.6, color: "text.secondary", fontSize: 14 }}
               >
-                Private operations for invoices, orders, and supplier records. Every consequential
-                change is recorded.
+                Private operations for invoices, orders, and supplier records.
+                Every consequential change is recorded.
               </Typography>
             </Box>
             <Stack
@@ -1721,6 +2986,7 @@ export function Intools() {
                 [
                   ["invoices", "Invoices"],
                   ["rfq", "RFQ review"],
+                  ["rfqs", "Requests"],
                   ["orders", "Orders"],
                   ["audit", "Audit history"],
                   ["registrations", "Sign-up requests"],
@@ -1735,7 +3001,7 @@ export function Intools() {
                     setTab(value);
                     setSelected(null);
                     setCreating(false);
-                    navigate(value === "suppliers" ? "/intools/suppliers" : "/intools");
+                    navigate(intoolsTabPath(value));
                   }}
                   variant={tab === value ? "contained" : "outlined"}
                 >
@@ -1745,11 +3011,14 @@ export function Intools() {
             </Stack>
             {tab === "invoices" && (
               <>
-                {selected ? (
+                    {selected ? (
                   <InvoiceDetail
                     invoice={selected}
                     onChanged={setSelected}
-                    onBack={() => setSelected(null)}
+                    onBack={() => {
+                      setSelected(null);
+                      navigate("/intools/invoices");
+                    }}
                   />
                 ) : (
                   <>
@@ -1780,12 +3049,16 @@ export function Intools() {
                       </Select>
                       <Button
                         variant="contained"
-                        onClick={() =>
-                          setCreating((value) => {
-                            if (value) setInvoiceDraft(null);
-                            return !value;
-                          })
-                        }
+                        onClick={() => {
+                          if (creating) {
+                            setCreating(false);
+                            setInvoiceDraft(null);
+                            navigate("/intools/invoices");
+                          } else {
+                            setCreating(true);
+                            navigate("/intools/invoices/new");
+                          }
+                        }}
                         startIcon={creating ? <Close /> : <Add />}
                       >
                         {creating ? "Close new invoice" : "New invoice"}
@@ -1799,10 +3072,12 @@ export function Intools() {
                           setInvoiceDraft(null);
                           setSelected(invoice);
                           void loadInvoices();
+                          navigate(`/intools/invoices/${encodeURIComponent(invoice.id)}`);
                         }}
                         onCancel={() => {
                           setCreating(false);
                           setInvoiceDraft(null);
+                          navigate("/intools/invoices");
                         }}
                       />
                     )}
@@ -1832,14 +3107,32 @@ export function Intools() {
                 )}
               </>
             )}
-            {tab === "rfq" && <RfqReviewPanel onCreateInvoice={startInvoiceFromRfq} />}
+            {tab === "rfq" && (
+              <RfqReviewPanel
+                routeCaseId={route.rfqId}
+                onSelectCase={(id) => navigate(`/intools/rfq/${encodeURIComponent(id)}`)}
+                onBack={() => navigate("/intools/rfq")}
+                onCreateInvoice={startInvoiceFromRfq}
+              />
+            )}
+            {tab === "rfqs" && (
+              <RfqOpsPanel
+                routeCaseId={route.requestId}
+                onSelectCase={(id) =>
+                  navigate(`/intools/requests/${encodeURIComponent(id)}`)
+                }
+                onBack={() => navigate("/intools/requests")}
+              />
+            )}
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
             {tab === "suppliers" && (
               <IntoolsSuppliers
                 supplierId={supplierId}
-                onOpen={(id) => navigate(`/intools/suppliers/${encodeURIComponent(id)}`)}
+                onOpen={(id) =>
+                  navigate(`/intools/suppliers/${encodeURIComponent(id)}`)
+                }
                 onBack={() => navigate("/intools/suppliers")}
               />
             )}
@@ -1907,8 +3200,14 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
 }
 
 function RfqReviewPanel({
+  routeCaseId,
+  onSelectCase,
+  onBack,
   onCreateInvoice,
 }: {
+  routeCaseId: string | null;
+  onSelectCase: (id: string) => void;
+  onBack: () => void;
   onCreateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState("needs_research");
@@ -1926,14 +3225,16 @@ function RfqReviewPanel({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [matchSearch, setMatchSearch] = useState("");
   const [showAllMatches, setShowAllMatches] = useState(false);
+  const [tableSearch, setTableSearch] = useState("");
+  const [tableSort, setTableSort] = useState<"updated" | "title" | "buyer">("updated");
 
   async function loadCases(nextFilter = statusFilter) {
     setLoading(true); setError("");
-    try { setCases(await listIntoolsRfqCases(nextFilter === "all" ? null : nextFilter)); }
+    try { setCases(await listIntoolsRfqCases(routeCaseId ? null : nextFilter === "all" ? null : nextFilter)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load RFQs."); }
     finally { setLoading(false); }
   }
-  useEffect(() => { void loadCases(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void loadCases(); }, [routeCaseId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void listIntoolsSuppliers().then(setSuppliers).catch(() => undefined); }, []);
 
   const selected = cases.find((item) => item.id === selectedId) || null;
@@ -1948,7 +3249,18 @@ function RfqReviewPanel({
       setMatches(nextMatches); setQuotes(nextQuotes); setOrder(nextOrder);
     } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not load this RFQ."); }
   }
-  function selectCase(caseId: string) { setSelectedId(caseId); setOpenQuoteFor(null); setMatchSearch(""); setShowAllMatches(false); void loadDetail(caseId); }
+  function selectCase(caseId: string) {
+    setSelectedId(caseId);
+    setOpenQuoteFor(null);
+    setMatchSearch("");
+    setShowAllMatches(false);
+    onSelectCase(caseId);
+    void loadDetail(caseId);
+  }
+  useEffect(() => {
+    setSelectedId(routeCaseId);
+    if (routeCaseId) void loadDetail(routeCaseId);
+  }, [routeCaseId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function supplierFor(factoryId: string) { return suppliers.find((item) => item.id === factoryId) || null; }
   function quoteForFactory(factoryId: string) { return (quotes || []).find((quote) => quote.factory_id === factoryId) || null; }
@@ -1987,6 +3299,17 @@ function RfqReviewPanel({
   const matchesSuggested = matchesFiltered.filter((match) => match.status === "suggested");
   const suggestedVisible = showAllMatches ? matchesSuggested : matchesSuggested.slice(0, 15);
   const matchesVisible = [...matchesApproved, ...suggestedVisible];
+  const visibleCases = cases
+    .filter((item) => {
+      const needle = tableSearch.trim().toLowerCase();
+      if (!needle) return true;
+      return `${item.case_no} ${item.title} ${item.buyer_name} ${item.buyer_email} ${item.buyer_profile_id}`.toLowerCase().includes(needle);
+    })
+    .sort((a, b) => {
+      if (tableSort === "title") return a.title.localeCompare(b.title);
+      if (tableSort === "buyer") return a.buyer_name.localeCompare(b.buyer_name);
+      return b.updated_at.localeCompare(a.updated_at);
+    });
   async function confirmOrder() {
     if (!selected || !selectedQuote) return;
     setBusyKey("confirm-order");
@@ -2006,29 +3329,66 @@ function RfqReviewPanel({
 
   return <Stack spacing={2}>
     <Typography sx={{ color: "text.secondary", fontSize: 14 }}>Keep each buyer request selected here while Atelix approves supplier matches, publishes one quote per supplier, and initiates the sample order after the buyer selects a quote.</Typography>
-    <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ alignItems: "flex-start" }}>
-      <Stack spacing={1.25} sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}>
-        <Select size="small" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); void loadCases(event.target.value); }} aria-label="Filter RFQs by status">
-          {rfqStatusFilters.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-        </Select>
-        {error && <Alert severity="error">{error}</Alert>}
-        {loading ? <LoadingRows /> : cases.length ? cases.map((item) => <Surface key={item.id} onClick={() => selectCase(item.id)} sx={{ p: 1.5, cursor: "pointer", borderColor: selectedId === item.id ? "#4b7657" : "#dfe4eb", backgroundColor: selectedId === item.id ? "#f7fbf7" : "#fff" }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 13.5, overflowWrap: "anywhere" }}>{item.title}</Typography>
-          <Typography sx={{ mt: .3, fontSize: 11.5, color: "text.secondary", fontFamily: "'DM Mono', monospace" }}>{item.case_no}</Typography>
-          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: .75 }}>
-            <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{item.buyer_name}</Typography>
-            <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
-              {item.quote_count > 0 && <Chip size="small" variant="outlined" label={`${item.quote_count} quoted`} />}
-              <Chip size="small" label={displayStatus(item.status)} />
-            </Stack>
+    <Stack spacing={2}>
+      {!selected && (
+        <Stack spacing={1.25}>
+          <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1.25, alignItems: "center" }}>
+            <TextField
+              size="small"
+              value={tableSearch}
+              onChange={(event) => setTableSearch(event.target.value)}
+              placeholder="Search RFQ, buyer, UUID or email"
+              aria-label="Search RFQs"
+              sx={{ flex: "1 1 280px", maxWidth: 420 }}
+            />
+            <Select size="small" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); void loadCases(event.target.value); }} aria-label="Filter RFQs by status" sx={{ minWidth: 190 }}>
+              {rfqStatusFilters.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+            </Select>
+            <Select size="small" value={tableSort} onChange={(event) => setTableSort(event.target.value as typeof tableSort)} aria-label="Sort RFQs" sx={{ minWidth: 170 }}>
+              <MenuItem value="updated">Sort: Recently updated</MenuItem>
+              <MenuItem value="title">Sort: RFQ title</MenuItem>
+              <MenuItem value="buyer">Sort: Buyer name</MenuItem>
+            </Select>
           </Stack>
-        </Surface>) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No RFQs in this state</Typography></Surface>}
-      </Stack>
+          {error && <Alert severity="error">{error}</Alert>}
+          {loading ? <LoadingRows /> : visibleCases.length ? (
+            <Surface sx={{ overflow: "hidden" }}>
+              <Box role="table" aria-label="RFQs" sx={{ minWidth: { xs: 0, md: 860 } }}>
+                <Box role="row" sx={{ display: { xs: "none", md: "grid" }, gridTemplateColumns: "minmax(240px,1.6fr) minmax(160px,1fr) 110px 100px 150px", gap: 1.5, px: 2, py: 1.25, borderBottom: "1px solid #dfe4eb", backgroundColor: "#f6f8fa", color: "#526176", fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase" }}>
+                  <Box role="columnheader">RFQ</Box><Box role="columnheader">Buyer</Box><Box role="columnheader">Status</Box><Box role="columnheader">Quotes</Box><Box role="columnheader">Updated</Box>
+                </Box>
+                <Box component="ul" role="rowgroup" sx={{ listStyle: "none", p: 0, m: 0 }}>
+                  {visibleCases.map((item) => (
+                    <Box component="li" key={item.id} sx={{ borderBottom: "1px solid #e8ecf1", "&:last-child": { borderBottom: 0 } }}>
+                      <Button fullWidth onClick={() => selectCase(item.id)} role="row" aria-current={selectedId === item.id ? "true" : undefined} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", md: "minmax(240px,1.6fr) minmax(160px,1fr) 110px 100px 150px" }, gap: { xs: 1, md: 1.5 }, alignItems: "center", p: { xs: 1.5, md: 2 }, borderRadius: 0, textAlign: "left", color: "inherit", textTransform: "none", backgroundColor: selectedId === item.id ? "#f1f7f2" : "#fff", "&:hover": { backgroundColor: selectedId === item.id ? "#e9f3eb" : "#f7f9fb" }, "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 } }}>
+                        <Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{item.title}</Typography><Typography sx={{ mt: .3, color: "text.secondary", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{item.case_no}</Typography><Typography sx={{ display: { xs: "block", md: "none" }, mt: .4, color: "text.secondary", fontSize: 12 }}>{item.buyer_name} · {item.quote_count} quotes</Typography></Box>
+                        <Typography noWrap sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 13 }}>{item.buyer_name || item.buyer_email || "Buyer not named"}</Typography>
+                        <StatusChip status={item.status} />
+                        <Typography sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 13 }}>{item.quote_count}</Typography>
+                        <Typography sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 12 }}>{shortDate(item.updated_at)}</Typography>
+                      </Button>
+                    </Box>
+                  ))}
+                </Box>
+              </Box>
+            </Surface>
+          ) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{cases.length ? "No RFQs match these filters" : "No RFQs in this state"}</Typography><Typography sx={{ mt: .5, color: "text.secondary", fontSize: 13 }}>Try a different search or status filter.</Typography></Surface>}
+        </Stack>
+      )}
 
       {selected && <Stack spacing={2} sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+        <Button startIcon={<ArrowBack />} onClick={onBack} sx={{ alignSelf: "flex-start", px: 0 }}>Back to RFQ table</Button>
         <Surface sx={{ p: 2 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
-            <Box><Typography variant="h2" sx={{ fontSize: 20 }}>{selected.title}</Typography><Typography sx={{ mt: .3, fontSize: 12, color: "text.secondary" }}>{selected.case_no} · {selected.buyer_name} · {selected.buyer_email}</Typography></Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h2" sx={{ fontSize: 20, overflowWrap: "anywhere" }}>{selected.title}</Typography>
+              <Typography sx={{ mt: .3, fontSize: 12, color: "text.secondary" }}>{selected.case_no} · {selected.buyer_name} · {selected.buyer_email}</Typography>
+              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, auto)" }, gap: { xs: .4, sm: 2 }, mt: 1 }}>
+                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>User UUID: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{selected.buyer_profile_id}</Box></Typography>
+                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>Order ID: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{order?.id || "—"}</Box></Typography>
+                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>Order no: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{order?.order_no || "—"}</Box></Typography>
+              </Box>
+            </Box>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Button
                 size="small"
@@ -2117,30 +3477,56 @@ function RegistrationRequestsPanel() {
     setLoading(true);
     setError("");
     try {
-      setRequests(await listIntoolsRegistrationRequests(nextStatus === "all" ? null : nextStatus));
+      setRequests(
+        await listIntoolsRegistrationRequests(
+          nextStatus === "all" ? null : nextStatus,
+        ),
+      );
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load sign-up requests.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not load sign-up requests.",
+      );
     } finally {
       setLoading(false);
     }
   }
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
   async function approve(id: string) {
     setError("");
     try {
       await approveRegistrationRequest(id);
       await load();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not approve this request.");
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not approve this request.",
+      );
     }
   }
   return (
     <Stack spacing={1.5}>
-      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1.5 }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        sx={{ justifyContent: "space-between", gap: 1.5 }}
+      >
         <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
           New accounts stay pending until an administrator approves them.
         </Typography>
-        <Select size="small" value={status} aria-label="Filter sign-up requests by status" onChange={(event) => { setStatus(event.target.value); void load(event.target.value); }} sx={{ minWidth: 190 }}>
+        <Select
+          size="small"
+          value={status}
+          aria-label="Filter sign-up requests by status"
+          onChange={(event) => {
+            setStatus(event.target.value);
+            void load(event.target.value);
+          }}
+          sx={{ minWidth: 190 }}
+        >
           <MenuItem value="pending_review">Pending review</MenuItem>
           <MenuItem value="approved">Approved</MenuItem>
           <MenuItem value="invited">Invited</MenuItem>
@@ -2149,26 +3535,73 @@ function RegistrationRequestsPanel() {
         </Select>
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      {loading ? <LoadingRows /> : requests.length ? <Surface sx={{ overflow: "hidden" }}>
-        <Box component="ul" aria-label="Sign-up requests" sx={{ listStyle: "none", p: 0, m: 0 }}>
-        {requests.map((request) => (
-        <Box component="li" key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1, "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
-          <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}>
-            <Box>
-              <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{request.name} · {request.company_name}</Typography>
-              <Typography sx={{ color: "text.secondary", fontSize: 13 }}>{request.email}{request.phone ? ` · ${request.country_code || ""} ${request.phone}` : ""}</Typography>
-            </Box>
-            <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}>
-              <StatusChip status={request.status} />
-              {request.status === "pending_review" && <Button size="small" variant="contained" onClick={() => void approve(request.id)}>Approve</Button>}
-            </Stack>
-          </Stack>
-          <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Sourcing: {request.sourcing} · Revenue: {request.annual_revenue}</Typography>
-          <Typography sx={{ color: "text.secondary", fontSize: 12 }}>Submitted {shortDate(request.created_at)}</Typography>
-        </Box>
-      ))}
-        </Box>
-      </Surface> : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
+      {loading ? (
+        <LoadingRows />
+      ) : requests.length ? (
+        <Surface sx={{ overflow: "hidden" }}>
+          <Box
+            component="ul"
+            aria-label="Sign-up requests"
+            sx={{ listStyle: "none", p: 0, m: 0 }}
+          >
+            {requests.map((request) => (
+              <Box
+                component="li"
+                key={request.id}
+                sx={{
+                  p: { xs: 1.5, sm: 2 },
+                  display: "grid",
+                  gap: 1,
+                  "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" },
+                }}
+              >
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  sx={{ justifyContent: "space-between", gap: 1 }}
+                >
+                  <Box>
+                    <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
+                      {request.name} · {request.company_name}
+                    </Typography>
+                    <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+                      {request.email}
+                      {request.phone
+                        ? ` · ${request.country_code || ""} ${request.phone}`
+                        : ""}
+                    </Typography>
+                  </Box>
+                  <Stack
+                    direction="row"
+                    sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
+                  >
+                    <StatusChip status={request.status} />
+                    {request.status === "pending_review" && (
+                      <Button
+                        size="small"
+                        variant="contained"
+                        onClick={() => void approve(request.id)}
+                      >
+                        Approve
+                      </Button>
+                    )}
+                  </Stack>
+                </Stack>
+                <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+                  Sourcing: {request.sourcing} · Revenue:{" "}
+                  {request.annual_revenue}
+                </Typography>
+                <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
+                  Submitted {shortDate(request.created_at)}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </Surface>
+      ) : (
+        <Surface sx={{ p: 4, textAlign: "center" }}>
+          <Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography>
+        </Surface>
+      )}
     </Stack>
   );
 }

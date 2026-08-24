@@ -55,6 +55,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   stable columns on desktop and compact structured rows on narrow screens.
   Selecting a record opens its existing detail workflow; it does not create a
   separate storefront-style card surface for every row.
+- Intools top-level workspaces use canonical private routes: `/intools/invoices`,
+  `/intools/rfq`, `/intools/requests`, `/intools/orders`, `/intools/audit`,
+  `/intools/registrations`, and `/intools/suppliers`. Record detail stays under
+  its owning workspace route.
 - Intools order detail keeps immutable order items, fulfillment records, and
   status activity readable beside server-derived commercial and delivery
   context. Administrators can request a status change with an optional audit

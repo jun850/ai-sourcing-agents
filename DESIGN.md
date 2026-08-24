@@ -28,6 +28,8 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
 - Opening an RFQ from Requests keeps the Requests navigation item selected and
   preserves that request context on refresh/deep link.
+- Intools section tabs are route-backed, with one canonical `/intools/<section>`
+  path per operational workspace and detail paths nested beneath that section.
 - The dashboard prompt remains the first screen. The RFQ workspace then uses a
   split conversation + live RFQ review layout, followed by Requests, invoice,
   and sourced Product records tied back to the RFQ.
