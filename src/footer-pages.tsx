@@ -806,12 +806,14 @@ function About() {
                   Co-Founder, COO &amp; Creative Director
                 </p>
                 <p>
-                  An accounting and finance analyst with a master's degree
-                  in Accounting &amp; Finance, native to the China and Japan
-                  markets that anchor global textile manufacturing. Celina
-                  runs Atelix's financial operations and leads
-                  supplier-facing quality and creative direction across two
-                  of the industry's most important sourcing regions.
+                  A finance analyst with a master's degree in Accounting
+                  &amp; Finance, reading financial models and economic
+                  conditions across Greater China and Japan, native to
+                  both markets. Celina runs Atelix's financial operations
+                  and leads supplier-facing quality and creative direction
+                  across two of the industry's most important sourcing
+                  regions. She's also building a skincare brand, drawn in
+                  by an active interest in beauty and fashion.
                 </p>
               </div>
             </article>
