@@ -4280,6 +4280,17 @@ function invoiceDate(value: string | null) {
         day: "numeric",
       });
 }
+
+function requestDetailIdFromPath(path: string) {
+  const match = path.match(/^\/dashboard\/requests\/([^/]+)$/);
+  if (!match) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return "";
+  }
+}
+
 function invoiceStatusLabel(invoice: WorkspaceInvoice) {
   if (invoice.effective_status === "overdue") return "Overdue";
   if (invoice.status === "sent") return "Due";
@@ -5032,8 +5043,31 @@ export function Dashboard({ path }: { path: string }) {
       active = false;
     };
   }, []);
+  const requestDetailId = requestDetailIdFromPath(path);
+  useEffect(() => {
+    if (!requestDetailId) return;
+    const item = historyItems.find((entry) => entry.id === requestDetailId);
+    if (!item || rfq?.record.id === item.id) return;
+    let active = true;
+    setMessage("Loading your RFQ…");
+    void listRfqAttachments(item.id)
+      .then((attachments) => {
+        if (!active) return;
+        setRfq({ record: item, attachments });
+        setMessage("");
+      })
+      .catch((cause) => {
+        if (!active) return;
+        setMessage(
+          cause instanceof Error ? cause.message : "Could not load your RFQ.",
+        );
+      });
+    return () => {
+      active = false;
+    };
+  }, [historyItems, requestDetailId, rfq?.record.id]);
   const view: DashboardView =
-    path === "/dashboard/requests"
+    path === "/dashboard/requests" || requestDetailId
       ? "requests"
       : path === "/dashboard/products" ||
           /^\/dashboard\/products\/[^/]+$/.test(path)
@@ -5054,11 +5088,11 @@ export function Dashboard({ path }: { path: string }) {
                     ? "new"
                     : "dashboard";
   const workspaceOpen = Boolean(
-    rfq && (view === "dashboard" || view === "new"),
+    rfq && (view === "dashboard" || view === "new" || requestDetailId),
   );
   function go(item: (typeof navItems)[number]) {
     setMobileOpen(false);
-    if (item.view === "new") setRfq(null);
+    if (item.view === "new" || item.view === "requests") setRfq(null);
     navigate(item.href);
   }
   async function startRfq(brief: string, files: UploadFile[]) {
@@ -5093,7 +5127,7 @@ export function Dashboard({ path }: { path: string }) {
       const attachments = await listRfqAttachments(item.id);
       setRfq({ record: item, attachments });
       setMessage("");
-      navigate("/dashboard");
+      navigate(`/dashboard/requests/${encodeURIComponent(item.id)}`);
     } catch (cause) {
       setMessage(
         cause instanceof Error ? cause.message : "Could not load your RFQ.",
@@ -5127,7 +5161,10 @@ export function Dashboard({ path }: { path: string }) {
     }
   }
   function content() {
-    if (rfq && (view === "dashboard" || view === "new")) {
+    if (
+      rfq &&
+      (view === "dashboard" || view === "new" || Boolean(requestDetailId))
+    ) {
       const summary =
         typeof rfq.record.brief.summary === "string"
           ? rfq.record.brief.summary

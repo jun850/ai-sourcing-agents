@@ -36,6 +36,8 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   price, MOQ, certification, capacity, availability, quote, or payment facts.
 - Requests are the durable RFQ index and timeline entry point. Products are
   buyer-owned immutable order-item snapshots, never a catalogue browse surface.
+- Opening an RFQ from Requests keeps the request-scoped route and Requests
+  navigation selection active, including on a direct/deep link.
 - The Products workspace groups those snapshots by operational stage and supports
   search, supplier filtering, sorting, deep-linked read-only detail, linked-RFQ
   navigation, invoice handoff, and a reorder action that only pre-fills a fresh
