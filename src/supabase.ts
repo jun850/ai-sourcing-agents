@@ -163,6 +163,57 @@ export type IntoolsOrder = {
   payment_declared_at?: string | null;
   payment_verified_at?: string | null;
 };
+export type IntoolsOrderItem = {
+  name: string | null;
+  seller: string | null;
+  sku: string | null;
+  unit_price: number | null;
+  qty: number | null;
+  line_total: number | null;
+  option_selection: string | null;
+  buyer_note: string | null;
+};
+export type IntoolsOrderFulfillment = {
+  factory_name: string | null;
+  fulfillment_status: string | null;
+  tracking: string | null;
+};
+export type IntoolsOrderEvent = {
+  status: string;
+  note: string | null;
+  created_by_name: string | null;
+  created_at: string;
+};
+export type IntoolsOrderDetail = {
+  id: string;
+  order_no: string;
+  status: string;
+  subtotal: number | null;
+  fee: number | null;
+  ship: number | null;
+  qc_fee: number | null;
+  ins_fee: number | null;
+  total: number | null;
+  ship_country: string | null;
+  ship_address: string | null;
+  shipping_service: string | null;
+  shipping_eta_min_days: number | null;
+  shipping_eta_max_days: number | null;
+  incoterms: string | null;
+  notes: string | null;
+  placed_at: string | null;
+  payment_declared_at: string | null;
+  payment_verified_at: string | null;
+  buyer: {
+    full_name: string | null;
+    email: string | null;
+    company_name: string | null;
+    country: string | null;
+  };
+  items: IntoolsOrderItem[];
+  fulfillments: IntoolsOrderFulfillment[];
+  events: IntoolsOrderEvent[];
+};
 export type IntoolsSupplier = {
   id: string;
   slug: string;
@@ -698,8 +749,19 @@ export async function listIntoolsOrders() {
   return intoolsRpc<IntoolsOrder[]>("intools_list_orders");
 }
 export async function getIntoolsOrderDetail(orderNo: string) {
-  return intoolsRpc<Record<string, unknown>>("intools_get_order_detail", {
+  return intoolsRpc<IntoolsOrderDetail>("intools_get_order_detail", {
     p_order_no: orderNo,
+  });
+}
+export async function updateIntoolsOrderStatus(
+  orderNo: string,
+  status: string,
+  note: string | null,
+) {
+  return intoolsRpc("admin_update_order_status", {
+    p_order_no: orderNo,
+    p_status: status,
+    p_note: note,
   });
 }
 export async function listIntoolsAudit(

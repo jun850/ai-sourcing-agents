@@ -36,6 +36,12 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   row dividers and a quiet column header on desktop. Rows are rectangular,
   never individually pill-shaped; hover and keyboard focus communicate the
   active record without adding decorative card shadows.
+- Intools order detail uses one operational surface: a concise record header,
+  structured item, fulfillment, and activity rows, plus a quiet summary rail
+  that stacks below the records on narrow screens. Keep the single status
+  action in that rail with explicit labels, optional audit note, busy state,
+  and inline success or error status; never expose a raw record dump or imply
+  that payment settlement can be changed in the browser.
 - The access-request form is a compact two-column workflow on desktop and a
   single-column workflow on narrow screens. Its header, fields, primary action,
   and login link stay in one surface; labels use a dedicated label row so
