@@ -293,6 +293,8 @@ export type IntoolsOrderDetail = {
   id: string;
   order_no: string;
   status: string;
+  buyer_profile_id: string;
+  rfq_case_id: string | null;
   subtotal: number | null;
   fee: number | null;
   ship: number | null;
