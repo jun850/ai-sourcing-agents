@@ -65,11 +65,7 @@ import {
   VerifiedOutlined,
   X,
 } from "@mui/icons-material";
-import {
-  ArrowUp as PromptArrowUp,
-  Plus as PromptPlus,
-  Lock as ComposerLockIcon,
-} from "lucide-react";
+import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
 import {
   createRfqCase,
   getSession,
@@ -1268,23 +1264,22 @@ function ConversationChatPanel({
           </Box>
         )}
       </Box>
-      {(status || remainingTurns !== null || canUndo) && (
+      {status && (
         <Box
           aria-live="polite"
           role="status"
           sx={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
             gap: 1,
             mt: 0.75,
             px: 0.5,
             color:
-              status?.tone === "error"
+              status.tone === "error"
                 ? "#a4413e"
-                : status?.tone === "warning"
+                : status.tone === "warning"
                   ? "#81622c"
-                  : status?.tone === "success"
+                  : status.tone === "success"
                     ? "#426c4e"
                     : "#566476",
             fontSize: 12,
@@ -1292,28 +1287,8 @@ function ConversationChatPanel({
           }}
         >
           <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
-            {status?.text ||
-              (remainingTurns !== null
-                ? `${remainingTurns} AI ${remainingTurns === 1 ? "reply" : "replies"} left this month.`
-                : "")}
+            {status.text}
           </Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
-            {remainingTurns !== null && status && (
-              <Typography component="span" sx={{ color: "#758091", fontSize: 11 }}>
-                {remainingTurns} left
-              </Typography>
-            )}
-            {canUndo && (
-              <MuiButton
-                size="small"
-                onClick={() => void onUndo()}
-                disabled={busy}
-                sx={{ minHeight: 30, px: 1, color: "#426c4e" }}
-              >
-                Undo change
-              </MuiButton>
-            )}
-          </Box>
         </Box>
       )}
       <Box
@@ -1330,12 +1305,13 @@ function ConversationChatPanel({
           border: "1px solid #e7ebf0",
           borderRadius: expanded ? "16px" : "14px",
           backgroundColor: "#fff",
-          boxShadow: "0 8px 22px rgba(32,41,54,.07)",
+          colorScheme: "light",
+          boxShadow: "0 1px 4px rgba(0,0,0,.05)",
           transition:
             "box-shadow 180ms ease, border-color 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
           "&:focus-within": {
             borderColor: "#cfe2d4",
-            boxShadow: "0 8px 22px rgba(32,41,54,.09)",
+            boxShadow: "0 1px 6px rgba(0,0,0,.06)",
           },
         }}
       >
@@ -1360,26 +1336,13 @@ function ConversationChatPanel({
             border: 0,
             outline: 0,
             background: "transparent",
+            colorScheme: "light",
             color: "#202936",
             font: "inherit",
             fontSize: { xs: 14, sm: 15 },
             lineHeight: 1.45,
             py: 1.05,
             "&::placeholder": { color: "#858c96" },
-          }}
-        />
-        <Box
-          component="img"
-          src="/atelix-ai-mode-badge.png"
-          alt="Atelix AI mode"
-          sx={{
-            flex: "0 0 auto",
-            alignSelf: expanded ? "flex-end" : "center",
-            width: { xs: 54, sm: 68 },
-            height: { xs: 32, sm: 38 },
-            objectFit: "contain",
-            opacity: hasDraft ? 0.92 : 0.78,
-            transition: "opacity 180ms ease",
           }}
         />
         <IconButton
@@ -1404,21 +1367,6 @@ function ConversationChatPanel({
         >
           <PromptArrowUp size={21} strokeWidth={1.9} />
         </IconButton>
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.5,
-          mt: 0.75,
-          px: 0.5,
-        }}
-      >
-        <ComposerLockIcon size={11} strokeWidth={2} color="#9aa3af" />
-        <Typography sx={{ fontSize: 11, color: "#9aa3af", lineHeight: 1.4 }}>
-          Drafting aid only. Supplier, price, and payment facts come from
-          reviewed Atelix records.
-        </Typography>
       </Box>
     </RoundedSurface>
   );
@@ -2146,10 +2094,10 @@ function SupplierMatchingStage({
           display: "grid",
           gridTemplateColumns: { xs: "1fr", sm: "minmax(0,1fr) 300px" },
           gap: 3.5,
-          alignItems: "start",
+          alignItems: "stretch",
         }}
       >
-        <Box>
+        <Box sx={{ display: "flex", flexDirection: "column" }}>
           <Typography
             sx={{
               color: "#8b978e",
@@ -2206,7 +2154,7 @@ function SupplierMatchingStage({
             direction="row"
             alignItems="center"
             spacing={1.5}
-            sx={{ mt: 2.75 }}
+            sx={{ mt: "auto", pt: 2.75 }}
           >
             <MuiButton
               onClick={onQuotes}
@@ -2220,9 +2168,6 @@ function SupplierMatchingStage({
             >
               Track this request
             </MuiButton>
-            <Typography sx={{ color: "#9ba1aa", fontSize: 12 }}>
-              We’ll notify you when the shortlist is ready.
-            </Typography>
           </Stack>
         </Box>
         <Box
@@ -2964,7 +2909,7 @@ function RfqWorkspace({
   );
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [checkCount, setCheckCount] = useState(0);
-  const [trackAcknowledged, setTrackAcknowledged] = useState(false);
+  const [trackClicked, setTrackClicked] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
   >([]);
@@ -3228,18 +3173,18 @@ function RfqWorkspace({
         ),
       );
   }
-  function goToQuotes() {
-    // The buyer must see the completed matching checks and click through
-    // themselves; only this manual acknowledgement switches the panel away
-    // from SupplierMatchingStage, not the phase reaching "matched" on its own.
-    setTrackAcknowledged(true);
-    setTab("Quotes");
+  function trackRequest() {
+    // The timer-driven matching -> matched transition never switches the
+    // panel on its own; only this explicit click (the buyer's own action)
+    // does, landing on the Timeline tab.
+    setTrackClicked(true);
+    setTab("Timeline");
   }
 
   const draftingPhase =
     phase === "drafting" || phase === "review" || phase === "editing";
   const showMatchingAnimation =
-    (phase === "matching" || phase === "matched") && !trackAcknowledged;
+    (phase === "matching" || phase === "matched") && !trackClicked;
   const baseStatus =
     phase === "submitted" || phase === "matching" || phase === "matched"
       ? status === "draft"
@@ -3252,7 +3197,7 @@ function RfqWorkspace({
       phase={phase === "matched" ? "matched" : "matching"}
       checkCount={checkCount}
       caseStatus={caseStatus}
-      onQuotes={goToQuotes}
+      onQuotes={trackRequest}
     />
   ) : (
     <RfqDocumentPanel

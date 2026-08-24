@@ -28,7 +28,19 @@ function extractJson(raw: string) {
   const end = candidate.lastIndexOf("}");
   return start !== -1 && end > start ? candidate.slice(start, end + 1) : candidate;
 }
-function operational(message: string) { return /\b(invoice|payment|pay|paid|stripe|order|production|shipment|shipping|delivery)\b/i.test(message); }
+function operational(message: string) {
+  // invoice/payment/paid/stripe rarely describe a new RFQ's own product, so
+  // they're treated as operational on their own. order/production/shipment/
+  // shipping/delivery are ordinary RFQ vocabulary (a delivery timeline, a
+  // bulk production run, shipping terms), so those only count as an
+  // operational question when paired with a status-inquiry cue -- otherwise
+  // "bulk production... by next month" in a fresh RFQ prompt false-triggers
+  // the payment/order support handoff instead of actually drafting the RFQ.
+  const lower = message.toLowerCase();
+  if (/\b(invoice|payment|paid|stripe)\b/.test(lower)) return true;
+  if (!/\b(order|production|shipment|shipping|delivery)\b/.test(lower)) return false;
+  return /\?|\b(status|cleared|confirm|track(ing)?|update|where is|when (will|is)|has (my|our|the))\b/.test(lower);
+}
 function readOnlyRfqQuestion(message: string) { return /\b(double[ -]?check|review|summari[sz]e|what(?:'s| is) in|show)\b.*\b(rfq|request|draft)\b/i.test(message); }
 function output(kind: AgentKind, message: string, revision: number, extra: Record<string, unknown> = {}) {
   return { kind, reply: text(message, 900), savedPatch: null, changedFields: [], revision, undoToken: null, verificationStatus: null, supportHandoff: null, budgetState: null, options: null, ...extra };
@@ -150,7 +162,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   }
   const { data: budget, error: budgetError } = await admin.rpc("agent_rfq_reserve_budget", { p_profile_id: user.id, p_turn_id: turn.id, p_reservation_microusd: 10000 });
   if (budgetError || !budget?.allowed) {
-    const result = output("unavailable", "You’ve reached this month’s conversational AI budget. Your RFQ is still available to edit, and I can help route payment or order questions to our team.", revision, { budgetState: { remainingTurns: Number(budget?.remainingTurns || 0) } });
+    const result = output("unavailable", "You’ve reached this month’s conversational AI budget. Your RFQ is still available to edit, and I can help route payment or order questions to our team.", revision);
     await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result);
   }
 
@@ -181,7 +193,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   } catch {
     await admin.rpc("agent_rfq_settle_budget", { p_turn_id: turn.id, p_reported_cost_microusd: null, p_countable: false });
     const handoff = operational(message);
-    const result = output(handoff ? "support_handoff" : "unavailable", handoff ? "I can’t verify that payment or order detail right now. Please contact info@arcanawangsa.com and our team will clarify it." : "I couldn’t complete that check right now. Your message and RFQ draft were saved safely; please try again shortly.", revision, { supportHandoff: handoff, budgetState: { remainingTurns: Math.min(5, Number(budget.remainingTurns || 0) + 1) } });
+    const result = output(handoff ? "support_handoff" : "unavailable", handoff ? "I can’t verify that payment or order detail right now. Please contact info@arcanawangsa.com and our team will clarify it." : "I couldn’t complete that check right now. Your message and RFQ draft were saved safely; please try again shortly.", revision, { supportHandoff: handoff });
     await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result, 503);
   }
   const usage = completion?.usage;
@@ -200,20 +212,19 @@ export async function handleBrokerRfqAgent(request: Request) {
   const countable = modelResult.kind !== "clarifying_question" && modelResult.verificationStatus !== "response rejected";
   const { error: settlementError } = await admin.rpc("agent_rfq_settle_budget", { p_turn_id: turn.id, p_reported_cost_microusd: microusd(usage), p_resolved_model: text(completion?.model, 240) || PRESET, p_provider: text(completion?.provider, 240) || null, p_input_tokens: Number.isInteger(usage?.prompt_tokens) ? usage.prompt_tokens : null, p_output_tokens: Number.isInteger(usage?.completion_tokens) ? usage.completion_tokens : null, p_countable: countable });
   if (settlementError) {
-    const result = output("unavailable", "I couldn’t verify the usage record safely, so I left your RFQ unchanged. Please try again later.", revision, { budgetState: { remainingTurns: 0 } });
+    const result = output("unavailable", "I couldn’t verify the usage record safely, so I left your RFQ unchanged. Please try again later.", revision);
     await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "failed"); return reply(result, 503);
   }
-  const displayRemainingTurns = Math.min(5, Number(budget.remainingTurns || 0) + (countable ? 0 : 1));
   const handoff = operational(message) && ((!compact.operation?.invoice && !compact.operation?.order) || modelResult.supportHandoff);
-  let result = output(handoff ? "support_handoff" : modelResult.kind, handoff ? "I don’t have a verified payment or order record for that yet. Please contact info@arcanawangsa.com and our team will clarify it for you." : modelResult.reply, revision, { verificationStatus: modelResult.verificationStatus, supportHandoff: handoff, options: handoff ? null : modelResult.options, budgetState: { remainingTurns: displayRemainingTurns } });
+  let result = output(handoff ? "support_handoff" : modelResult.kind, handoff ? "I don’t have a verified payment or order record for that yet. Please contact info@arcanawangsa.com and our team will clarify it for you." : modelResult.reply, revision, { verificationStatus: modelResult.verificationStatus, supportHandoff: handoff, options: handoff ? null : modelResult.options });
   if (modelResult.patch && !handoff && !readOnlyRfqQuestion(message)) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: modelResult.patch, p_turn_id: turn.id });
     result = error
-      ? output("unavailable", "I understood the requested change, but your RFQ was updated elsewhere so I did not overwrite anything. Please review the latest draft and try again.", revision, { verificationStatus: "conflict", budgetState: { remainingTurns: displayRemainingTurns } })
+      ? output("unavailable", "I understood the requested change, but your RFQ was updated elsewhere so I did not overwrite anything. Please review the latest draft and try again.", revision, { verificationStatus: "conflict" })
       // The same turn can both save the fields the buyer already gave and ask
       // about one that's still missing, so the pending options survive the
       // kind flipping to draft_updated once the patch is applied.
-      : output("draft_updated", modelResult.reply, Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || modelResult.patch, changedFields: applied?.changedFields || Object.keys(modelResult.patch), undoToken: applied?.undoToken || null, verificationStatus: modelResult.verificationStatus, options: modelResult.options, budgetState: { remainingTurns: displayRemainingTurns } });
+      : output("draft_updated", modelResult.reply, Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || modelResult.patch, changedFields: applied?.changedFields || Object.keys(modelResult.patch), undoToken: applied?.undoToken || null, verificationStatus: modelResult.verificationStatus, options: modelResult.options });
   }
   await append(admin, rfqCaseId, user.id, "agent", result.reply);
   await finish(admin, turn.id, result);
