@@ -795,14 +795,14 @@ function About() {
               <figure className="about-team-photo about-team-photo--celina">
                 <img
                   src="/assets/team/celina.jpg"
-                  alt="Celina, Co-Founder, COO and Creative Director of Atelix"
+                  alt="Celina Yang, Co-Founder, COO and Creative Director of Atelix"
                   width={800}
                   height={1200}
                   loading="lazy"
                 />
               </figure>
               <div>
-                <h3>Celina</h3>
+                <h3>Celina Yang</h3>
                 <p className="about-team-role">
                   Co-Founder, COO &amp; Creative Director
                 </p>
