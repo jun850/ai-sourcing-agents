@@ -176,9 +176,14 @@ request in that month.
 
 Per user:
 
-- At most five paid OpenRouter-generated turns per month.
 - At most USD 0.05 admitted spend per month.
 - At most USD 0.01 conservative reservation per turn.
+
+Per RFQ case:
+
+- At most five paid OpenRouter-generated turns. This is scoped to the RFQ,
+  not the buyer's calendar month — a buyer working multiple RFQs, or picking
+  one back up next month, is not limited by turns spent on a different RFQ.
 
 Before a call, the server deduplicates `clientMessageId`, calculates the bounded
 worst-case reservation, and atomically reserves against both the user allowance
@@ -199,13 +204,13 @@ message is preserved and the RFQ UI continues with deterministic form edits,
 authoritative reads, and the payment/order support handoff. No paid fallback
 outside `@preset/marketplace-copilot` is allowed.
 
-A turn is reserved against the five-per-month allowance before its outcome is
+A turn is reserved against the case's five-turn allowance before its outcome is
 known, since the outcome depends on the model's response. If that response
 turns out to be a `clarifying_question` — the agent asking about a still-missing
 optional field such as colors, sizes, or certifications, rather than delivering
 a saved answer — or the deterministic "could not interpret" fallback, the
 reservation's real provider cost is still settled and counted against the
-dollar ceiling above, but the turn is not counted against the buyer's five paid
+dollar ceiling above, but the turn is not counted against the RFQ's five paid
 turns. This keeps a short back-and-forth to fill in optional details from
 costing the buyer usable turns.
 
