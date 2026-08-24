@@ -41,6 +41,21 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Sign-up submissions are stored as Supabase `registration_requests` in
   `pending_review`; Intools exposes the queue and approval action only after
   the server confirms an administrator role.
+- The sign-up screen is an access-request workflow, not immediate self-serve
+  account creation. It records the request, explains the human review gate,
+  and only promises an email invitation after approval.
+- Existing approved users can choose password sign-in or a single email message
+  containing both a magic link and a six-digit OTP. Either completes the same
+  Supabase session; the OTP is an accessible fallback, never a second account
+  path.
+- After login, the dashboard is the buyer's private RFQ workspace: a persistent
+  request sidebar and RFQ context header frame a split conversation and live
+  RFQ document. The buyer can save edits and submit the RFQ, but submission
+  only queues Atelix review; it never sends supplier outreach directly.
+- The live RFQ view exposes the durable RFQ, timeline, quotes, orders, and
+  files records in one workspace. Empty tabs remain explicit until guarded
+  records exist, and the assistant presents drafting progress only, never
+  invented supplier or commercial facts.
 
 ## Accessibility
 

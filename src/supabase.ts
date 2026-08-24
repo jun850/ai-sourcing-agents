@@ -352,6 +352,14 @@ export async function signInWithMagicLink(email: string, redirectTo: string) {
   });
   rpcError(error);
 }
+export async function signInWithEmailOtp(email: string, token: string) {
+  const { error } = await client().auth.verifyOtp({
+    email,
+    token,
+    type: "email",
+  });
+  rpcError(error);
+}
 export async function signOut() {
   const { error } = await client().auth.signOut();
   rpcError(error);

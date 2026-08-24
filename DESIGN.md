@@ -32,6 +32,28 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   contracts and preserve server-authoritative status boundaries.
 - Keep the Intools sign-up queue private, status-filterable, and explicit about
   the manual approval gate; never show it to non-admin users.
+- The access-request form is a compact two-column workflow on desktop and a
+  single-column workflow on narrow screens. Its header, fields, primary action,
+  and login link stay in one surface; labels use a dedicated label row so
+  optional metadata never breaks field alignment.
+- Auth request surfaces use the existing moss action and quiet white surface,
+  with a defined border rather than a decorative gradient or broad card shadow.
+  Form hover, focus, busy, error, and reduced-motion states remain visible.
+- Email-code sign-in is a focused alternative state, not an additional panel:
+  one email field, then one six-digit code field after delivery. The message
+  describes both available completion paths, preserves copy/paste and native
+  one-time-code autofill, and uses the same moss action and quiet status style.
+- Auth forms use a shared 52px control height and an 18px label row. Registration
+  fields reserve a separate helper-text row so email, phone, and standard fields
+  align cleanly across both desktop columns and the single-column mobile layout.
+- The signed-in RFQ workspace follows the split sourcing-flow composition:
+  persistent request navigation, a concise RFQ context header, conversation on
+  the left, and a live review document on the right. On narrow screens these
+  regions stack in task order without horizontal scrolling.
+- The RFQ document keeps its status, tabs, decision notice, specifications,
+  autosave/review explanation, and single Submit RFQ action visible. Use moss
+  only for current state and consequential actions; the request remains a
+  draft until the guarded submission has queued Atelix review.
 
 ## Accessibility target
 
