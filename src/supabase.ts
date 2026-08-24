@@ -718,6 +718,7 @@ export type IntoolsRfqCase = {
   title: string;
   brief: Record<string, unknown>;
   status: string;
+  buyer_profile_id: string;
   buyer_name: string;
   buyer_email: string;
   match_count: number;
