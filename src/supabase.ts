@@ -10,7 +10,8 @@ export const supabase = isSupabaseConfigured
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true,
+        // AuthCallback exchanges the code manually; auto-detection would race it and consume the single-use code first.
+        detectSessionInUrl: false,
       },
     })
   : null;
@@ -490,14 +491,6 @@ export async function signInWithMagicLink(email: string, redirectTo: string) {
   const { error } = await client().auth.signInWithOtp({
     email,
     options: { emailRedirectTo: redirectTo },
-  });
-  rpcError(error);
-}
-export async function signInWithEmailOtp(email: string, token: string) {
-  const { error } = await client().auth.verifyOtp({
-    email,
-    token,
-    type: "email",
   });
   rpcError(error);
 }
