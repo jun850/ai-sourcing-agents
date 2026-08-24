@@ -69,6 +69,9 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Auth request surfaces use the existing moss action and quiet white surface,
   with a defined border rather than a decorative gradient or broad card shadow.
   Form hover, focus, busy, error, and reduced-motion states remain visible.
+- Magic-link submission always transitions to the same quiet success state for
+  syntactically valid emails. Its copy may say that an eligible email will
+  receive a link, but must never reveal account existence or approval status.
 - Email-code sign-in is a focused alternative state, not an additional panel:
   one email field, then one six-digit code field after delivery. The message
   describes both available completion paths, preserves copy/paste and native

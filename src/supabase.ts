@@ -515,9 +515,8 @@ export async function getUserDisplayName(user: User): Promise<string> {
   return user.email?.split("@")[0] || "Administrator";
 }
 export async function signInWithMagicLink(email: string, redirectTo: string) {
-  const { error } = await client().auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: redirectTo },
+  const { error } = await client().functions.invoke("request-magic-link", {
+    body: { email, redirectTo },
   });
   rpcError(error);
 }

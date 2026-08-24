@@ -81,6 +81,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   containing both a magic link and a six-digit OTP. Either completes the same
   Supabase session; the OTP is an accessible fallback, never a second account
   path.
+- Magic-link requests are checked server-side against the latest access request.
+  Only `approved` or `invited` emails may receive a link, and Auth may not create
+  a missing user during sign-in. Every valid email submission receives the same
+  generic response so account and approval status cannot be enumerated.
 - Access request, sign-in, and supplier-intake forms use the shared Material
   component layer. Searchable lookup controls are limited to bounded,
   user-supplied options such as country calling code, manufacturing category,
