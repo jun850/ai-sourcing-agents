@@ -57,6 +57,11 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   containing both a magic link and a six-digit OTP. Either completes the same
   Supabase session; the OTP is an accessible fallback, never a second account
   path.
+- Access request, sign-in, and supplier-intake forms use the shared Material
+  component layer. Searchable lookup controls are limited to bounded,
+  user-supplied options such as country calling code, manufacturing category,
+  and certification; selecting an option does not verify or create supplier
+  capability, certification, or commercial facts.
 - After login, the dashboard is the buyer's private RFQ workspace: a persistent
   request sidebar and RFQ context header frame a split conversation and live
   RFQ document. The buyer can save edits and submit the RFQ, but submission

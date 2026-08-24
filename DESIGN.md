@@ -56,6 +56,12 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Auth forms use a shared 52px control height and an 18px label row. Registration
   fields reserve a separate helper-text row so email, phone, and standard fields
   align cleanly across both desktop columns and the single-column mobile layout.
+- Auth and supplier-intake forms use a shared Material 3-inspired control
+  vocabulary: outlined text fields, select menus, searchable Autocomplete
+  lookups, native-labelled radio/checkbox groups, inline status alerts, and
+  contained moss primary actions. Lookup controls must remain keyboard-complete
+  and use an explicit option list; do not present a lookup result as reviewed
+  supplier or commercial truth.
 - The signed-in RFQ workspace follows the split sourcing-flow composition:
   persistent request navigation, a concise RFQ context header, conversation on
   the left, and a live review document on the right. On narrow screens these
