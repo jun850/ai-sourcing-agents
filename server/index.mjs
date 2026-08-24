@@ -25,7 +25,7 @@ const cookieName = "atelix_local_intools";
 const allowedRpcs = new Set([
   "intools_list_invoices", "intools_get_invoice_detail", "intools_create_invoice",
   "intools_update_invoice", "intools_send_invoice", "intools_cancel_invoice",
-  "intools_record_manual_payment", "intools_list_orders", "intools_get_order_detail",
+  "intools_record_manual_payment", "intools_list_orders", "intools_get_order_detail", "admin_update_order_status",
   "intools_list_audit",
   "intools_list_suppliers", "intools_get_supplier_detail", "intools_save_supplier",
   "intools_save_supplier_with_images", "intools_archive_supplier",

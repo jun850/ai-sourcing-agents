@@ -74,7 +74,7 @@ function supplierSurface(children: ReactNode, sx: Record<string, unknown> = {}) 
       elevation={0}
       sx={{
         border: "1px solid #dfe4eb",
-        borderRadius: 3,
+        borderRadius: 1.75,
         backgroundColor: "#fff",
         ...sx,
       }}

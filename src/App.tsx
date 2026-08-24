@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
+import { Alert, Button as MaterialButton, TextField } from "@mui/material";
 import { Button, SkipLink } from "./components";
 import { AtelixLandingPage } from "./landing/landing";
-import { getSession, isSupabaseConfigured, signInWithMagicLink, supabase } from "./supabase";
+import { getSession, isSupabaseConfigured, signInWithEmailOtp, signInWithMagicLink, supabase } from "./supabase";
 
 const Dashboard = lazy(() => import("./dashboard").then(({ Dashboard: Route }) => ({ default: Route })));
 const Intools = lazy(() => import("./intools").then(({ Intools: Route }) => ({ default: Route })));
@@ -40,27 +41,68 @@ function RouteLoading() {
 
 function Landing(){ return <><SkipLink/><AtelixLandingPage/></>; }
 function SignIn(){
-  const [error,setError]=useState(""); const [notice,setNotice]=useState(""); const [busy,setBusy]=useState(false);
-  async function submit(event:FormEvent<HTMLFormElement>){
-    event.preventDefault(); setBusy(true); setError(""); setNotice("");
-    const form=new FormData(event.currentTarget); const email=String(form.get("email")||""); const password=String(form.get("password")||"");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [email, setEmail] = useState("");
+  const [method, setMethod] = useState<"password" | "email-code">("password");
+  const [codeSent, setCodeSent] = useState(false);
+
+  function completeSignIn() {
+    const next = sanitizeInternalPath(new URLSearchParams(location.search).get("next"));
+    history.pushState({}, "", next);
+    dispatchEvent(new PopStateEvent("popstate"));
+  }
+
+  async function submitPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true); setError(""); setNotice("");
+    const password = String(new FormData(event.currentTarget).get("password") || "");
     try {
       if (!supabase || !isSupabaseConfigured) throw new Error("Sign in is not configured for this environment.");
-      const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (authError) throw authError;
-      const next = sanitizeInternalPath(new URLSearchParams(location.search).get("next"));
-      history.pushState({},"",next); dispatchEvent(new PopStateEvent("popstate"));
-    } catch(cause) { setError(cause instanceof Error?cause.message:"Could not sign in."); } finally { setBusy(false); }
+      completeSignIn();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not sign in.");
+    } finally { setBusy(false); }
   }
-  async function sendMagicLink(){
-    const form = document.querySelector<HTMLFormElement>(".auth-card");
-    const email=form ? String(new FormData(form).get("email")||"").trim() : "";
-    if (!email) { setError("Enter your work email first."); return; }
+
+  async function sendEmailCode() {
+    const safeEmail = email.trim();
+    if (!safeEmail) { setError("Enter your work email first."); return; }
     setBusy(true); setError(""); setNotice("");
-    try { const next = sanitizeInternalPath(new URLSearchParams(location.search).get("next")); await signInWithMagicLink(email, `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`); setNotice("Check your email for a secure sign-in link."); }
-    catch(cause) { setError(cause instanceof Error?cause.message:"Could not send the sign-in link."); } finally { setBusy(false); }
+    try {
+      const next = sanitizeInternalPath(new URLSearchParams(location.search).get("next"));
+      await signInWithMagicLink(safeEmail, `${location.origin}/auth/callback?next=${encodeURIComponent(next)}`);
+      setCodeSent(true);
+      setNotice("We sent a sign-in link and a 6-digit code to your work email.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not send the sign-in email.");
+    } finally { setBusy(false); }
   }
-  return <><SkipLink/><main id="main-content" className="auth"><form className="auth-card" onSubmit={submit} aria-labelledby="sign-in-title"><a href="/" className="wordmark">atelix<span>.</span></a><h1 id="sign-in-title">Welcome back</h1><p>Sign in to continue your sourcing work.</p><label htmlFor="email">Work email<input id="email" name="email" type="email" autoComplete="email" required/></label><label htmlFor="password">Password<input id="password" type="password" name="password" autoComplete="current-password" required/></label>{error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="success" role="status">{notice}</p>}<Button type="submit" disabled={busy} ariaBusy={busy}>{busy?"Signing in…":"Log in"}</Button><Button type="button" kind="secondary" disabled={busy} onClick={sendMagicLink}>Email me a sign-in link</Button><p className="auth-footnote">New to Atelix? <a href="/sign-up">Sign up</a></p></form></main></>;
+
+  async function verifyEmailCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const token = String(new FormData(event.currentTarget).get("email-code") || "").replace(/\s/g, "");
+    if (!/^\d{6}$/.test(token)) { setError("Enter the 6-digit code from your email."); return; }
+    setBusy(true); setError("");
+    try {
+      await signInWithEmailOtp(email.trim(), token);
+      completeSignIn();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "That code is invalid or has expired.");
+    } finally { setBusy(false); }
+  }
+
+  function switchMethod(nextMethod: "password" | "email-code") {
+    setMethod(nextMethod); setError(""); setNotice(""); setCodeSent(false);
+  }
+
+  const emailField = <TextField id="email" name="email" label="Work email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required fullWidth/>;
+  const ErrorAlert = error ? <Alert severity="error" role="alert">{error}</Alert> : null;
+  const NoticeAlert = notice ? <Alert severity="success" role="status">{notice}</Alert> : null;
+  return <><SkipLink/><main id="main-content" className="auth"><section className="auth-card auth-login" aria-labelledby="sign-in-title"><a href="/" className="wordmark">atelix<span>.</span></a><header className="auth-header"><p className="auth-eyebrow">Private sourcing workspace</p><h1 id="sign-in-title">{method === "password" ? "Welcome back" : codeSent ? "Enter your code" : "Sign in with a code"}</h1><p>{method === "password" ? "Sign in to continue your sourcing work." : codeSent ? <>Use the code we sent to <strong>{email.trim()}</strong>, or open the sign-in link in that email.</> : "We’ll email a secure link and a one-time code to your work address."}</p></header>{method === "password" ? <form className="auth-login-form" onSubmit={submitPassword}>{emailField}<TextField id="password" type="password" name="password" label="Password" autoComplete="current-password" required fullWidth/>{ErrorAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>{busy ? "Signing in…" : "Log in"}</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("email-code")} disabled={busy}>Use an email code instead</button></form> : codeSent ? <form className="auth-login-form" onSubmit={verifyEmailCode}><TextField id="email-code" name="email-code" label="6-digit sign-in code" inputMode="numeric" slotProps={{ htmlInput: { pattern: "[0-9]{6}", autoComplete: "one-time-code", maxLength: 6 } }} placeholder="000000" required autoFocus fullWidth/>{ErrorAlert}{NoticeAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>{busy ? "Checking code…" : "Continue"}</MaterialButton><button className="auth-method-link" type="button" onClick={() => setCodeSent(false)} disabled={busy}>Use a different email</button><button className="auth-method-link" type="button" onClick={() => void sendEmailCode()} disabled={busy}>Send a new code</button></form> : <form className="auth-login-form" onSubmit={(event) => { event.preventDefault(); void sendEmailCode(); }}>{emailField}{ErrorAlert}{NoticeAlert}<MaterialButton type="submit" variant="contained" disabled={busy} aria-busy={busy}>{busy ? "Sending…" : "Email my code and link"}</MaterialButton><button className="auth-method-link" type="button" onClick={() => switchMethod("password")} disabled={busy}>Use password instead</button></form>}<p className="auth-footnote">New to Atelix? <a href="/sign-up">Request access</a></p></section></main></>;
 }
 function AuthCallback(){
   const [error,setError]=useState("");

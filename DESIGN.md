@@ -32,6 +32,44 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   contracts and preserve server-authoritative status boundaries.
 - Keep the Intools sign-up queue private, status-filterable, and explicit about
   the manual approval gate; never show it to non-admin users.
+- Intools operational records use one bounded, 14px-radius list panel with
+  row dividers and a quiet column header on desktop. Rows are rectangular,
+  never individually pill-shaped; hover and keyboard focus communicate the
+  active record without adding decorative card shadows.
+- Intools order detail uses one operational surface: a concise record header,
+  structured item, fulfillment, and activity rows, plus a quiet summary rail
+  that stacks below the records on narrow screens. Keep the single status
+  action in that rail with explicit labels, optional audit note, busy state,
+  and inline success or error status; never expose a raw record dump or imply
+  that payment settlement can be changed in the browser.
+- The access-request form is a compact two-column workflow on desktop and a
+  single-column workflow on narrow screens. Its header, fields, primary action,
+  and login link stay in one surface; labels use a dedicated label row so
+  optional metadata never breaks field alignment.
+- Auth request surfaces use the existing moss action and quiet white surface,
+  with a defined border rather than a decorative gradient or broad card shadow.
+  Form hover, focus, busy, error, and reduced-motion states remain visible.
+- Email-code sign-in is a focused alternative state, not an additional panel:
+  one email field, then one six-digit code field after delivery. The message
+  describes both available completion paths, preserves copy/paste and native
+  one-time-code autofill, and uses the same moss action and quiet status style.
+- Auth forms use a shared 52px control height and an 18px label row. Registration
+  fields reserve a separate helper-text row so email, phone, and standard fields
+  align cleanly across both desktop columns and the single-column mobile layout.
+- Auth and supplier-intake forms use a shared Material 3-inspired control
+  vocabulary: outlined text fields, select menus, searchable Autocomplete
+  lookups, native-labelled radio/checkbox groups, inline status alerts, and
+  contained moss primary actions. Lookup controls must remain keyboard-complete
+  and use an explicit option list; do not present a lookup result as reviewed
+  supplier or commercial truth.
+- The signed-in RFQ workspace follows the split sourcing-flow composition:
+  persistent request navigation, a concise RFQ context header, conversation on
+  the left, and a live review document on the right. On narrow screens these
+  regions stack in task order without horizontal scrolling.
+- The RFQ document keeps its status, tabs, decision notice, specifications,
+  autosave/review explanation, and single Submit RFQ action visible. Use moss
+  only for current state and consequential actions; the request remains a
+  draft until the guarded submission has queued Atelix review.
 
 ## Accessibility target
 

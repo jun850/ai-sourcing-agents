@@ -59,6 +59,7 @@ import {
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
   setIntoolsRfqSupplierMatchStatus,
+  updateIntoolsOrderStatus,
   updateIntoolsInvoice,
   updateIntoolsOrderProductionStage,
   upsertIntoolsRfqQuote,
@@ -68,6 +69,7 @@ import {
   type IntoolsInvoiceDetail,
   type IntoolsManualPaymentPayload,
   type IntoolsOrder,
+  type IntoolsOrderDetail,
   type IntoolsRegistrationRequest,
   type IntoolsRfqCase,
   type IntoolsRfqQuote,
@@ -92,18 +94,18 @@ const intoolsTheme = createTheme({
     warning: { main: "#9a6a14" },
     error: { main: "#a33b36" },
   },
-  shape: { borderRadius: 14 },
+  shape: { borderRadius: 12 },
   components: {
     MuiButton: {
       defaultProps: { disableElevation: true },
       styleOverrides: {
-        root: { borderRadius: 11, minHeight: 42, paddingInline: 16 },
+        root: { borderRadius: 10, minHeight: 42, paddingInline: 16 },
       },
     },
     MuiTextField: { defaultProps: { size: "small" } },
     MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
     MuiDialog: {
-      styleOverrides: { paper: { borderRadius: 16, maxWidth: 560 } },
+      styleOverrides: { paper: { borderRadius: 14, maxWidth: 560 } },
     },
   },
 });
@@ -198,7 +200,7 @@ function Surface({
       {...props}
       sx={{
         border: "1px solid #dfe4eb",
-        borderRadius: 3,
+        borderRadius: 1.75,
         backgroundColor: "#fff",
         ...sx,
       }}
@@ -384,43 +386,49 @@ function InvoiceList({
       </Surface>
     );
   return (
-    <Stack
-      component="ul"
-      aria-label="Invoices"
-      spacing={1}
-      sx={{ listStyle: "none", p: 0, m: 0 }}
-    >
-      {invoices.map((invoice) => (
-        <Box component="li" key={invoice.id}>
-          <Button
-            className="intools-row-button"
-            onClick={() => onSelect(invoice)}
-            fullWidth
-            sx={{
-              display: "block",
-              p: 0,
-              textAlign: "left",
-              color: "inherit",
-              borderRadius: 3,
-              textTransform: "none",
-              "&:hover": { backgroundColor: "transparent" },
-            }}
-            aria-current={selectedId === invoice.id ? "true" : undefined}
-          >
-            <Surface
-              interactive
+    <Surface sx={{ overflow: "hidden" }}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          display: { xs: "none", sm: "grid" },
+          gridTemplateColumns: "1.15fr 1.4fr .8fr .8fr auto",
+          gap: 1.5,
+          px: 2,
+          py: 1.25,
+          borderBottom: "1px solid #dfe4eb",
+          backgroundColor: "#f6f8fa",
+          color: "#526176",
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: ".04em",
+          textTransform: "uppercase",
+        }}
+      >
+        <Box>Invoice</Box><Box>Case</Box><Box>Total</Box><Box>Due</Box><Box>Status</Box>
+      </Box>
+      <Box component="ul" aria-label="Invoices" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {invoices.map((invoice) => (
+          <Box component="li" key={invoice.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+            <Button
+              className="intools-row-button"
+              onClick={() => onSelect(invoice)}
+              fullWidth
               sx={{
                 display: "grid",
-                gridTemplateColumns: {
-                  xs: "minmax(0,1fr) auto",
-                  sm: "1.15fr 1.4fr .8fr .8fr auto",
-                },
+                gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.15fr 1.4fr .8fr .8fr auto" },
                 alignItems: "center",
                 gap: { xs: 1, sm: 1.5 },
                 p: { xs: 1.5, sm: 2 },
-                borderColor: selectedId === invoice.id ? "#6fae86" : "#dfe4eb",
-                backgroundColor: selectedId === invoice.id ? "#f4faf5" : "#fff",
+                borderRadius: 0,
+                textAlign: "left",
+                color: "inherit",
+                textTransform: "none",
+                backgroundColor: selectedId === invoice.id ? "#f1f7f2" : "#fff",
+                transition: "background-color 180ms ease-out",
+                "&:hover": { backgroundColor: selectedId === invoice.id ? "#e9f3eb" : "#f7f9fb" },
+                "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
               }}
+              aria-current={selectedId === invoice.id ? "true" : undefined}
             >
               <Box sx={{ minWidth: 0 }}>
                 <Typography
@@ -485,11 +493,11 @@ function InvoiceList({
                 Due {shortDate(invoice.due_date)} · Balance{" "}
                 {money(invoice.balance_cents)}
               </Typography>
-            </Surface>
-          </Button>
-        </Box>
-      ))}
-    </Stack>
+            </Button>
+          </Box>
+        ))}
+      </Box>
+    </Surface>
   );
 }
 
@@ -1131,11 +1139,186 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+const orderStatuses = [
+  "awaiting_payment",
+  "payment_declared",
+  "payment_verified",
+  "fulfilling",
+  "completed",
+  "cancelled",
+  "disputed",
+  "refunded",
+] as const;
+
+function moneyValue(value: number | null | undefined) {
+  return money(Math.round(Number(value || 0) * 100));
+}
+
+function OrderDetail({
+  order,
+  onBack,
+  onChanged,
+}: {
+  order: IntoolsOrderDetail;
+  onBack: () => void;
+  onChanged: (order: IntoolsOrderDetail) => void;
+}) {
+  const [nextStatus, setNextStatus] = useState(order.status);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setNextStatus(order.status);
+    setNote("");
+  }, [order.order_no, order.status]);
+  async function submitStatus(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (nextStatus === order.status) return;
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await updateIntoolsOrderStatus(order.order_no, nextStatus, note.trim() || null);
+      onChanged(await getIntoolsOrderDetail(order.order_no));
+      setMessage("Order status updated and recorded in the activity history.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not update the order status.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  const buyer = order.buyer || { full_name: null, email: null, company_name: null, country: null };
+  const shippingEta =
+    order.shipping_eta_min_days && order.shipping_eta_max_days
+      ? `${order.shipping_eta_min_days}–${order.shipping_eta_max_days} days`
+      : order.shipping_eta_min_days
+        ? `${order.shipping_eta_min_days} days`
+        : "—";
+  return (
+    <Box>
+      <Button onClick={onBack} startIcon={<ArrowBack />} sx={{ mb: 1.5, px: 0 }}>
+        Back to orders
+      </Button>
+      <Surface sx={{ overflow: "hidden" }}>
+        <Box sx={{ p: { xs: 2, sm: 3 }, borderBottom: "1px solid #dfe4eb" }}>
+          <Stack
+            direction={{ xs: "column", sm: "row" }}
+            sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 1.5 }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h2" sx={{ fontSize: { xs: 24, sm: 30 }, overflowWrap: "anywhere" }}>
+                {order.order_no}
+              </Typography>
+              <Typography sx={{ mt: 0.4, color: "text.secondary", fontSize: 13 }}>
+                Placed {shortDate(order.placed_at)} · {buyer.company_name || buyer.full_name || "Buyer not named"}
+              </Typography>
+            </Box>
+            <StatusChip status={order.status} />
+          </Stack>
+        </Box>
+
+        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 310px" }, alignItems: "start" }}>
+          <Stack spacing={3} sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
+            <Box>
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Order items</Typography>
+              <Stack component="ul" aria-label="Order items" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
+                {order.items.length ? order.items.map((item, index) => (
+                  <Box component="li" key={`${item.sku || item.name || "item"}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 2, py: 1.5, borderBottom: "1px solid #e8ecf1" }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{item.name || "Unnamed item"}</Typography>
+                      <Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
+                        {[item.seller, item.sku && `SKU ${item.sku}`, item.qty ? `${item.qty} × ${moneyValue(item.unit_price)}` : null].filter(Boolean).join(" · ") || "No item metadata returned"}
+                      </Typography>
+                      {(item.option_selection || item.buyer_note) && (
+                        <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
+                          {[item.option_selection, item.buyer_note].filter(Boolean).join(" · ")}
+                        </Typography>
+                      )}
+                    </Box>
+                    <Typography sx={{ fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" }}>{moneyValue(item.line_total)}</Typography>
+                  </Box>
+                )) : <Typography sx={{ py: 1.5, color: "text.secondary", fontSize: 13 }}>No immutable line items returned.</Typography>}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Fulfillment</Typography>
+              {order.fulfillments.length ? (
+                <Stack component="ul" aria-label="Fulfillment records" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
+                  {order.fulfillments.map((fulfillment, index) => (
+                    <Box component="li" key={`${fulfillment.factory_name || "factory"}-${index}`} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1.2fr .8fr minmax(0,1fr)" }, gap: 1, py: 1.25, borderBottom: "1px solid #e8ecf1" }}>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{fulfillment.factory_name || "Supplier not identified"}</Typography>
+                      <Typography sx={{ color: "text.secondary", fontSize: 13 }}>{displayStatus(fulfillment.fulfillment_status || "pending")}</Typography>
+                      <Typography sx={{ color: "text.secondary", fontSize: 13, overflowWrap: "anywhere" }}>{fulfillment.tracking || "Tracking not recorded"}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : <Typography sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}>No fulfillment records returned.</Typography>}
+            </Box>
+
+            <Box>
+              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Activity</Typography>
+              {order.events.length ? (
+                <Stack component="ol" aria-label="Order activity" spacing={0} sx={{ m: 0, mt: 1.25, p: 0, listStyle: "none", borderTop: "1px solid #e8ecf1" }}>
+                  {order.events.map((event, index) => (
+                    <Box component="li" key={`${event.created_at}-${index}`} sx={{ py: 1.25, borderBottom: "1px solid #e8ecf1" }}>
+                      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 0.5 }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{displayStatus(event.status)}</Typography>
+                        <Typography sx={{ color: "text.secondary", fontSize: 12 }}>{shortDate(event.created_at)}</Typography>
+                      </Stack>
+                      <Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 13, overflowWrap: "anywhere" }}>
+                        {event.note || "No note recorded"}{event.created_by_name ? ` · ${event.created_by_name}` : ""}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : <Typography sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}>No status activity returned.</Typography>}
+            </Box>
+          </Stack>
+
+          <Box sx={{ p: { xs: 2, sm: 3 }, borderTop: { xs: "1px solid #dfe4eb", lg: 0 }, borderLeft: { lg: "1px solid #dfe4eb" }, backgroundColor: "#f6f8fa" }}>
+            <Stack spacing={2.5}>
+              <Box>
+                <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Order summary</Typography>
+                <Stack spacing={0.85} sx={{ mt: 1.25 }}>
+                  {[["Subtotal", moneyValue(order.subtotal)], ["Service fee", moneyValue(order.fee)], ["Shipping", moneyValue(order.ship)], ["Quality control", moneyValue(order.qc_fee)], ["Insurance", moneyValue(order.ins_fee)]].map(([label, value]) => (
+                    <Stack key={label} direction="row" sx={{ justifyContent: "space-between", gap: 2 }}><Typography sx={{ color: "text.secondary", fontSize: 13 }}>{label}</Typography><Typography sx={{ fontSize: 13 }}>{value}</Typography></Stack>
+                  ))}
+                  <Divider sx={{ my: 0.35 }} />
+                  <Stack direction="row" sx={{ justifyContent: "space-between", gap: 2 }}><Typography sx={{ fontWeight: 800 }}>Total</Typography><Typography sx={{ fontWeight: 800 }}>{moneyValue(order.total)}</Typography></Stack>
+                </Stack>
+              </Box>
+              <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
+                {[["Buyer", buyer.company_name || buyer.full_name || "—"], ["Email", buyer.email || "—"], ["Country", buyer.country || "—"], ["Payment", order.payment_verified_at ? `Verified ${shortDate(order.payment_verified_at)}` : order.payment_declared_at ? `Declared ${shortDate(order.payment_declared_at)}` : "Not recorded"], ["Shipping", order.shipping_service || "—"], ["Delivery estimate", shippingEta], ["Destination", order.ship_address || order.ship_country || "—"], ["Incoterms", order.incoterms || "—"]].map(([label, value]) => (
+                  <Box key={label}><Typography component="dt" sx={{ color: "text.secondary", fontSize: 11, fontWeight: 700 }}>{label}</Typography><Typography component="dd" sx={{ m: 0, mt: 0.2, fontSize: 13, overflowWrap: "anywhere" }}>{value}</Typography></Box>
+                ))}
+              </Box>
+              <Box component="form" onSubmit={submitStatus} aria-labelledby="update-order-status-title" sx={{ pt: 2, borderTop: "1px solid #dfe4eb" }}>
+                <Stack spacing={1.25}>
+                  <Box><Typography id="update-order-status-title" component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>Update status</Typography><Typography sx={{ mt: 0.25, color: "text.secondary", fontSize: 12 }}>The change is added to the order history and buyer notification workflow.</Typography></Box>
+                  <TextField select label="New status" value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} disabled={busy}>
+                    {orderStatuses.map((status) => <MenuItem key={status} value={status}>{displayStatus(status)}</MenuItem>)}
+                  </TextField>
+                  <TextField label="Update note" multiline minRows={3} value={note} onChange={(event) => setNote(event.target.value)} disabled={busy} helperText="Optional. This note is visible in the order activity." />
+                  {(message || error) && <Alert severity={error ? "error" : "success"} role={error ? "alert" : "status"}>{error || message}</Alert>}
+                  <Button type="submit" variant="contained" disabled={busy || nextStatus === order.status} startIcon={busy ? <CircularProgress size={16} color="inherit" /> : <Refresh />}>
+                    {busy ? "Updating…" : "Update order"}
+                  </Button>
+                </Stack>
+              </Box>
+            </Stack>
+          </Box>
+        </Box>
+      </Surface>
+    </Box>
+  );
+}
+
 function OrdersPanel() {
   const [orders, setOrders] = useState<IntoolsOrder[]>([]);
-  const [selected, setSelected] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const [selected, setSelected] = useState<IntoolsOrderDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -1168,55 +1351,43 @@ function OrdersPanel() {
         {error}
       </Alert>
     );
-  if (selected)
-    return (
-      <Surface sx={{ p: { xs: 2, sm: 3 } }}>
-        <Button
-          onClick={() => setSelected(null)}
-          startIcon={<ArrowBack />}
-          sx={{ px: 0, mb: 1 }}
-        >
-          Back to orders
-        </Button>
-        <Typography variant="h2" sx={{ fontSize: 24 }}>
-          Order detail
-        </Typography>
-        <Box
-          component="pre"
-          sx={{
-            m: 0,
-            mt: 2,
-            whiteSpace: "pre-wrap",
-            overflowWrap: "anywhere",
-            font: "inherit",
-            color: "text.secondary",
-            fontSize: 13,
-          }}
-        >
-          {JSON.stringify(selected, null, 2)}
-        </Box>
-      </Surface>
-    );
-  return (
-    <Stack spacing={1}>
-      {orders.length ? (
-        orders.map((order) => (
-          <Surface
+  if (selected) return <OrderDetail order={selected} onBack={() => setSelected(null)} onChanged={(updated) => { setSelected(updated); setOrders((items) => items.map((item) => item.id === updated.id ? { ...item, status: updated.status } : item)); }} />;
+  return orders.length ? (
+    <Surface sx={{ overflow: "hidden" }}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          display: { xs: "none", sm: "grid" },
+          gridTemplateColumns: "1.1fr 1.5fr .8fr .8fr auto",
+          gap: 1.5,
+          px: 2,
+          py: 1.25,
+          borderBottom: "1px solid #dfe4eb",
+          backgroundColor: "#f6f8fa",
+          color: "#526176",
+          fontSize: 11,
+          fontWeight: 800,
+          letterSpacing: ".04em",
+          textTransform: "uppercase",
+        }}
+      >
+        <Box>Order</Box><Box>Items</Box><Box>Total</Box><Box>Placed</Box><Box>Status</Box>
+      </Box>
+      <Box component="ul" aria-label="Orders" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {orders.map((order) => (
+          <Box component="li" key={order.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+            <Button
             key={order.id}
-            component="button"
-            onClick={() =>
+            disabled={loadingDetail}
+            onClick={() => {
+              setLoadingDetail(true);
+              setError("");
               void getIntoolsOrderDetail(order.order_no)
                 .then(setSelected)
-                .catch((cause) =>
-                  setError(
-                    cause instanceof Error
-                      ? cause.message
-                      : "Could not load order detail.",
-                  ),
-                )
-            }
+                .catch((cause) => setError(cause instanceof Error ? cause.message : "Could not load order detail."))
+                .finally(() => setLoadingDetail(false));
+            }}
             sx={{
-              width: "100%",
               display: "grid",
               gridTemplateColumns: {
                 xs: "minmax(0,1fr) auto",
@@ -1226,9 +1397,13 @@ function OrdersPanel() {
               gap: 1.5,
               p: { xs: 1.5, sm: 2 },
               textAlign: "left",
-              cursor: "pointer",
               color: "inherit",
-              "&:hover": { borderColor: "#aeb9c8" },
+              borderRadius: 0,
+              textTransform: "none",
+              backgroundColor: "#fff",
+              transition: "background-color 180ms ease-out",
+              "&:hover": { backgroundColor: "#f7f9fb" },
+              "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 },
             }}
           >
             <Box>
@@ -1261,14 +1436,15 @@ function OrdersPanel() {
               {shortDate(order.placed_at)}
             </Typography>
             <StatusChip status={order.status} />
-          </Surface>
-        ))
-      ) : (
-        <Surface sx={{ p: 4, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 700 }}>No orders returned</Typography>
-        </Surface>
-      )}
-    </Stack>
+            </Button>
+          </Box>
+        ))}
+      </Box>
+    </Surface>
+  ) : (
+    <Surface sx={{ p: 4, textAlign: "center" }}>
+      <Typography sx={{ fontWeight: 700 }}>No orders returned</Typography>
+    </Surface>
   );
 }
 
@@ -1893,8 +2069,10 @@ function RegistrationRequestsPanel() {
         </Select>
       </Stack>
       {error && <Alert severity="error">{error}</Alert>}
-      {loading ? <LoadingRows /> : requests.length ? requests.map((request) => (
-        <Surface key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1 }}>
+      {loading ? <LoadingRows /> : requests.length ? <Surface sx={{ overflow: "hidden" }}>
+        <Box component="ul" aria-label="Sign-up requests" sx={{ listStyle: "none", p: 0, m: 0 }}>
+        {requests.map((request) => (
+        <Box component="li" key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1, "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
           <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}>
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{request.name} · {request.company_name}</Typography>
@@ -1907,8 +2085,10 @@ function RegistrationRequestsPanel() {
           </Stack>
           <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Sourcing: {request.sourcing} · Revenue: {request.annual_revenue}</Typography>
           <Typography sx={{ color: "text.secondary", fontSize: 12 }}>Submitted {shortDate(request.created_at)}</Typography>
-        </Surface>
-      )) : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
+        </Box>
+      ))}
+        </Box>
+      </Surface> : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
     </Stack>
   );
 }
