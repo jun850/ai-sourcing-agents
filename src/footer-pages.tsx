@@ -26,7 +26,7 @@ type FaqEntry = { q: string; a: string };
 const sourcingFaqs: FaqEntry[] = [
   {
     q: "Where does Atelix's network actually come from?",
-    a: "It didn't start from a cold list. Our foundation is over 30 years of family and business relationships in Asian manufacturing, built by one of our own team long before Atelix existed as a company. That's what gives us a real starting point instead of a directory: factories that already trust us, not factories we're introducing ourselves to for the first time. Since launch, we've expanded that foundation through warm introductions, factory to factory, into a working network across China, Vietnam, Japan, Malaysia, and Indonesia. The relationships are decades old. The network built on top of them is new and growing fast.",
+    a: "Our network comes from Atelix's business operations and partnerships with existing suppliers across China, Vietnam, Japan, Malaysia, and Indonesia. It is rooted in more than 30 years of family and business relationships in Asian manufacturing, including the founder's apparel business, and strengthened through long-standing supplier partnerships across the region. We continue to expand through trusted introductions and factory-to-factory relationships, while our team manages local compliance, quality control, and communication.",
   },
   {
     q: "Why does Atelix source from five countries instead of one?",
