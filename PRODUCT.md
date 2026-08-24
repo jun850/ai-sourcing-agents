@@ -40,6 +40,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   search, supplier filtering, sorting, deep-linked read-only detail, linked-RFQ
   navigation, invoice handoff, and a reorder action that only pre-fills a fresh
   RFQ draft. It never sends a supplier request from the product surface.
+- Products use a dense desktop table that reflows into labelled structured rows
+  on narrow screens. Product detail keeps the immutable snapshot and order
+  history in the main column and the current stage, invoice/RFQ handoff, and
+  guarded reorder action in a secondary rail.
 - Invoices continue through workspace invoice RPCs and Stripe Checkout; the
   browser may request checkout but cannot set totals or settlement state.
 - Sign-up submissions are stored as Supabase `registration_requests` in

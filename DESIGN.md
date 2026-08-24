@@ -16,6 +16,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   screens, and no product-card/pill stack. Product detail is a read-only split
   surface: immutable snapshot fields and order history on the left, one
   stage-aware next action plus a prefilled-RFQ reorder action on the right.
+- Products use a quiet 52px filter row: search, status tabs, supplier filter,
+  and sort. Stage state uses a small semantic dot and text label; the selected
+  tab and consequential actions use moss. Product detail uses a 64px back
+  toolbar, a 350px stage rail on desktop, and a stacked rail on narrow screens.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
