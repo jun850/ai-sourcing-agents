@@ -314,6 +314,7 @@ export type FooterContent = {
   newsletterPlaceholder: string;
   subscribe: string;
   newsletterNote: string;
+  socialLinks: readonly { id: "linkedin" | "x" | "instagram"; label: string; href: string }[];
 };
 
 export type HeaderNavigationContent = {
@@ -926,6 +927,11 @@ export const atelixContent = {
     newsletterPlaceholder: "Your work email",
     subscribe: "Subscribe",
     newsletterNote: "Work email only.",
+    socialLinks: [
+      { id: "linkedin", label: "LinkedIn", href: "https://www.linkedin.com/in/junarcana" },
+      { id: "x", label: "X", href: "https://x.com/junarcana263" },
+      { id: "instagram", label: "Instagram", href: "https://instagram.com/junarcana" },
+    ],
   },
   supplierIntake: {
     title: "Join Atelix as Supplier",
