@@ -122,10 +122,16 @@ It returns a validated shape:
 }
 ```
 
-The server rejects unknown response keys and any `savedPatch` key outside the
-eight RFQ fields. A transactional patch operation requires buyer ownership,
-`draft` status, an optimistic revision match, server validation, and an
-idempotent turn binding. Before/after snapshots support undo and audit.
+The server only ever reads the model's five allowed raw-output keys (`kind`,
+`reply`, `patch`, `verificationStatus`, `supportHandoff`) and any `patch` key
+outside the eight RFQ fields; it discards everything else the model returns,
+including a `savedPatch`, `revision`, `undoToken`, or `budgetState` the model
+might echo back. Those five endpoint-computed fields are always derived
+server-side and can never be influenced by model output, so unrecognized keys
+are ignored rather than failing the whole turn closed. A transactional patch
+operation requires buyer ownership, `draft` status, an optimistic revision
+match, server validation, and an idempotent turn binding. Before/after
+snapshots support undo and audit.
 
 ## 5. Internal knowledge and upload instructions
 
@@ -192,6 +198,16 @@ questions use deterministic responses. When a paid call cannot be admitted, the
 message is preserved and the RFQ UI continues with deterministic form edits,
 authoritative reads, and the payment/order support handoff. No paid fallback
 outside `@preset/marketplace-copilot` is allowed.
+
+A turn is reserved against the five-per-month allowance before its outcome is
+known, since the outcome depends on the model's response. If that response
+turns out to be a `clarifying_question` — the agent asking about a still-missing
+optional field such as colors, sizes, or certifications, rather than delivering
+a saved answer — or the deterministic "could not interpret" fallback, the
+reservation's real provider cost is still settled and counted against the
+dollar ceiling above, but the turn is not counted against the buyer's five paid
+turns. This keeps a short back-and-forth to fill in optional details from
+costing the buyer usable turns.
 
 ## 7. Technical team and ownership
 
