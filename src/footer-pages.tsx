@@ -748,12 +748,11 @@ function About() {
         <div className="resource-wrap">
           <h2>The team behind Atelix</h2>
           <p className="about-team-lede">
-            Atelix is run by a two-person founding team shaped by both sides
-            of the market we serve. Jun has spent six years inside Southeast
-            Asia's marketplace and fintech leaders; Celina is native to the
-            China and Japan markets that anchor global textile manufacturing.
-            Both of us grew up between Asia and the West, and we previously
-            built{" "}
+            Jun and Celina met in Australia during their Master's studies—one
+            building marketplace product across Southeast Asia, the other
+            native to the China and Japan markets that anchor global textile
+            manufacturing. That meeting became a decision to build together,
+            starting with{" "}
             <a
               href="https://arcanawangsa.com"
               target="_blank"
@@ -761,10 +760,10 @@ function About() {
             >
               ARCANA
             </a>
-            , a fabric-led brand born in Melbourne—an experience that showed
-            us firsthand how fragmented fashion sourcing looks from every
-            side of the supply chain, from design and sourcing through
-            production and market operations.
+            , a fabric-led brand born in Melbourne. ARCANA taught us exactly
+            how fragmented fashion sourcing looks from every side of the
+            supply chain—design, sourcing, production, and market operations.
+            Atelix is what we built next to fix it.
           </p>
           <div className="about-team-grid">
             <article>
