@@ -35,7 +35,79 @@ export function sanitizeInternalPath(value: string | null | undefined, fallback 
   }
 }
 
-function RouteLoading() {
+type RouteSkeletonVariant = "dashboard" | "intools" | "auth" | "content";
+
+function routeSkeletonVariant(path: string): RouteSkeletonVariant {
+  if (path === "/auth/callback" || path === "/sign-in" || path === "/sign-up") return "auth";
+  if (path === "/intools" || path.startsWith("/intools/")) return "intools";
+  if (path.startsWith("/dashboard")) return "dashboard";
+  return "content";
+}
+
+function DashboardSkeletonBody() {
+  return (
+    <>
+      <div className="route-skeleton-bar" />
+      <div className="route-skeleton-grid">
+        <div className="route-skeleton-rail">
+          <i /><i /><i /><i />
+        </div>
+        <div className="route-skeleton-panel">
+          <i className="route-skeleton-title" />
+          <i className="route-skeleton-copy" />
+          <i className="route-skeleton-copy route-skeleton-copy-short" />
+          <div className="route-skeleton-rows"><i /><i /><i /></div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function IntoolsSkeletonBody() {
+  return (
+    <>
+      <div className="route-skeleton-bar" />
+      <div className="route-skeleton-intools-panel">
+        <i className="route-skeleton-title" />
+        <i className="route-skeleton-copy route-skeleton-copy-short" />
+        <div className="route-skeleton-tabs"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+        <div className="route-skeleton-rows"><i /><i /><i /><i /></div>
+      </div>
+    </>
+  );
+}
+
+function AuthSkeletonBody() {
+  return (
+    <div className="route-skeleton-auth-card">
+      <i className="route-skeleton-auth-word" />
+      <i className="route-skeleton-title" />
+      <i className="route-skeleton-copy" />
+      <div className="route-skeleton-auth-fields"><i /><i /><i /><i /></div>
+      <i className="route-skeleton-auth-button" />
+    </div>
+  );
+}
+
+function ContentSkeletonBody() {
+  return (
+    <>
+      <div className="route-skeleton-hero">
+        <i className="route-skeleton-eyebrow" />
+        <i className="route-skeleton-hero-title" />
+        <i className="route-skeleton-copy route-skeleton-copy-center" />
+      </div>
+      <div className="route-skeleton-cards"><i /><i /><i /><i /></div>
+    </>
+  );
+}
+
+function RouteLoading({ variant = "content" }: { variant?: RouteSkeletonVariant }) {
+  const body =
+    variant === "dashboard" ? <DashboardSkeletonBody /> :
+    variant === "intools" ? <IntoolsSkeletonBody /> :
+    variant === "auth" ? <AuthSkeletonBody /> :
+    <ContentSkeletonBody />;
   return (
     <main
       id="main-content"
@@ -43,19 +115,8 @@ function RouteLoading() {
       aria-busy="true"
       aria-label="Content pending"
     >
-      <div className="route-skeleton" aria-hidden="true">
-        <div className="route-skeleton-bar" />
-        <div className="route-skeleton-grid">
-          <div className="route-skeleton-rail">
-            <i /><i /><i /><i />
-          </div>
-          <div className="route-skeleton-panel">
-            <i className="route-skeleton-title" />
-            <i className="route-skeleton-copy" />
-            <i className="route-skeleton-copy route-skeleton-copy-short" />
-            <div className="route-skeleton-rows"><i /><i /><i /></div>
-          </div>
-        </div>
+      <div className={`route-skeleton route-skeleton--${variant}`} aria-hidden="true">
+        {body}
       </div>
     </main>
   );
@@ -116,14 +177,14 @@ function SignIn(){
 function AuthCallback(){
   const [error,setError]=useState("");
   useEffect(()=>{ void (async()=>{ const code=new URLSearchParams(location.search).get("code"); if (code && supabase) { const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code); if (exchangeError) throw exchangeError; } const session=await getSession(); if (!session) throw new Error("This sign-in link is invalid or has expired."); const next=sanitizeInternalPath(new URLSearchParams(location.search).get("next")); history.replaceState({},"",next); dispatchEvent(new PopStateEvent("popstate")); })().catch((cause)=>setError(cause instanceof Error?cause.message:"Could not complete sign in.")); },[]);
-  return error ? <main id="main-content" className="auth"><section className="auth-card"><h1>Sign-in link unavailable</h1><p className="error" role="alert">{error}</p><a className="button" href="/sign-in">Return to sign in</a></section></main> : <RouteLoading/>;
+  return error ? <main id="main-content" className="auth"><section className="auth-card"><h1>Sign-in link unavailable</h1><p className="error" role="alert">{error}</p><a className="button" href="/sign-in">Return to sign in</a></section></main> : <RouteLoading variant="auth"/>;
 }
 export function App(){
   const [path,setPath]=useState(location.pathname); const [authReady,setAuthReady]=useState(false); const [authError,setAuthError]=useState("");
   useEffect(()=>{const listener=()=>setPath(location.pathname);addEventListener("popstate",listener);return()=>removeEventListener("popstate",listener)},[]);
   useEffect(()=>{const section=path.startsWith("/dashboard")?"Dashboard":path==="/intools" || path.startsWith("/intools/")?"Intools":path==="/sign-up"?"Sign up":path==="/sign-in"?"Sign in":"Fashion sourcing";document.title=`${section} — Atelix`;},[path]);
   useEffect(()=>{ let active=true; setAuthReady(false); setAuthError(""); if (!path.startsWith("/dashboard")) { setAuthReady(true); return; } void getSession().then((session)=>{ if (!active) return; if (!session) { const next=`/sign-in?next=${encodeURIComponent(sanitizeInternalPath(path))}`; history.replaceState({},"",next); setPath("/sign-in"); } else setAuthReady(true); }).catch((cause)=>{ if (!active) return; setAuthError(cause instanceof Error?cause.message:"Could not verify your session."); setAuthReady(true); }); return()=>{active=false}; },[path]);
-  if (!authReady) return <RouteLoading/>;
+  if (!authReady) return <RouteLoading variant="dashboard"/>;
   if (authError && path.startsWith("/dashboard")) return <main id="main-content" className="auth"><section className="auth-card"><h1>Workspace unavailable</h1><p className="error" role="alert">{authError}</p></section></main>;
-  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path==="/intools" || path.startsWith("/intools/")?<Intools/>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><CopyGuard><FooterPage path={path}/></CopyGuard></>:<Landing/>;return <Suspense fallback={<RouteLoading/>}>{route}</Suspense>
+  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path==="/intools" || path.startsWith("/intools/")?<Intools/>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><CopyGuard><FooterPage path={path}/></CopyGuard></>:<Landing/>;return <Suspense fallback={<RouteLoading variant={routeSkeletonVariant(path)}/>}>{route}</Suspense>
 }
