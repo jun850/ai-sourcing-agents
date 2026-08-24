@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from "react";
 import { Alert, Button as MaterialButton, TextField } from "@mui/material";
-import { Button, SkipLink } from "./components";
+import { Button, CopyGuard, SkipLink } from "./components";
 import { AtelixLandingPage } from "./landing/landing";
 import { getSession, isSupabaseConfigured, signInWithEmailOtp, signInWithMagicLink, supabase } from "./supabase";
 
@@ -39,7 +39,7 @@ function RouteLoading() {
   return <main id="main-content" className="route-loading" aria-live="polite">Loading…</main>;
 }
 
-function Landing(){ return <><SkipLink/><AtelixLandingPage/></>; }
+function Landing(){ return <><SkipLink/><CopyGuard><AtelixLandingPage/></CopyGuard></>; }
 function SignIn(){
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -116,5 +116,5 @@ export function App(){
   useEffect(()=>{ let active=true; setAuthReady(false); setAuthError(""); if (!path.startsWith("/dashboard")) { setAuthReady(true); return; } void getSession().then((session)=>{ if (!active) return; if (!session) { const next=`/sign-in?next=${encodeURIComponent(sanitizeInternalPath(path))}`; history.replaceState({},"",next); setPath("/sign-in"); } else setAuthReady(true); }).catch((cause)=>{ if (!active) return; setAuthError(cause instanceof Error?cause.message:"Could not verify your session."); setAuthReady(true); }); return()=>{active=false}; },[path]);
   if (!authReady) return <RouteLoading/>;
   if (authError && path.startsWith("/dashboard")) return <main id="main-content" className="auth"><section className="auth-card"><h1>Workspace unavailable</h1><p className="error" role="alert">{authError}</p></section></main>;
-  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path==="/intools" || path.startsWith("/intools/")?<Intools/>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><FooterPage path={path}/></>:<Landing/>;return <Suspense fallback={<RouteLoading/>}>{route}</Suspense>
+  const route=path==="/auth/callback"?<AuthCallback/>:path==="/sign-in"?<SignIn/>:path==="/sign-up"?<><SkipLink/><SignUp/></>:path==="/intools" || path.startsWith("/intools/")?<Intools/>:path.startsWith("/dashboard")?<Dashboard path={path}/>:isFooterPagePath(path)?<><SkipLink/><CopyGuard><FooterPage path={path}/></CopyGuard></>:<Landing/>;return <Suspense fallback={<RouteLoading/>}>{route}</Suspense>
 }

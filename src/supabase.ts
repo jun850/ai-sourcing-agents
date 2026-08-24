@@ -78,6 +78,31 @@ export type WorkspaceRfqDecision = {
   order_no: string | null;
   invoice_status: WorkspaceInvoiceStatus | null;
 };
+export type LegacyWorkspaceRfqQuote = {
+  id: string;
+  factory_id: string | null;
+  supplier_name: string;
+  supplier_region: string | null;
+  unit_price_cents: number;
+  quote_total_cents: number | null;
+  quantity: number | null;
+  moq: number | null;
+  lead_days: number | null;
+  certifications: string[];
+  quote_notes: string | null;
+  status: "suggested" | "selected" | "approved" | "rejected";
+  recommended: boolean;
+  verified: boolean;
+  updated_at: string;
+};
+export type WorkspaceRfqDecision = {
+  case: WorkspaceRfq & { selected_match_id: string | null; accepted_at: string | null };
+  quotes: LegacyWorkspaceRfqQuote[];
+  invoice_id: string | null;
+  invoice_no: string | null;
+  order_no: string | null;
+  invoice_status: WorkspaceInvoiceStatus | null;
+};
 export type WorkspaceChatMessage = {
   id: string;
   role: "buyer" | "agent" | "system";
