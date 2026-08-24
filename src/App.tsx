@@ -97,7 +97,18 @@ function ContentSkeletonBody() {
         <i className="route-skeleton-hero-title" />
         <i className="route-skeleton-copy route-skeleton-copy-center" />
       </div>
-      <div className="route-skeleton-cards"><i /><i /><i /><i /></div>
+      <div className="route-skeleton-features">
+        {[0, 1, 2].map((row) => (
+          <div className="route-skeleton-feature" key={row}>
+            <i className="route-skeleton-feature-icon" />
+            <div>
+              <i className="route-skeleton-feature-title" />
+              <i className="route-skeleton-copy" />
+              <i className="route-skeleton-copy route-skeleton-copy-short" />
+            </div>
+          </div>
+        ))}
+      </div>
     </>
   );
 }
