@@ -30,6 +30,8 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Avoid local-only chat state, fake product catalogue rows, invented supplier
   quotes, or payment state. Read and write through the typed Supabase/RPC
   contracts and preserve server-authoritative status boundaries.
+- Keep the Intools sign-up queue private, status-filterable, and explicit about
+  the manual approval gate; never show it to non-admin users.
 
 ## Accessibility target
 

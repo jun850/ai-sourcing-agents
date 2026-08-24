@@ -38,6 +38,9 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   buyer-owned immutable order-item snapshots, never a catalogue browse surface.
 - Invoices continue through workspace invoice RPCs and Stripe Checkout; the
   browser may request checkout but cannot set totals or settlement state.
+- Sign-up submissions are stored as Supabase `registration_requests` in
+  `pending_review`; Intools exposes the queue and approval action only after
+  the server confirms an administrator role.
 
 ## Accessibility
 

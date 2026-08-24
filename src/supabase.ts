@@ -135,6 +135,22 @@ export type IntoolsInvoiceDetail = IntoolsInvoice & {
   payments: IntoolsInvoicePayment[];
   audit: IntoolsInvoiceAudit[];
 };
+export type IntoolsRegistrationRequest = {
+  id: string;
+  name: string;
+  email: string;
+  company_name: string;
+  sourcing: string;
+  annual_revenue: string;
+  phone: string | null;
+  country_code: string | null;
+  status: "pending_review" | "approved" | "declined" | "invited";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  invitation_requested_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export type IntoolsOrder = {
   id: string;
   order_no: string;
@@ -539,6 +555,20 @@ export async function loginLocalIntools(username: string, password: string) {
 export async function listIntoolsInvoices(status: string | null = null) {
   return intoolsRpc<IntoolsInvoice[]>("intools_list_invoices", {
     p_status: status,
+  });
+}
+export async function listIntoolsRegistrationRequests(status: string | null = "pending_review") {
+  return intoolsRpc<IntoolsRegistrationRequest[]>("intools_list_registration_requests", {
+    p_status: status,
+  });
+}
+export async function assertIntoolsAdmin() {
+  const { error } = await client().rpc("intools_assert_admin");
+  rpcError(error);
+}
+export async function approveRegistrationRequest(requestId: string) {
+  return intoolsRpc<IntoolsRegistrationRequest>("approve_registration_request", {
+    p_request_id: requestId,
   });
 }
 export async function listIntoolsSuppliers() {

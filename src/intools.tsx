@@ -36,6 +36,7 @@ import {
 } from "@mui/icons-material";
 import {
   cancelIntoolsInvoice,
+  assertIntoolsAdmin,
   createIntoolsInvoice,
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
@@ -44,6 +45,7 @@ import {
   loginLocalIntools,
   listIntoolsAudit,
   listIntoolsInvoices,
+  listIntoolsRegistrationRequests,
   listIntoolsOrders,
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
@@ -54,6 +56,8 @@ import {
   type IntoolsInvoiceDetail,
   type IntoolsManualPaymentPayload,
   type IntoolsOrder,
+  type IntoolsRegistrationRequest,
+  approveRegistrationRequest,
 } from "./supabase";
 import { IntoolsSuppliers } from "./intools-suppliers";
 
@@ -88,7 +92,7 @@ const intoolsTheme = createTheme({
   },
 });
 
-type Tab = "invoices" | "orders" | "audit" | "suppliers";
+type Tab = "invoices" | "orders" | "audit" | "registrations" | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
   description: string;
@@ -1381,6 +1385,8 @@ export function Intools() {
         setAccess("permission");
         return;
       }
+      await assertIntoolsAdmin();
+      if (!active) return;
       setReady(true);
       if (supplierRoute) setAccess("allowed");
       else void loadInvoices();
@@ -1508,6 +1514,7 @@ export function Intools() {
                   ["invoices", "Invoices"],
                   ["orders", "Orders"],
                   ["audit", "Audit history"],
+                  ["registrations", "Sign-up requests"],
                   ["suppliers", "Suppliers"],
                 ] as const
               ).map(([value, label]) => (
@@ -1608,6 +1615,7 @@ export function Intools() {
             )}
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
+            {tab === "registrations" && <RegistrationRequestsPanel />}
             {tab === "suppliers" && (
               <IntoolsSuppliers
                 supplierId={supplierId}
@@ -1619,5 +1627,66 @@ export function Intools() {
         </Box>
       </Box>
     </ThemeProvider>
+  );
+}
+
+function RegistrationRequestsPanel() {
+  const [status, setStatus] = useState("pending_review");
+  const [requests, setRequests] = useState<IntoolsRegistrationRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  async function load(nextStatus = status) {
+    setLoading(true);
+    setError("");
+    try {
+      setRequests(await listIntoolsRegistrationRequests(nextStatus === "all" ? null : nextStatus));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load sign-up requests.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  useEffect(() => { void load(); }, []);
+  async function approve(id: string) {
+    setError("");
+    try {
+      await approveRegistrationRequest(id);
+      await load();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not approve this request.");
+    }
+  }
+  return (
+    <Stack spacing={1.5}>
+      <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1.5 }}>
+        <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
+          New accounts stay pending until an administrator approves them.
+        </Typography>
+        <Select size="small" value={status} aria-label="Filter sign-up requests by status" onChange={(event) => { setStatus(event.target.value); void load(event.target.value); }} sx={{ minWidth: 190 }}>
+          <MenuItem value="pending_review">Pending review</MenuItem>
+          <MenuItem value="approved">Approved</MenuItem>
+          <MenuItem value="invited">Invited</MenuItem>
+          <MenuItem value="declined">Declined</MenuItem>
+          <MenuItem value="all">All requests</MenuItem>
+        </Select>
+      </Stack>
+      {error && <Alert severity="error">{error}</Alert>}
+      {loading ? <LoadingRows /> : requests.length ? requests.map((request) => (
+        <Surface key={request.id} sx={{ p: { xs: 1.5, sm: 2 }, display: "grid", gap: 1 }}>
+          <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}>
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: 14 }}>{request.name} · {request.company_name}</Typography>
+              <Typography sx={{ color: "text.secondary", fontSize: 13 }}>{request.email}{request.phone ? ` · ${request.country_code || ""} ${request.phone}` : ""}</Typography>
+            </Box>
+            <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}>
+              <StatusChip status={request.status} />
+              {request.status === "pending_review" && <Button size="small" variant="contained" onClick={() => void approve(request.id)}>Approve</Button>}
+            </Stack>
+          </Stack>
+          <Typography sx={{ color: "text.secondary", fontSize: 13 }}>Sourcing: {request.sourcing} · Revenue: {request.annual_revenue}</Typography>
+          <Typography sx={{ color: "text.secondary", fontSize: 12 }}>Submitted {shortDate(request.created_at)}</Typography>
+        </Surface>
+      )) : <Surface sx={{ p: 4, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography></Surface>}
+    </Stack>
   );
 }
