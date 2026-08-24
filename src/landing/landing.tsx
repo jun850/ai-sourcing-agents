@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Activity, ArrowRight, BarChart3, Check, ChevronDown, Instagram, Linkedin, Mail, Paperclip, Send, ShieldCheck, Sparkles, X as XLogo } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Check, CirclePlus, Instagram, Linkedin, Mail, Paperclip, Send, ShieldCheck, Sparkles, X as XLogo } from "lucide-react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { SupplierIntakeModal } from "../supplier-intake";
 import { atelixContent, type FeatureCardContent, type JourneyPreviewKind, type SupplierContent } from "../content/atelix";
@@ -157,7 +157,7 @@ export function SourcingIntelligenceSection() {
 
 export function FaqSection() {
   const copy = atelixContent.faq;
-  return <section id="faq" className="faq" aria-labelledby="faq-title"><h2 id="faq-title">{copy.title} <em>{copy.emphasis}</em></h2>{copy.items.map((item) => <details key={item.id}><summary>{item.question}<ChevronDown size={18} aria-hidden="true" /></summary><p>{item.answer}</p></details>)}</section>;
+  return <section id="faq" className="faq" aria-labelledby="faq-title"><h2 id="faq-title">{copy.title} <em>{copy.emphasis}</em></h2>{copy.items.map((item) => <details key={item.id}><summary><span>{item.question}</span><CirclePlus size={24} aria-hidden="true" /></summary><p>{item.answer}</p></details>)}</section>;
 }
 
 export function SiteFooter() {

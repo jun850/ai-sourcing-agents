@@ -108,3 +108,8 @@ Route and data waits preserve the expected layout with content-shaped skeletons 
 Access-request fields preserve native required validation without relying on
 visible asterisks. The optional phone number is entered as one international-
 format value so keyboard and mobile autofill behavior remain predictable.
+
+Landing and resource-page FAQs keep their existing sourcing questions and
+answers in one shared native, keyboard-operable disclosure pattern. Expanding
+a row reveals only its canonical answer and does not create a new route or
+sourcing claim.

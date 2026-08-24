@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ArrowRight } from "lucide-react";
+import { Check, CirclePlus, ArrowRight } from "lucide-react";
 import { Footer, Header } from "./components";
 
 const routes = [
@@ -130,8 +130,8 @@ function Faqs({ title = "Frequently asked questions" }: { title?: string }) {
         {faqs.map((question) => (
           <details key={question}>
             <summary>
-              {question}
-              <ChevronDown size={18} aria-hidden="true" />
+              <span>{question}</span>
+              <CirclePlus size={24} aria-hidden="true" />
             </summary>
             <p>
               Atelix keeps this decision in the structured brief and confirms

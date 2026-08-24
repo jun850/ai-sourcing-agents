@@ -26,6 +26,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
 - Avoid nested cards, decorative gradients, glass effects, oversized rounding, and dashboard metric-card filler.
+- FAQ surfaces use one shared stack of independent soft-neutral disclosure rows: 1180px wide on the landing page to align with sourcing intelligence, and the existing content measure on resource pages. Each native summary has a circled plus that rotates to a close mark when expanded, while the answer remains inside the same rounded row. Preserve each route's canonical FAQ copy, visible focus, full-row keyboard activation, reduced-motion behavior, and compact mobile padding.
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
 - Opening an RFQ from Requests keeps the Requests navigation item selected and
   preserves that request context on refresh/deep link.

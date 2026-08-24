@@ -10,6 +10,7 @@ import "./supplier-intake.css";
 import "./atelix-sourcing-section.css";
 import "./landing/primitives.css";
 import "./landing/journey.css";
+import "./landing/faq.css";
 import { App } from "./App";
 import { atelixMaterialTheme } from "./material-theme";
 
