@@ -38,6 +38,7 @@ import {
 } from "@mui/material";
 import {
   Add,
+  ArrowBack,
   ArrowForward,
   CheckCircle,
   ChevronLeft,
@@ -53,11 +54,14 @@ import {
   Image,
   Inbox,
   Inventory2,
+  KeyboardArrowDown,
   LibraryBooks,
+  FilterList,
   LockOutlined,
   Menu as MenuIcon,
   SaveOutlined,
   Search,
+  Sort,
   Settings,
   VerifiedOutlined,
   X,
@@ -96,6 +100,7 @@ import {
   nextStepOwner,
   StageTimeline,
 } from "./dashboard-stage-timeline";
+import "./product-workspace.css";
 
 const dashboardTheme = createTheme({
   typography: {
@@ -3059,7 +3064,9 @@ function WorkspaceRequests({
         if (active) setSuppliers(new Map(rows.map((row) => [row.rfq_case_id, row])));
       })
       .catch(() => undefined);
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, []);
   function ownerFor(request: StoredRfq) {
     return nextStepOwner(request.status, unpaidCaseIds.has(request.id));
@@ -3749,10 +3756,38 @@ function LegacyWorkspaceProducts({
 }
 
 function productStageLabel(status: string) {
-  return status
+  const labels: Record<string, string> = {
+    awaiting_payment: "Payment due",
+    payment_declared: "Payment review",
+    payment_verified: "Payment verified",
+    fulfilling: "In production",
+    completed: "Finalized",
+    cancelled: "Cancelled",
+    disputed: "Payment disputed",
+    refunded: "Refunded",
+  };
+  return labels[status] || status
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function productStageDescription(status: string, invoiceNo?: string | null) {
+  if (status === "awaiting_payment") {
+    return invoiceNo
+      ? `Your confirmed order is waiting for ${invoiceNo} to be paid before production begins.`
+      : "Your confirmed order is waiting for invoice payment before production begins.";
+  }
+  if (status === "fulfilling") return "Production is underway against this saved order.";
+  if (status === "completed") return "This sourced product is in your finalized library.";
+  if (status === "cancelled") return "This order is cancelled and remains available as a read-only record.";
+  return "Atelix is coordinating this order against the saved RFQ and supplier record.";
+}
+
+function productStageTone(status: string) {
+  if (status === "completed") return "success";
+  if (["cancelled", "disputed", "refunded"].includes(status)) return "error";
+  return "attention";
 }
 
 function ProductTable({
@@ -3769,73 +3804,53 @@ function ProductTable({
   onReorder: (product: WorkspaceProduct) => void;
 }) {
   if (!products.length) return null;
+  const tableId = `product-table-${title.toLowerCase().replaceAll(" ", "-")}`;
   return (
-    <Box>
-      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#4a5667" }}>
-        {title} <span style={{ color: "#9ba1aa", fontWeight: 500 }}>· {products.length}</span>
-      </Typography>
-      <Box
-        sx={{
-          mt: 1.25,
-          border: "1px solid #e7ebf0",
-          borderRadius: "14px",
-          overflow: "hidden",
-          backgroundColor: "#fff",
-        }}
-      >
-        <Box
-          sx={{
-            display: { xs: "none", md: "grid" },
-            gridTemplateColumns: "minmax(220px,1.7fr) minmax(150px,1.1fr) 100px 110px minmax(150px,1fr) 180px",
-            gap: 1.5,
-            px: 1.5,
-            py: 1.25,
-            borderBottom: "1px solid #eef0f3",
-            color: "#8d98a5",
-            fontSize: 10.5,
-            fontWeight: 700,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-          }}
-        >
-          <span>Product</span><span>Supplier</span><span>Unit cost</span><span>Units to date</span><span>{finalized ? "Last ordered" : "Stage"}</span><span />
-        </Box>
+    <section className="product-stage-section" aria-labelledby={tableId}>
+      <h2 className="product-stage-heading" id={tableId}>
+        {title} <span>· {products.length}</span>
+      </h2>
+      <div className="product-table" role="table" aria-label={`${title} products`}>
+        <div className="product-table-header" role="row">
+          <span role="columnheader">Product</span>
+          <span role="columnheader">Supplier</span>
+          <span role="columnheader">Unit cost</span>
+          <span role="columnheader">Units to date</span>
+          <span role="columnheader">{finalized ? "Last ordered" : "Stage"}</span>
+          <span role="columnheader" aria-label="Actions" />
+        </div>
         {products.map((product) => (
-          <Box
-            key={product.id}
-            sx={{
-              display: { xs: "block", md: "grid" },
-              gridTemplateColumns: "minmax(220px,1.7fr) minmax(150px,1.1fr) 100px 110px minmax(150px,1fr) 180px",
-              gap: 1.5,
-              alignItems: "center",
-              px: 1.5,
-              py: { xs: 1.5, md: 1.75 },
-              borderBottom: "1px solid #eef0f3",
-              "&:last-child": { borderBottom: 0 },
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{product.name}</Typography>
-              <Typography sx={{ mt: 0.35, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{product.sku}</Typography>
-            </Box>
-            <Typography sx={{ mt: { xs: 1, md: 0 }, color: "#596678", fontSize: 13, overflowWrap: "anywhere" }}>{product.supplier}</Typography>
-            <Typography sx={{ mt: { xs: 0.75, md: 0 }, color: "#596678", fontSize: 13 }}>{invoiceMoney(Math.round(product.unit_price * 100))}</Typography>
-            <Typography sx={{ mt: { xs: 0.75, md: 0 }, color: "#596678", fontSize: 13 }}>{product.units.toLocaleString()} units</Typography>
-            <Box sx={{ mt: { xs: 0.75, md: 0 } }}>
+          <div className="product-table-row" role="row" key={product.id}>
+            <div className="product-table-cell product-table-product" role="cell" data-label="Product">
+              <strong>{product.name}</strong>
+              <small>{product.sku}</small>
+            </div>
+            <div className="product-table-cell" role="cell" data-label="Supplier">{product.supplier || "Not yet assigned"}</div>
+            <div className="product-table-cell" role="cell" data-label="Unit cost">{invoiceMoney(Math.round(product.unit_price * 100))}</div>
+            <div className="product-table-cell" role="cell" data-label="Units to date">{product.units.toLocaleString()} units</div>
+            <div className="product-table-cell" role="cell" data-label={finalized ? "Last ordered" : "Stage"}>
               {finalized ? (
-                <Typography sx={{ color: "#596678", fontSize: 13 }}>{product.placed_at ? new Date(product.placed_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}</Typography>
+                product.placed_at ? new Date(product.placed_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"
               ) : (
-                <Chip size="small" label={productStageLabel(product.order_status)} sx={{ color: "#8b6e35", backgroundColor: "#fbf6e9" }} />
+                <span className={`product-stage-status product-stage-status--${productStageTone(product.order_status)}`}>
+                  <i aria-hidden="true" /> {productStageLabel(product.order_status)}
+                </span>
               )}
-            </Box>
-            <Stack direction="row" spacing={1} sx={{ mt: { xs: 1.25, md: 0 }, justifyContent: { xs: "flex-start", md: "flex-end" } }}>
-              <MuiButton size="small" variant="outlined" onClick={() => onView(product)} sx={{ borderColor: "#e1e6eb", color: "#4a5667" }}>View</MuiButton>
-              {finalized && <MuiButton size="small" variant="contained" onClick={() => onReorder(product)} sx={{ backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}>Reorder</MuiButton>}
-            </Stack>
-          </Box>
+            </div>
+            <div className="product-table-actions" role="cell" data-label="Actions">
+              <MuiButton className="product-outline-button" size="small" variant="outlined" onClick={() => onView(product)} aria-label={`View ${product.name}`}>
+                View
+              </MuiButton>
+              {finalized && (
+                <MuiButton className="product-primary-button" size="small" variant="contained" onClick={() => onReorder(product)}>
+                  Reorder
+                </MuiButton>
+              )}
+            </div>
+          </div>
         ))}
-      </Box>
-    </Box>
+      </div>
+    </section>
   );
 }
 
@@ -3851,43 +3866,71 @@ function ProductDetail({
   onReorder: () => void;
 }) {
   const finalized = product.order_status === "completed";
+  const [production, setProduction] = useState<WorkspaceRfqProduction | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (!product.rfq_case_id) return () => { active = false; };
+    void getWorkspaceRfqProduction(product.rfq_case_id)
+      .then((next) => { if (active) setProduction(next); })
+      .catch(() => { if (active) setProduction(null); });
+    return () => { active = false; };
+  }, [product.rfq_case_id]);
+  const invoice = production?.invoice;
+  const invoicePending = Boolean(invoice && ["sent", "overdue"].includes(invoice.effective_status));
+  const openStage = () => {
+    if (invoice?.id && invoicePending) navigate(`/dashboard/invoices/${encodeURIComponent(invoice.id)}`);
+    else onOpenRfq(product.rfq_case_id);
+  };
   return (
-    <Stack spacing={2} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}>
-      <MuiButton variant="text" onClick={onBack} sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}>← Back to products</MuiButton>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 320px" }, border: "1px solid #e7ebf0", borderRadius: "14px", overflow: "hidden", backgroundColor: "#fff" }}>
-        <Box sx={{ p: { xs: 2, sm: 3 } }}>
-          <Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Sourced product</Typography>
-          <Typography variant="h1" sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 28, sm: 36 }, overflowWrap: "anywhere" }}>{product.name}</Typography>
-          <Typography sx={{ mt: 0.5, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{product.sku} · {product.supplier}</Typography>
-          <Typography sx={{ mt: 3, mb: 1.25, fontSize: 16, fontWeight: 700, color: "#3f4c5e" }}>Saved order snapshot</Typography>
-          <Box sx={{ borderTop: "1px solid #eef0f3" }}>
-            {[...["Supplier", product.supplier], ["Unit cost", invoiceMoney(Math.round(product.unit_price * 100))], ["Units ordered", `${product.units.toLocaleString()} units`], ["Order", product.order_no], ["RFQ", product.rfq_case_id || "Not linked"]].map(([label, value]) => (
-              <Box key={label} sx={{ display: "grid", gridTemplateColumns: { xs: "110px 1fr", sm: "180px 1fr" }, gap: 1.5, py: 1.25, borderBottom: "1px solid #eef0f3" }}>
-                <Typography sx={{ color: "#8d98a5", fontSize: 13 }}>{label}</Typography>
-                <Typography sx={{ color: "#596678", fontSize: 13, overflowWrap: "anywhere" }}>{value}</Typography>
-              </Box>
-            ))}
-          </Box>
-          <Typography sx={{ mt: 3, mb: 1.25, fontSize: 16, fontWeight: 700, color: "#3f4c5e" }}>Order history for this product</Typography>
-          <Box sx={{ border: "1px solid #e7ebf0", borderRadius: "10px", overflow: "hidden" }}>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 100px 140px", gap: 1, px: 1.5, py: 1.1, color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}><span>Order</span><span>Units</span><span>Status</span></Box>
-            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 100px 140px", gap: 1, px: 1.5, py: 1.35, borderTop: "1px solid #eef0f3", alignItems: "center" }}><Typography sx={{ fontSize: 13, color: "#596678" }}>{product.order_no}</Typography><Typography sx={{ fontSize: 13, color: "#596678" }}>{product.units.toLocaleString()}</Typography><Chip size="small" label={productStageLabel(product.order_status)} sx={{ justifySelf: "start", color: finalized ? "#4b7657" : "#8b6e35", backgroundColor: finalized ? "#eef4ee" : "#fbf6e9" }} /></Box>
-          </Box>
-        </Box>
-        <Box sx={{ p: { xs: 2, sm: 3 }, borderTop: { xs: "1px solid #eef0f3", lg: 0 }, borderLeft: { lg: "1px solid #eef0f3" }, backgroundColor: "#fcfdfc" }}>
-          <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Current stage</Typography>
-          <Box sx={{ mt: 1.25, p: 1.75, border: "1px solid #dce9de", borderRadius: "12px", backgroundColor: "#f7fbf7" }}>
-            <Typography sx={{ color: "#33513c", fontSize: 15, fontWeight: 700 }}>{productStageLabel(product.order_status)}</Typography>
-            <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13, lineHeight: 1.55 }}>{finalized ? "This sourced product is in your finalized library." : "Atelix is coordinating this order against the saved RFQ and supplier record."}</Typography>
-          </Box>
-          {product.rfq_case_id && <MuiButton fullWidth variant="contained" onClick={() => onOpenRfq(product.rfq_case_id)} sx={{ mt: 1.75 }}>Open request</MuiButton>}
-          <Divider sx={{ my: 2.5 }} />
-          <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Also from here</Typography>
-          <MuiButton fullWidth variant="outlined" onClick={onReorder} sx={{ mt: 1.25, borderColor: "#e1e6eb", color: "#4a5667" }}>Reorder this spec</MuiButton>
-          <Typography sx={{ mt: 1.1, color: "#9aa4b0", fontSize: 12.5, lineHeight: 1.55 }}>Starts a fresh RFQ pre-filled from this saved spec. Nothing is sent to a supplier until Atelix reviews it.</Typography>
-        </Box>
-      </Box>
-    </Stack>
+    <div className="product-detail-page">
+      <div className="product-detail-toolbar">
+        <MuiButton className="product-back-button" variant="text" onClick={onBack} startIcon={<ArrowBack />}>Back to products</MuiButton>
+      </div>
+      <div className="product-detail-layout">
+        <section className="product-detail-content" aria-labelledby="product-detail-title">
+          <div className="product-detail-heading">
+            <div>
+              <Typography className="product-eyebrow">Product</Typography>
+              <Typography id="product-detail-title" component="h1" className="product-detail-title">{product.name}</Typography>
+              <Typography className="product-detail-meta">{product.sku} · {product.supplier || "Not yet assigned"}</Typography>
+            </div>
+            <span className={`product-detail-badge product-detail-badge--${productStageTone(product.order_status)}`}>{productStageLabel(product.order_status)}</span>
+          </div>
+          <section className="product-specification" aria-labelledby="product-specification-title">
+            <h2 id="product-specification-title">Specification</h2>
+            <dl>
+              {[
+                ["Supplier", product.supplier || "Not yet assigned"],
+                ["Unit cost", invoiceMoney(Math.round(product.unit_price * 100))],
+                ["Units ordered", `${product.units.toLocaleString()} units`],
+                ["Order", product.order_no],
+                ["RFQ", product.rfq_case_id || "Not linked"],
+              ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+            </dl>
+          </section>
+          <section className="product-history" aria-labelledby="product-history-title">
+            <h2 id="product-history-title">Order history for this product</h2>
+            <div className="product-history-table" role="table" aria-label="Order history">
+              <div className="product-history-header" role="row"><span role="columnheader">RFQ</span><span role="columnheader">Units</span><span role="columnheader">Status</span></div>
+              <div className="product-history-row" role="row"><span role="cell">{product.rfq_case_id ? `${product.rfq_case_id} · first order` : `${product.order_no} · first order`}</span><span role="cell">{product.units.toLocaleString()} units</span><span role="cell" className={`product-history-status product-history-status--${productStageTone(product.order_status)}`}>{productStageLabel(product.order_status)}</span></div>
+            </div>
+            <p className="product-history-note">No earlier orders are recorded for this saved product.</p>
+          </section>
+        </section>
+        <aside className="product-stage-rail" aria-labelledby="product-current-stage-title">
+          <Typography id="product-current-stage-title" className="product-rail-eyebrow">Current stage</Typography>
+          <div className={`product-stage-callout product-stage-callout--${productStageTone(product.order_status)}`}>
+            <strong>{product.order_status === "awaiting_payment" ? "Invoice payment due" : productStageLabel(product.order_status)}</strong>
+            <p>{productStageDescription(product.order_status, invoice?.invoice_no)}</p>
+          </div>
+          {product.rfq_case_id && <MuiButton className="product-primary-button product-stage-action" fullWidth variant="contained" onClick={openStage}>{invoicePending ? "Go to production & invoice" : "Open linked request"}</MuiButton>}
+          <div className="product-rail-divider" />
+          <Typography className="product-rail-eyebrow">Also from here</Typography>
+          <MuiButton className="product-outline-button product-reorder-button" fullWidth variant="outlined" onClick={onReorder} disabled={!finalized}>Reorder this spec</MuiButton>
+          <p className="product-reorder-note">Starts a fresh RFQ pre-filled from this spec — available once the first order is complete.</p>
+        </aside>
+      </div>
+    </div>
   );
 }
 
@@ -3903,6 +3946,7 @@ function WorkspaceProducts({
   const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
   const [products, setProducts] = useState<WorkspaceProduct[]>([]);
   const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
+  const [detailLoading, setDetailLoading] = useState(Boolean(detailId));
   const [query, setQuery] = useState("");
   const [supplier, setSupplier] = useState("all");
   const [status, setStatus] = useState<"all" | "in_progress" | "finalized">("all");
@@ -3917,12 +3961,25 @@ function WorkspaceProducts({
   }, []);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!detailId) { setDetail(null); return; }
+    if (!detailId) { setDetail(null); setDetailLoading(false); return; }
     let active = true;
-    void getWorkspaceProduct(decodeURIComponent(detailId)).then((next) => { if (active) setDetail(next); }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load this product."); });
+    setDetail(null);
+    setDetailLoading(true);
+    void getWorkspaceProduct(decodeURIComponent(detailId)).then((next) => {
+      if (!active) return;
+      setDetail(next);
+      setDetailLoading(false);
+      if (!next) setError("Could not load this product.");
+    }).catch((cause) => {
+      if (!active) return;
+      setDetailLoading(false);
+      setError(cause instanceof Error ? cause.message : "Could not load this product.");
+    });
     return () => { active = false; };
   }, [detailId]);
   if (detailId && detail) return <ProductDetail product={detail} onBack={() => navigate("/dashboard/products")} onOpenRfq={onOpenRfq} onReorder={() => onReorder(detail)} />;
+  if (detailId && detailLoading) return <div className="product-detail-loading" aria-live="polite"><Skeleton variant="text" width={180} height={22} /><Skeleton variant="text" width="62%" height={54} /><Skeleton variant="rounded" height={320} /></div>;
+  if (detailId && error) return <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => window.location.reload()}>Retry</MuiButton>}>{error}</Alert>;
   const suppliers = Array.from(new Set(products.map((product) => product.supplier))).sort();
   const filtered = products.filter((product) => {
     const haystack = `${product.name} ${product.supplier} ${product.sku} ${product.rfq_case_id || ""}`.toLowerCase();
@@ -3931,20 +3988,45 @@ function WorkspaceProducts({
   }).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : (b.placed_at || "").localeCompare(a.placed_at || ""));
   const inProgress = filtered.filter((product) => product.order_status !== "completed");
   const finalized = filtered.filter((product) => product.order_status === "completed");
-  const controlSx = { border: "1px solid #e1e6eb", borderRadius: "10px", backgroundColor: "#fff", color: "#596678", minHeight: 44, px: 1.5, font: "inherit", fontSize: 13, outline: "none" };
   return (
-    <Stack spacing={2.5} sx={{ width: "100%", maxWidth: 1160, mx: "auto" }}>
-      <Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}>Products</Typography><Typography sx={{ mt: 0.75, maxWidth: 680, color: "#758091", fontSize: 14, lineHeight: 1.55 }}>Products you’ve sourced through Atelix — not a catalogue to browse. Each one is tied to its own RFQ history.</Typography></Box>
+    <div className="product-workspace-page">
+      <header className="product-workspace-heading">
+        <Typography className="product-eyebrow">Workspace</Typography>
+        <Typography component="h1" className="product-workspace-title">Products</Typography>
+        <Typography className="product-workspace-description">Products you’ve sourced through Atelix — not a catalogue to browse. Each one is tied to its own RFQ history.</Typography>
+      </header>
       {error && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void load()}>Retry</MuiButton>}>{error}</Alert>}
-      <Stack direction="row" spacing={1.5} sx={{ flexDirection: { xs: "column", lg: "row" }, alignItems: { lg: "center" } }}>
-        <Box component="label" sx={{ ...controlSx, display: "flex", alignItems: "center", gap: 1, flex: 1, minWidth: 220 }}><Search sx={{ color: "#9ba4b0", fontSize: 20 }} /><Box component="input" value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="Search by product, supplier or RFQ" sx={{ border: 0, outline: 0, flex: 1, minWidth: 0, color: "#202936", font: "inherit", fontSize: 13, background: "transparent" }} /></Box>
-        <Box sx={{ ...controlSx, display: "flex", alignItems: "center", gap: 0.5, p: 0.5 }} role="tablist" aria-label="Filter products by status">{([["all", `All ${products.length}`], ["in_progress", `In progress ${products.filter((product) => product.order_status !== "completed").length}`], ["finalized", `Finalized ${products.filter((product) => product.order_status === "completed").length}`]] as const).map(([value, label]) => <MuiButton key={value} size="small" role="tab" aria-selected={status === value} onClick={() => setStatus(value)} sx={{ minHeight: 34, px: 1.25, color: status === value ? "#33513c" : "#758091", backgroundColor: status === value ? "#eef4ee" : "transparent", "&:hover": { backgroundColor: "#f2f6f2" } }}>{label}</MuiButton>)}</Box>
-        <Box component="select" value={supplier} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSupplier(event.target.value)} aria-label="Filter by supplier" sx={{ ...controlSx, minWidth: 170 }}><option value="all">All suppliers</option>{suppliers.map((item) => <option key={item} value={item}>{item}</option>)}</Box>
-        <Box component="select" value={sort} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSort(event.target.value as "last_ordered" | "name")} aria-label="Sort products" sx={{ ...controlSx, minWidth: 170 }}><option value="last_ordered">Sort: Last ordered</option><option value="name">Sort: Product name</option></Box>
-      </Stack>
-      {loading ? <InvoiceSkeletonRows /> : filtered.length ? <Stack spacing={3}><ProductTable title="In progress" products={inProgress} finalized={false} onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /><ProductTable title="Finalized library" products={finalized} finalized onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /></Stack> : <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{products.length ? "No products match these filters" : "No sourced products yet"}</Typography><Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>{products.length ? "Try a different search or filter." : "Products appear here after an Atelix order creates an immutable line snapshot."}</Typography></RoundedSurface>}
-      {!loading && Boolean(products.length) && <Stack direction="row" alignItems="center" spacing={0.6}><LockOutlined sx={{ fontSize: 14, color: "#9ba1aa" }} /><Typography sx={{ color: "#9ba1aa", fontSize: 11.5 }}>Reorder opens a new RFQ from this product’s saved spec — nothing is sent to a supplier until you approve it.</Typography></Stack>}
-    </Stack>
+      <div className="product-filters" aria-label="Product filters">
+        <label className="product-search-field">
+          <Search aria-hidden="true" />
+          <span className="sr-only">Search products</span>
+          <input value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="Search by product, supplier or RFQ" />
+        </label>
+        <div className="product-status-tabs" role="tablist" aria-label="Filter products by status">
+          {([["all", `All ${products.length}`], ["in_progress", `In progress ${products.filter((product) => product.order_status !== "completed").length}`], ["finalized", `Finalized ${products.filter((product) => product.order_status === "completed").length}`]] as const).map(([value, label]) => <MuiButton key={value} className={status === value ? "is-selected" : ""} size="small" role="tab" aria-selected={status === value} onClick={() => setStatus(value)}>{label}</MuiButton>)}
+        </div>
+        <label className="product-select-field">
+          <FilterList aria-hidden="true" />
+          <span className="sr-only">Filter by supplier</span>
+          <select value={supplier} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSupplier(event.target.value)}>
+            <option value="all">Supplier</option>
+            {suppliers.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <KeyboardArrowDown aria-hidden="true" />
+        </label>
+        <label className="product-select-field product-sort-field">
+          <Sort aria-hidden="true" />
+          <span className="sr-only">Sort products</span>
+          <select value={sort} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSort(event.target.value as "last_ordered" | "name")}>
+            <option value="last_ordered">Sort: Last ordered</option>
+            <option value="name">Sort: Product name</option>
+          </select>
+          <KeyboardArrowDown aria-hidden="true" />
+        </label>
+      </div>
+      {loading ? <InvoiceSkeletonRows /> : filtered.length ? <div className="product-stage-list"><ProductTable title="In progress" products={inProgress} finalized={false} onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /><ProductTable title="Finalized library" products={finalized} finalized onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /></div> : <div className="product-empty-state"><Typography component="h2">{products.length ? "No products match these filters" : "No sourced products yet"}</Typography><Typography>{products.length ? "Try a different search or filter." : "Products appear here after an Atelix order creates an immutable line snapshot."}</Typography></div>}
+      {!loading && Boolean(products.length) && <p className="product-workspace-note"><LockOutlined aria-hidden="true" /> Reorder opens a new RFQ from this product’s saved spec — nothing is sent to a supplier until you approve it.</p>}
+    </div>
   );
 }
 
@@ -5223,6 +5305,11 @@ export function Dashboard({ path }: { path: string }) {
                 width: "100%",
                 maxWidth: workspaceOpen
                   ? "none"
+                  : view === "products"
+                    ? {
+                        xs: "calc(100vw - 32px)",
+                        sm: "min(1450px, calc(100% - 80px))",
+                      }
                   : {
                       xs: "calc(100vw - 32px)",
                       sm: "min(1060px, calc(100% - 48px))",
