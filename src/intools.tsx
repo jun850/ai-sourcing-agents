@@ -504,13 +504,15 @@ function InvoiceList({
 }
 
 function InvoiceCreateForm({
+  initial,
   onCreated,
   onCancel,
 }: {
+  initial?: Partial<InvoiceFormState> | null;
   onCreated: (invoice: IntoolsInvoiceDetail) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(() => ({ ...emptyForm, ...initial }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   function set<K extends keyof InvoiceFormState>(
@@ -1513,6 +1515,7 @@ export function Intools() {
   const [invoices, setInvoices] = useState<IntoolsInvoice[]>([]);
   const [selected, setSelected] = useState<IntoolsInvoiceDetail | null>(null);
   const [creating, setCreating] = useState(false);
+  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(null);
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
@@ -1591,6 +1594,17 @@ export function Intools() {
       active = false;
     };
   }, []);
+  function startInvoiceFromRfq(input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) {
+    setInvoiceDraft({
+      rfqCaseId: input.rfqCaseId,
+      buyerProfileId: input.buyerProfileId,
+      orderId: input.orderId || "",
+    });
+    setSelected(null);
+    setCreating(true);
+    setTab("invoices");
+    navigate("/intools");
+  }
   async function selectInvoice(invoice: IntoolsInvoice) {
     setError("");
     try {
@@ -1766,7 +1780,12 @@ export function Intools() {
                       </Select>
                       <Button
                         variant="contained"
-                        onClick={() => setCreating((value) => !value)}
+                        onClick={() =>
+                          setCreating((value) => {
+                            if (value) setInvoiceDraft(null);
+                            return !value;
+                          })
+                        }
                         startIcon={creating ? <Close /> : <Add />}
                       >
                         {creating ? "Close new invoice" : "New invoice"}
@@ -1774,12 +1793,17 @@ export function Intools() {
                     </Stack>
                     {creating && (
                       <InvoiceCreateForm
+                        initial={invoiceDraft}
                         onCreated={(invoice) => {
                           setCreating(false);
+                          setInvoiceDraft(null);
                           setSelected(invoice);
                           void loadInvoices();
                         }}
-                        onCancel={() => setCreating(false)}
+                        onCancel={() => {
+                          setCreating(false);
+                          setInvoiceDraft(null);
+                        }}
                       />
                     )}
                     {error && (
@@ -1808,7 +1832,7 @@ export function Intools() {
                 )}
               </>
             )}
-            {tab === "rfq" && <RfqReviewPanel />}
+            {tab === "rfq" && <RfqReviewPanel onCreateInvoice={startInvoiceFromRfq} />}
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
@@ -1882,7 +1906,11 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
   </Stack>;
 }
 
-function RfqReviewPanel() {
+function RfqReviewPanel({
+  onCreateInvoice,
+}: {
+  onCreateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) => void;
+}) {
   const [statusFilter, setStatusFilter] = useState("needs_research");
   const [cases, setCases] = useState<IntoolsRfqCase[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2001,7 +2029,22 @@ function RfqReviewPanel() {
         <Surface sx={{ p: 2 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
             <Box><Typography variant="h2" sx={{ fontSize: 20 }}>{selected.title}</Typography><Typography sx={{ mt: .3, fontSize: 12, color: "text.secondary" }}>{selected.case_no} · {selected.buyer_name} · {selected.buyer_email}</Typography></Box>
-            <StatusChip status={selected.status} />
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() =>
+                  onCreateInvoice({
+                    rfqCaseId: selected.id,
+                    buyerProfileId: selected.buyer_profile_id,
+                    orderId: (order || null)?.id ?? null,
+                  })
+                }
+              >
+                Create invoice
+              </Button>
+              <StatusChip status={selected.status} />
+            </Stack>
           </Stack>
           {typeof selected.brief === "object" && selected.brief && <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{typeof (selected.brief as Record<string, unknown>).summary === "string" ? (selected.brief as Record<string, unknown>).summary as string : JSON.stringify(selected.brief)}</Typography>}
         </Surface>
