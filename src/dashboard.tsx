@@ -1,408 +1,4236 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { useForm } from "react-hook-form";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { Alert, Avatar, Box, Button as MuiButton, Checkbox, Chip, CircularProgress, CssBaseline, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Paper, Skeleton, ThemeProvider, Tooltip, Typography, createTheme, useMediaQuery, type SxProps, type Theme } from "@mui/material";
-import { Add, ArrowForward, CheckCircle, ChevronLeft, ChevronRight, Circle, Description, EditOutlined, ErrorOutlined, ExpandMore, Favorite, FileUploadOutlined, FolderOpen, Home, Image, Inbox, Inventory2, LibraryBooks, LockOutlined, Menu as MenuIcon, PictureAsPdfOutlined, SaveOutlined, Search, Settings, X } from "@mui/icons-material";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button as MuiButton,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  CssBaseline,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Paper,
+  Skeleton,
+  ThemeProvider,
+  Tooltip,
+  Typography,
+  createTheme,
+  useMediaQuery,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
+import {
+  Add,
+  ArrowForward,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Circle,
+  Description,
+  EditOutlined,
+  ErrorOutlined,
+  Favorite,
+  FileUploadOutlined,
+  FolderOpen,
+  Home,
+  Image,
+  Inbox,
+  Inventory2,
+  LibraryBooks,
+  LockOutlined,
+  Menu as MenuIcon,
+  SaveOutlined,
+  Search,
+  Settings,
+  VerifiedOutlined,
+  X,
+} from "@mui/icons-material";
 import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
-import { addRfqMessage, createRfqCase, getSession, getWorkspaceInvoiceDetail, getWorkspaceProduct, getWorkspaceRfqDecision, listRfqAttachments, listRfqCases, listRfqMessages, listWorkspaceInvoices, listWorkspaceProducts, selectWorkspaceRfqSupplier, startWorkspaceInvoiceCheckout, type RfqAttachment, type WorkspaceChatMessage, type WorkspaceInvoice, type WorkspaceInvoiceDetail, type WorkspaceProduct, type WorkspaceRfq, type WorkspaceRfqDecision, updateRfqCase, uploadRfqAttachment } from "./supabase";
+import {
+  addRfqMessage,
+  createRfqCase,
+  getSession,
+  getWorkspaceInvoiceDetail,
+  getWorkspaceProduct,
+  getWorkspaceRfqProduction,
+  listRfqAttachments,
+  listRfqCases,
+  listRfqMessages,
+  listWorkspaceInvoices,
+  listWorkspaceProducts,
+  listWorkspaceRfqQuotes,
+  selectWorkspaceRfqQuote,
+  startWorkspaceInvoiceCheckout,
+  type RfqAttachment,
+  type WorkspaceChatMessage,
+  type WorkspaceInvoice,
+  type WorkspaceInvoiceDetail,
+  type WorkspaceProduct,
+  type WorkspaceRfq,
+  type WorkspaceRfqProduction,
+  type WorkspaceRfqQuote,
+  updateRfqCase,
+  uploadRfqAttachment,
+} from "./supabase";
+import {
+  MiniStageTimeline,
+  nextStepOwner,
+  StageTimeline,
+} from "./dashboard-stage-timeline";
 
 const dashboardTheme = createTheme({
-  typography: { fontFamily: "'DM Sans', Arial, sans-serif", h1: { fontWeight: 500, letterSpacing: "-0.04em" }, h2: { fontWeight: 600, letterSpacing: "-0.035em" }, button: { fontWeight: 600, textTransform: "none" } },
-  palette: { background: { default: "#f4f6f9", paper: "#ffffff" }, text: { primary: "#202936", secondary: "#758091" }, primary: { main: "#45556b", dark: "#334256", contrastText: "#ffffff" } },
-  shape: { borderRadius: 16 },
-  components: { MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { borderRadius: 12, minHeight: 42, paddingInline: 16 } } }, MuiIconButton: { styleOverrides: { root: { borderRadius: 12 } } }, MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } }, MuiListItemButton: { styleOverrides: { root: { borderRadius: 12, minHeight: 44 } } } },
+  typography: {
+    fontFamily: "'DM Sans', Arial, sans-serif",
+    h1: { fontWeight: 500, letterSpacing: "-0.04em" },
+    h2: { fontWeight: 600, letterSpacing: "-0.035em" },
+    button: { fontWeight: 600, textTransform: "none" },
+  },
+  palette: {
+    background: { default: "#f4f6f9", paper: "#ffffff" },
+    text: { primary: "#202936", secondary: "#758091" },
+    primary: { main: "#4b7657", dark: "#3d6548", contrastText: "#ffffff" },
+  },
+  shape: { borderRadius: 8 },
+  components: {
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+      styleOverrides: {
+        root: { borderRadius: 10, minHeight: 42, paddingInline: 16 },
+      },
+    },
+    MuiIconButton: { styleOverrides: { root: { borderRadius: 10 } } },
+    MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
+    MuiListItemButton: {
+      styleOverrides: { root: { borderRadius: 10, minHeight: 44 } },
+    },
+    MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
+  },
 });
 
-type DashboardView = "dashboard" | "new" | "requests" | "products" | "favourites" | "messages" | "invoices" | "settings" | "library";
+type DashboardView =
+  | "dashboard"
+  | "new"
+  | "requests"
+  | "products"
+  | "favourites"
+  | "messages"
+  | "invoices"
+  | "settings"
+  | "library";
 type UploadState = "ready" | "invalid";
-type UploadFile = { id: string; file: File; state: UploadState; message?: string };
+type UploadFile = {
+  id: string;
+  file: File;
+  state: UploadState;
+  message?: string;
+};
 type BriefForm = { brief: string };
-type RfqPhase = "idle" | "drafting" | "review" | "editing" | "submitted" | "matching" | "matched";
+type RfqPhase =
+  | "idle"
+  | "drafting"
+  | "review"
+  | "editing"
+  | "submitted"
+  | "matching"
+  | "matched";
 type RfqTab = "RFQ" | "Timeline" | "Quotes" | "Orders" | "Files";
-type RfqFields = { product: string; quantity: string; material: string; certifications: string; colors: string; sizes: string; budget: string; timeline: string };
-type HistoryItem = { id: string; title: string; detail: string; active?: boolean };
+type RfqFields = {
+  product: string;
+  quantity: string;
+  material: string;
+  certifications: string;
+  colors: string;
+  sizes: string;
+  budget: string;
+  timeline: string;
+};
 type StoredRfq = WorkspaceRfq;
 type ConversationMessage = { from: "You" | "Atelix assistant"; text: string };
 
-const navItems: Array<{ label: string; view: DashboardView; icon: typeof Home; href: string }> = [
+const navItems: Array<{
+  label: string;
+  view: DashboardView;
+  icon: typeof Home;
+  href: string;
+}> = [
   { label: "Dashboard", view: "dashboard", icon: Home, href: "/dashboard" },
-  { label: "Requests", view: "requests", icon: Inbox, href: "/dashboard/requests" },
-  { label: "Products", view: "products", icon: Inventory2, href: "/dashboard/products" },
-  { label: "Favourites", view: "favourites", icon: Favorite, href: "/dashboard/favourites" },
-  { label: "Messages", view: "messages", icon: Inbox, href: "/dashboard/messages" },
-  { label: "Invoices", view: "invoices", icon: Description, href: "/dashboard/invoices" },
+  {
+    label: "Requests",
+    view: "requests",
+    icon: Inbox,
+    href: "/dashboard/requests",
+  },
+  {
+    label: "Products",
+    view: "products",
+    icon: Inventory2,
+    href: "/dashboard/products",
+  },
+  {
+    label: "Favourites",
+    view: "favourites",
+    icon: Favorite,
+    href: "/dashboard/favourites",
+  },
+  {
+    label: "Messages",
+    view: "messages",
+    icon: Inbox,
+    href: "/dashboard/messages",
+  },
+  {
+    label: "Invoices",
+    view: "invoices",
+    icon: Description,
+    href: "/dashboard/invoices",
+  },
 ];
-const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const acceptedTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
 const acceptedExtensions = /\.(jpe?g|png|webp|pdf)$/i;
 const maxFileSize = 25 * 1024 * 1024;
-const matchingChecks = ["Brief saved to your Atelix workspace", "Reference files attached securely", "Atelix team review queued"];
-const defaultRfqFields: RfqFields = { product: "", quantity: "", material: "", certifications: "", colors: "", sizes: "", budget: "", timeline: "" };
+const matchingChecks = [
+  "Brief saved to your Atelix workspace",
+  "Reference files attached securely",
+  "Atelix team review queued",
+];
+const defaultRfqFields: RfqFields = {
+  product: "",
+  quantity: "",
+  material: "",
+  certifications: "",
+  colors: "",
+  sizes: "",
+  budget: "",
+  timeline: "",
+};
 
 type UserProfile = { username: string; name: string; role?: string };
-function initials(name: string) { const parts = name.trim().split(/\s+/).filter(Boolean); return (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0]?.slice(0, 2) || "A").toUpperCase(); }
-
-type StackProps = { direction?: "row" | "column"; spacing?: number | string; alignItems?: "center" | "flex-start" | "flex-end" | "stretch" | "baseline"; justifyContent?: "center" | "flex-start" | "flex-end" | "space-between" | "space-around" | "space-evenly"; flexWrap?: "wrap" | "nowrap" | "wrap-reverse"; gap?: number | string; sx?: SxProps<Theme>; children?: ReactNode };
-const Stack = ({ direction = "column", spacing = 0, alignItems, justifyContent, flexWrap, gap, children, sx }: StackProps) => <Box sx={{ display: "flex", flexDirection: direction, gap: gap ?? (typeof spacing === "number" ? dashboardTheme.spacing(spacing) : spacing), alignItems, justifyContent, flexWrap, ...sx }}>{children}</Box>;
-
-function RoundedSurface({ children, translucent = false, interactive = false, sx, ...props }: { children: ReactNode; translucent?: boolean; interactive?: boolean; sx?: Record<string, unknown>; [key: string]: unknown }) {
-  return <Paper elevation={0} {...props} sx={{ minWidth: 0, boxSizing: "border-box", border: "1px solid rgba(214,220,229,.85)", borderRadius: 4, backgroundColor: translucent ? "rgba(255,255,255,.68)" : "#fff", backdropFilter: translucent ? "blur(18px)" : undefined, transition: "border-color 180ms ease, background-color 180ms ease, transform 180ms ease", ...(interactive ? { "&:hover": { borderColor: "#aeb9c8", transform: "translateY(-1px)" } } : {}), ...sx }}>{children}</Paper>;
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    parts.length > 1
+      ? `${parts[0][0]}${parts[parts.length - 1][0]}`
+      : parts[0]?.slice(0, 2) || "A"
+  ).toUpperCase();
 }
 
-function navigate(path: string) { history.pushState({}, "", path); dispatchEvent(new PopStateEvent("popstate")); }
+type StackProps = {
+  direction?: "row" | "column";
+  spacing?: number | string;
+  alignItems?: "center" | "flex-start" | "flex-end" | "stretch" | "baseline";
+  justifyContent?:
+    | "center"
+    | "flex-start"
+    | "flex-end"
+    | "space-between"
+    | "space-around"
+    | "space-evenly";
+  flexWrap?: "wrap" | "nowrap" | "wrap-reverse";
+  gap?: number | string;
+  sx?: SxProps<Theme>;
+  children?: ReactNode;
+};
+const Stack = ({
+  direction = "column",
+  spacing = 0,
+  alignItems,
+  justifyContent,
+  flexWrap,
+  gap,
+  children,
+  sx,
+}: StackProps) => (
+  <Box
+    sx={{
+      display: "flex",
+      flexDirection: direction,
+      gap:
+        gap ??
+        (typeof spacing === "number"
+          ? dashboardTheme.spacing(spacing)
+          : spacing),
+      alignItems,
+      justifyContent,
+      flexWrap,
+      ...sx,
+    }}
+  >
+    {children}
+  </Box>
+);
 
-function Sidebar({ view, onNavigate, historyItems, onRestore, collapsed = false, onToggle, mobile = false }: { view: DashboardView; onNavigate: (item: typeof navItems[number]) => void; historyItems: StoredRfq[]; onRestore: (item: StoredRfq) => void; collapsed?: boolean; onToggle?: () => void; mobile?: boolean }) {
+function RoundedSurface({
+  children,
+  translucent = false,
+  interactive = false,
+  sx,
+  ...props
+}: {
+  children: ReactNode;
+  translucent?: boolean;
+  interactive?: boolean;
+  sx?: Record<string, unknown>;
+  [key: string]: unknown;
+}) {
+  return (
+    <Paper
+      elevation={0}
+      {...props}
+      sx={{
+        minWidth: 0,
+        boxSizing: "border-box",
+        border: "1px solid rgba(214,220,229,.85)",
+        borderRadius: "14px",
+        backgroundColor: translucent ? "rgba(255,255,255,.68)" : "#fff",
+        backdropFilter: translucent ? "blur(18px)" : undefined,
+        transition:
+          "border-color 180ms ease, background-color 180ms ease, transform 180ms ease",
+        ...(interactive
+          ? {
+              "&:hover": {
+                borderColor: "#aeb9c8",
+                transform: "translateY(-1px)",
+              },
+            }
+          : {}),
+        ...sx,
+      }}
+    >
+      {children}
+    </Paper>
+  );
+}
+
+function navigate(path: string) {
+  history.pushState({}, "", path);
+  dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function Sidebar({
+  view,
+  onNavigate,
+  historyItems,
+  onRestore,
+  collapsed = false,
+  onToggle,
+  mobile = false,
+}: {
+  view: DashboardView;
+  onNavigate: (item: (typeof navItems)[number]) => void;
+  historyItems: StoredRfq[];
+  onRestore: (item: StoredRfq) => void;
+  collapsed?: boolean;
+  onToggle?: () => void;
+  mobile?: boolean;
+}) {
   const compact = collapsed && !mobile;
   const [logoHovered, setLogoHovered] = useState(false);
-  const itemSx = { color: "#697586", "&.Mui-selected": { backgroundColor: compact ? "transparent" : "#f0f1f3", color: "#202936" }, "&.Mui-selected:hover": { backgroundColor: compact ? "#f7f7f8" : "#e9eaed" }, "&:hover": { backgroundColor: compact ? "#f7f7f8" : "#f5f5f6" } };
-  return <Box component="nav" aria-label="Dashboard navigation" sx={{ display: "flex", flexDirection: "column", alignItems: compact ? "center" : "stretch", minHeight: 0, height: "100%", overflow: "hidden", p: compact ? 1.25 : mobile ? 2 : 2.25, transition: "padding 220ms ease" }}>
-    <Box sx={{ display: "flex", alignItems: "center", justifyContent: compact ? "center" : "space-between", gap: 1, width: compact ? 48 : "100%", minHeight: 44, mb: 2 }}>
-      <Box component={compact ? "button" : "a"} href={compact ? undefined : "/"} type={compact ? "button" : undefined} aria-label={compact ? "Expand sidebar" : "Atelix home"} onClick={compact ? onToggle : undefined} onMouseEnter={() => setLogoHovered(true)} onMouseLeave={() => setLogoHovered(false)} onFocus={() => setLogoHovered(true)} onBlur={() => setLogoHovered(false)} sx={{ display: "flex", alignItems: "center", justifyContent: compact ? "center" : "flex-start", gap: 1.1, width: compact ? 36 : "auto", height: compact ? 36 : "auto", p: 0, border: 0, borderRadius: "50%", backgroundColor: compact && logoHovered ? "#f0f1f3" : "transparent", color: "#16181c", textDecoration: "none", minWidth: 0, cursor: "pointer", transition: "background-color 160ms ease" }}>{compact ? (logoHovered ? <ChevronRight sx={{ color: "#68717d", fontSize: 23 }} /> : <Box component="span" aria-hidden="true" sx={{ display: "grid", placeItems: "center", width: 28, height: 28, color: "#6fae86", fontSize: 21 }}>✦</Box>) : <><Box component="span" aria-hidden="true" sx={{ display: "grid", placeItems: "center", width: 28, height: 28, color: "#6fae86", fontSize: 21 }}>✦</Box><Typography sx={{ color: "inherit", fontSize: 19, fontWeight: 700, letterSpacing: "-.045em" }}>atelix<span style={{ color: "#6fae86" }}>.</span></Typography></>}</Box>
-      {!mobile && !compact && <IconButton onClick={onToggle} aria-label="Collapse sidebar" size="small" sx={{ color: "#68717d", borderRadius: 2 }}><ChevronLeft fontSize="small" /></IconButton>}
+  const itemSx = {
+    color: "#697586",
+    "&.Mui-selected": {
+      backgroundColor: compact ? "transparent" : "#f0f1f3",
+      color: "#202936",
+    },
+    "&.Mui-selected:hover": {
+      backgroundColor: compact ? "#f7f7f8" : "#e9eaed",
+    },
+    "&:hover": { backgroundColor: compact ? "#f7f7f8" : "#f5f5f6" },
+  };
+  return (
+    <Box
+      component="nav"
+      aria-label="Dashboard navigation"
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: compact ? "center" : "stretch",
+        minHeight: 0,
+        height: "100%",
+        overflow: "hidden",
+        p: compact ? 1.25 : mobile ? 2 : 2.25,
+        transition: "padding 220ms ease",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: compact ? "center" : "space-between",
+          gap: 1,
+          width: compact ? 48 : "100%",
+          minHeight: 44,
+          mb: 2,
+        }}
+      >
+        <Box
+          component={compact ? "button" : "a"}
+          href={compact ? undefined : "/"}
+          type={compact ? "button" : undefined}
+          aria-label={compact ? "Expand sidebar" : "Atelix home"}
+          onClick={compact ? onToggle : undefined}
+          onMouseEnter={() => setLogoHovered(true)}
+          onMouseLeave={() => setLogoHovered(false)}
+          onFocus={() => setLogoHovered(true)}
+          onBlur={() => setLogoHovered(false)}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: compact ? "center" : "flex-start",
+            gap: 1.1,
+            width: compact ? 36 : "auto",
+            height: compact ? 36 : "auto",
+            p: 0,
+            border: 0,
+            borderRadius: "10px",
+            backgroundColor: compact && logoHovered ? "#f0f1f3" : "transparent",
+            color: "#16181c",
+            textDecoration: "none",
+            minWidth: 0,
+            cursor: "pointer",
+            transition: "background-color 160ms ease",
+          }}
+        >
+          {compact ? (
+            logoHovered ? (
+              <ChevronRight sx={{ color: "#68717d", fontSize: 23 }} />
+            ) : (
+              <Box
+                component="span"
+                aria-hidden="true"
+                sx={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: 28,
+                  height: 28,
+                  color: "#6fae86",
+                  fontSize: 21,
+                }}
+              >
+                ✦
+              </Box>
+            )
+          ) : (
+            <>
+              <Box
+                component="span"
+                aria-hidden="true"
+                sx={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: 28,
+                  height: 28,
+                  color: "#6fae86",
+                  fontSize: 21,
+                }}
+              >
+                ✦
+              </Box>
+              <Typography
+                sx={{
+                  color: "inherit",
+                  fontSize: 19,
+                  fontWeight: 700,
+                  letterSpacing: "-.045em",
+                }}
+              >
+                atelix<span style={{ color: "#6fae86" }}>.</span>
+              </Typography>
+            </>
+          )}
+        </Box>
+        {!mobile && !compact && (
+          <IconButton
+            onClick={onToggle}
+            aria-label="Collapse sidebar"
+            size="small"
+            sx={{ color: "#68717d", borderRadius: "8px" }}
+          >
+            <ChevronLeft fontSize="small" />
+          </IconButton>
+        )}
+      </Box>
+      <MuiButton
+        onClick={() =>
+          onNavigate({
+            label: "New request",
+            view: "new",
+            icon: EditOutlined,
+            href: "/dashboard/new-product-request",
+          })
+        }
+        aria-label="New request"
+        startIcon={!compact ? <EditOutlined /> : undefined}
+        sx={{
+          justifyContent: compact ? "center" : "flex-start",
+          alignSelf: compact ? "center" : "stretch",
+          minWidth: 0,
+          px: compact ? 0 : 1.25,
+          mb: 2.25,
+          borderRadius: "10px",
+          width: compact ? 48 : "auto",
+          height: compact ? 48 : "auto",
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          color: "#202936",
+          backgroundColor: "#fff",
+          "&:hover": { backgroundColor: "#f7f7f8" },
+          "& .MuiButton-startIcon": { margin: 0, mr: 1 },
+        }}
+      >
+        {compact ? <Add fontSize="small" /> : "New request"}
+      </MuiButton>
+      <List disablePadding sx={{ display: "grid", gap: 0.35, width: "100%" }}>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <ListItemButton
+              key={item.view}
+              selected={view === item.view}
+              onClick={() => onNavigate(item)}
+              component="a"
+              href={item.href}
+              aria-label={item.label}
+              sx={{
+                ...itemSx,
+                justifyContent: compact ? "center" : "flex-start",
+                alignSelf: compact ? "center" : "stretch",
+                width: compact ? 48 : "100%",
+                minHeight: 42,
+                px: compact ? 0 : 1,
+                borderRadius: "10px",
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: compact ? 0 : 32,
+                  color: "inherit",
+                  justifyContent: "center",
+                }}
+              >
+                <Icon fontSize="small" />
+              </ListItemIcon>
+              {!compact && (
+                <ListItemText
+                  primary={
+                    <Typography
+                      sx={{
+                        fontSize: 13,
+                        fontWeight: view === item.view ? 700 : 500,
+                      }}
+                    >
+                      {item.label}
+                    </Typography>
+                  }
+                />
+              )}
+            </ListItemButton>
+          );
+        })}
+      </List>
+      {!compact && (
+        <Box
+          sx={{
+            mt: 2.5,
+            minHeight: 0,
+            flex: 1,
+            overflowY: "auto",
+            scrollbarWidth: "none",
+            "&::-webkit-scrollbar": { display: "none" },
+          }}
+        >
+          <Typography
+            sx={{
+              px: 1,
+              mb: 0.75,
+              color: "#9ba1aa",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Recent requests
+          </Typography>
+          {historyItems.length ? (
+            <Box sx={{ display: "grid", gap: 0.25 }}>
+              {historyItems.map((item) => (
+                <ListItemButton
+                  key={item.id}
+                  onClick={() => onRestore(item)}
+                  sx={{
+                    display: "block",
+                    px: 1,
+                    py: 0.75,
+                    borderRadius: "8px",
+                    color: "#697586",
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography noWrap sx={{ fontSize: 12, fontWeight: 600 }}>
+                    {item.title}
+                  </Typography>
+                  <Typography
+                    noWrap
+                    sx={{ mt: 0.2, color: "#a0a7b0", fontSize: 10 }}
+                  >
+                    {new Date(item.updated_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    · {item.status}
+                  </Typography>
+                </ListItemButton>
+              ))}
+            </Box>
+          ) : (
+            <Typography
+              sx={{ px: 1, color: "#9ea5ad", fontSize: 11, lineHeight: 1.45 }}
+            >
+              Your saved RFQs will appear here.
+            </Typography>
+          )}
+        </Box>
+      )}
+      <Box sx={{ mt: 2.5, width: compact ? 48 : "100%", flexShrink: 0 }}>
+        <Divider sx={{ mb: 1.25, borderColor: "#ececef" }} />
+        <ListItemButton
+          selected={view === "library"}
+          component="a"
+          href="/dashboard/library"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate("/dashboard/library");
+          }}
+          aria-label="Library"
+          sx={{
+            ...itemSx,
+            justifyContent: compact ? "center" : "flex-start",
+            alignSelf: compact ? "center" : "stretch",
+            width: compact ? 48 : "100%",
+            px: compact ? 0 : 1,
+            borderRadius: "10px",
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: compact ? 0 : 32,
+              color: "inherit",
+              justifyContent: "center",
+            }}
+          >
+            <LibraryBooks fontSize="small" />
+          </ListItemIcon>
+          {!compact && (
+            <ListItemText
+              primary={<Typography sx={{ fontSize: 13 }}>Library</Typography>}
+            />
+          )}
+        </ListItemButton>
+        <ListItemButton
+          selected={view === "settings"}
+          component="a"
+          href="/dashboard/settings"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate("/dashboard/settings");
+          }}
+          aria-label="Settings"
+          sx={{
+            ...itemSx,
+            justifyContent: compact ? "center" : "flex-start",
+            alignSelf: compact ? "center" : "stretch",
+            width: compact ? 48 : "100%",
+            px: compact ? 0 : 1,
+            borderRadius: "10px",
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: compact ? 0 : 32,
+              color: "inherit",
+              justifyContent: "center",
+            }}
+          >
+            <Settings fontSize="small" />
+          </ListItemIcon>
+          {!compact && (
+            <ListItemText
+              primary={<Typography sx={{ fontSize: 13 }}>Settings</Typography>}
+            />
+          )}
+        </ListItemButton>
+      </Box>
     </Box>
-    <MuiButton onClick={() => onNavigate({ label: "New request", view: "new", icon: EditOutlined, href: "/dashboard/new-product-request" })} aria-label="New request" startIcon={!compact ? <EditOutlined /> : undefined} sx={{ justifyContent: compact ? "center" : "flex-start", alignSelf: compact ? "center" : "stretch", minWidth: 0, px: compact ? 0 : 1.25, mb: 2.25, borderRadius: compact ? "50%" : 2.5, width: compact ? 48 : "auto", height: compact ? 48 : "auto", position: "sticky", top: 0, zIndex: 1, color: "#202936", backgroundColor: "#fff", "&:hover": { backgroundColor: "#f7f7f8" }, "& .MuiButton-startIcon": { margin: 0, mr: 1 } }}>{compact ? <Add fontSize="small" /> : "New request"}</MuiButton>
-    <List disablePadding sx={{ display: "grid", gap: .35, width: "100%" }}>{navItems.map((item) => { const Icon = item.icon; return <ListItemButton key={item.view} selected={view === item.view} onClick={() => onNavigate(item)} component="a" href={item.href} aria-label={item.label} sx={{ ...itemSx, justifyContent: compact ? "center" : "flex-start", alignSelf: compact ? "center" : "stretch", width: compact ? 48 : "100%", minHeight: 42, px: compact ? 0 : 1, borderRadius: compact ? "50%" : 2.5 }}><ListItemIcon sx={{ minWidth: compact ? 0 : 32, color: "inherit", justifyContent: "center" }}><Icon fontSize="small" /></ListItemIcon>{!compact && <ListItemText primary={<Typography sx={{ fontSize: 13, fontWeight: view === item.view ? 700 : 500 }}>{item.label}</Typography>} />}</ListItemButton>; })}</List>
-    {!compact && <Box sx={{ mt: 2.5, minHeight: 0, flex: 1, overflowY: "auto", scrollbarWidth: "none", "&::-webkit-scrollbar": { display: "none" } }}><Typography sx={{ px: 1, mb: .75, color: "#9ba1aa", fontSize: 10, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Recent requests</Typography>{historyItems.length ? <Box sx={{ display: "grid", gap: .25 }}>{historyItems.map((item) => <ListItemButton key={item.id} onClick={() => onRestore(item)} sx={{ display: "block", px: 1, py: .75, borderRadius: 2, color: "#697586", minWidth: 0 }}><Typography noWrap sx={{ fontSize: 12, fontWeight: 600 }}>{item.title}</Typography><Typography noWrap sx={{ mt: .2, color: "#a0a7b0", fontSize: 10 }}>{new Date(item.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {item.status}</Typography></ListItemButton>)}</Box> : <Typography sx={{ px: 1, color: "#9ea5ad", fontSize: 11, lineHeight: 1.45 }}>Your saved RFQs will appear here.</Typography>}</Box>}
-    <Box sx={{ mt: 2.5, width: compact ? 48 : "100%", flexShrink: 0 }}><Divider sx={{ mb: 1.25, borderColor: "#ececef" }} /><ListItemButton selected={view === "library"} component="a" href="/dashboard/library" onClick={(event) => { event.preventDefault(); navigate("/dashboard/library"); }} aria-label="Library" sx={{ ...itemSx, justifyContent: compact ? "center" : "flex-start", alignSelf: compact ? "center" : "stretch", width: compact ? 48 : "100%", px: compact ? 0 : 1, borderRadius: compact ? "50%" : 2.5 }}><ListItemIcon sx={{ minWidth: compact ? 0 : 32, color: "inherit", justifyContent: "center" }}><LibraryBooks fontSize="small" /></ListItemIcon>{!compact && <ListItemText primary={<Typography sx={{ fontSize: 13 }}>Library</Typography>} />}</ListItemButton><ListItemButton selected={view === "settings"} component="a" href="/dashboard/settings" onClick={(event) => { event.preventDefault(); navigate("/dashboard/settings"); }} aria-label="Settings" sx={{ ...itemSx, justifyContent: compact ? "center" : "flex-start", alignSelf: compact ? "center" : "stretch", width: compact ? 48 : "100%", px: compact ? 0 : 1, borderRadius: compact ? "50%" : 2.5 }}><ListItemIcon sx={{ minWidth: compact ? 0 : 32, color: "inherit", justifyContent: "center" }}><Settings fontSize="small" /></ListItemIcon>{!compact && <ListItemText primary={<Typography sx={{ fontSize: 13 }}>Settings</Typography>} />}</ListItemButton></Box>
-  </Box>;
+  );
 }
 
-function UploadTray({ files, onFiles, onRemove, compact = false, inputId = "product-reference-upload" }: { files: UploadFile[]; onFiles: (files: UploadFile[]) => void; onRemove: (id: string) => void; compact?: boolean; inputId?: string }) {
+function UploadTray({
+  files,
+  onFiles,
+  onRemove,
+  compact = false,
+  inputId = "product-reference-upload",
+}: {
+  files: UploadFile[];
+  onFiles: (files: UploadFile[]) => void;
+  onRemove: (id: string) => void;
+  compact?: boolean;
+  inputId?: string;
+}) {
   function validate(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files || []);
-    const next = selected.map((file) => { const validType = acceptedTypes.has(file.type) || acceptedExtensions.test(file.name); const validSize = file.size <= maxFileSize; const uniqueId = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`; return { id: `${file.name}-${file.lastModified}-${uniqueId}`, file, state: validType && validSize ? "ready" : "invalid", message: !validType ? "Use JPG, PNG, WebP, or PDF." : "Files must be 25 MB or smaller." } satisfies UploadFile; });
-    onFiles([...files, ...next]); event.target.value = "";
+    const next = selected.map((file) => {
+      const validType =
+        acceptedTypes.has(file.type) || acceptedExtensions.test(file.name);
+      const validSize = file.size <= maxFileSize;
+      const uniqueId =
+        typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random()}`;
+      return {
+        id: `${file.name}-${file.lastModified}-${uniqueId}`,
+        file,
+        state: validType && validSize ? "ready" : "invalid",
+        message: !validType
+          ? "Use JPG, PNG, WebP, or PDF."
+          : "Files must be 25 MB or smaller.",
+      } satisfies UploadFile;
+    });
+    onFiles([...files, ...next]);
+    event.target.value = "";
   }
-  return <Stack spacing={1.25} sx={{ mt: compact ? 0 : 1.5 }}><Box component="label" htmlFor={inputId} sx={{ display: compact ? "none" : "flex", alignItems: "center", gap: 1, cursor: "pointer", color: "#6f7782", fontSize: 13, "&:hover": { color: "#202936" } }}><input id={inputId} type="file" multiple accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" onChange={validate} style={{ display: "none" }} /><FileUploadOutlined sx={{ fontSize: 18 }} aria-hidden="true" /> Upload files <Typography component="span" sx={{ color: "#a1a7af", fontSize: 12 }}>JPG, PNG, WebP, PDF tech pack · 25 MB max</Typography></Box><AnimatePresence initial={false}>{files.map(({ id, file, state, message }) => <motion.div key={id} initial={{ opacity: 0, height: 0, y: -8 }} animate={{ opacity: 1, height: "auto", y: 0 }} exit={{ opacity: 0, height: 0, y: -8 }} transition={{ duration: .18 }}><Box sx={{ display: "flex", alignItems: "center", gap: 1, px: 1.25, py: .75, borderRadius: 2, backgroundColor: state === "ready" ? "#f0f2f4" : "#fff0ee", color: state === "ready" ? "#46515f" : "#9a4f47" }}><Image sx={{ display: file.type === "application/pdf" ? "none" : "block", fontSize: 18 }} /><Description sx={{ display: file.type === "application/pdf" ? "block" : "none", fontSize: 18 }} /><Box sx={{ minWidth: 0, flex: 1 }}><Typography noWrap sx={{ fontSize: 12 }}>{file.name}</Typography><Typography sx={{ color: "inherit", opacity: .68, fontSize: 10 }}>{state === "ready" ? `${(file.size / 1024 / 1024).toFixed(1)} MB${file.type === "application/pdf" ? " · Tech pack" : ""}` : message}</Typography></Box><IconButton aria-label={`Remove ${file.name}`} onClick={() => onRemove(id)} size="small" sx={{ color: "inherit" }}><X fontSize="small" /></IconButton></Box></motion.div>)}</AnimatePresence></Stack>;
+  return (
+    <Stack spacing={1.25} sx={{ mt: compact ? 0 : 1.5 }}>
+      <Box
+        component="label"
+        htmlFor={inputId}
+        sx={{
+          display: compact ? "none" : "flex",
+          alignItems: "center",
+          gap: 1,
+          cursor: "pointer",
+          color: "#6f7782",
+          fontSize: 13,
+          "&:hover": { color: "#202936" },
+        }}
+      >
+        <input
+          id={inputId}
+          type="file"
+          multiple
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+          onChange={validate}
+          style={{ display: "none" }}
+        />
+        <FileUploadOutlined sx={{ fontSize: 18 }} aria-hidden="true" /> Upload
+        files{" "}
+        <Typography component="span" sx={{ color: "#a1a7af", fontSize: 12 }}>
+          JPG, PNG, WebP, PDF tech pack · 25 MB max
+        </Typography>
+      </Box>
+      <AnimatePresence initial={false}>
+        {files.map(({ id, file, state, message }) => (
+          <motion.div
+            key={id}
+            initial={{ opacity: 0, height: 0, y: -8 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 1.25,
+                py: 0.75,
+                borderRadius: 2,
+                backgroundColor: state === "ready" ? "#f0f2f4" : "#fff0ee",
+                color: state === "ready" ? "#46515f" : "#9a4f47",
+              }}
+            >
+              <Image
+                sx={{
+                  display: file.type === "application/pdf" ? "none" : "block",
+                  fontSize: 18,
+                }}
+              />
+              <Description
+                sx={{
+                  display: file.type === "application/pdf" ? "block" : "none",
+                  fontSize: 18,
+                }}
+              />
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography noWrap sx={{ fontSize: 12 }}>
+                  {file.name}
+                </Typography>
+                <Typography
+                  sx={{ color: "inherit", opacity: 0.68, fontSize: 10 }}
+                >
+                  {state === "ready"
+                    ? `${(file.size / 1024 / 1024).toFixed(1)} MB${file.type === "application/pdf" ? " · Tech pack" : ""}`
+                    : message}
+                </Typography>
+              </Box>
+              <IconButton
+                aria-label={`Remove ${file.name}`}
+                onClick={() => onRemove(id)}
+                size="small"
+                sx={{ color: "inherit" }}
+              >
+                <X fontSize="small" />
+              </IconButton>
+            </Box>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </Stack>
+  );
 }
 
-function CleanPromptComposer({ onStart, onMessage, initialBrief = "" }: { onStart: (brief: string, files: UploadFile[]) => void; onMessage: (message: string) => void; initialBrief?: string }) {
-  const { register, handleSubmit, watch, reset } = useForm<BriefForm>({ defaultValues: { brief: initialBrief } });
+function CleanPromptComposer({
+  onStart,
+  onMessage,
+}: {
+  onStart: (brief: string, files: UploadFile[]) => void;
+  onMessage: (message: string) => void;
+}) {
+  const { register, handleSubmit, watch, reset } = useForm<BriefForm>({
+    defaultValues: { brief: "" },
+  });
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [expanded, setExpanded] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const promptRegistration = register("brief");
   const brief = watch("brief");
-  function resizePrompt(target: HTMLTextAreaElement) { target.style.height = "auto"; const nextHeight = Math.min(target.scrollHeight, 248); target.style.height = `${nextHeight}px`; target.style.overflowY = target.scrollHeight > 248 ? "auto" : "hidden"; setExpanded(nextHeight > 88); }
-  function submit(values: BriefForm) { if (!values.brief.trim()) { onMessage("Describe what you need before creating a product request."); return; } if (files.some((file) => file.state === "invalid")) { onMessage("Remove unsupported or oversized files before starting the request."); return; } onStart(values.brief.trim(), files); reset(); setFiles([]); setExpanded(false); requestAnimationFrame(() => { if (promptRef.current) { promptRef.current.style.height = ""; promptRef.current.style.overflowY = "hidden"; } }); }
-  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) { if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return; event.preventDefault(); void handleSubmit(submit)(); }
-  return <motion.form className="clean-prompt-form" style={{ width: "100%", maxWidth: "100%", margin: "0 auto", boxSizing: "border-box" }} onSubmit={handleSubmit(submit)} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .28, ease: "easeOut" }}>
-    <motion.div animate={{ scale: brief.trim() ? 1.002 : 1 }} transition={{ duration: .18, ease: [0.22, 1, 0.36, 1] }} style={{ width: "100%" }}><RoundedSurface sx={{ display: "flex", alignItems: expanded ? "flex-end" : "center", gap: { xs: .25, sm: .5 }, width: "100%", minHeight: { xs: 68, sm: 74 }, p: { xs: .5, sm: .75 }, pl: { xs: .75, sm: 1 }, border: 0, borderRadius: expanded ? 4 : 999, backgroundColor: "#fff", boxShadow: "0 12px 30px rgba(32,41,54,.10)", transition: "box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)", "&:focus-within": { border: 0, boxShadow: "0 12px 30px rgba(32,41,54,.10)" } }}>
-      <Tooltip title="Add reference files"><IconButton type="button" component="label" htmlFor="product-reference-upload" aria-label="Add reference files" sx={{ flex: "0 0 auto", width: 48, height: 48, color: "#202936", borderRadius: "50%", "&:hover": { backgroundColor: "#f2f3f4" } }}><PromptPlus size={23} strokeWidth={1.8} /></IconButton></Tooltip>
-      <Box component="textarea" rows={1} aria-label="Product request" placeholder="Tell us what you want to source. A sentence or a few details about quantity, material, or delivery is enough to start." {...promptRegistration} ref={(node: HTMLTextAreaElement | null) => { promptRegistration.ref(node); promptRef.current = node; }} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => { promptRegistration.onChange(event); resizePrompt(event.currentTarget); }} onKeyDown={handleComposerKeyDown} sx={{ flex: 1, minWidth: 0, minHeight: { xs: 56, sm: 42 }, maxHeight: 248, resize: "none", overflowY: "hidden", border: 0, outline: 0, background: "transparent", color: "#202936", font: "inherit", fontSize: { xs: 15, sm: 17 }, lineHeight: 1.4, py: { xs: .75, sm: 1.15 }, "&::placeholder": { color: "#66717f" } }} />
-      <Box component="img" src="/atelix-ai-mode-badge.png" alt="Atelix AI mode" sx={{ flex: "0 0 auto", alignSelf: expanded ? "flex-end" : "center", width: { xs: 58, sm: 76 }, height: { xs: 34, sm: 42 }, objectFit: "contain", opacity: brief.trim() ? .92 : .78, transition: "opacity 180ms ease" }} />
-      <Tooltip title="Start RFQ draft"><Box component="span" sx={{ display: "inline-flex", flex: "0 0 auto", alignSelf: expanded ? "flex-end" : "center" }}><IconButton type="submit" aria-label="Start RFQ draft" disabled={!brief.trim()} sx={{ flex: "0 0 auto", width: 44, height: 44, p: 0, border: 0, borderRadius: "50%", boxShadow: "none", color: "#203143", backgroundColor: "#b7d7f8", "&:hover": { backgroundColor: "#a5cdf5", transform: "scale(1.04)" }, "&.Mui-disabled": { color: "#c5cbd2", backgroundColor: "#f1f2f3" }, transition: "background-color 150ms ease, transform 150ms ease" }}><PromptArrowUp size={23} strokeWidth={1.9} /></IconButton></Box></Tooltip>
-    </RoundedSurface></motion.div>
-    <UploadTray compact files={files} onFiles={setFiles} onRemove={(id) => setFiles((current) => current.filter((item) => item.id !== id))} />
-  </motion.form>;
+  function resizePrompt(target: HTMLTextAreaElement) {
+    target.style.height = "auto";
+    const nextHeight = Math.min(target.scrollHeight, 248);
+    target.style.height = `${nextHeight}px`;
+    target.style.overflowY = target.scrollHeight > 248 ? "auto" : "hidden";
+    setExpanded(nextHeight > 88);
+  }
+  function submit(values: BriefForm) {
+    if (!values.brief.trim()) {
+      onMessage("Describe what you need before creating a product request.");
+      return;
+    }
+    if (files.some((file) => file.state === "invalid")) {
+      onMessage(
+        "Remove unsupported or oversized files before starting the request.",
+      );
+      return;
+    }
+    onStart(values.brief.trim(), files);
+    reset();
+    setFiles([]);
+    setExpanded(false);
+    requestAnimationFrame(() => {
+      if (promptRef.current) {
+        promptRef.current.style.height = "";
+        promptRef.current.style.overflowY = "hidden";
+      }
+    });
+  }
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    )
+      return;
+    event.preventDefault();
+    void handleSubmit(submit)();
+  }
+  return (
+    <motion.form
+      className="clean-prompt-form"
+      style={{
+        width: "100%",
+        maxWidth: "100%",
+        margin: "0 auto",
+        boxSizing: "border-box",
+      }}
+      onSubmit={handleSubmit(submit)}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: "easeOut" }}
+    >
+      <motion.div
+        animate={{ scale: brief.trim() ? 1.002 : 1 }}
+        transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+        style={{ width: "100%" }}
+      >
+        <RoundedSurface
+          sx={{
+            display: "flex",
+            alignItems: expanded ? "flex-end" : "center",
+            gap: { xs: 0.25, sm: 0.5 },
+            width: "100%",
+            minHeight: { xs: 68, sm: 74 },
+            p: { xs: 0.5, sm: 0.75 },
+            pl: { xs: 0.75, sm: 1 },
+            border: 0,
+            borderRadius: expanded ? "18px" : "16px",
+            backgroundColor: "#fff",
+            boxShadow: "0 12px 30px rgba(32,41,54,.10)",
+            transition:
+              "box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
+            "&:focus-within": {
+              border: 0,
+              boxShadow: "0 12px 30px rgba(32,41,54,.10)",
+            },
+          }}
+        >
+          <Tooltip title="Add reference files">
+            <IconButton
+              type="button"
+              component="label"
+              htmlFor="product-reference-upload"
+              aria-label="Add reference files"
+              sx={{
+                flex: "0 0 auto",
+                width: 48,
+                height: 48,
+                color: "#202936",
+                borderRadius: "12px",
+                "&:hover": { backgroundColor: "#f2f3f4" },
+              }}
+            >
+              <PromptPlus size={23} strokeWidth={1.8} />
+            </IconButton>
+          </Tooltip>
+          <Box
+            component="textarea"
+            rows={1}
+            aria-label="Product request"
+            placeholder="Tell us what you want to source. A sentence or a few details about quantity, material, or delivery is enough to start."
+            {...promptRegistration}
+            ref={(node: HTMLTextAreaElement | null) => {
+              promptRegistration.ref(node);
+              promptRef.current = node;
+            }}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
+              promptRegistration.onChange(event);
+              resizePrompt(event.currentTarget);
+            }}
+            onKeyDown={handleComposerKeyDown}
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              minHeight: { xs: 56, sm: 42 },
+              maxHeight: 248,
+              resize: "none",
+              overflowY: "hidden",
+              border: 0,
+              outline: 0,
+              background: "transparent",
+              color: "#202936",
+              font: "inherit",
+              fontSize: { xs: 15, sm: 17 },
+              lineHeight: 1.4,
+              py: { xs: 0.75, sm: 1.15 },
+              "&::placeholder": { color: "#66717f" },
+            }}
+          />
+          <Box
+            component="img"
+            src="/atelix-ai-mode-badge.png"
+            alt="Atelix AI mode"
+            sx={{
+              flex: "0 0 auto",
+              alignSelf: expanded ? "flex-end" : "center",
+              width: { xs: 58, sm: 76 },
+              height: { xs: 34, sm: 42 },
+              objectFit: "contain",
+              opacity: brief.trim() ? 0.92 : 0.78,
+              transition: "opacity 180ms ease",
+            }}
+          />
+          <Tooltip title="Start RFQ draft">
+            <Box
+              component="span"
+              sx={{
+                display: "inline-flex",
+                flex: "0 0 auto",
+                alignSelf: expanded ? "flex-end" : "center",
+              }}
+            >
+              <IconButton
+                type="submit"
+                aria-label="Start RFQ draft"
+                disabled={!brief.trim()}
+                sx={{
+                  flex: "0 0 auto",
+                  width: 44,
+                  height: 44,
+                  p: 0,
+                  border: 0,
+                  borderRadius: "12px",
+                  boxShadow: "none",
+                  color: "#fff",
+                  backgroundColor: "#4b7657",
+                  "&:hover": {
+                    backgroundColor: "#3d6548",
+                    transform: "scale(1.04)",
+                  },
+                  "&.Mui-disabled": {
+                    color: "#c5cbd2",
+                    backgroundColor: "#f1f2f3",
+                  },
+                  transition:
+                    "background-color 150ms ease, transform 150ms ease",
+                }}
+              >
+                <PromptArrowUp size={23} strokeWidth={1.9} />
+              </IconButton>
+            </Box>
+          </Tooltip>
+        </RoundedSurface>
+      </motion.div>
+      <UploadTray
+        compact
+        files={files}
+        onFiles={setFiles}
+        onRemove={(id) =>
+          setFiles((current) => current.filter((item) => item.id !== id))
+        }
+      />
+    </motion.form>
+  );
 }
 
-function ConversationPanel({ brief, phase, history, messages: assistantMessages }: { brief: string; phase: RfqPhase; history: HistoryItem[]; messages: string[] }) {
-  const matching = phase === "matching" || phase === "matched";
-  const messages = [
-    { from: "You", text: brief || "3,000 running T-shirts" },
-    { from: "Atelix assistant", text: phase === "drafting" ? "I’m turning your brief into an RFQ draft…" : "I’ve structured the request so you can review the production details." },
-    ...(matching ? [{ from: "Atelix assistant", text: phase === "matched" ? "Your RFQ is ready for Atelix review." : "Your RFQ is saved and queued for Atelix review." }] : []),
-    ...assistantMessages.map((text) => ({ from: "Atelix assistant", text })),
-  ];
-  return <RoundedSurface sx={{ display: "flex", flexDirection: "column", minHeight: { xs: 260, md: 610 }, overflow: "hidden", backgroundColor: "rgba(255,255,255,.7)" }}>
-    <Box sx={{ px: 2, py: 1.75, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ color: "#718092", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Sourcing history</Typography></Box>
-    <Box sx={{ p: 1.25, borderBottom: "1px solid #e7ebf0" }}>{history.map((item) => <Box key={item.id} sx={{ px: 1.25, py: 1, borderRadius: 2.25, backgroundColor: item.active ? "#eef4ee" : "transparent", color: item.active ? "#3d6548" : "#87919e" }}><Typography noWrap sx={{ fontSize: 13, fontWeight: item.active ? 700 : 500 }}>{item.title}</Typography><Typography noWrap sx={{ mt: .35, fontSize: 11, color: item.active ? "#71917a" : "#a2aab4" }}>{item.detail}</Typography></Box>)}</Box>
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5, p: { xs: 2, md: 2.5 }, flex: 1 }}><AnimatePresence initial={false}>{messages.map((message, index) => <motion.div key={`${message.from}-${index}-${message.text}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .24, delay: index === messages.length - 1 ? .08 : 0 }}><Box sx={{ alignSelf: message.from === "You" ? "flex-end" : "flex-start", maxWidth: "88%", px: 1.5, py: 1.25, borderRadius: message.from === "You" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", backgroundColor: message.from === "You" ? "#526176" : "#f3f5f7", color: message.from === "You" ? "#fff" : "#566476" }}><Typography sx={{ mb: .5, color: message.from === "You" ? "rgba(255,255,255,.68)" : "#8b96a4", fontSize: 10, fontWeight: 700 }}>{message.from}</Typography><Typography sx={{ fontSize: 13, lineHeight: 1.5 }}>{message.text}</Typography></Box></motion.div>)}</AnimatePresence></Box>
-  </RoundedSurface>;
-}
-
-function ConversationChatPanel({ phase, messages: conversationMessages, onSend }: { phase: RfqPhase; messages: ConversationMessage[]; onSend: (message: string) => void }) {
+function ConversationChatPanel({
+  phase,
+  messages: conversationMessages,
+  onSend,
+}: {
+  phase: RfqPhase;
+  messages: ConversationMessage[];
+  onSend: (message: string) => void;
+}) {
   const [draft, setDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
   const hasDraft = Boolean(draft.trim());
   const messages: ConversationMessage[] = conversationMessages;
-  function resizeConversation(target: HTMLTextAreaElement) { target.style.height = "auto"; const nextHeight = Math.min(target.scrollHeight, 180); target.style.height = `${nextHeight}px`; target.style.overflowY = target.scrollHeight > 180 ? "auto" : "hidden"; setExpanded(nextHeight > 52); }
-  function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const message = draft.trim(); if (!message) return; onSend(message); setDraft(""); setExpanded(false); }
-  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) { if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return; event.preventDefault(); const message = draft.trim(); if (!message) return; onSend(message); setDraft(""); setExpanded(false); }
-  const activity = phase === "drafting" ? "Structuring RFQ" : "RFQ draft ready for your review";
-  return <Box sx={{ display: "flex", alignSelf: "stretch", flexDirection: "column", minHeight: { xs: 450, md: "calc(100dvh - 68px)" }, px: { xs: 0, md: 3.25 }, py: { xs: 2, md: 2.75 } }}>
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 2.25, flex: "1 1 auto", minHeight: 0, overflowY: "auto" }}>
-      <AnimatePresence initial={false}>{messages.map((message, index) => <motion.div key={`${message.from}-${index}-${message.text}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: .2 }}><Box sx={{ maxWidth: message.from === "You" ? "84%" : "100%", ml: message.from === "You" ? "auto" : 0, px: message.from === "You" ? 2.25 : 0, py: message.from === "You" ? 1.5 : 0, borderRadius: message.from === "You" ? "18px 18px 6px 18px" : 0, backgroundColor: message.from === "You" ? "#f1f2f1" : "transparent", color: "#202936" }}><Typography sx={{ display: message.from === "You" ? "none" : "block", mb: .75, color: "#8a95a3", fontSize: 11.5, fontWeight: 700 }}>{message.from}</Typography><Typography sx={{ fontSize: 14.5, lineHeight: 1.65, color: "inherit" }}>{message.text}</Typography></Box></motion.div>)}</AnimatePresence>
-      <Box sx={{ display: "grid", gap: 1 }}><Stack direction="row" spacing={.75} alignItems="center"><Box aria-hidden="true" sx={{ display: "grid", placeItems: "center", width: 22, height: 22, borderRadius: "50%", backgroundColor: "#eef4ee", color: "#6fae86", fontSize: 13 }}>✦</Box><Typography sx={{ color: "#8a95a3", fontSize: 11.5, fontWeight: 700 }}>Atelix sourcing agent</Typography></Stack><Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 1.5, py: 1.1, border: "1px solid #e7ebf0", borderRadius: 1.5, backgroundColor: "#fff" }}><CheckCircle sx={{ color: "#4b7657", fontSize: 17 }} /><Typography sx={{ color: "#3f4c5e", fontSize: 12.5, fontWeight: 600 }}>Saved your sourcing brief</Typography><ExpandMore sx={{ ml: "auto", color: "#b6bdc6", fontSize: 18 }} /></Stack><Stack direction="row" alignItems="center" spacing={1.25} sx={{ px: 1.5, py: 1.1, border: "1px solid #dfe8e1", borderRadius: 1.5, backgroundColor: "#f7fbf7" }}>{phase === "drafting" ? <CircularProgress size={16} thickness={5} sx={{ color: "#4b7657" }} /> : <CheckCircle sx={{ color: "#4b7657", fontSize: 17 }} />}<Typography sx={{ color: "#3f4c5e", fontSize: 12.5, fontWeight: 600 }}>{activity}</Typography></Stack></Box>
+  function resizeConversation(target: HTMLTextAreaElement) {
+    target.style.height = "auto";
+    const nextHeight = Math.min(target.scrollHeight, 180);
+    target.style.height = `${nextHeight}px`;
+    target.style.overflowY = target.scrollHeight > 180 ? "auto" : "hidden";
+    setExpanded(nextHeight > 52);
+  }
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const message = draft.trim();
+    if (!message) return;
+    onSend(message);
+    setDraft("");
+    setExpanded(false);
+  }
+  function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    )
+      return;
+    event.preventDefault();
+    const message = draft.trim();
+    if (!message) return;
+    onSend(message);
+    setDraft("");
+    setExpanded(false);
+  }
+  return (
+    <RoundedSurface
+      sx={{
+        display: "flex",
+        alignSelf: "stretch",
+        flexDirection: "column",
+        height: { xs: "min(440px, calc(100dvh - 120px))", md: "auto" },
+        minHeight: { xs: 340, md: 610 },
+        overflow: "hidden",
+        border: 0,
+        borderRadius: 0,
+        backgroundColor: "transparent",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          gap: { xs: 2.25, md: 3 },
+          p: { xs: 0, md: 1.25 },
+          pt: { xs: 1.5, md: 1.75 },
+          flex: "1 1 auto",
+          minHeight: 0,
+          overflowY: "auto",
+        }}
+      >
+        <AnimatePresence initial={false}>
+          {messages.map((message, index) => (
+            <motion.div
+              key={`${message.from}-${index}-${message.text}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: 0.24,
+                delay: index === messages.length - 1 ? 0.08 : 0,
+              }}
+            >
+              <Box
+                sx={{
+                  alignSelf: message.from === "You" ? "flex-end" : "flex-start",
+                  maxWidth: message.from === "You" ? "88%" : "100%",
+                  ml: message.from === "You" ? "auto" : 0,
+                  px: message.from === "You" ? { xs: 1.75, md: 2.25 } : 0,
+                  py: message.from === "You" ? { xs: 1.25, md: 1.5 } : 0,
+                  borderRadius:
+                    message.from === "You" ? "16px 16px 4px 16px" : 0,
+                  backgroundColor:
+                    message.from === "You" ? "#4b7657" : "transparent",
+                  color: message.from === "You" ? "#fff" : "#202936",
+                }}
+              >
+                <Typography
+                  sx={{
+                    display: message.from === "You" ? "none" : "block",
+                    mb: 0.7,
+                    color: "#8a95a3",
+                    fontSize: 11,
+                    fontWeight: 700,
+                  }}
+                >
+                  {message.from}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: { xs: 14, md: 16 },
+                    lineHeight: 1.65,
+                    color: "inherit",
+                  }}
+                >
+                  {message.text}
+                </Typography>
+              </Box>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {phase === "drafting" && (
+          <Box
+            aria-label="Atelix assistant is typing"
+            sx={{
+              display: "flex",
+              gap: 0.5,
+              alignItems: "center",
+              minHeight: 18,
+              pl: 0.25,
+            }}
+          >
+            {[0, 1, 2].map((dot) => (
+              <motion.span
+                key={dot}
+                animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+                transition={{
+                  duration: 1,
+                  repeat: Infinity,
+                  delay: dot * 0.16,
+                }}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  backgroundColor: "#202936",
+                  display: "block",
+                }}
+              />
+            ))}
+          </Box>
+        )}
+      </Box>
+      <Box
+        component="form"
+        className="conversation-composer"
+        onSubmit={submit}
+        sx={{
+          display: "flex",
+          alignItems: expanded ? "flex-end" : "center",
+          gap: { xs: 0.25, sm: 0.5 },
+          mt: 1,
+          p: { xs: 0.5, sm: 0.75 },
+          pl: { xs: 0.75, sm: 1 },
+          border: "1px solid #e7ebf0",
+          borderRadius: expanded ? "16px" : "14px",
+          backgroundColor: "#fff",
+          boxShadow: "0 8px 22px rgba(32,41,54,.07)",
+          transition:
+            "box-shadow 180ms ease, border-color 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
+          "&:focus-within": {
+            borderColor: "#cfe2d4",
+            boxShadow: "0 8px 22px rgba(32,41,54,.09)",
+          },
+        }}
+      >
+        <Box
+          component="textarea"
+          rows={1}
+          value={draft}
+          onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
+            setDraft(event.target.value);
+            resizeConversation(event.currentTarget);
+          }}
+          onKeyDown={handleComposerKeyDown}
+          aria-label="Continue conversation"
+          placeholder="Reply, or ask about MOQ, lead time, certification…"
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 42,
+            maxHeight: 180,
+            resize: "none",
+            overflowY: "hidden",
+            border: 0,
+            outline: 0,
+            background: "transparent",
+            color: "#202936",
+            font: "inherit",
+            fontSize: { xs: 14, sm: 15 },
+            lineHeight: 1.45,
+            py: 1.05,
+            "&::placeholder": { color: "#858c96" },
+          }}
+        />
+        <Box
+          component="img"
+          src="/atelix-ai-mode-badge.png"
+          alt="Atelix AI mode"
+          sx={{
+            flex: "0 0 auto",
+            alignSelf: expanded ? "flex-end" : "center",
+            width: { xs: 54, sm: 68 },
+            height: { xs: 32, sm: 38 },
+            objectFit: "contain",
+            opacity: hasDraft ? 0.92 : 0.78,
+            transition: "opacity 180ms ease",
+          }}
+        />
+        <IconButton
+          type="submit"
+          aria-label="Send message"
+          disabled={!hasDraft}
+          sx={{
+            flex: "0 0 auto",
+            alignSelf: expanded ? "flex-end" : "center",
+            width: 40,
+            height: 40,
+            p: 0,
+            border: 0,
+            borderRadius: "10px",
+            boxShadow: "none",
+            color: "#fff",
+            backgroundColor: "#4b7657",
+            "&:hover": { backgroundColor: "#3d6548", transform: "scale(1.04)" },
+            "&.Mui-disabled": { color: "#b6bdc6", backgroundColor: "#f1f2f3" },
+            transition: "background-color 150ms ease, transform 150ms ease",
+          }}
+        >
+          <PromptArrowUp size={21} strokeWidth={1.9} />
+        </IconButton>
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.75,
+          mt: 1.1,
+          pl: 0.5,
+          color: "#9ba1aa",
+          fontSize: 11,
+        }}
+      >
+        <LockOutlined sx={{ fontSize: 14 }} />
+        Drafting aid only. Supplier, price and payment facts come from reviewed
+        Atelix records.
+      </Box>
+    </RoundedSurface>
+  );
+}
+
+function RfqField({
+  label,
+  value,
+  field,
+  editing,
+  draft,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  field: keyof RfqFields;
+  editing: boolean;
+  draft: RfqFields;
+  onChange: (field: keyof RfqFields, value: string) => void;
+}) {
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: {
+          xs: "1fr",
+          sm: "minmax(130px,.45fr) minmax(0,1fr)",
+        },
+        gap: { xs: 0.5, sm: 2 },
+        py: 1.25,
+        borderBottom: "1px solid #edf0f3",
+      }}
+    >
+      <Typography sx={{ color: "#8a95a3", fontSize: 12 }}>{label}</Typography>
+      {editing ? (
+        <Box
+          component="input"
+          value={draft[field]}
+          onChange={(event: ChangeEvent<HTMLInputElement>) =>
+            onChange(field, event.target.value)
+          }
+          aria-label={label}
+          sx={{
+            width: "100%",
+            minWidth: 0,
+            border: "1px solid #ccd5df",
+            borderRadius: 1.5,
+            px: 1,
+            py: 0.65,
+            color: "#354357",
+            backgroundColor: "#fff",
+            font: "inherit",
+            fontSize: 13,
+            outline: 0,
+            "&:focus": {
+              borderColor: "#4b7657",
+              boxShadow: "0 0 0 3px rgba(75,118,87,.14)",
+            },
+          }}
+        />
+      ) : (
+        <Typography sx={{ color: "#3f4c5e", fontSize: 13, lineHeight: 1.45 }}>
+          {value}
+        </Typography>
+      )}
     </Box>
-    <Box component="form" className="conversation-composer" onSubmit={submit} sx={{ display: "flex", alignItems: expanded ? "flex-end" : "center", gap: .5, mt: 2, p: .75, pl: 1.25, border: "1px solid #e7ebf0", borderRadius: expanded ? 2.5 : 999, backgroundColor: "#fff", boxShadow: "0 8px 22px rgba(32,41,54,.07)", "&:focus-within": { borderColor: "#cfe2d4", boxShadow: "0 8px 22px rgba(32,41,54,.09)" } }}>
-      <IconButton aria-label="Attachments are added from the request editor" disabled sx={{ alignSelf: "center", color: "#6f7782" }}><Add /></IconButton><Box component="textarea" rows={1} value={draft} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => { setDraft(event.target.value); resizeConversation(event.currentTarget); }} onKeyDown={handleComposerKeyDown} aria-label="Reply or ask a sourcing question" placeholder="Reply, or ask about MOQ, lead time, certification…" sx={{ flex: 1, minWidth: 0, minHeight: 42, maxHeight: 180, resize: "none", overflowY: "hidden", border: 0, outline: 0, background: "transparent", color: "#202936", font: "inherit", fontSize: 14.5, lineHeight: 1.45, py: 1.05, "&::placeholder": { color: "#858c96" } }} /><Box component="img" src="/atelix-ai-mode-badge.png" alt="Atelix AI mode" sx={{ flex: "0 0 auto", alignSelf: "center", width: 68, height: 38, objectFit: "contain", opacity: .82 }} /><IconButton type="submit" aria-label="Send message" disabled={!hasDraft} sx={{ flex: "0 0 auto", alignSelf: "center", width: 40, height: 40, backgroundColor: "#4b7657", color: "#fff", "&:hover": { backgroundColor: "#3d6548", transform: "scale(1.04)" }, "&.Mui-disabled": { color: "#c5cbd2", backgroundColor: "#f1f2f3" } }}><PromptArrowUp size={20} strokeWidth={1.9} /></IconButton>
-    </Box><Stack direction="row" spacing={.75} alignItems="center" sx={{ mt: 1, pl: .5, color: "#9ba1aa" }}><LockOutlined sx={{ fontSize: 14 }} /><Typography sx={{ fontSize: 11 }}>Drafting aid only. Supplier, price, and payment facts come from reviewed Atelix records.</Typography></Stack>
-  </Box>;
+  );
 }
 
-function RfqField({ label, value, field, editing, draft, onChange }: { label: string; value: string; field: keyof RfqFields; editing: boolean; draft: RfqFields; onChange: (field: keyof RfqFields, value: string) => void }) {
-  return <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "minmax(130px,.45fr) minmax(0,1fr)" }, gap: { xs: .5, sm: 2 }, py: 1.25, borderBottom: "1px solid #edf0f3" }}><Typography sx={{ color: "#8a95a3", fontSize: 12 }}>{label}</Typography>{editing ? <Box component="input" value={draft[field]} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(field, event.target.value)} aria-label={label} sx={{ width: "100%", minWidth: 0, border: "1px solid #ccd5df", borderRadius: 1.5, px: 1, py: .65, color: "#354357", backgroundColor: "#fff", font: "inherit", fontSize: 13, outline: 0, "&:focus": { borderColor: "#526176", boxShadow: "0 0 0 3px rgba(82,97,118,.14)" } }} /> : <Typography sx={{ color: "#3f4c5e", fontSize: 13, lineHeight: 1.45 }}>{value}</Typography>}</Box>;
+function FilesTab({ attachments }: { attachments: RfqAttachment[] }) {
+  if (!attachments.length)
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          minHeight: 380,
+          placeItems: "center",
+          p: 4,
+          textAlign: "center",
+        }}
+      >
+        <Box>
+          <Typography sx={{ color: "#718092", fontSize: 16, fontWeight: 700 }}>
+            No files attached yet
+          </Typography>
+          <Typography
+            sx={{
+              maxWidth: 330,
+              mt: 1,
+              color: "#9aa4b0",
+              fontSize: 13,
+              lineHeight: 1.55,
+            }}
+          >
+            Reference images or a tech pack you attach to this RFQ will appear
+            here.
+          </Typography>
+        </Box>
+      </Box>
+    );
+  return (
+    <Stack spacing={1} sx={{ pt: { xs: 2, md: 3 } }}>
+      {attachments.map((attachment) => (
+        <Box
+          key={attachment.id}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.25,
+            px: 1.5,
+            py: 1.1,
+            border: "1px solid #e7ebf0",
+            borderRadius: "10px",
+          }}
+        >
+          {attachment.content_type === "application/pdf" ? (
+            <Description sx={{ fontSize: 20, color: "#4b7657" }} />
+          ) : (
+            <Image sx={{ fontSize: 20, color: "#4b7657" }} />
+          )}
+          <Typography
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              fontSize: 13,
+              color: "#3f4c5e",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {attachment.original_name}
+          </Typography>
+          <Typography sx={{ flexShrink: 0, fontSize: 11.5, color: "#9ba1aa" }}>
+            {(attachment.byte_size / 1024 / 1024).toFixed(1)} MB
+          </Typography>
+        </Box>
+      ))}
+    </Stack>
+  );
 }
 
-function RfqDocumentPanel({ phase, fields, draft, tab, setTab, onEdit, onChange, onSave, onCancel, onSubmit }: { phase: RfqPhase; fields: RfqFields; draft: RfqFields; tab: RfqTab; setTab: (tab: RfqTab) => void; onEdit: () => void; onChange: (field: keyof RfqFields, value: string) => void; onSave: () => void; onCancel: () => void; onSubmit: () => void }) {
+function RfqDocumentPanel({
+  phase,
+  fields,
+  draft,
+  tab,
+  setTab,
+  caseStatus,
+  caseId,
+  attachments,
+  onEdit,
+  onChange,
+  onSave,
+  onCancel,
+  onSubmit,
+  onMessage,
+  onQuoteSelected,
+}: {
+  phase: RfqPhase;
+  fields: RfqFields;
+  draft: RfqFields;
+  tab: RfqTab;
+  setTab: (tab: RfqTab) => void;
+  caseStatus: string;
+  caseId: string;
+  attachments: RfqAttachment[];
+  onEdit: () => void;
+  onChange: (field: keyof RfqFields, value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+  onMessage: (message: string) => void;
+  onQuoteSelected: () => void;
+}) {
   const editing = phase === "editing";
-  const disabledTab = tab !== "RFQ";
   const tabs: RfqTab[] = ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
-  function moveTab(event: KeyboardEvent, index: number) { const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0; if (!direction) return; event.preventDefault(); setTab(tabs[(index + direction + tabs.length) % tabs.length]); }
-  return <Box sx={{ display: "flex", flexDirection: "column", minHeight: { xs: "auto", md: "calc(100dvh - 68px)" }, backgroundColor: "#fff" }}>
-    <Box sx={{ flexShrink: 0, px: { xs: 2, md: 3.25 }, pt: 2 }}><Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2} sx={{ pb: 1.75 }}><Box><Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Request for quotation</Typography><Typography variant="h2" sx={{ mt: .65, fontSize: { xs: 20, md: 22 }, color: "#202936" }}>{fields.quantity || "Draft quantity"} — {fields.product || "Sourcing request"}</Typography></Box><Stack direction="row" spacing={1}>{!editing && phase !== "submitted" && phase !== "matching" && phase !== "matched" && <MuiButton onClick={onEdit} startIcon={<EditOutlined />} size="small" variant="outlined" sx={{ borderColor: "#e7ebf0", color: "#4a5667" }}>Edit</MuiButton>}<MuiButton disabled startIcon={<PictureAsPdfOutlined />} size="small" variant="outlined" sx={{ borderColor: "#e7ebf0", color: "#4a5667" }}>PDF</MuiButton></Stack></Stack><Box role="tablist" aria-label="RFQ workspace sections" sx={{ display: "flex", gap: .25, borderBottom: "1px solid #e7ebf0", overflowX: "auto" }}>{tabs.map((item, index) => <Box key={item} id={`rfq-tab-${item.toLowerCase()}`} component="button" role="tab" aria-selected={tab === item} aria-controls="rfq-tabpanel" tabIndex={tab === item ? 0 : -1} onClick={() => setTab(item)} onKeyDown={(event: KeyboardEvent) => moveTab(event, index)} sx={{ flex: "0 0 auto", px: 1.5, py: 1.35, border: 0, borderBottom: tab === item ? "2px solid #4b7657" : "2px solid transparent", background: "transparent", color: tab === item ? "#4b7657" : "#9aa4b0", font: "inherit", fontSize: 12.5, fontWeight: tab === item ? 700 : 500, cursor: "pointer" }}>{item}{item === "Files" && <Box component="span" sx={{ ml: .75, px: .7, py: .1, borderRadius: 1, backgroundColor: "#f1f2f4", color: "#758091", fontSize: 10.5 }}>0</Box>}</Box>)}</Box></Box>
-    {disabledTab ? <Box id="rfq-tabpanel" role="tabpanel" aria-labelledby={`rfq-tab-${tab.toLowerCase()}`} sx={{ display: "grid", flex: 1, minHeight: 360, placeItems: "center", p: 4, textAlign: "center" }}><Box><Typography sx={{ color: "#718092", fontSize: 16, fontWeight: 700 }}>{tab} will appear here</Typography><Typography sx={{ maxWidth: 330, mt: 1, color: "#9aa4b0", fontSize: 13, lineHeight: 1.55 }}>This RFQ has no {tab.toLowerCase()} records yet.</Typography></Box></Box> : <Box id="rfq-tabpanel" role="tabpanel" aria-labelledby="rfq-tab-rfq" sx={{ flex: 1, p: { xs: 2, md: 3.25 }, overflowY: "auto" }}><Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.25, mb: 2.25, p: 1.5, border: "1px solid #ecdfc3", borderRadius: 1.5, backgroundColor: "#fbf6ea" }}><ErrorOutlined sx={{ color: "#9a7a33", fontSize: 18 }} /><Box><Typography sx={{ color: "#7d6229", fontSize: 12.5, fontWeight: 700 }}>Review the RFQ before submitting</Typography><Typography sx={{ mt: .35, color: "#8a7645", fontSize: 12.5, lineHeight: 1.5 }}>Confirm the drafted specifications. Atelix reviews the request before any supplier outreach.</Typography></Box></Box><Typography sx={{ mb: .5, color: "#4a5667", fontSize: 12.5, fontWeight: 700 }}>Product specifications</Typography><Box>{([ ["Product", "product"], ["Material", "material"], ["Certifications", "certifications"], ["Colors & sizes", "colors"], ["Quantity", "quantity"], ["Target budget", "budget"], ["Timeline", "timeline"] ] as Array<[string, keyof RfqFields]>).map(([label, field]) => <RfqField key={field} label={label} value={fields[field]} field={field} editing={editing} draft={draft} onChange={onChange} />)}</Box>{editing && <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ pt: 2 }}><MuiButton onClick={onCancel} sx={{ color: "#718092" }}>Cancel</MuiButton><MuiButton onClick={onSave} variant="contained" startIcon={<SaveOutlined />} sx={{ backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}>Save changes</MuiButton></Stack>}</Box>}
-    {!editing && <Box sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, gap: 1.5, flexShrink: 0, px: { xs: 2, md: 3.25 }, py: 2, borderTop: "1px solid #ececef", backgroundColor: "#fcfdfc" }}><Typography sx={{ maxWidth: 380, color: "#758091", fontSize: 12, lineHeight: 1.5 }}>Draft saves automatically. Nothing reaches a supplier until Atelix reviews it.</Typography>{phase !== "submitted" && phase !== "matching" && phase !== "matched" && <MuiButton onClick={onSubmit} endIcon={<ArrowForward />} variant="contained" sx={{ alignSelf: { xs: "stretch", sm: "auto" }, backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}>Submit RFQ</MuiButton>}</Box>}
-  </Box>;
+  const tabCount: Partial<Record<RfqTab, number>> = {
+    Files: attachments.length,
+  };
+  function moveTab(event: KeyboardEvent, index: number) {
+    const direction =
+      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    setTab(tabs[(index + direction + tabs.length) % tabs.length]);
+  }
+  return (
+    <RoundedSurface
+      sx={{
+        minHeight: { xs: 0, md: 610 },
+        overflow: "hidden",
+        border: 0,
+        borderRadius: 0,
+        backgroundColor: "transparent",
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+          px: { xs: 0, md: 0 },
+          py: 1.75,
+          borderBottom: "1px solid #e7ebf0",
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              color: "#8d98a5",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+            }}
+          >
+            RFQ
+          </Typography>
+          <Typography
+            variant="h2"
+            sx={{ mt: 0.45, fontSize: { xs: 20, md: 24 }, color: "#334155" }}
+          >
+            RFQ: {fields.quantity.replace(/\s*units?$/i, "")} Units –{" "}
+            {fields.product}
+          </Typography>
+        </Box>
+        <Chip
+          label={
+            phase === "matching" || phase === "matched"
+              ? "Submitted"
+              : editing
+                ? "Editing"
+                : "Ready to review"
+          }
+          size="small"
+          sx={{
+            color: editing ? "#81622c" : "#58745d",
+            backgroundColor: editing ? "#fbf4e7" : "#eef4ee",
+            fontWeight: 700,
+          }}
+        />
+      </Box>
+      <Box
+        role="tablist"
+        aria-label="RFQ workspace sections"
+        sx={{
+          display: "flex",
+          gap: 0.5,
+          px: { xs: 1.25, md: 2 },
+          borderBottom: "1px solid #e7ebf0",
+          overflowX: "auto",
+        }}
+      >
+        {tabs.map((item, index) => (
+          <Box
+            key={item}
+            id={`rfq-tab-${item.toLowerCase()}`}
+            component="button"
+            role="tab"
+            aria-selected={tab === item}
+            aria-controls="rfq-tabpanel"
+            tabIndex={tab === item ? 0 : -1}
+            onClick={() => setTab(item)}
+            onKeyDown={(event: KeyboardEvent) => moveTab(event, index)}
+            sx={{
+              flex: "0 0 auto",
+              display: "flex",
+              alignItems: "center",
+              gap: 0.6,
+              px: 1.25,
+              py: 1.35,
+              border: 0,
+              borderBottom:
+                tab === item ? "2px solid #4b7657" : "2px solid transparent",
+              background: "transparent",
+              color: tab === item ? "#4b7657" : "#9aa4b0",
+              font: "inherit",
+              fontSize: 12,
+              fontWeight: tab === item ? 700 : 500,
+              cursor: "pointer",
+            }}
+          >
+            {item}
+            {Boolean(tabCount[item]) && (
+              <Box
+                component="span"
+                sx={{
+                  fontSize: 10.5,
+                  fontWeight: 700,
+                  color: "#758091",
+                  backgroundColor: "#f1f2f4",
+                  borderRadius: 1,
+                  px: 0.75,
+                  py: 0.1,
+                }}
+              >
+                {tabCount[item]}
+              </Box>
+            )}
+          </Box>
+        ))}
+      </Box>
+      <Box
+        id="rfq-tabpanel"
+        role="tabpanel"
+        aria-labelledby={`rfq-tab-${tab.toLowerCase()}`}
+        sx={{
+          p: { xs: 0, md: 0 },
+          pt: tab === "RFQ" ? { xs: 2, md: 3 } : { xs: 2.5, md: 3 },
+        }}
+      >
+        {tab === "Timeline" && (
+          <StageTimeline
+            status={caseStatus}
+            onReviewDraft={() => setTab("RFQ")}
+          />
+        )}
+        {tab === "Files" && <FilesTab attachments={attachments} />}
+        {tab === "Quotes" && (
+          <QuotesTab
+            caseId={caseId}
+            onMessage={onMessage}
+            onSelected={onQuoteSelected}
+          />
+        )}
+        {tab === "Orders" && (
+          <ProductionTab caseId={caseId} onMessage={onMessage} />
+        )}
+        {tab === "RFQ" && (
+          <>
+            <Box sx={{ maxWidth: 820, mb: 3 }}>
+              <Typography
+                sx={{ color: "#566476", fontSize: 14, lineHeight: 1.65 }}
+              >
+                Dear Supplier,
+              </Typography>
+              <Typography
+                sx={{
+                  mt: 1.25,
+                  color: "#788596",
+                  fontSize: 14,
+                  lineHeight: 1.65,
+                }}
+              >
+                We are looking to source {fields.quantity.toLowerCase()} and
+                would like to request a quotation based on the following
+                requirements:
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                mb: 1.5,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+              }}
+            >
+              <Typography
+                sx={{ color: "#4a5667", fontSize: 14, fontWeight: 700 }}
+              >
+                Product Specifications
+              </Typography>
+              {!editing &&
+                phase !== "submitted" &&
+                phase !== "matching" &&
+                phase !== "matched" && (
+                  <MuiButton
+                    onClick={onEdit}
+                    startIcon={<EditOutlined />}
+                    size="small"
+                    sx={{ color: "#708092" }}
+                  >
+                    Edit RFQ
+                  </MuiButton>
+                )}
+            </Box>
+            <Box>
+              {(
+                [
+                  ["Product", "product"],
+                  ["Material", "material"],
+                  ["Certifications", "certifications"],
+                  ["Colors", "colors"],
+                  ["Sizes", "sizes"],
+                  ["Quantity", "quantity"],
+                  ["Target budget", "budget"],
+                  ["Timeline", "timeline"],
+                ] as Array<[string, keyof RfqFields]>
+              ).map(([label, field]) => (
+                <RfqField
+                  key={field}
+                  label={label}
+                  value={fields[field]}
+                  field={field}
+                  editing={editing}
+                  draft={draft}
+                  onChange={onChange}
+                />
+              ))}
+            </Box>
+            <Box sx={{ mt: 3 }}>
+              <Typography
+                sx={{ color: "#4a5667", fontSize: 14, fontWeight: 700 }}
+              >
+                Certification Requirements
+              </Typography>
+              <Box
+                component="ul"
+                sx={{
+                  mt: 1,
+                  mb: 0,
+                  pl: 2.5,
+                  color: "#788596",
+                  fontSize: 13,
+                  lineHeight: 1.8,
+                }}
+              >
+                <li>OEKO-TEX Standard 100 for all materials and dyes</li>
+                <li>ISO 9001 quality management certification</li>
+              </Box>
+            </Box>
+            {editing ? (
+              <Stack
+                direction="row"
+                justifyContent="flex-end"
+                spacing={1}
+                sx={{ pt: 2 }}
+              >
+                <MuiButton onClick={onCancel} sx={{ color: "#718092" }}>
+                  Cancel
+                </MuiButton>
+                <MuiButton
+                  onClick={onSave}
+                  variant="contained"
+                  startIcon={<SaveOutlined />}
+                  sx={{
+                    backgroundColor: "#4b7657",
+                    "&:hover": { backgroundColor: "#3d6548" },
+                  }}
+                >
+                  Save changes
+                </MuiButton>
+              </Stack>
+            ) : (
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+                spacing={1.5}
+                sx={{ pt: 3, flexWrap: "wrap" }}
+              >
+                <Typography sx={{ color: "#93a0ae", fontSize: 11 }}>
+                  Review every detail before sending this draft to Atelix.
+                </Typography>
+                {phase !== "submitted" &&
+                  phase !== "matching" &&
+                  phase !== "matched" && (
+                    <MuiButton
+                      onClick={onSubmit}
+                      endIcon={<ArrowForward />}
+                      variant="contained"
+                      sx={{
+                        backgroundColor: "#4b7657",
+                        "&:hover": { backgroundColor: "#3d6548" },
+                      }}
+                    >
+                      Request RFQ Draft
+                    </MuiButton>
+                  )}
+              </Stack>
+            )}
+          </>
+        )}
+      </Box>
+    </RoundedSurface>
+  );
 }
 
 function SupplierMap({ complete }: { complete: boolean }) {
-  return <Box sx={{ position: "relative", minHeight: { xs: 240, md: 315 }, overflow: "hidden", border: "1px solid #e1ece3", borderRadius: 3, background: "radial-gradient(circle at 50% 48%, rgba(232,244,235,.8), rgba(249,251,250,.96) 64%)" }}><svg viewBox="0 0 760 320" role="img" aria-labelledby="matching-map-title matching-map-description" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}><title id="matching-map-title">RFQ review route</title><desc id="matching-map-description">A green route moves from your brief toward Atelix review.</desc><path d="M80 125 C200 45 300 68 385 122 S560 195 680 158" fill="none" stroke="#d7e8da" strokeWidth="1.5" strokeDasharray="3 8" /><motion.path d="M80 125 C200 45 300 68 385 122 S560 195 680 158" fill="none" stroke="#65a979" strokeWidth="3" strokeLinecap="round" pathLength="1" initial={{ pathLength: 0 }} animate={{ pathLength: complete ? 1 : .72 }} transition={{ duration: .9, ease: [0.22, 1, 0.36, 1] }} /><path d="M185 83 C252 50 308 54 348 91 M455 168 C500 125 571 126 626 167" fill="none" stroke="#dfeee1" strokeWidth="12" strokeLinecap="round" opacity=".55" /><g fill="#ffffff" stroke="#65a979" strokeWidth="3"><circle cx="80" cy="125" r="8" /><circle cx="385" cy="122" r="6" /><circle cx="520" cy="171" r="6" /><circle cx="680" cy="158" r="8" /></g></svg><Box sx={{ position: "absolute", left: "9%", top: "40%", color: "#5f7866", fontSize: 11, fontWeight: 700 }}>You</Box><Box sx={{ position: "absolute", right: "8%", top: "48%", color: "#5f7866", fontSize: 11, fontWeight: 700 }}>Atelix review</Box><Box sx={{ position: "absolute", left: "50%", bottom: 16, transform: "translateX(-50%)", display: "flex", alignItems: "center", gap: .75, px: 1.5, py: .9, border: "1px solid #dce9df", borderRadius: 999, backgroundColor: "rgba(255,255,255,.9)", color: "#5f7866", whiteSpace: "nowrap", fontSize: 11, fontWeight: 700, boxShadow: "0 4px 10px rgba(56,86,62,.08)" }}><Box component="span" sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: complete ? "#65a979" : "#d7a07d" }} />{complete ? "RFQ READY FOR REVIEW" : "SAVING RFQ"}</Box></Box>;
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        minHeight: { xs: 260, md: 320 },
+        overflow: "hidden",
+        border: "1px solid #dfe8e1",
+        borderRadius: "14px",
+        background:
+          "radial-gradient(circle at 30% 20%, rgba(232,244,235,.9), rgba(249,251,250,.98) 60%)",
+      }}
+    >
+      <svg
+        viewBox="0 0 760 320"
+        role="img"
+        aria-labelledby="matching-map-title matching-map-description"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+        }}
+      >
+        <title id="matching-map-title">RFQ review pipeline</title>
+        <desc id="matching-map-description">
+          Your brief moves through structuring, eligibility checks and into
+          Atelix review.
+        </desc>
+        <path
+          d="M80 125 C200 45 300 68 385 122 S560 195 680 158"
+          fill="none"
+          stroke="#e2ece4"
+          strokeWidth="2"
+        />
+        <motion.path
+          d="M80 125 C200 45 300 68 385 122 S560 195 680 158"
+          fill="none"
+          stroke="#4b7657"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          pathLength="1"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: complete ? 1 : 0.72 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+        />
+        <g fill="#ffffff" stroke="#4b7657" strokeWidth="2.5">
+          <circle cx="80" cy="125" r="8" />
+          <circle cx="385" cy="122" r="6" />
+          <circle cx="520" cy="171" r="6" />
+          <circle cx="680" cy="158" r="8" />
+        </g>
+      </svg>
+      <Box
+        sx={{
+          position: "absolute",
+          left: "6%",
+          top: "44%",
+          width: 90,
+          color: "#4b7657",
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        Your brief
+      </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          left: "42%",
+          top: "30%",
+          width: 100,
+          color: "#4b7657",
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        Structuring RFQ
+      </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          left: "63%",
+          top: "60%",
+          width: 100,
+          color: "#4b7657",
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        Eligibility checks
+      </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          right: "5%",
+          top: "44%",
+          width: 110,
+          textAlign: "right",
+          color: "#4b7657",
+          fontSize: 11,
+          fontWeight: 700,
+        }}
+      >
+        RFQ sent to Atelix
+      </Box>
+      <Box
+        sx={{
+          position: "absolute",
+          left: 20,
+          top: 18,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1.5,
+          py: 0.8,
+          border: "1px solid #dce9df",
+          borderRadius: "10px",
+          backgroundColor: "rgba(255,255,255,.92)",
+          color: "#4b7657",
+          whiteSpace: "nowrap",
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: ".04em",
+          boxShadow: "0 4px 10px rgba(56,86,62,.08)",
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            backgroundColor: "#65a979",
+          }}
+        />
+        {complete
+          ? "RFQ MATCHED · READY TO REVIEW"
+          : "RFQ SAVED · REVIEW QUEUED"}
+      </Box>
+    </Box>
+  );
 }
 
-function SupplierMatchingStage({ phase, checkCount, onQuotes }: { phase: "matching" | "matched"; checkCount: number; onQuotes: () => void }) {
+function SupplierMatchingStage({
+  phase,
+  checkCount,
+  caseStatus,
+  onQuotes,
+}: {
+  phase: "matching" | "matched";
+  checkCount: number;
+  caseStatus: string;
+  onQuotes: () => void;
+}) {
   const complete = phase === "matched";
-  return <RoundedSurface sx={{ minHeight: { xs: 0, md: 610 }, p: { xs: 0, md: 0 }, border: 0, borderRadius: 0, backgroundColor: "transparent" }}><Stack spacing={2}><Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Supplier matching</Typography><Typography variant="h2" sx={{ mt: .6, color: "#344155", fontSize: { xs: 24, md: 30 } }}>{complete ? "Your RFQ has been matched" : "We’re matching your RFQ"}</Typography><Typography sx={{ maxWidth: 540, mt: 1, color: "#7d8997", fontSize: 13, lineHeight: 1.6 }}>{complete ? "The simulated sourcing pass is complete. Review the supplier quote context when you’re ready." : "We’re checking your production brief against simulated supplier profiles and compliance requirements."}</Typography></Box><SupplierMap complete={complete} /><Box sx={{ px: { xs: 0, md: 1 }, pt: 1 }}><Typography sx={{ color: "#8b978e", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Compliance checks</Typography><Stack spacing={1.15} sx={{ mt: 1.25 }}>{matchingChecks.map((check, index) => <motion.div key={check} initial={{ opacity: 0, x: -8 }} animate={{ opacity: index < checkCount || complete ? 1 : .38, x: 0 }} transition={{ duration: .24, delay: index * .04 }}><Stack direction="row" spacing={1} alignItems="center"><Box sx={{ display: "grid", placeItems: "center", width: 20, height: 20, color: index < checkCount || complete ? "#65a979" : "#b8c8ba" }}>{index < checkCount || complete ? <CheckCircle sx={{ fontSize: 19 }} /> : <Circle sx={{ fontSize: 13 }} />}</Box><Typography sx={{ color: index < checkCount || complete ? "#586c5d" : "#9ba79d", fontSize: 13 }}>{check}</Typography></Stack></motion.div>)}</Stack></Box>{complete && <MuiButton onClick={onQuotes} endIcon={<ArrowForward />} variant="contained" sx={{ alignSelf: { xs: "stretch", sm: "flex-start" }, mt: 1, backgroundColor: "#526176", "&:hover": { backgroundColor: "#3e4c60" } }}>View Supplier Quotes</MuiButton>}</Stack></RoundedSurface>;
+  return (
+    <RoundedSurface
+      sx={{
+        minHeight: { xs: 0, md: 610 },
+        p: { xs: 0, md: 0 },
+        border: 0,
+        borderRadius: 0,
+        backgroundColor: "transparent",
+      }}
+    >
+      <Box>
+        <Typography
+          sx={{
+            color: "#71917a",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Supplier matching
+        </Typography>
+        <Typography
+          variant="h2"
+          sx={{
+            mt: 0.6,
+            color: "#202936",
+            fontWeight: 500,
+            letterSpacing: "-.035em",
+            fontSize: { xs: 24, md: 30 },
+          }}
+        >
+          {complete ? "Your RFQ has been matched" : "We’re matching your RFQ"}
+        </Typography>
+        <Typography
+          sx={{
+            maxWidth: 560,
+            mt: 1,
+            color: "#758091",
+            fontSize: 13.5,
+            lineHeight: 1.6,
+          }}
+        >
+          Your brief is checked against vetted supplier profiles and compliance
+          requirements. An Atelix reviewer confirms the shortlist before any
+          supplier is contacted.
+        </Typography>
+      </Box>
+      <Box sx={{ mt: 2.75 }}>
+        <SupplierMap complete={complete} />
+      </Box>
+      <Box
+        sx={{
+          mt: 3,
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", sm: "minmax(0,1fr) 300px" },
+          gap: 3.5,
+          alignItems: "start",
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              color: "#8b978e",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+            }}
+          >
+            Compliance checks
+          </Typography>
+          <Stack spacing={1.15} sx={{ mt: 1.25 }}>
+            {matchingChecks.map((check, index) => (
+              <motion.div
+                key={check}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{
+                  opacity: index < checkCount || complete ? 1 : 0.38,
+                  x: 0,
+                }}
+                transition={{ duration: 0.24, delay: index * 0.04 }}
+              >
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Box
+                    sx={{
+                      display: "grid",
+                      placeItems: "center",
+                      width: 20,
+                      height: 20,
+                      color:
+                        index < checkCount || complete ? "#4b7657" : "#b8c8ba",
+                    }}
+                  >
+                    {index < checkCount || complete ? (
+                      <CheckCircle sx={{ fontSize: 19 }} />
+                    ) : (
+                      <Circle sx={{ fontSize: 13 }} />
+                    )}
+                  </Box>
+                  <Typography
+                    sx={{
+                      color:
+                        index < checkCount || complete ? "#4a5667" : "#9ba79d",
+                      fontSize: 13,
+                    }}
+                  >
+                    {check}
+                  </Typography>
+                </Stack>
+              </motion.div>
+            ))}
+          </Stack>
+          <Stack
+            direction="row"
+            alignItems="center"
+            spacing={1.5}
+            sx={{ mt: 2.75 }}
+          >
+            <MuiButton
+              onClick={onQuotes}
+              disabled={!complete}
+              endIcon={<ArrowForward />}
+              variant="contained"
+              sx={{
+                backgroundColor: "#4b7657",
+                "&:hover": { backgroundColor: "#3d6548" },
+              }}
+            >
+              Track this request
+            </MuiButton>
+            <Typography sx={{ color: "#9ba1aa", fontSize: 12 }}>
+              We’ll notify you when the shortlist is ready.
+            </Typography>
+          </Stack>
+        </Box>
+        <Box
+          sx={{
+            p: 2,
+            border: "1px solid #e7ebf0",
+            borderRadius: "12px",
+            backgroundColor: "#fff",
+          }}
+        >
+          <Typography
+            sx={{
+              color: "#8d98a5",
+              fontSize: 10.5,
+              fontWeight: 700,
+              letterSpacing: ".08em",
+              textTransform: "uppercase",
+            }}
+          >
+            What happens next
+          </Typography>
+          <Box sx={{ mt: 1.5 }}>
+            <MiniStageTimeline status={caseStatus} />
+          </Box>
+        </Box>
+      </Box>
+    </RoundedSurface>
+  );
 }
 
-function QuotesPanel() {
-  return <RoundedSurface sx={{ minHeight: { xs: 0, md: 610 }, p: { xs: 2, md: 3 }, backgroundColor: "rgba(255,255,255,.72)" }}><Stack spacing={2}><Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Supplier review</Typography><Typography variant="h2" sx={{ mt: .6, color: "#344155", fontSize: { xs: 24, md: 30 } }}>Review context will appear here</Typography><Typography sx={{ maxWidth: 520, mt: 1, color: "#7d8997", fontSize: 13, lineHeight: 1.6 }}>The Atelix team confirms availability, terms, and suitability before any supplier commitment.</Typography></Box><Box sx={{ display: "grid", gap: 1.25, mt: 1 }}><Box sx={{ p: 1.5, border: "1px solid #dfe8e1", borderRadius: 2.5, backgroundColor: "#f7fbf7" }}><Typography sx={{ color: "#4e7059", fontSize: 12, fontWeight: 700 }}>RFQ saved</Typography><Typography sx={{ mt: .5, color: "#7d8997", fontSize: 12 }}>Your request is queued for Atelix review.</Typography></Box><Box sx={{ p: 1.5, border: "1px solid #e5e9ee", borderRadius: 2.5, backgroundColor: "#fff" }}><Typography sx={{ color: "#566476", fontSize: 12, fontWeight: 700 }}>Next step</Typography><Typography sx={{ mt: .5, color: "#7d8997", fontSize: 12 }}>The Atelix team will confirm the sourcing path before any supplier contact.</Typography></Box></Box></Stack></RoundedSurface>;
+function quoteCertBadge(quote: WorkspaceRfqQuote) {
+  if (!quote.certifications.length) return null;
+  const pending = Boolean(quote.certification_note);
+  return (
+    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.5 }}>
+      {pending ? (
+        <ErrorOutlined sx={{ fontSize: 15, color: "#9a7a33" }} />
+      ) : (
+        <VerifiedOutlined sx={{ fontSize: 15, color: "#4b7657" }} />
+      )}
+      <Typography
+        sx={{
+          fontSize: 11.5,
+          fontWeight: 600,
+          color: pending ? "#9a7a33" : "#4b7657",
+        }}
+      >
+        {quote.certification_note ||
+          quote.certifications.join(" + ") + " on file"}
+      </Typography>
+    </Stack>
+  );
 }
 
-function DecisionStatus({ status }: { status: string }) {
-  const tone = status === "paid" || status === "sampling" || status === "production" || status === "completed" ? { color: "#4f7658", dot: "#5b8064" } : status === "awaiting_payment" ? { color: "#9d5d4e", dot: "#cf846f" } : { color: "#657486", dot: "#9aa6b3" };
-  const label = status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-  return <Box sx={{ display: "inline-flex", alignItems: "center", gap: .75, color: tone.color, fontSize: 12, fontWeight: 700, textTransform: "none" }}><Box component="span" aria-hidden="true" sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: tone.dot }} />{label}</Box>;
+function quoteStatusLabel(status: WorkspaceRfqQuote["status"]) {
+  return status === "selected" ? "Selected" : status === "declined" ? "Declined" : "Published";
 }
 
-function SupplierQuoteCard({ quote, selected, busy, onSelect }: { quote: WorkspaceRfqDecision["quotes"][number]; selected: boolean; busy: boolean; onSelect: () => void }) {
-  const total = quote.quote_total_cents ?? (quote.unit_price_cents * Math.max(quote.quantity ?? 1, quote.moq ?? 1));
-  return <Box component="article" sx={{ display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden", border: selected ? "2px solid #5b8064" : "1px solid #e1e6eb", borderRadius: 3, backgroundColor: selected ? "#f8fbf8" : "#fff" }}>
-    <Box sx={{ p: { xs: 2, sm: 2.5 }, borderBottom: "1px solid #edf0f3" }}><Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}><Box sx={{ minWidth: 0 }}><Typography sx={{ color: "#273140", fontSize: 16, fontWeight: 700, overflowWrap: "anywhere" }}>{quote.supplier_name}</Typography><Typography sx={{ mt: .45, color: "#98a2af", fontSize: 13 }}>{quote.supplier_region || "Region not recorded"}{quote.verified ? " · Atelix verified" : " · Manual operator entry"}</Typography></Box>{quote.recommended && <Typography sx={{ flex: "0 0 auto", color: "#5d8065", fontSize: 11, fontWeight: 700 }}>Recommended</Typography>}</Stack></Box>
-    <Box sx={{ p: { xs: 2, sm: 2.5 }, flex: 1 }}><Box component="dl" sx={{ display: "grid", gap: 1.15, m: 0 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}><Typography component="dt" sx={{ color: "#9aa5b2", fontSize: 13 }}>Unit price</Typography><Typography component="dd" sx={{ m: 0, color: "#273140", fontSize: 24, fontWeight: 700 }}>{invoiceMoney(quote.unit_price_cents)}</Typography></Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}><Typography component="dt" sx={{ color: "#9aa5b2", fontSize: 13 }}>MOQ</Typography><Typography component="dd" sx={{ m: 0, color: "#5e6b7b", fontSize: 14 }}>{quote.moq?.toLocaleString() || "Not recorded"}</Typography></Box>
-      <Box sx={{ display: "flex", justifyContent: "space-between", gap: 1 }}><Typography component="dt" sx={{ color: "#9aa5b2", fontSize: 13 }}>Lead time</Typography><Typography component="dd" sx={{ m: 0, color: "#5e6b7b", fontSize: 14 }}>{quote.lead_days != null ? `${quote.lead_days} days` : "Not recorded"}</Typography></Box>
-      <Box sx={{ pt: 1.15, borderTop: "1px solid #edf0f3" }}><Typography sx={{ color: "#9aa5b2", fontSize: 12 }}>Quote total</Typography><Typography sx={{ mt: .25, color: "#5e6b7b", fontSize: 15, fontWeight: 700 }}>{invoiceMoney(total)}{quote.quantity ? ` · ${quote.quantity.toLocaleString()} units` : ""}</Typography></Box>
-      <Box sx={{ minHeight: 19, color: quote.verified ? "#5b8064" : "#9d7a3b", fontSize: 12, fontWeight: 700 }}>{quote.certifications.length ? `✓ ${quote.certifications.join(" + ")}` : "Certification evidence not provided"}</Box>
-      {quote.quote_notes && <Typography sx={{ color: "#7c8795", fontSize: 12, lineHeight: 1.5 }}>{quote.quote_notes}</Typography>}
-    </Box></Box>
-    <Box sx={{ p: { xs: 1.5, sm: 2 }, borderTop: "1px solid #edf0f3", backgroundColor: selected ? "#f4f9f4" : "#fff" }}><MuiButton fullWidth variant={selected ? "contained" : "outlined"} disabled={busy || selected} onClick={onSelect} sx={{ minHeight: 48, borderColor: "#dfe5ea", color: selected ? "#fff" : "#596676", backgroundColor: selected ? "#5b8064" : "#fff", "&:hover": { borderColor: "#5b8064", backgroundColor: selected ? "#4d7056" : "#f8fbf8" } }}>{busy ? "Confirming…" : selected ? "Supplier selected" : "Select supplier"}</MuiButton></Box>
-  </Box>;
-}
-
-function SupplierDecisionSurface({ decision, onDecision, onMessage }: { decision: WorkspaceRfqDecision; onDecision: (next: WorkspaceRfqDecision) => void; onMessage: (message: string) => void }) {
-  const [busyId, setBusyId] = useState("");
-  async function select(matchId: string) {
-    setBusyId(matchId);
-    try { onDecision(await selectWorkspaceRfqSupplier(decision.case.id, matchId)); } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not select this supplier."); } finally { setBusyId(""); }
+function QuotesTab({
+  caseId,
+  onMessage,
+  onSelected,
+}: {
+  caseId: string;
+  onMessage: (message: string) => void;
+  onSelected: () => void;
+}) {
+  const [quotes, setQuotes] = useState<WorkspaceRfqQuote[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setQuotes(await listWorkspaceRfqQuotes(caseId));
+    } catch (cause) {
+      onMessage(
+        cause instanceof Error ? cause.message : "Could not load quotes.",
+      );
+    }
+  }, [caseId, onMessage]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  async function select(quoteId: string) {
+    setBusyId(quoteId);
+    try {
+      await selectWorkspaceRfqQuote(quoteId);
+      await load();
+      onSelected();
+      onMessage(
+        "Supplier selected. Atelix will confirm terms before any commercial commitment.",
+      );
+    } catch (cause) {
+      onMessage(
+        cause instanceof Error
+          ? cause.message
+          : "Could not select this supplier.",
+      );
+    } finally {
+      setBusyId(null);
+    }
   }
-  return <Box sx={{ minHeight: { md: "calc(100dvh - 68px)" }, backgroundColor: "#fff", px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}><Box sx={{ maxWidth: 1280, mx: "auto" }}><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Supplier quotes</Typography><Typography variant="h1" sx={{ mt: .65, color: "#202936", fontSize: { xs: 30, md: 38 }, fontWeight: 500 }}>Choose a supplier to proceed</Typography><Typography sx={{ maxWidth: 780, mt: 1, color: "#758091", fontSize: 15, lineHeight: 1.55 }}>Atelix has reviewed the suppliers below against your request. Quotes use the same unit basis and MOQ where those facts were recorded.</Typography><Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3,minmax(0,1fr))" }, gap: 2.25, mt: 3.5 }}>{decision.quotes.map((quote) => <SupplierQuoteCard key={quote.id} quote={quote} selected={decision.case.selected_match_id === quote.id} busy={busyId === quote.id} onSelect={() => void select(quote.id)} />)}</Box>{!decision.quotes.length && <Box sx={{ mt: 3, p: 3, border: "1px solid #e1e6eb", borderRadius: 2, color: "#758091" }}>Atelix is still confirming supplier quotes for this request.</Box>}<Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 2.25, color: "#9aa4b0" }}><LockOutlined sx={{ fontSize: 16 }} /><Typography sx={{ fontSize: 12 }}>Selecting a supplier asks Atelix to confirm terms before any production commitment.</Typography></Stack></Box></Box>;
+  if (quotes === null)
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+        }}
+      >
+        {[1, 2, 3].map((row) => (
+          <Skeleton key={row} variant="rounded" height={220} />
+        ))}
+      </Box>
+    );
+  if (!quotes.length)
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          minHeight: 380,
+          placeItems: "center",
+          p: 4,
+          textAlign: "center",
+        }}
+      >
+        <Box>
+          <Typography sx={{ color: "#718092", fontSize: 16, fontWeight: 700 }}>
+            No quotes yet
+          </Typography>
+          <Typography
+            sx={{
+              maxWidth: 330,
+              mt: 1,
+              color: "#9aa4b0",
+              fontSize: 13,
+              lineHeight: 1.55,
+            }}
+          >
+            Atelix vets suppliers against your spec before quotes appear here.
+          </Typography>
+        </Box>
+      </Box>
+    );
+  const decided = quotes.some((quote) => quote.status === "selected");
+  return (
+    <Stack spacing={2}>
+      <Typography
+        sx={{ color: "#758091", fontSize: 13, lineHeight: 1.6, maxWidth: 640 }}
+      >
+        Atelix vetted these suppliers against your spec. Quotes are normalized
+        to the same unit basis and MOQ; certifications shown are on file with
+        Atelix.
+      </Typography>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))",
+        }}
+      >
+        {quotes.map((quote) => {
+          const selected = quote.status === "selected";
+          return (
+            <Box
+              key={quote.id}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                border: selected ? "2px solid #4b7657" : "1px solid #e7ebf0",
+                borderRadius: "14px",
+                backgroundColor: "#fff",
+                overflow: "hidden",
+                opacity: decided && !selected ? 0.55 : 1,
+                boxShadow: selected ? "0 8px 22px rgba(75,118,87,.10)" : "none",
+              }}
+            >
+              <Box
+                sx={{
+                  p: 2,
+                  borderBottom: "1px solid #eef0f3",
+                  backgroundColor: quote.recommended
+                    ? "#f7fbf7"
+                    : "transparent",
+                  display: "flex",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 1,
+                }}
+              >
+                <Box>
+                  <Typography
+                    sx={{ fontSize: 14.5, fontWeight: 700, color: "#202936" }}
+                  >
+                    {quote.factory_name}
+                  </Typography>
+                  <Typography sx={{ mt: 0.35, fontSize: 12, color: "#8a95a3" }}>
+                    {[
+                      quote.factory_region,
+                      quote.factory_years
+                        ? `${quote.factory_years} yrs on Atelix`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </Typography>
+                </Box>
+                {quote.recommended && (
+                  <Box
+                    component="span"
+                    sx={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      color: "#4b7657",
+                      backgroundColor: "#eef4ee",
+                      borderRadius: "6px",
+                      px: 1,
+                      py: 0.35,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Recommended
+                  </Box>
+                )}
+                <Chip
+                  size="small"
+                  label={quoteStatusLabel(quote.status)}
+                  sx={{
+                    color: quote.status === "selected" ? "#33513c" : quote.status === "declined" ? "#8b625b" : "#596678",
+                    backgroundColor: quote.status === "selected" ? "#eef4ee" : quote.status === "declined" ? "#f8eeee" : "#f3f5f7",
+                    fontWeight: 700,
+                  }}
+                />
+              </Box>
+              <Stack spacing={1.25} sx={{ p: 2, flex: 1 }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="baseline"
+                >
+                  <Typography sx={{ fontSize: 11.5, color: "#8a95a3" }}>
+                    Unit price
+                  </Typography>
+                  <Typography
+                    sx={{ fontSize: 20, fontWeight: 700, color: "#202936" }}
+                  >
+                    {invoiceMoney(quote.unit_price_cents)}
+                  </Typography>
+                </Stack>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="baseline"
+                >
+                  <Typography sx={{ fontSize: 11.5, color: "#8a95a3" }}>
+                    MOQ
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, color: "#3f4c5e" }}>
+                    {quote.moq.toLocaleString()}
+                  </Typography>
+                </Stack>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="baseline"
+                >
+                  <Typography sx={{ fontSize: 11.5, color: "#8a95a3" }}>
+                    Lead time
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, color: "#3f4c5e" }}>
+                    {quote.lead_time_days} days
+                  </Typography>
+                </Stack>
+                {quoteCertBadge(quote)}
+              </Stack>
+              <Box sx={{ p: 2, pt: 0 }}>
+                {selected ? (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 0.75,
+                      py: 1.25,
+                      borderRadius: "10px",
+                      backgroundColor: "#eef4ee",
+                      color: "#33513c",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                    }}
+                  >
+                    <CheckCircle sx={{ fontSize: 16 }} />
+                    Selected
+                  </Box>
+                ) : (
+                  <MuiButton
+                    fullWidth
+                    disabled={decided || busyId === quote.id}
+                    onClick={() => void select(quote.id)}
+                    variant={quote.recommended ? "contained" : "outlined"}
+                    sx={
+                      quote.recommended
+                        ? {
+                            backgroundColor: "#4b7657",
+                            "&:hover": { backgroundColor: "#3d6548" },
+                          }
+                        : { borderColor: "#e7ebf0", color: "#4a5667" }
+                    }
+                  >
+                    {busyId === quote.id ? "Selecting…" : "Select supplier"}
+                  </MuiButton>
+                )}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+      <Stack direction="row" alignItems="center" spacing={0.75}>
+        <LockOutlined sx={{ fontSize: 14, color: "#9ba1aa" }} />
+        <Typography sx={{ fontSize: 11.5, color: "#9ba1aa" }}>
+          Selecting a supplier notifies Atelix to confirm terms before any
+          commercial commitment.
+        </Typography>
+      </Stack>
+    </Stack>
+  );
 }
 
-function ProductionPaymentSurface({ decision, onMessage }: { decision: WorkspaceRfqDecision; onMessage: (message: string) => void }) {
-  const [invoice, setInvoice] = useState<WorkspaceInvoiceDetail | null>(null);
-  const [busy, setBusy] = useState(false);
-  useEffect(() => { let active = true; if (!decision.invoice_id) return; const load = () => void getWorkspaceInvoiceDetail(decision.invoice_id!).then((next) => { if (active) setInvoice(next); }).catch((cause) => { if (active) onMessage(cause instanceof Error ? cause.message : "Could not load the invoice."); }); load(); const timer = window.setInterval(load, 5000); return () => { active = false; window.clearInterval(timer); }; }, [decision.invoice_id, onMessage]);
-  async function pay() { if (!invoice || busy) return; setBusy(true); try { const checkout = await startWorkspaceInvoiceCheckout([invoice.id]); window.location.assign(checkout.url); } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not start payment."); setBusy(false); } }
-  const paid = invoice?.status === "paid" || decision.invoice_status === "paid";
-  return <Box sx={{ minHeight: { md: "calc(100dvh - 68px)" }, backgroundColor: "#fff" }}><Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 360px" }, maxWidth: 1440, mx: "auto" }}><Box sx={{ px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, md: 4 } }}><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Production & logistics</Typography><Typography variant="h1" sx={{ mt: .65, color: "#202936", fontSize: { xs: 30, md: 38 }, fontWeight: 500 }}>Confirmed with {decision.quotes.find((quote) => quote.id === decision.case.selected_match_id)?.supplier_name || "your selected supplier"}</Typography><Typography sx={{ maxWidth: 720, mt: 1, color: "#758091", fontSize: 15, lineHeight: 1.55 }}>{paid ? "Payment is confirmed. Atelix can now move this request into sampling and production coordination." : "Your supplier is booked and waiting. Sampling begins once the invoice is paid — nothing in production moves until then."}</Typography><Box component="ol" sx={{ position: "relative", display: "grid", gap: 2.5, m: 0, mt: 4, p: 0, listStyle: "none", maxWidth: 660 }}>{[["Supplier confirmed", "Atelix review · selected supplier", true], ["Invoice payment", paid ? "Paid · payment confirmed" : `Waiting on you · due ${invoiceDate(invoice?.due_date || null)}`, paid], ["Sampling", paid ? "Ready to begin" : "Not started · begins on payment", paid], ["Bulk production", "Atelix will update this request", false], ["Quality inspection & shipment", "Atelix operations", false]].map(([title, detail, complete], index) => <Box component="li" key={String(title)} sx={{ display: "grid", gridTemplateColumns: "34px minmax(0,1fr)", gap: 1.5, position: "relative" }}>{index < 4 && <Box aria-hidden="true" sx={{ position: "absolute", left: 16, top: 32, bottom: -24, width: 1, backgroundColor: "#e6eaee" }} />}{<Box sx={{ position: "relative", zIndex: 1, display: "grid", placeItems: "center", width: 34, height: 34, border: complete ? 0 : "2px solid #dfe5ea", borderRadius: "50%", backgroundColor: complete ? "#5b8064" : "#fff", color: complete ? "#fff" : "#a4afba", fontSize: 14 }}>{complete ? "✓" : ""}</Box>}<Box sx={{ pt: .2 }}><Typography sx={{ color: complete ? "#344155" : "#a4afba", fontSize: 16, fontWeight: 700 }}>{title}</Typography><Typography sx={{ mt: .35, color: complete ? "#758091" : "#b6bec7", fontSize: 13 }}>{detail}</Typography>{index === 1 && !paid && <MuiButton variant="contained" onClick={() => void pay()} disabled={busy || !invoice} sx={{ mt: 1.25, backgroundColor: "#5b8064", "&:hover": { backgroundColor: "#4d7056" } }}>{busy ? "Opening payment…" : "Pay invoice"}</MuiButton>}</Box></Box>)}</Box></Box><Box component="aside" sx={{ p: { xs: 2, sm: 3, md: 4 }, borderTop: { xs: "1px solid #e3e8ed", lg: 0 }, borderLeft: { lg: "1px solid #e3e8ed" }, backgroundColor: "#fcfdfc" }}><Typography sx={{ color: "#929daa", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Invoice</Typography><Typography sx={{ mt: .75, color: "#273140", fontSize: 22, fontWeight: 700 }}>{invoice?.invoice_no || decision.invoice_no || "Invoice loading"}</Typography><Stack direction="row" justifyContent="space-between" sx={{ mt: 1.5 }}><Box><Typography sx={{ color: "#9aa5b2", fontSize: 12 }}>Total</Typography><Typography sx={{ mt: .25, color: "#273140", fontSize: 16, fontWeight: 700 }}>{invoice ? invoiceMoney(invoice.total_cents) : "—"}</Typography></Box><Box><Typography sx={{ color: "#9aa5b2", fontSize: 12 }}>Balance due</Typography><Typography sx={{ mt: .25, color: paid ? "#4f7658" : "#9d5d4e", fontSize: 16, fontWeight: 700 }}>{invoice ? invoiceMoney(invoice.balance_cents) : "—"}</Typography></Box></Stack><Box sx={{ mt: 2.5, p: 1.5, borderTop: "1px solid #e3e8ed", borderBottom: "1px solid #e3e8ed" }}><DecisionStatus status={paid ? "paid" : "awaiting_payment"} /><Typography sx={{ mt: .7, color: "#9aa4b0", fontSize: 12 }}>Stripe-hosted, webhook-settled.</Typography></Box>{!paid && <MuiButton fullWidth variant="contained" onClick={() => void pay()} disabled={busy || !invoice} sx={{ mt: 2, minHeight: 48, backgroundColor: "#5b8064", "&:hover": { backgroundColor: "#4d7056" } }}>{busy ? "Opening payment…" : "Pay invoice"}</MuiButton>}<Typography sx={{ mt: 2.5, color: "#929daa", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Quality evidence</Typography><Typography sx={{ mt: 1, color: "#a8b1bb", fontSize: 13 }}>{paid ? "Sample report will appear once sampling starts." : "Sample report — available once sampling starts"}</Typography></Box></Box></Box>;
+function productionStageLabel(stage: string | null) {
+  return (
+    {
+      sampling: "Sampling",
+      bulk_production: "Bulk production",
+      quality_inspection: "Quality inspection & shipment",
+      shipped: "Shipped",
+      delivered: "Delivered",
+    }[stage || ""] || "Not started"
+  );
+}
+
+function ProductionTab({
+  caseId,
+  onMessage,
+}: {
+  caseId: string;
+  onMessage: (message: string) => void;
+}) {
+  const [data, setData] = useState<WorkspaceRfqProduction | null>(null);
+  useEffect(() => {
+    let active = true;
+    void getWorkspaceRfqProduction(caseId)
+      .then((next) => {
+        if (active) setData(next);
+      })
+      .catch((cause) => {
+        if (active)
+          onMessage(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load production status.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [caseId, onMessage]);
+  if (data === null) return <Skeleton variant="rounded" height={320} />;
+  if (!data.quote)
+    return (
+      <Box
+        sx={{
+          display: "grid",
+          minHeight: 380,
+          placeItems: "center",
+          p: 4,
+          textAlign: "center",
+        }}
+      >
+        <Box>
+          <Typography sx={{ color: "#718092", fontSize: 16, fontWeight: 700 }}>
+            Production starts once you select a supplier
+          </Typography>
+          <Typography
+            sx={{
+              maxWidth: 330,
+              mt: 1,
+              color: "#9aa4b0",
+              fontSize: 13,
+              lineHeight: 1.55,
+            }}
+          >
+            Choose a quote from the Quotes tab to see production and logistics
+            here.
+          </Typography>
+        </Box>
+      </Box>
+    );
+  const stages: Array<{
+    key: string;
+    label: string;
+    done: boolean;
+    current: boolean;
+    detail?: string;
+  }> = [
+    {
+      key: "confirmed",
+      label: "Supplier confirmed",
+      done: true,
+      current: false,
+      detail: data.quote.factory_name,
+    },
+    {
+      key: "invoice",
+      label: "Invoice payment",
+      done: Boolean(data.invoice && data.invoice.status === "paid"),
+      current: Boolean(data.invoice && data.invoice.status !== "paid"),
+      detail: data.invoice
+        ? data.invoice.status === "paid"
+          ? "Paid"
+          : "Waiting on you"
+        : "Not yet invoiced",
+    },
+    {
+      key: "sampling",
+      label: "Sampling",
+      done: Boolean(
+        data.order &&
+        [
+          "bulk_production",
+          "quality_inspection",
+          "shipped",
+          "delivered",
+        ].includes(data.order.production_stage || ""),
+      ),
+      current: data.order?.production_stage === "sampling",
+    },
+    {
+      key: "bulk",
+      label: "Bulk production",
+      done: Boolean(
+        data.order &&
+        ["quality_inspection", "shipped", "delivered"].includes(
+          data.order.production_stage || "",
+        ),
+      ),
+      current: data.order?.production_stage === "bulk_production",
+    },
+    {
+      key: "qc",
+      label: "Quality inspection & shipment",
+      done: Boolean(
+        data.order &&
+        ["shipped", "delivered"].includes(data.order.production_stage || ""),
+      ),
+      current: data.order?.production_stage === "quality_inspection",
+    },
+  ];
+  return (
+    <Box
+      sx={{
+        display: "grid",
+        gridTemplateColumns: { xs: "1fr", md: "minmax(0,1fr) 300px" },
+        gap: 3,
+      }}
+    >
+      <Box>
+        <Typography sx={{ fontSize: 18, fontWeight: 600, color: "#202936" }}>
+          Confirmed with {data.quote.factory_name}
+        </Typography>
+        <Typography
+          sx={{ mt: 0.75, fontSize: 13, color: "#758091", maxWidth: 480 }}
+        >
+          {data.order
+            ? `Sample order ${data.order.order_no} is active. Production stage: ${productionStageLabel(data.order.production_stage)}.`
+            : "Atelix has the selected supplier and will initiate the sample order from Intools. It will appear here once confirmed."}
+        </Typography>
+        <Box sx={{ mt: 2.5, display: "grid", gap: 0 }}>
+          {stages.map((stage, index) => (
+            <Box
+              key={stage.key}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "20px minmax(0,1fr)",
+                columnGap: 1.5,
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "grid",
+                    placeItems: "center",
+                    width: 20,
+                    height: 20,
+                    borderRadius: "50%",
+                    backgroundColor: stage.done ? "#4b7657" : "#fff",
+                    border: stage.done
+                      ? 0
+                      : stage.current
+                        ? "2px solid #4b7657"
+                        : "2px solid #e0e4e9",
+                  }}
+                >
+                  {stage.done && (
+                    <CheckCircle sx={{ fontSize: 14, color: "#fff" }} />
+                  )}
+                  {!stage.done && stage.current && (
+                    <Box
+                      sx={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        backgroundColor: "#4b7657",
+                      }}
+                    />
+                  )}
+                </Box>
+                {index < stages.length - 1 && (
+                  <Box
+                    sx={{
+                      flex: 1,
+                      width: "2px",
+                      minHeight: 20,
+                      backgroundColor: "#eef0f3",
+                    }}
+                  />
+                )}
+              </Box>
+              <Box sx={{ pb: 2.5 }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: stage.done || stage.current ? "#202936" : "#9aa4b0",
+                  }}
+                >
+                  {stage.label}
+                </Typography>
+                <Typography
+                  sx={{
+                    mt: 0.35,
+                    fontSize: 12,
+                    color: stage.current ? "#4b7657" : "#758091",
+                  }}
+                >
+                  {stage.detail}
+                </Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+      <Box
+        sx={{
+          p: 2,
+          border: "1px solid #e7ebf0",
+          borderRadius: "12px",
+          backgroundColor: "#fff",
+          alignSelf: "start",
+        }}
+      >
+        <Typography
+          sx={{
+            color: "#8d98a5",
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Invoice
+        </Typography>
+        {data.invoice ? (
+          <>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="flex-start"
+              sx={{ mt: 1.25 }}
+            >
+              <Box>
+                <Typography
+                  sx={{ fontSize: 15, fontWeight: 700, color: "#202936" }}
+                >
+                  {data.invoice.invoice_no}
+                </Typography>
+                <Typography sx={{ mt: 0.3, fontSize: 12, color: "#758091" }}>
+                  {invoiceDate(data.invoice.due_date)}
+                </Typography>
+              </Box>
+              <Chip
+                size="small"
+                label={invoiceStatusLabel(data.invoice as WorkspaceInvoice)}
+                color={invoiceStatusColor(data.invoice as WorkspaceInvoice)}
+              />
+            </Stack>
+            <Box
+              sx={{
+                mt: 2,
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 1.5,
+              }}
+            >
+              <Box>
+                <Typography sx={{ fontSize: 10.5, color: "#9ba1aa" }}>
+                  Total
+                </Typography>
+                <Typography sx={{ mt: 0.3, fontSize: 15, fontWeight: 700 }}>
+                  {invoiceMoney(data.invoice.total_cents)}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: 10.5, color: "#9ba1aa" }}>
+                  Balance
+                </Typography>
+                <Typography
+                  sx={{
+                    mt: 0.3,
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: data.invoice.balance_cents ? "#9a4f47" : "#202936",
+                  }}
+                >
+                  {invoiceMoney(data.invoice.balance_cents)}
+                </Typography>
+              </Box>
+            </Box>
+            {data.invoice.status === "sent" && (
+              <MuiButton
+                fullWidth
+                variant="contained"
+                sx={{
+                  mt: 2,
+                  backgroundColor: "#4b7657",
+                  "&:hover": { backgroundColor: "#3d6548" },
+                }}
+                onClick={() =>
+                  navigate(
+                    `/dashboard/invoices/${encodeURIComponent(data.invoice!.id)}`,
+                  )
+                }
+              >
+                Pay invoice
+              </MuiButton>
+            )}
+            <Stack
+              direction="row"
+              alignItems="center"
+              spacing={0.6}
+              sx={{ mt: 1 }}
+            >
+              <LockOutlined sx={{ fontSize: 13, color: "#9ba1aa" }} />
+              <Typography sx={{ fontSize: 10.5, color: "#9ba1aa" }}>
+                Stripe-hosted, webhook-settled.
+              </Typography>
+            </Stack>
+          </>
+        ) : (
+          <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "#9aa4b0" }}>
+            Not yet invoiced. Atelix sends an invoice once production is
+            confirmed.
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
 }
 
 function fieldsFromBrief(brief: Record<string, unknown>): RfqFields {
-  const source = brief.fields && typeof brief.fields === "object" && !Array.isArray(brief.fields) ? brief.fields as Record<string, unknown> : brief;
-  return Object.fromEntries(Object.keys(defaultRfqFields).map((key) => [key, typeof source[key] === "string" ? source[key] : ""])) as RfqFields;
+  const source =
+    brief.fields &&
+    typeof brief.fields === "object" &&
+    !Array.isArray(brief.fields)
+      ? (brief.fields as Record<string, unknown>)
+      : brief;
+  return Object.fromEntries(
+    Object.keys(defaultRfqFields).map((key) => [
+      key,
+      typeof source[key] === "string" ? source[key] : "",
+    ]),
+  ) as RfqFields;
 }
 
-function briefFromFields(summary: string, fields: RfqFields): Record<string, unknown> {
+function briefFromFields(
+  summary: string,
+  fields: RfqFields,
+): Record<string, unknown> {
   return { summary, fields };
 }
 
 function phaseForPersistedStatus(status: string): RfqPhase {
   switch (status) {
-    case "draft": return "review";
-    case "needs_research": return "submitted";
-    default: return "submitted";
+    case "draft":
+      return "review";
+    case "needs_research":
+      return "submitted";
+    default:
+      return "submitted";
   }
 }
 
-function RfqWorkspace({ caseId, brief, initialFields, files, status, initialPhase, onMessage }: { caseId: string; brief: string; initialFields: RfqFields; files: RfqAttachment[]; status: string; initialPhase?: RfqPhase; onMessage: (message: string) => void }) {
+function RfqWorkspace({
+  caseId,
+  brief,
+  initialFields,
+  files,
+  status,
+  initialPhase,
+  onMessage,
+}: {
+  caseId: string;
+  brief: string;
+  initialFields: RfqFields;
+  files: RfqAttachment[];
+  status: string;
+  initialPhase?: RfqPhase;
+  onMessage: (message: string) => void;
+}) {
   const persistedPhase = phaseForPersistedStatus(status);
-  const restoredSubmitted = initialPhase === undefined && persistedPhase === "submitted";
+  const restoredSubmitted =
+    initialPhase === undefined && persistedPhase === "submitted";
   const [phase, setPhase] = useState<RfqPhase>(initialPhase ?? persistedPhase);
   const [fields, setFields] = useState<RfqFields>(initialFields);
   const [draft, setDraft] = useState<RfqFields>(initialFields);
   const [attachments, setAttachments] = useState<RfqAttachment[]>(files);
-  const [tab, setTab] = useState<RfqTab>("RFQ");
+  const [tab, setTab] = useState<RfqTab>(() =>
+    restoredSubmitted ? "Timeline" : "RFQ",
+  );
+  const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [checkCount, setCheckCount] = useState(0);
-  const [quotesVisible, setQuotesVisible] = useState(false);
-  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([]);
-  const [decision, setDecision] = useState<WorkspaceRfqDecision | null>(null);
+  const [conversationMessages, setConversationMessages] = useState<
+    ConversationMessage[]
+  >([]);
 
-  useEffect(() => { let active = true; void listRfqAttachments(caseId).then((next) => { if (active) setAttachments(next); }).catch((cause) => { if (active) onMessage(cause instanceof Error ? cause.message : "Could not load attached references."); }); return () => { active = false; }; }, [caseId, onMessage]);
-  useEffect(() => { let active = true; void listRfqMessages(caseId).then((next) => { if (active) setConversationMessages(next.map((message) => ({ from: (message.role === "buyer" ? "You" : "Atelix assistant") as ConversationMessage["from"], text: message.content }))); }).catch((cause) => { if (active) onMessage(cause instanceof Error ? cause.message : "Could not load the RFQ conversation."); }); return () => { active = false; }; }, [caseId, onMessage]);
-  useEffect(() => { let active = true; if (!["accepted", "quotes_ready", "buyer_review", "supplier_selected", "awaiting_payment", "sampling", "production", "quality", "completed"].includes(status)) { setDecision(null); return; } void getWorkspaceRfqDecision(caseId).then((next) => { if (active) setDecision(next); }).catch((cause) => { if (active) onMessage(cause instanceof Error ? cause.message : "Could not load the reviewed RFQ decision."); }); return () => { active = false; }; }, [caseId, onMessage, status]);
+  useEffect(() => {
+    let active = true;
+    void listRfqAttachments(caseId)
+      .then((next) => {
+        if (active) setAttachments(next);
+      })
+      .catch((cause) => {
+        if (active)
+          onMessage(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load attached references.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [caseId, onMessage]);
+  useEffect(() => {
+    let active = true;
+    void listRfqMessages(caseId)
+      .then((next) => {
+        if (active)
+          setConversationMessages(
+            next.map((message) => ({
+              from: (message.role === "buyer"
+                ? "You"
+                : "Atelix assistant") as ConversationMessage["from"],
+              text: message.content,
+            })),
+          );
+      })
+      .catch((cause) => {
+        if (active)
+          onMessage(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load the RFQ conversation.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [caseId, onMessage]);
 
-  useEffect(() => { if (phase !== "drafting") return; const timer = window.setTimeout(() => setPhase("review"), 2300); return () => window.clearTimeout(timer); }, [phase]);
-  useEffect(() => { if (phase !== "submitted" || restoredSubmitted) return; const timer = window.setTimeout(() => setPhase("matching"), 500); return () => window.clearTimeout(timer); }, [phase, restoredSubmitted]);
-  useEffect(() => { if (phase !== "matching") return; setCheckCount(0); const timer = window.setInterval(() => setCheckCount((current) => Math.min(current + 1, matchingChecks.length)), 640); return () => window.clearInterval(timer); }, [phase]);
-  useEffect(() => { if (phase !== "matching" || checkCount < matchingChecks.length) return; const timer = window.setTimeout(() => setPhase("matched"), 350); return () => window.clearTimeout(timer); }, [phase, checkCount]);
+  useEffect(() => {
+    if (phase !== "drafting") return;
+    const timer = window.setTimeout(() => setPhase("review"), 2300);
+    return () => window.clearTimeout(timer);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== "submitted" || restoredSubmitted) return;
+    const timer = window.setTimeout(() => setPhase("matching"), 500);
+    return () => window.clearTimeout(timer);
+  }, [phase, restoredSubmitted]);
+  useEffect(() => {
+    if (phase !== "matching") return;
+    setCheckCount(0);
+    const timer = window.setInterval(
+      () =>
+        setCheckCount((current) =>
+          Math.min(current + 1, matchingChecks.length),
+        ),
+      640,
+    );
+    return () => window.clearInterval(timer);
+  }, [phase]);
+  useEffect(() => {
+    if (phase !== "matching" || checkCount < matchingChecks.length) return;
+    const timer = window.setTimeout(() => setPhase("matched"), 350);
+    return () => window.clearTimeout(timer);
+  }, [phase, checkCount]);
 
-  function startEdit() { setDraft(fields); setPhase("editing"); }
-  function changeField(field: keyof RfqFields, value: string) { setDraft((current) => ({ ...current, [field]: value })); }
-  async function sendConversationMessage(message: string) { try { const next = await addRfqMessage(caseId, message); setConversationMessages((current) => [...current, ...next.map((item) => ({ from: (item.role === "buyer" ? "You" : "Atelix assistant") as ConversationMessage["from"], text: item.content }))]); } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not save your message."); } }
-  function saveEdit() { void updateRfqCase(caseId, { title: brief.slice(0, 120) || "New sourcing request", brief: briefFromFields(brief, draft), status: "draft" }).then(() => { setFields(draft); setPhase("review"); setConversationMessages((current) => [...current, { from: "Atelix assistant", text: "Your RFQ changes are saved. Review the updated brief before requesting the draft." }]); }).catch((cause) => onMessage(cause instanceof Error ? cause.message : "Could not save your RFQ.")); }
-  function submitRfq() { void updateRfqCase(caseId, { title: brief.slice(0, 120) || "New sourcing request", brief: briefFromFields(brief, fields), status: "needs_research" }).then(() => { setQuotesVisible(false); setPhase("submitted"); setConversationMessages((current) => [...current, { from: "Atelix assistant", text: "Your RFQ draft has been submitted for Atelix review." }]); }).catch((cause) => onMessage(cause instanceof Error ? cause.message : "Could not submit your RFQ.")); }
-  function showQuotes() { setQuotesVisible(true); onMessage("Supplier review becomes available after the Atelix team confirms a match."); }
+  function startEdit() {
+    setDraft(fields);
+    setPhase("editing");
+  }
+  function changeField(field: keyof RfqFields, value: string) {
+    setDraft((current) => ({ ...current, [field]: value }));
+  }
+  async function sendConversationMessage(message: string) {
+    try {
+      const next = await addRfqMessage(caseId, message);
+      setConversationMessages((current) => [
+        ...current,
+        ...next.map((item) => ({
+          from: (item.role === "buyer"
+            ? "You"
+            : "Atelix assistant") as ConversationMessage["from"],
+          text: item.content,
+        })),
+      ]);
+    } catch (cause) {
+      onMessage(
+        cause instanceof Error ? cause.message : "Could not save your message.",
+      );
+    }
+  }
+  function saveEdit() {
+    void updateRfqCase(caseId, {
+      title: brief.slice(0, 120) || "New sourcing request",
+      brief: briefFromFields(brief, draft),
+      status: "draft",
+    })
+      .then(() => {
+        setFields(draft);
+        setPhase("review");
+        setConversationMessages((current) => [
+          ...current,
+          {
+            from: "Atelix assistant",
+            text: "Your RFQ changes are saved. Review the updated brief before requesting the draft.",
+          },
+        ]);
+      })
+      .catch((cause) =>
+        onMessage(
+          cause instanceof Error ? cause.message : "Could not save your RFQ.",
+        ),
+      );
+  }
+  function submitRfq() {
+    void updateRfqCase(caseId, {
+      title: brief.slice(0, 120) || "New sourcing request",
+      brief: briefFromFields(brief, fields),
+      status: "needs_research",
+    })
+      .then(() => {
+        setPhase("submitted");
+        setConversationMessages((current) => [
+          ...current,
+          {
+            from: "Atelix assistant",
+            text: "Your RFQ draft has been submitted for Atelix review.",
+          },
+        ]);
+      })
+      .catch((cause) =>
+        onMessage(
+          cause instanceof Error ? cause.message : "Could not submit your RFQ.",
+        ),
+      );
+  }
+  function goToQuotes() {
+    setTab("Quotes");
+  }
 
-  const draftingPhase = phase === "drafting" || phase === "review" || phase === "editing";
-  if (decision && ["accepted", "quotes_ready", "buyer_review"].includes(decision.case.status)) return <SupplierDecisionSurface decision={decision} onDecision={setDecision} onMessage={onMessage} />;
-  if (decision && ["supplier_selected", "awaiting_payment", "sampling", "production", "quality", "completed"].includes(decision.case.status)) return <ProductionPaymentSurface decision={decision} onMessage={onMessage} />;
-  const rightPanel = draftingPhase ? <RfqDocumentPanel phase={phase} fields={fields} draft={draft} tab={tab} setTab={setTab} onEdit={startEdit} onChange={changeField} onSave={saveEdit} onCancel={() => setPhase("review")} onSubmit={submitRfq} /> : quotesVisible ? <QuotesPanel /> : <SupplierMatchingStage phase={phase === "matched" ? "matched" : "matching"} checkCount={checkCount} onQuotes={showQuotes} />;
-  return <Box sx={{ width: "100%" }}><Box sx={{ display: "grid", gridTemplateColumns: draftingPhase ? { xs: "1fr", md: "minmax(360px,1fr) minmax(0,1.32fr)" } : "minmax(0,1fr)", minHeight: { md: "calc(100dvh - 68px)" }, borderTop: { md: "1px solid #f0f0f2" }, backgroundColor: "#fff" }}><Box sx={{ minWidth: 0, borderRight: { md: "1px solid #ececef" } }}>{draftingPhase && <ConversationChatPanel phase={phase} messages={conversationMessages} onSend={sendConversationMessage} />}{attachments.length > 0 && <Stack direction="row" alignItems="center" spacing={1} sx={{ px: { xs: 2, md: 3.25 }, pb: 2, flexWrap: "wrap" }}><Description sx={{ color: "#82909d", fontSize: 18 }} /><Typography sx={{ color: "#647284", fontSize: 12 }}>Attached references</Typography>{attachments.map((attachment) => <Chip key={attachment.id} label={attachment.original_name} size="small" sx={{ color: "#647284", backgroundColor: "#eef2f5" }} />)}</Stack>}</Box><Box sx={{ gridColumn: draftingPhase ? "auto" : "1 / -1", minWidth: 0, width: "100%" }}>{rightPanel}</Box></Box></Box>;
+  const draftingPhase =
+    phase === "drafting" || phase === "review" || phase === "editing";
+  const showMatchingAnimation = phase === "matching";
+  const baseStatus =
+    phase === "submitted" || phase === "matching" || phase === "matched"
+      ? status === "draft"
+        ? "needs_research"
+        : status
+      : status;
+  const caseStatus = statusOverride ?? baseStatus;
+  const rightPanel = showMatchingAnimation ? (
+    <SupplierMatchingStage
+      phase="matching"
+      checkCount={checkCount}
+      caseStatus={caseStatus}
+      onQuotes={goToQuotes}
+    />
+  ) : (
+    <RfqDocumentPanel
+      phase={phase}
+      fields={fields}
+      draft={draft}
+      tab={tab}
+      setTab={setTab}
+      caseStatus={caseStatus}
+      caseId={caseId}
+      attachments={attachments}
+      onEdit={startEdit}
+      onChange={changeField}
+      onSave={saveEdit}
+      onCancel={() => setPhase("review")}
+      onSubmit={submitRfq}
+      onMessage={onMessage}
+      onQuoteSelected={() => setStatusOverride("quote_selected")}
+    />
+  );
+  return (
+    <Stack spacing={2.25} sx={{ width: "100%" }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: draftingPhase
+            ? { xs: "1fr", md: "minmax(0,1fr) minmax(0,1.6fr)" }
+            : "minmax(0,1fr)",
+          gap: 3,
+          alignItems: "stretch",
+        }}
+      >
+        {draftingPhase && (
+          <ConversationChatPanel
+            phase={phase}
+            messages={conversationMessages}
+            onSend={sendConversationMessage}
+          />
+        )}
+        <Box
+          sx={{
+            gridColumn: draftingPhase ? "auto" : "1 / -1",
+            minWidth: 0,
+            width: "100%",
+          }}
+        >
+          {rightPanel}
+        </Box>
+      </Box>
+    </Stack>
+  );
 }
 
-function WorkspaceRequests({ requests, onOpen }: { requests: StoredRfq[]; onOpen: (request: StoredRfq) => void }) {
-  const statusCopy: Record<string, string> = { draft: "Draft to review", needs_research: "Atelix review queued", awaiting_supplier: "With suppliers", supplier_replied: "Reply received", buyer_review: "Your decision", closed: "Closed" };
-  return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 960, mx: "auto" }}><Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: .6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}>Requests</Typography><Typography sx={{ mt: .75, maxWidth: 560, color: "#758091", fontSize: 14, lineHeight: 1.55 }}>Every RFQ you’ve started, with who holds the next step.</Typography></Box><Box component="ul" aria-label="Sourcing requests" sx={{ display: "grid", gap: 1.25, p: 0, m: 0, listStyle: "none" }}>{requests.length ? requests.map((request, index) => <Box component="li" key={request.id}><motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: .2, delay: Math.min(index, 5) * .04 }}><RoundedSurface interactive sx={{ p: { xs: 1.5, sm: 2 } }}><Box component="button" onClick={() => onOpen(request)} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "minmax(0,1fr) 180px auto" }, alignItems: "center", gap: 1.5, width: "100%", border: 0, p: 0, textAlign: "left", color: "inherit", background: "transparent", cursor: "pointer", "&:focus-visible": { outline: "3px solid #4b7657", outlineOffset: 4, borderRadius: 2 } }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{request.title}</Typography><Typography sx={{ mt: .35, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{request.case_no} · {new Date(request.updated_at).toLocaleDateString()}</Typography></Box><Typography sx={{ display: { xs: "none", sm: "block" }, color: "#758091", fontSize: 12 }}>{statusCopy[request.status] || request.status}</Typography><ArrowForward sx={{ color: "#6fae86", fontSize: 20 }} /></Box></RoundedSurface></motion.div></Box>) : <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No requests yet</Typography><Typography sx={{ mt: .75, color: "#758091", fontSize: 13 }}>Start from the dashboard prompt and your RFQ will appear here.</Typography></RoundedSurface>}</Box></Stack>;
-}
-
-type ProductFilter = "all" | "in_progress" | "finalized";
-type ProductGroup = "in_progress" | "finalized";
-
-function productGroup(product: WorkspaceProduct): ProductGroup {
-  return product.order_status === "completed" ? "finalized" : "in_progress";
-}
-
-function productStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    awaiting_payment: "Payment due",
-    payment_declared: "Payment under review",
-    payment_verified: "Payment verified",
-    fulfilling: "In production",
-    completed: "Finalized",
-    cancelled: "Cancelled",
-    disputed: "Payment review",
-    refunded: "Refunded",
+const stageCopy: Record<string, string> = {
+  draft: "Approval needed",
+  needs_research: "Atelix review",
+  awaiting_supplier: "Awaiting suppliers",
+  supplier_replied: "Supplier replied",
+  buyer_review: "Quotes in — your decision",
+  quote_selected: "Confirming terms",
+  in_production: "In production",
+  closed: "Closed",
+};
+const stageDotColor: Record<string, string> = {
+  draft: "#65a979",
+  needs_research: "#c9a86a",
+  awaiting_supplier: "#c9a86a",
+  supplier_replied: "#c9a86a",
+  buyer_review: "#65a979",
+  quote_selected: "#c9a86a",
+  in_production: "#c9a86a",
+  closed: "#b6bdc6",
+};
+type RequestFilter = "all" | "needs_you" | "in_progress" | "closed";
+function WorkspaceRequests({
+  requests,
+  onOpen,
+}: {
+  requests: StoredRfq[];
+  onOpen: (request: StoredRfq) => void;
+}) {
+  const [unpaidCaseIds, setUnpaidCaseIds] = useState<Set<string>>(new Set());
+  const [filter, setFilter] = useState<RequestFilter>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    void listWorkspaceInvoices()
+      .then((rows) => {
+        if (!active) return;
+        setUnpaidCaseIds(
+          new Set(
+            rows
+              .filter((row) => row.status === "sent" && row.rfq_case_id)
+              .map((row) => row.rfq_case_id as string),
+          ),
+        );
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+  function ownerFor(request: StoredRfq) {
+    return nextStepOwner(request.status, unpaidCaseIds.has(request.id));
+  }
+  const filtered = requests.filter((request) => {
+    if (filter === "closed") return request.status === "closed";
+    if (filter === "needs_you")
+      return request.status !== "closed" && ownerFor(request) === "You";
+    if (filter === "in_progress")
+      return request.status !== "closed" && ownerFor(request) !== "You";
+    return true;
+  });
+  const counts = {
+    all: requests.length,
+    needs_you: requests.filter(
+      (r) => r.status !== "closed" && ownerFor(r) === "You",
+    ).length,
+    in_progress: requests.filter(
+      (r) => r.status !== "closed" && ownerFor(r) !== "You",
+    ).length,
+    closed: requests.filter((r) => r.status === "closed").length,
   };
-  return labels[status] || status.replaceAll("_", " ");
+  const selected =
+    requests.find((request) => request.id === selectedId) ||
+    filtered[0] ||
+    requests[0] ||
+    null;
+  const filterPills: Array<[RequestFilter, string]> = [
+    ["all", `All ${counts.all}`],
+    ["needs_you", `Needs you ${counts.needs_you}`],
+    ["in_progress", `In progress ${counts.in_progress}`],
+    ["closed", `Closed ${counts.closed}`],
+  ];
+  return (
+    <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 1180, mx: "auto" }}>
+      <Box>
+        <Typography
+          sx={{
+            color: "#71917a",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Workspace
+        </Typography>
+        <Typography
+          variant="h1"
+          sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}
+        >
+          Requests
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.75,
+            maxWidth: 560,
+            color: "#758091",
+            fontSize: 14,
+            lineHeight: 1.55,
+          }}
+        >
+          Every RFQ you’ve started, with who holds the next step.
+        </Typography>
+      </Box>
+      {requests.length > 0 && (
+        <Box
+          sx={{
+            display: "inline-flex",
+            gap: 0.5,
+            p: 0.4,
+            border: "1px solid #e7ebf0",
+            borderRadius: "10px",
+            backgroundColor: "#fff",
+            alignSelf: "flex-start",
+          }}
+        >
+          {filterPills.map(([key, label]) => (
+            <Box
+              key={key}
+              component="button"
+              type="button"
+              onClick={() => setFilter(key)}
+              sx={{
+                px: 1.5,
+                py: 0.85,
+                border: 0,
+                borderRadius: "8px",
+                backgroundColor: filter === key ? "#eef4ee" : "transparent",
+                color: filter === key ? "#33513c" : "#758091",
+                font: "inherit",
+                fontSize: 12.5,
+                fontWeight: filter === key ? 700 : 500,
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </Box>
+          ))}
+        </Box>
+      )}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 320px" },
+          gap: 2.5,
+          alignItems: "start",
+        }}
+      >
+        {filtered.length ? (
+          <Box
+            sx={{
+              border: "1px solid #e7ebf0",
+              borderRadius: "12px",
+              backgroundColor: "#fff",
+              overflow: "hidden",
+            }}
+          >
+            <Box
+              sx={{
+                display: { xs: "none", sm: "grid" },
+                gridTemplateColumns: "minmax(0,1fr) 180px 100px 90px",
+                gap: 1.5,
+                px: 2,
+                py: 1.4,
+                borderBottom: "1px solid #eef0f3",
+                backgroundColor: "#fcfcfd",
+              }}
+            >
+              {["Request", "Stage", "Next step owner", "Updated"].map(
+                (label) => (
+                  <Typography
+                    key={label}
+                    sx={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      letterSpacing: ".06em",
+                      textTransform: "uppercase",
+                      color: "#9ba1aa",
+                    }}
+                  >
+                    {label}
+                  </Typography>
+                ),
+              )}
+            </Box>
+            {filtered.map((request, index) => {
+              const owner = ownerFor(request);
+              const active = selected?.id === request.id;
+              return (
+                <Box
+                  key={request.id}
+                  component={motion.div}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{
+                    duration: 0.18,
+                    delay: Math.min(index, 6) * 0.03,
+                  }}
+                  onClick={() => setSelectedId(request.id)}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "minmax(0,1fr) auto",
+                      sm: "minmax(0,1fr) 180px 100px 90px",
+                    },
+                    gap: 1.5,
+                    alignItems: "center",
+                    px: 2,
+                    py: 1.6,
+                    borderBottom: "1px solid #f2f4f6",
+                    borderLeft: active
+                      ? "2px solid #4b7657"
+                      : "2px solid transparent",
+                    backgroundColor: active ? "#fbfdfb" : "transparent",
+                    cursor: "pointer",
+                    "&:last-of-type": { borderBottom: 0 },
+                  }}
+                >
+                  <Box
+                    component="button"
+                    type="button"
+                    onClick={() => onOpen(request)}
+                    sx={{
+                      display: "block",
+                      minWidth: 0,
+                      border: 0,
+                      p: 0,
+                      textAlign: "left",
+                      background: "transparent",
+                      cursor: "pointer",
+                      "&:focus-visible": {
+                        outline: "3px solid #4b7657",
+                        outlineOffset: 2,
+                        borderRadius: 1,
+                      },
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: 13.5,
+                        fontWeight: 600,
+                        color: "#202936",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {request.title}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        mt: 0.35,
+                        color: "#9ba1aa",
+                        fontFamily: "'DM Mono', monospace",
+                        fontSize: 11,
+                      }}
+                    >
+                      {request.case_no}
+                    </Typography>
+                  </Box>
+                  <Box
+                    sx={{
+                      display: { xs: "none", sm: "flex" },
+                      alignItems: "center",
+                      gap: 0.85,
+                    }}
+                  >
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        backgroundColor:
+                          stageDotColor[request.status] || "#b6bdc6",
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color:
+                          request.status === "closed" ? "#758091" : "#4b7657",
+                      }}
+                    >
+                      {stageCopy[request.status] || request.status}
+                    </Typography>
+                  </Box>
+                  <Typography
+                    sx={{
+                      display: { xs: "none", sm: "block" },
+                      fontSize: 12.5,
+                      color: "#4a5667",
+                    }}
+                  >
+                    {owner}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      display: { xs: "none", sm: "block" },
+                      fontSize: 12,
+                      color: "#9ba1aa",
+                    }}
+                  >
+                    {new Date(request.updated_at).toLocaleDateString(
+                      undefined,
+                      { month: "short", day: "numeric" },
+                    )}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        ) : (
+          <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
+            <Typography sx={{ fontWeight: 700 }}>
+              {requests.length
+                ? "No requests match this filter"
+                : "No requests yet"}
+            </Typography>
+            <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>
+              {requests.length
+                ? "Try a different filter above."
+                : "Start from the dashboard prompt and your RFQ will appear here."}
+            </Typography>
+          </RoundedSurface>
+        )}
+        {selected && (
+          <Box
+            sx={{
+              p: 2.25,
+              border: "1px solid #e7ebf0",
+              borderRadius: "12px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <Typography
+              sx={{
+                color: "#8d98a5",
+                fontSize: 10.5,
+                fontWeight: 700,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Stage timeline
+            </Typography>
+            <Typography
+              sx={{
+                mt: 1,
+                fontSize: 15,
+                fontWeight: 600,
+                color: "#202936",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {selected.title}
+            </Typography>
+            <Typography
+              sx={{
+                mt: 0.3,
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 11.5,
+                color: "#9ba1aa",
+              }}
+            >
+              {selected.case_no}
+            </Typography>
+            <Box sx={{ mt: 2.5 }}>
+              <StageTimeline
+                status={selected.status}
+                onReviewDraft={() => onOpen(selected)}
+              />
+            </Box>
+          </Box>
+        )}
+      </Box>
+    </Stack>
+  );
 }
 
-function productStatusTone(status: string) {
-  if (["awaiting_payment", "disputed", "refunded", "cancelled"].includes(status)) return { color: "#a45b50", dot: "#c67868", background: "#fbefec" };
-  if (status === "completed") return { color: "#4d7658", dot: "#6b9677", background: "#eef5ef" };
-  return { color: "#876f3d", dot: "#c7a96a", background: "#faf5e9" };
+function ProductRow({
+  product,
+  onView,
+  onReorder,
+}: {
+  product: WorkspaceProduct;
+  onView: () => void;
+  onReorder?: () => void;
+}) {
+  const finalized = product.order_status === "completed";
+  return (
+    <RoundedSurface interactive sx={{ p: { xs: 1.5, sm: 2 } }}>
+      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}
+          >
+            {product.name}
+          </Typography>
+          <Typography
+            sx={{
+              mt: 0.35,
+              color: "#9ba1aa",
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11,
+            }}
+          >
+            {product.sku} · {product.supplier}
+          </Typography>
+        </Box>
+        <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 80 }}>
+          <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+            Unit cost
+          </Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+            {invoiceMoney(Math.round(product.unit_price * 100))}
+          </Typography>
+        </Box>
+        <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 70 }}>
+          <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Units</Typography>
+          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+            {product.units}
+          </Typography>
+        </Box>
+        <Chip size="small" label={product.order_status.replaceAll("_", " ")} />
+        <MuiButton
+          size="small"
+          onClick={onView}
+          aria-label={`View ${product.name}`}
+        >
+          View
+        </MuiButton>
+        {finalized && onReorder && (
+          <MuiButton
+            size="small"
+            variant="contained"
+            onClick={onReorder}
+            sx={{
+              backgroundColor: "#4b7657",
+              "&:hover": { backgroundColor: "#3d6548" },
+            }}
+          >
+            Reorder
+          </MuiButton>
+        )}
+      </Stack>
+    </RoundedSurface>
+  );
 }
 
-function productAction(product: WorkspaceProduct) {
-  if (["awaiting_payment", "payment_declared", "disputed"].includes(product.order_status)) return { label: "Go to invoice", kind: "invoice" as const };
-  if (product.rfq_case_id) return { label: "Open linked request", kind: "rfq" as const };
-  return { label: "No next action", kind: "none" as const };
-}
-
-function ProductStatus({ status }: { status: string }) {
-  const tone = productStatusTone(status);
-  return <Box sx={{ display: "inline-flex", alignItems: "center", gap: .8, color: tone.color, fontSize: 13, whiteSpace: "nowrap" }}><Box component="span" aria-hidden="true" sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: tone.dot }} />{productStatusLabel(status)}</Box>;
-}
-
-function ProductRow({ product, onOpen }: { product: WorkspaceProduct; onOpen: () => void }) {
-  return <Box component="li" sx={{ listStyle: "none", borderTop: "1px solid #eceff2", "&:hover": { backgroundColor: "#fbfcfb" } }}><Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", md: "minmax(220px,1.35fr) minmax(150px,1fr) 100px 120px minmax(140px,.9fr) auto" }, alignItems: "center", gap: { xs: 1.25, md: 2 }, px: { xs: 1.5, md: 2.5 }, py: { xs: 1.5, md: 1.8 } }}><Box sx={{ minWidth: 0 }}><Typography sx={{ color: "#29323e", fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{product.name}</Typography><Typography sx={{ mt: .45, color: "#a0a7b0", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{product.sku} · {product.rfq_case_id ? "RFQ linked" : "No linked RFQ"}</Typography></Box><Box sx={{ minWidth: 0, display: { xs: "none", md: "block" } }}><Typography sx={{ color: "#687587", fontSize: 13, overflowWrap: "anywhere" }}>{product.supplier || "Supplier not recorded"}</Typography></Box><Typography sx={{ display: { xs: "none", md: "block" }, color: "#687587", fontSize: 13 }}>{invoiceMoney(Math.round(product.unit_price * 100))}</Typography><Typography sx={{ display: { xs: "none", md: "block" }, color: "#687587", fontSize: 13 }}>{product.units} units</Typography><Box sx={{ display: { xs: "none", md: "block" } }}><ProductStatus status={product.order_status} /></Box><MuiButton variant="outlined" size="small" onClick={onOpen} aria-label={`View ${product.name}`} sx={{ minWidth: { xs: 76, md: 82 }, borderColor: "#e1e6eb", color: "#596676", backgroundColor: "#fff", "&:hover": { borderColor: "#b7c2cd", backgroundColor: "#fff" } }}>View</MuiButton><Box sx={{ display: { xs: "flex", md: "none" }, gridColumn: "1 / -1", alignItems: "center", justifyContent: "space-between", gap: 1, pt: .25 }}><Typography sx={{ color: "#758091", fontSize: 12 }}>{product.supplier || "Supplier not recorded"}</Typography><ProductStatus status={product.order_status} /></Box></Box></Box>;
-}
-
-function ProductTable({ title, products, onOpen }: { title: string; products: WorkspaceProduct[]; onOpen: (product: WorkspaceProduct) => void }) {
-  return <Box component="section" aria-labelledby={`${title.toLowerCase().replaceAll(" ", "-")}-title`}><Stack direction="row" alignItems="center" spacing={.7} sx={{ mb: 1.25 }}><Typography id={`${title.toLowerCase().replaceAll(" ", "-")}-title`} sx={{ color: "#3f4c5e", fontSize: 15, fontWeight: 700 }}>{title}</Typography><Typography sx={{ color: "#9da5af", fontSize: 14 }}>{products.length}</Typography></Stack><Box sx={{ overflow: "hidden", border: "1px solid #e3e8ed", borderRadius: 2.5, backgroundColor: "#fff" }}><Box aria-hidden="true" sx={{ display: { xs: "none", md: "grid" }, gridTemplateColumns: "minmax(220px,1.35fr) minmax(150px,1fr) 100px 120px minmax(140px,.9fr) auto", gap: 2, px: 2.5, py: 1.25, color: "#9ba3ad", fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase" }}><span>Product</span><span>Supplier</span><span>Unit cost</span><span>Units to date</span><span>Stage</span><span /></Box><Box component="ul" aria-label={`${title} products`} sx={{ p: 0, m: 0 }}>{products.map((product) => <ProductRow key={product.id} product={product} onOpen={() => onOpen(product)} />)}</Box></Box></Box>;
-}
-
-function WorkspaceProducts({ path, onOpenRfq, onReorder }: { path: string; onOpenRfq: (id: string | null) => void; onReorder: (product: WorkspaceProduct) => void }) {
-  const encodedDetailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
-  const detailId = encodedDetailId ? decodeURIComponent(encodedDetailId) : "";
+function LegacyWorkspaceProducts({
+  path,
+  onOpenRfq,
+  onReorder,
+}: {
+  path: string;
+  onOpenRfq: (id: string | null) => void;
+  onReorder: (product: WorkspaceProduct) => void;
+}) {
+  const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
   const [products, setProducts] = useState<WorkspaceProduct[]>([]);
   const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<ProductFilter>("all");
-  const [search, setSearch] = useState("");
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setProducts(await listWorkspaceProducts());
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not load sourced products.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  useEffect(() => {
+    let active = true;
+    if (!detailId) {
+      setDetail(null);
+      return;
+    }
+    void getWorkspaceProduct(detailId)
+      .then((next) => {
+        if (active) setDetail(next);
+      })
+      .catch((cause) => {
+        if (active)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load this product.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [detailId]);
+  if (detailId && detail)
+    return (
+      <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
+        <MuiButton
+          variant="text"
+          onClick={() => navigate("/dashboard/products")}
+          sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}
+        >
+          ← Back to products
+        </MuiButton>
+        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+          <Stack spacing={1.5}>
+            <Typography
+              sx={{
+                color: "#71917a",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+              }}
+            >
+              Sourced product
+            </Typography>
+            <Typography
+              variant="h1"
+              sx={{
+                color: "#202936",
+                fontSize: { xs: 28, sm: 36 },
+                overflowWrap: "anywhere",
+              }}
+            >
+              {detail.name}
+            </Typography>
+            <Typography
+              sx={{
+                color: "#9ba1aa",
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 11,
+              }}
+            >
+              {detail.sku} · {detail.supplier}
+            </Typography>
+            <Divider />
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "repeat(2,minmax(0,1fr))",
+                  sm: "repeat(4,minmax(0,1fr))",
+                },
+                gap: 1.5,
+              }}
+            >
+              {[
+                [
+                  "Unit cost",
+                  invoiceMoney(Math.round(detail.unit_price * 100)),
+                ],
+                ["Units", String(detail.units)],
+                ["Order", detail.order_no],
+                ["Stage", detail.order_status],
+              ].map(([label, value]) => (
+                <Box key={label}>
+                  <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+                    {label}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      mt: 0.35,
+                      fontSize: 13,
+                      fontWeight: 700,
+                      overflowWrap: "anywhere",
+                    }}
+                  >
+                    {value}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+            {detail.rfq_case_id && (
+              <MuiButton
+                variant="contained"
+                onClick={() => onOpenRfq(detail.rfq_case_id)}
+                sx={{ alignSelf: "flex-start" }}
+              >
+                Open request
+              </MuiButton>
+            )}
+          </Stack>
+        </RoundedSurface>
+      </Stack>
+    );
+  const inProgress = products.filter(
+    (product) => product.order_status !== "completed",
+  );
+  const finalized = products.filter(
+    (product) => product.order_status === "completed",
+  );
+  function group(label: string, items: WorkspaceProduct[]) {
+    if (!items.length) return null;
+    return (
+      <Box>
+        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: "#4a5667" }}>
+          {label}{" "}
+          <Typography
+            component="span"
+            sx={{ fontWeight: 500, color: "#9ba1aa" }}
+          >
+            · {items.length}
+          </Typography>
+        </Typography>
+        <Box
+          component="ul"
+          aria-label={label}
+          sx={{
+            mt: 1.25,
+            display: "grid",
+            gap: 1.25,
+            p: 0,
+            m: 0,
+            listStyle: "none",
+          }}
+        >
+          {items.map((product, index) => (
+            <Box component="li" key={product.id}>
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: Math.min(index, 5) * 0.04 }}
+              >
+                <ProductRow
+                  product={product}
+                  onView={() =>
+                    navigate(
+                      `/dashboard/products/${encodeURIComponent(product.id)}`,
+                    )
+                  }
+                  onReorder={() => onReorder(product)}
+                />
+              </motion.div>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+    );
+  }
+  return (
+    <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 960, mx: "auto" }}>
+      <Box>
+        <Typography
+          sx={{
+            color: "#71917a",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Workspace
+        </Typography>
+        <Typography
+          variant="h1"
+          sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}
+        >
+          Products
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.75,
+            maxWidth: 600,
+            color: "#758091",
+            fontSize: 14,
+            lineHeight: 1.55,
+          }}
+        >
+          Products you’ve sourced through Atelix — not a catalogue to browse.
+          Each record stays tied to its RFQ and order history.
+        </Typography>
+      </Box>
+      {error && (
+        <Alert
+          severity="error"
+          action={
+            <MuiButton color="inherit" size="small" onClick={() => void load()}>
+              Retry
+            </MuiButton>
+          }
+        >
+          {error}
+        </Alert>
+      )}
+      {loading ? (
+        <InvoiceSkeletonRows />
+      ) : products.length ? (
+        <Stack spacing={3}>
+          {group("In progress", inProgress)}
+          {group("Finalized library", finalized)}
+        </Stack>
+      ) : (
+        <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
+          <Typography sx={{ fontWeight: 700 }}>
+            No sourced products yet
+          </Typography>
+          <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>
+            Products appear here after an Atelix order creates an immutable line
+            snapshot.
+          </Typography>
+        </RoundedSurface>
+      )}
+    </Stack>
+  );
+}
+
+function productStageLabel(status: string) {
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function ProductTable({
+  title,
+  products,
+  finalized,
+  onView,
+  onReorder,
+}: {
+  title: string;
+  products: WorkspaceProduct[];
+  finalized: boolean;
+  onView: (product: WorkspaceProduct) => void;
+  onReorder: (product: WorkspaceProduct) => void;
+}) {
+  if (!products.length) return null;
+  return (
+    <Box>
+      <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#4a5667" }}>
+        {title} <span style={{ color: "#9ba1aa", fontWeight: 500 }}>· {products.length}</span>
+      </Typography>
+      <Box
+        sx={{
+          mt: 1.25,
+          border: "1px solid #e7ebf0",
+          borderRadius: "14px",
+          overflow: "hidden",
+          backgroundColor: "#fff",
+        }}
+      >
+        <Box
+          sx={{
+            display: { xs: "none", md: "grid" },
+            gridTemplateColumns: "minmax(220px,1.7fr) minmax(150px,1.1fr) 100px 110px minmax(150px,1fr) 180px",
+            gap: 1.5,
+            px: 1.5,
+            py: 1.25,
+            borderBottom: "1px solid #eef0f3",
+            color: "#8d98a5",
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          <span>Product</span><span>Supplier</span><span>Unit cost</span><span>Units to date</span><span>{finalized ? "Last ordered" : "Stage"}</span><span />
+        </Box>
+        {products.map((product) => (
+          <Box
+            key={product.id}
+            sx={{
+              display: { xs: "block", md: "grid" },
+              gridTemplateColumns: "minmax(220px,1.7fr) minmax(150px,1.1fr) 100px 110px minmax(150px,1fr) 180px",
+              gap: 1.5,
+              alignItems: "center",
+              px: 1.5,
+              py: { xs: 1.5, md: 1.75 },
+              borderBottom: "1px solid #eef0f3",
+              "&:last-child": { borderBottom: 0 },
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}>{product.name}</Typography>
+              <Typography sx={{ mt: 0.35, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{product.sku}</Typography>
+            </Box>
+            <Typography sx={{ mt: { xs: 1, md: 0 }, color: "#596678", fontSize: 13, overflowWrap: "anywhere" }}>{product.supplier}</Typography>
+            <Typography sx={{ mt: { xs: 0.75, md: 0 }, color: "#596678", fontSize: 13 }}>{invoiceMoney(Math.round(product.unit_price * 100))}</Typography>
+            <Typography sx={{ mt: { xs: 0.75, md: 0 }, color: "#596678", fontSize: 13 }}>{product.units.toLocaleString()} units</Typography>
+            <Box sx={{ mt: { xs: 0.75, md: 0 } }}>
+              {finalized ? (
+                <Typography sx={{ color: "#596678", fontSize: 13 }}>{product.placed_at ? new Date(product.placed_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"}</Typography>
+              ) : (
+                <Chip size="small" label={productStageLabel(product.order_status)} sx={{ color: "#8b6e35", backgroundColor: "#fbf6e9" }} />
+              )}
+            </Box>
+            <Stack direction="row" spacing={1} sx={{ mt: { xs: 1.25, md: 0 }, justifyContent: { xs: "flex-start", md: "flex-end" } }}>
+              <MuiButton size="small" variant="outlined" onClick={() => onView(product)} sx={{ borderColor: "#e1e6eb", color: "#4a5667" }}>View</MuiButton>
+              {finalized && <MuiButton size="small" variant="contained" onClick={() => onReorder(product)} sx={{ backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}>Reorder</MuiButton>}
+            </Stack>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+function ProductDetail({
+  product,
+  onBack,
+  onOpenRfq,
+  onReorder,
+}: {
+  product: WorkspaceProduct;
+  onBack: () => void;
+  onOpenRfq: (id: string | null) => void;
+  onReorder: () => void;
+}) {
+  const finalized = product.order_status === "completed";
+  return (
+    <Stack spacing={2} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}>
+      <MuiButton variant="text" onClick={onBack} sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}>← Back to products</MuiButton>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 320px" }, border: "1px solid #e7ebf0", borderRadius: "14px", overflow: "hidden", backgroundColor: "#fff" }}>
+        <Box sx={{ p: { xs: 2, sm: 3 } }}>
+          <Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Sourced product</Typography>
+          <Typography variant="h1" sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 28, sm: 36 }, overflowWrap: "anywhere" }}>{product.name}</Typography>
+          <Typography sx={{ mt: 0.5, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{product.sku} · {product.supplier}</Typography>
+          <Typography sx={{ mt: 3, mb: 1.25, fontSize: 16, fontWeight: 700, color: "#3f4c5e" }}>Saved order snapshot</Typography>
+          <Box sx={{ borderTop: "1px solid #eef0f3" }}>
+            {[...["Supplier", product.supplier], ["Unit cost", invoiceMoney(Math.round(product.unit_price * 100))], ["Units ordered", `${product.units.toLocaleString()} units`], ["Order", product.order_no], ["RFQ", product.rfq_case_id || "Not linked"]].map(([label, value]) => (
+              <Box key={label} sx={{ display: "grid", gridTemplateColumns: { xs: "110px 1fr", sm: "180px 1fr" }, gap: 1.5, py: 1.25, borderBottom: "1px solid #eef0f3" }}>
+                <Typography sx={{ color: "#8d98a5", fontSize: 13 }}>{label}</Typography>
+                <Typography sx={{ color: "#596678", fontSize: 13, overflowWrap: "anywhere" }}>{value}</Typography>
+              </Box>
+            ))}
+          </Box>
+          <Typography sx={{ mt: 3, mb: 1.25, fontSize: 16, fontWeight: 700, color: "#3f4c5e" }}>Order history for this product</Typography>
+          <Box sx={{ border: "1px solid #e7ebf0", borderRadius: "10px", overflow: "hidden" }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 100px 140px", gap: 1, px: 1.5, py: 1.1, color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}><span>Order</span><span>Units</span><span>Status</span></Box>
+            <Box sx={{ display: "grid", gridTemplateColumns: "1fr 100px 140px", gap: 1, px: 1.5, py: 1.35, borderTop: "1px solid #eef0f3", alignItems: "center" }}><Typography sx={{ fontSize: 13, color: "#596678" }}>{product.order_no}</Typography><Typography sx={{ fontSize: 13, color: "#596678" }}>{product.units.toLocaleString()}</Typography><Chip size="small" label={productStageLabel(product.order_status)} sx={{ justifySelf: "start", color: finalized ? "#4b7657" : "#8b6e35", backgroundColor: finalized ? "#eef4ee" : "#fbf6e9" }} /></Box>
+          </Box>
+        </Box>
+        <Box sx={{ p: { xs: 2, sm: 3 }, borderTop: { xs: "1px solid #eef0f3", lg: 0 }, borderLeft: { lg: "1px solid #eef0f3" }, backgroundColor: "#fcfdfc" }}>
+          <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Current stage</Typography>
+          <Box sx={{ mt: 1.25, p: 1.75, border: "1px solid #dce9de", borderRadius: "12px", backgroundColor: "#f7fbf7" }}>
+            <Typography sx={{ color: "#33513c", fontSize: 15, fontWeight: 700 }}>{productStageLabel(product.order_status)}</Typography>
+            <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13, lineHeight: 1.55 }}>{finalized ? "This sourced product is in your finalized library." : "Atelix is coordinating this order against the saved RFQ and supplier record."}</Typography>
+          </Box>
+          {product.rfq_case_id && <MuiButton fullWidth variant="contained" onClick={() => onOpenRfq(product.rfq_case_id)} sx={{ mt: 1.75 }}>Open request</MuiButton>}
+          <Divider sx={{ my: 2.5 }} />
+          <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Also from here</Typography>
+          <MuiButton fullWidth variant="outlined" onClick={onReorder} sx={{ mt: 1.25, borderColor: "#e1e6eb", color: "#4a5667" }}>Reorder this spec</MuiButton>
+          <Typography sx={{ mt: 1.1, color: "#9aa4b0", fontSize: 12.5, lineHeight: 1.55 }}>Starts a fresh RFQ pre-filled from this saved spec. Nothing is sent to a supplier until Atelix reviews it.</Typography>
+        </Box>
+      </Box>
+    </Stack>
+  );
+}
+
+function WorkspaceProducts({
+  path,
+  onOpenRfq,
+  onReorder,
+}: {
+  path: string;
+  onOpenRfq: (id: string | null) => void;
+  onReorder: (product: WorkspaceProduct) => void;
+}) {
+  const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
+  const [products, setProducts] = useState<WorkspaceProduct[]>([]);
+  const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
+  const [query, setQuery] = useState("");
   const [supplier, setSupplier] = useState("all");
-  const [sort, setSort] = useState("last_ordered");
-  const load = useCallback(async () => { setLoading(true); setError(""); try { setProducts(await listWorkspaceProducts()); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load sourced products."); } finally { setLoading(false); } }, []);
+  const [status, setStatus] = useState<"all" | "in_progress" | "finalized">("all");
+  const [sort, setSort] = useState<"last_ordered" | "name">("last_ordered");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    setLoading(true); setError("");
+    try { setProducts(await listWorkspaceProducts()); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load sourced products."); }
+    finally { setLoading(false); }
+  }, []);
   useEffect(() => { void load(); }, [load]);
-  useEffect(() => { let active = true; if (!detailId) { setDetail(null); return; } void getWorkspaceProduct(detailId).then((next) => { if (active) setDetail(next); }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load this product."); }); return () => { active = false; }; }, [detailId]);
-  const suppliers = Array.from(new Set(products.map((product) => product.supplier).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-  const matchingProducts = products.filter((product) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = !query || [product.name, product.supplier, product.sku, product.order_no].some((value) => value.toLowerCase().includes(query));
-    return matchesSearch && (filter === "all" || productGroup(product) === filter) && (supplier === "all" || product.supplier === supplier);
-  }).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : sort === "unit_cost" ? a.unit_price - b.unit_price : (new Date(b.placed_at || 0).valueOf() - new Date(a.placed_at || 0).valueOf()));
-  const inProgress = matchingProducts.filter((product) => productGroup(product) === "in_progress");
-  const finalized = matchingProducts.filter((product) => productGroup(product) === "finalized");
-  function moveFilter(event: KeyboardEvent<HTMLButtonElement>, index: number) {
-    const direction = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (!direction) return;
-    event.preventDefault();
-    const tabs: ProductFilter[] = ["all", "in_progress", "finalized"];
-    setFilter(tabs[(index + direction + tabs.length) % tabs.length]);
-  }
-  if (detailId && !detail && (loading || !error)) return <ProductLoading />;
-  if (detailId && detail) return <ProductDetail detail={detail} onOpenRfq={onOpenRfq} onReorder={onReorder} />;
-  return <Stack spacing={2.75} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}><Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: .6, color: "#202936", fontSize: { xs: 32, sm: 42 }, fontWeight: 500 }}>Products</Typography><Typography sx={{ mt: .75, maxWidth: 650, color: "#758091", fontSize: 15, lineHeight: 1.55 }}>Products you’ve sourced through Atelix — not a catalogue to browse. Each one stays tied to its RFQ history.</Typography></Box><Box component="form" role="search" onSubmit={(event) => event.preventDefault()} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(260px,1.35fr) minmax(160px,.8fr) minmax(160px,.8fr)" }, gap: 1.25 }}><Box sx={{ position: "relative", minWidth: 0 }}><Search aria-hidden="true" sx={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#8d98a5", fontSize: 20 }} /><Box component="input" type="search" value={search} onChange={(event: ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="Search by product, supplier or order" aria-label="Search by product, supplier or order" sx={{ width: "100%", height: 54, pl: 5, pr: 1.5, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#29323e", font: "inherit", fontSize: 14, outline: 0, "&:focus": { borderColor: "#93b59a", boxShadow: "0 0 0 3px rgba(111,174,134,.16)" }, "&::placeholder": { color: "#8994a2", opacity: 1 } }} /></Box><Box component="select" value={supplier} onChange={(event) => setSupplier(event.target.value)} aria-label="Filter products by supplier" sx={{ width: "100%", height: 54, px: 1.75, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#596676", font: "inherit", fontSize: 14, outline: 0, "&:focus": { borderColor: "#93b59a", boxShadow: "0 0 0 3px rgba(111,174,134,.16)" } }}><option value="all">All suppliers</option>{suppliers.map((name) => <option key={name} value={name}>{name}</option>)}</Box><Box component="select" value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort products" sx={{ width: "100%", height: 54, px: 1.75, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#596676", font: "inherit", fontSize: 14, outline: 0, "&:focus": { borderColor: "#93b59a", boxShadow: "0 0 0 3px rgba(111,174,134,.16)" } }}><option value="last_ordered">Sort: Last ordered</option><option value="name">Sort: Product name</option><option value="unit_cost">Sort: Unit cost</option></Box></Box>{error && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void load()}>Retry</MuiButton>}>{error}</Alert>}{loading ? <ProductLoading /> : !matchingProducts.length ? <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{products.length ? "No products match these filters" : "No sourced products yet"}</Typography><Typography sx={{ mt: .75, color: "#758091", fontSize: 13 }}>{products.length ? "Try a different search or filter." : "Products appear here after an Atelix order creates an immutable line snapshot."}</Typography></RoundedSurface> : <><Box role="tablist" aria-label="Product status" sx={{ display: "flex", gap: .5, overflowX: "auto", borderBottom: "1px solid #e7ebf0" }}>{([ ["all", `All ${matchingProducts.length}`], ["in_progress", `In progress ${inProgress.length}`], ["finalized", `Finalized ${finalized.length}`] ] as Array<[ProductFilter, string]>).map(([value, label], index) => <Box key={value} component="button" role="tab" aria-selected={filter === value} tabIndex={filter === value ? 0 : -1} onClick={() => setFilter(value)} onKeyDown={(event: KeyboardEvent<HTMLButtonElement>) => moveFilter(event, index)} sx={{ flex: "0 0 auto", minHeight: 42, px: 1.5, border: 0, borderBottom: filter === value ? "2px solid #6b9677" : "2px solid transparent", background: "transparent", color: filter === value ? "#3f6549" : "#7c8795", font: "inherit", fontSize: 13, fontWeight: filter === value ? 700 : 500, cursor: "pointer", "&:focus-visible": { outline: "3px solid rgba(75,118,87,.35)", outlineOffset: 2 } }}>{label}</Box>)}</Box>{inProgress.length > 0 && <ProductTable title="In progress" products={inProgress} onOpen={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} />}{finalized.length > 0 && <ProductTable title="Finalized library" products={finalized} onOpen={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} />}</>}</Stack>;
+  useEffect(() => {
+    if (!detailId) { setDetail(null); return; }
+    let active = true;
+    void getWorkspaceProduct(decodeURIComponent(detailId)).then((next) => { if (active) setDetail(next); }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load this product."); });
+    return () => { active = false; };
+  }, [detailId]);
+  if (detailId && detail) return <ProductDetail product={detail} onBack={() => navigate("/dashboard/products")} onOpenRfq={onOpenRfq} onReorder={() => onReorder(detail)} />;
+  const suppliers = Array.from(new Set(products.map((product) => product.supplier))).sort();
+  const filtered = products.filter((product) => {
+    const haystack = `${product.name} ${product.supplier} ${product.sku} ${product.rfq_case_id || ""}`.toLowerCase();
+    const matchesStatus = status === "all" || (status === "finalized" ? product.order_status === "completed" : product.order_status !== "completed");
+    return matchesStatus && (supplier === "all" || product.supplier === supplier) && haystack.includes(query.toLowerCase());
+  }).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : (b.placed_at || "").localeCompare(a.placed_at || ""));
+  const inProgress = filtered.filter((product) => product.order_status !== "completed");
+  const finalized = filtered.filter((product) => product.order_status === "completed");
+  const controlSx = { border: "1px solid #e1e6eb", borderRadius: "10px", backgroundColor: "#fff", color: "#596678", minHeight: 44, px: 1.5, font: "inherit", fontSize: 13, outline: "none" };
+  return (
+    <Stack spacing={2.5} sx={{ width: "100%", maxWidth: 1160, mx: "auto" }}>
+      <Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}>Products</Typography><Typography sx={{ mt: 0.75, maxWidth: 680, color: "#758091", fontSize: 14, lineHeight: 1.55 }}>Products you’ve sourced through Atelix — not a catalogue to browse. Each one is tied to its own RFQ history.</Typography></Box>
+      {error && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void load()}>Retry</MuiButton>}>{error}</Alert>}
+      <Stack direction="row" spacing={1.5} sx={{ flexDirection: { xs: "column", lg: "row" }, alignItems: { lg: "center" } }}>
+        <Box component="label" sx={{ ...controlSx, display: "flex", alignItems: "center", gap: 1, flex: 1, minWidth: 220 }}><Search sx={{ color: "#9ba4b0", fontSize: 20 }} /><Box component="input" value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="Search by product, supplier or RFQ" sx={{ border: 0, outline: 0, flex: 1, minWidth: 0, color: "#202936", font: "inherit", fontSize: 13, background: "transparent" }} /></Box>
+        <Box sx={{ ...controlSx, display: "flex", alignItems: "center", gap: 0.5, p: 0.5 }} role="tablist" aria-label="Filter products by status">{([["all", `All ${products.length}`], ["in_progress", `In progress ${products.filter((product) => product.order_status !== "completed").length}`], ["finalized", `Finalized ${products.filter((product) => product.order_status === "completed").length}`]] as const).map(([value, label]) => <MuiButton key={value} size="small" role="tab" aria-selected={status === value} onClick={() => setStatus(value)} sx={{ minHeight: 34, px: 1.25, color: status === value ? "#33513c" : "#758091", backgroundColor: status === value ? "#eef4ee" : "transparent", "&:hover": { backgroundColor: "#f2f6f2" } }}>{label}</MuiButton>)}</Box>
+        <Box component="select" value={supplier} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSupplier(event.target.value)} aria-label="Filter by supplier" sx={{ ...controlSx, minWidth: 170 }}><option value="all">All suppliers</option>{suppliers.map((item) => <option key={item} value={item}>{item}</option>)}</Box>
+        <Box component="select" value={sort} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSort(event.target.value as "last_ordered" | "name")} aria-label="Sort products" sx={{ ...controlSx, minWidth: 170 }}><option value="last_ordered">Sort: Last ordered</option><option value="name">Sort: Product name</option></Box>
+      </Stack>
+      {loading ? <InvoiceSkeletonRows /> : filtered.length ? <Stack spacing={3}><ProductTable title="In progress" products={inProgress} finalized={false} onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /><ProductTable title="Finalized library" products={finalized} finalized onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /></Stack> : <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{products.length ? "No products match these filters" : "No sourced products yet"}</Typography><Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>{products.length ? "Try a different search or filter." : "Products appear here after an Atelix order creates an immutable line snapshot."}</Typography></RoundedSurface>}
+      {!loading && Boolean(products.length) && <Stack direction="row" alignItems="center" spacing={0.6}><LockOutlined sx={{ fontSize: 14, color: "#9ba1aa" }} /><Typography sx={{ color: "#9ba1aa", fontSize: 11.5 }}>Reorder opens a new RFQ from this product’s saved spec — nothing is sent to a supplier until you approve it.</Typography></Stack>}
+    </Stack>
+  );
 }
 
-function ProductLoading() {
-  return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}><Skeleton width="180px" height={48} /><RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Stack spacing={1.5}><Skeleton width="35%" height={28} /><Skeleton width="62%" /><Skeleton width="100%" height={56} /><Skeleton width="100%" height={56} /></Stack></RoundedSurface></Stack>;
-}
-
-function ProductDetail({ detail, onOpenRfq, onReorder }: { detail: WorkspaceProduct; onOpenRfq: (id: string | null) => void; onReorder: (product: WorkspaceProduct) => void }) {
-  const stage = productAction(detail);
-  const tone = productStatusTone(detail.order_status);
-  function stageAction() {
-    if (stage.kind === "invoice") navigate("/dashboard/invoices");
-    if (stage.kind === "rfq") onOpenRfq(detail.rfq_case_id);
-  }
-  return <Stack spacing={0} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}><MuiButton variant="text" startIcon={<ChevronLeft />} onClick={() => navigate("/dashboard/products")} sx={{ alignSelf: "flex-start", mb: 1.5, px: 0, color: "#697586", "&:hover": { backgroundColor: "transparent", color: "#29323e" } }}>Back to products</MuiButton><Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "minmax(0,1.65fr) minmax(300px,.78fr)" }, border: "1px solid #e3e8ed", borderRadius: 2.5, backgroundColor: "#fff", overflow: "hidden" }}><Box component="article" sx={{ minWidth: 0, p: { xs: 2, sm: 3.5 } }}><Stack spacing={2.5}><Box><Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={{ gap: 1.5, flexWrap: "wrap" }}><Box sx={{ minWidth: 0 }}><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Product</Typography><Typography variant="h1" sx={{ mt: .65, color: "#202936", fontSize: { xs: 30, sm: 40 }, fontWeight: 500, overflowWrap: "anywhere" }}>{detail.name}</Typography><Typography sx={{ mt: .65, color: "#8b96a4", fontFamily: "'DM Mono', monospace", fontSize: 12, overflowWrap: "anywhere" }}>{detail.sku} · {detail.supplier}</Typography></Box><Box sx={{ display: "inline-flex", alignItems: "center", gap: .7, px: 1.25, py: .7, borderRadius: 999, color: tone.color, backgroundColor: tone.background, fontSize: 12, fontWeight: 700 }}><Box component="span" aria-hidden="true" sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: tone.dot }} />{productStatusLabel(detail.order_status)}</Box></Stack></Box><Divider /><Box component="section" aria-labelledby="product-specification-title"><Typography id="product-specification-title" sx={{ mb: 1, color: "#3f4c5e", fontSize: 15, fontWeight: 700 }}>Specification</Typography><Box component="dl" sx={{ m: 0 }}>{[["Product", detail.name], ["Supplier", detail.supplier || "Not recorded"], ["SKU", detail.sku], ["Unit cost", invoiceMoney(Math.round(detail.unit_price * 100))], ["Units", `${detail.units} units`], ["Order", detail.order_no], ["RFQ", detail.rfq_case_id ? "Linked RFQ" : "No linked RFQ"]].map(([label, value]) => <Box key={label} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(96px,.55fr) minmax(0,1.45fr)", sm: "220px minmax(0,1fr)" }, gap: 1.5, py: 1.2, borderBottom: "1px solid #edf0f2" }}><Typography component="dt" sx={{ color: "#929daa", fontSize: 13 }}>{label}</Typography><Typography component="dd" sx={{ m: 0, color: "#596676", fontSize: 14, overflowWrap: "anywhere" }}>{value}</Typography></Box>)}</Box></Box><Box component="section" aria-labelledby="product-history-title"><Typography id="product-history-title" sx={{ mb: 1, color: "#3f4c5e", fontSize: 15, fontWeight: 700 }}>Order history for this product</Typography><Box sx={{ overflow: "hidden", border: "1px solid #e3e8ed", borderRadius: 2 }}><Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 110px minmax(130px,.6fr)", gap: 1.5, px: 1.5, py: 1, color: "#9ba3ad", fontSize: 10.5, fontWeight: 700, letterSpacing: ".07em", textTransform: "uppercase" }}><span>Order</span><span>Units</span><span>Status</span></Box><Box sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 110px minmax(130px,.6fr)", gap: 1.5, px: 1.5, py: 1.35, borderTop: "1px solid #eceff2" }}><Typography sx={{ color: "#687587", fontSize: 13, overflowWrap: "anywhere" }}>{detail.order_no} · current snapshot</Typography><Typography sx={{ color: "#687587", fontSize: 13 }}>{detail.units} units</Typography><ProductStatus status={detail.order_status} /></Box></Box><Typography sx={{ mt: 1, color: "#a0a7b0", fontSize: 12 }}>This product is shown from an immutable order snapshot returned by your workspace.</Typography></Box></Stack></Box><Box component="aside" aria-label="Product stage actions" sx={{ minWidth: 0, p: { xs: 2, sm: 3.5 }, borderTop: { xs: "1px solid #e3e8ed", md: 0 }, borderLeft: { md: "1px solid #e3e8ed" }, backgroundColor: "#fcfdfc" }}><Stack spacing={2}><Typography sx={{ color: "#929daa", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Current stage</Typography><Box sx={{ p: 2, border: `1px solid ${tone.dot}55`, borderRadius: 2, backgroundColor: tone.background }}><Typography sx={{ color: tone.color, fontSize: 14, fontWeight: 700 }}>{productStatusLabel(detail.order_status)}</Typography><Typography sx={{ mt: .65, color: "#7a6a47", fontSize: 13, lineHeight: 1.5 }}>{detail.order_status === "awaiting_payment" ? "The order is waiting for invoice payment before the next handoff." : detail.order_status === "fulfilling" ? "Production updates remain tied to the reviewed order record." : detail.order_status === "completed" ? "This order is complete. The saved specification can be used for a fresh RFQ." : "The next stage is controlled by the reviewed Atelix order record."}</Typography></Box>{stage.kind !== "none" && <MuiButton fullWidth variant="contained" onClick={stageAction} sx={{ backgroundColor: "#5b8064", "&:hover": { backgroundColor: "#4d7056" } }}>{stage.label}</MuiButton>}<Divider sx={{ my: .5 }} /><Typography sx={{ color: "#929daa", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Also from here</Typography><MuiButton fullWidth variant="outlined" onClick={() => onReorder(detail)} sx={{ minHeight: 46, borderColor: "#dfe5ea", color: "#596676", backgroundColor: "#fff", "&:hover": { borderColor: "#b7c2cd", backgroundColor: "#fff" } }}>Reorder this spec</MuiButton><Typography sx={{ color: "#a0a7b0", fontSize: 12, lineHeight: 1.5 }}>Starts a fresh RFQ pre-filled from this saved order snapshot. Nothing is sent to a supplier until you approve it.</Typography></Stack></Box></Box></Stack>;
-}
-
-function PlaceholderView({ view }: { view: Exclude<DashboardView, "dashboard" | "new" | "requests" | "products" | "invoices"> }) {
+function PlaceholderView({
+  view,
+}: {
+  view: Exclude<
+    DashboardView,
+    "dashboard" | "new" | "requests" | "products" | "invoices"
+  >;
+}) {
   const content = {
-    products: ["Products", "Your sourced products will appear here once a product request is ready."],
-    favourites: ["Favourites", "Save product references here when you find something worth returning to."],
-    messages: ["Messages", "Messages with your sourcing team will appear here when a request is in progress."],
-    settings: ["Settings", "Manage your profile and workspace preferences here. Settings are local to this demo workspace."],
-    library: ["Library", "Keep reference files, supplier notes, and sourcing materials close to your RFQ history."],
+    products: [
+      "Products",
+      "Your sourced products will appear here once a product request is ready.",
+    ],
+    favourites: [
+      "Favourites",
+      "Save product references here when you find something worth returning to.",
+    ],
+    messages: [
+      "Messages",
+      "Messages with your sourcing team will appear here when a request is in progress.",
+    ],
+    settings: [
+      "Settings",
+      "Manage your profile and workspace preferences here. Settings are local to this demo workspace.",
+    ],
+    library: [
+      "Library",
+      "Keep reference files, supplier notes, and sourcing materials close to your RFQ history.",
+    ],
   }[view];
   const isLibrary = view === "library";
-  return <Box sx={{ minHeight: 520, width: "100%", maxWidth: 900, mx: "auto" }}><Box sx={{ mb: 4 }}><Typography sx={{ color: "#8d949e", fontSize: 12, fontWeight: 700, letterSpacing: ".04em" }}>{isLibrary ? "Your workspace" : "Account"}</Typography><Typography variant="h1" sx={{ mt: .75, color: "#20242b", fontSize: { xs: 32, sm: 42 }, fontWeight: 500 }}>{content[0]}</Typography><Typography sx={{ maxWidth: 540, mt: 1, color: "#747b86", fontSize: 15, lineHeight: 1.6 }}>{content[1]}</Typography></Box>{isLibrary ? <Box sx={{ display: "grid", gap: 1.25 }}><RoundedSurface sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 2.25, border: "1px solid #ececef", borderRadius: 3, backgroundColor: "#fff" }}><FolderOpen sx={{ color: "#6fae86" }} /><Box><Typography sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}>Reference library</Typography><Typography sx={{ mt: .35, color: "#858c96", fontSize: 12 }}>Files attached to saved RFQs will be organized here.</Typography></Box></RoundedSurface><RoundedSurface sx={{ display: "flex", alignItems: "center", gap: 1.5, p: 2.25, border: "1px solid #ececef", borderRadius: 3, backgroundColor: "#fff" }}><Search sx={{ color: "#8b929c" }} /><Box><Typography sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}>Search your sourcing materials</Typography><Typography sx={{ mt: .35, color: "#858c96", fontSize: 12 }}>Search becomes available as your workspace fills with references.</Typography></Box></RoundedSurface></Box> : <RoundedSurface sx={{ maxWidth: 640, p: { xs: 2.5, sm: 3 }, border: "1px solid #ececef", borderRadius: 3, backgroundColor: "#fff" }}><Stack spacing={1.75}><Box><Typography sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}>Profile</Typography><Typography sx={{ mt: .45, color: "#818894", fontSize: 13 }}>Atelix Review · Brand owner</Typography></Box><Divider sx={{ borderColor: "#f0f0f2" }} /><Box><Typography sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}>Workspace appearance</Typography><Typography sx={{ mt: .45, color: "#818894", fontSize: 13 }}>Light mode is active for this sourcing workspace.</Typography></Box></Stack></RoundedSurface>}</Box>;
+  return (
+    <Box sx={{ minHeight: 520, width: "100%", maxWidth: 900, mx: "auto" }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography
+          sx={{
+            color: "#8d949e",
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: ".04em",
+          }}
+        >
+          {isLibrary ? "Your workspace" : "Account"}
+        </Typography>
+        <Typography
+          variant="h1"
+          sx={{
+            mt: 0.75,
+            color: "#20242b",
+            fontSize: { xs: 32, sm: 42 },
+            fontWeight: 500,
+          }}
+        >
+          {content[0]}
+        </Typography>
+        <Typography
+          sx={{
+            maxWidth: 540,
+            mt: 1,
+            color: "#747b86",
+            fontSize: 15,
+            lineHeight: 1.6,
+          }}
+        >
+          {content[1]}
+        </Typography>
+      </Box>
+      {isLibrary ? (
+        <Box sx={{ display: "grid", gap: 1.25 }}>
+          <RoundedSurface
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              p: 2.25,
+              border: "1px solid #ececef",
+              borderRadius: "14px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <FolderOpen sx={{ color: "#6fae86" }} />
+            <Box>
+              <Typography
+                sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}
+              >
+                Reference library
+              </Typography>
+              <Typography sx={{ mt: 0.35, color: "#858c96", fontSize: 12 }}>
+                Files attached to saved RFQs will be organized here.
+              </Typography>
+            </Box>
+          </RoundedSurface>
+          <RoundedSurface
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              p: 2.25,
+              border: "1px solid #ececef",
+              borderRadius: "14px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <Search sx={{ color: "#8b929c" }} />
+            <Box>
+              <Typography
+                sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}
+              >
+                Search your sourcing materials
+              </Typography>
+              <Typography sx={{ mt: 0.35, color: "#858c96", fontSize: 12 }}>
+                Search becomes available as your workspace fills with
+                references.
+              </Typography>
+            </Box>
+          </RoundedSurface>
+        </Box>
+      ) : (
+        <RoundedSurface
+          sx={{
+            maxWidth: 640,
+            p: { xs: 2.5, sm: 3 },
+            border: "1px solid #ececef",
+            borderRadius: "14px",
+            backgroundColor: "#fff",
+          }}
+        >
+          <Stack spacing={1.75}>
+            <Box>
+              <Typography
+                sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}
+              >
+                Profile
+              </Typography>
+              <Typography sx={{ mt: 0.45, color: "#818894", fontSize: 13 }}>
+                Atelix Review · Brand owner
+              </Typography>
+            </Box>
+            <Divider sx={{ borderColor: "#f0f0f2" }} />
+            <Box>
+              <Typography
+                sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}
+              >
+                Workspace appearance
+              </Typography>
+              <Typography sx={{ mt: 0.45, color: "#818894", fontSize: 13 }}>
+                Light mode is active for this sourcing workspace.
+              </Typography>
+            </Box>
+          </Stack>
+        </RoundedSurface>
+      )}
+    </Box>
+  );
 }
 
-function DashboardHome({ isNew, onStart, onMessage }: { isNew: boolean; onStart: (brief: string, files: UploadFile[]) => void; onMessage: (message: string) => void }) {
-  const initialBrief = isNew ? new URLSearchParams(window.location.search).get("prefill") || "" : "";
-  return <Stack spacing={2.5} sx={{ minWidth: 0, width: "100%", maxWidth: 820, minHeight: { xs: "calc(100vh - 150px)", md: "calc(100vh - 120px)" }, rowGap: { xs: 2.25, md: 2.5 }, mx: "auto", justifyContent: "center", borderRadius: 6, background: "radial-gradient(circle at 50% 48%, rgba(190,219,249,.72), rgba(251,251,252,0) 58%)" }}><Box sx={{ minWidth: 0, width: "100%", maxWidth: 640, mx: "auto", boxSizing: "border-box", textAlign: "center" }}><Typography variant="h1" sx={{ display: "block", width: "100%", maxWidth: "100%", minWidth: 0, m: 0, whiteSpace: "normal", overflowWrap: "anywhere", wordBreak: "break-word", fontFamily: "inherit", fontSize: { xs: 32, sm: 40, md: 44 }, lineHeight: 1.08, color: "#202936" }}>{isNew ? "What product can we source?" : "Ready when you are"}</Typography><Typography sx={{ display: "block", width: "100%", maxWidth: "100%", minWidth: 0, mt: 1.25, color: "#7c8795", fontSize: { xs: 14, sm: 15 }, lineHeight: 1.5 }}>Our AI sourcing expert will help you find the best apparel manufacturers</Typography></Box><Box sx={{ width: "100%", maxWidth: 660, mx: "auto" }}><CleanPromptComposer initialBrief={initialBrief} onStart={onStart} onMessage={onMessage} /></Box></Stack>;
+function DashboardHome({
+  isNew,
+  onStart,
+  onMessage,
+}: {
+  isNew: boolean;
+  onStart: (brief: string, files: UploadFile[]) => void;
+  onMessage: (message: string) => void;
+}) {
+  return (
+    <Stack
+      spacing={2.5}
+      sx={{
+        minWidth: 0,
+        width: "100%",
+        maxWidth: 820,
+        minHeight: { xs: "calc(100vh - 150px)", md: "calc(100vh - 120px)" },
+        rowGap: { xs: 2.25, md: 2.5 },
+        mx: "auto",
+        justifyContent: "center",
+        borderRadius: 6,
+        background:
+          "radial-gradient(circle at 50% 48%, rgba(190,219,249,.72), rgba(251,251,252,0) 58%)",
+      }}
+    >
+      <Box
+        sx={{
+          minWidth: 0,
+          width: "100%",
+          maxWidth: 640,
+          mx: "auto",
+          boxSizing: "border-box",
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          variant="h1"
+          sx={{
+            display: "block",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            m: 0,
+            whiteSpace: "normal",
+            overflowWrap: "anywhere",
+            wordBreak: "break-word",
+            fontFamily: "inherit",
+            fontSize: { xs: 32, sm: 40, md: 44 },
+            lineHeight: 1.08,
+            color: "#202936",
+          }}
+        >
+          {isNew ? "What product can we source?" : "Ready when you are"}
+        </Typography>
+        <Typography
+          sx={{
+            display: "block",
+            width: "100%",
+            maxWidth: "100%",
+            minWidth: 0,
+            mt: 1.25,
+            color: "#7c8795",
+            fontSize: { xs: 14, sm: 15 },
+            lineHeight: 1.5,
+          }}
+        >
+          Our AI sourcing expert will help you find the best apparel
+          manufacturers
+        </Typography>
+      </Box>
+      <Box sx={{ width: "100%", maxWidth: 660, mx: "auto" }}>
+        <CleanPromptComposer onStart={onStart} onMessage={onMessage} />
+      </Box>
+    </Stack>
+  );
 }
 
 function invoiceMoney(cents: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(cents / 100);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
 }
 function invoiceDate(value: string | null) {
   if (!value) return "No due date";
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.valueOf()) ? "No due date" : date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  return Number.isNaN(date.valueOf())
+    ? "No due date"
+    : date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
 }
 function invoiceStatusLabel(invoice: WorkspaceInvoice) {
   if (invoice.effective_status === "overdue") return "Overdue";
   if (invoice.status === "sent") return "Due";
   return invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
 }
-function invoiceStatusColor(invoice: WorkspaceInvoice): "success" | "warning" | "error" | "default" {
+function invoiceStatusColor(
+  invoice: WorkspaceInvoice,
+): "success" | "warning" | "error" | "default" {
   if (invoice.effective_status === "overdue") return "error";
   if (invoice.status === "sent") return "warning";
   if (invoice.status === "paid") return "success";
   return "default";
 }
-function InvoiceStatusMark({ invoice }: { invoice: WorkspaceInvoice }) {
-  const color = invoice.effective_status === "paid" ? "#5b8064" : invoice.effective_status === "overdue" ? "#a06f35" : invoice.status === "sent" ? "#9d5d4e" : "#687587";
-  return <Box sx={{ display: "inline-flex", alignItems: "center", gap: .6, color, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" }}><Box component="span" aria-hidden="true" sx={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: color }} />{invoiceStatusLabel(invoice)}</Box>;
-}
 type PaymentReturnState = "success" | "cancelled" | "pending" | "failed";
 function paymentReturnState(): PaymentReturnState | null {
   const params = new URLSearchParams(window.location.search);
-  const value = params.get("stripe_return") || params.get("payment") || params.get("checkout");
-  return value === "success" || value === "cancelled" || value === "pending" || value === "failed" ? value : null;
+  const value =
+    params.get("stripe_return") ||
+    params.get("payment") ||
+    params.get("checkout");
+  return value === "success" ||
+    value === "cancelled" ||
+    value === "pending" ||
+    value === "failed"
+    ? value
+    : null;
 }
-function paymentReturnSeverity(kind: PaymentReturnState | null): "success" | "info" | "warning" {
-  return kind === "success" ? "success" : kind === "cancelled" ? "info" : "warning";
+function paymentReturnSeverity(
+  kind: PaymentReturnState | null,
+): "success" | "info" | "warning" {
+  return kind === "success"
+    ? "success"
+    : kind === "cancelled"
+      ? "info"
+      : "warning";
 }
 function InvoiceSkeletonRows() {
-  return <Box aria-label="Loading invoices" role="status"><Stack spacing={1.25}>{[1, 2, 3].map((row) => <RoundedSurface key={row} sx={{ p: { xs: 1.5, sm: 2 } }}><Stack direction="row" spacing={1.5} alignItems="center"><Skeleton variant="circular" width={24} height={24} /><Box sx={{ flex: 1, minWidth: 0 }}><Skeleton width="42%" /><Skeleton width="68%" /></Box><Skeleton width={82} /></Stack></RoundedSurface>)}</Stack></Box>;
+  return (
+    <Box aria-label="Loading invoices" role="status">
+      <Stack spacing={1.25}>
+        {[1, 2, 3].map((row) => (
+          <RoundedSurface key={row} sx={{ p: { xs: 1.5, sm: 2 } }}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Skeleton variant="circular" width={24} height={24} />
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Skeleton width="42%" />
+                <Skeleton width="68%" />
+              </Box>
+              <Skeleton width={82} />
+            </Stack>
+          </RoundedSurface>
+        ))}
+      </Stack>
+    </Box>
+  );
 }
 function WorkspaceInvoices({ path }: { path: string }) {
   const detailId = path.match(/^\/dashboard\/invoices\/([^/]+)$/)?.[1] || "";
@@ -417,9 +4245,6 @@ function WorkspaceInvoices({ path }: { path: string }) {
   const [checkoutError, setCheckoutError] = useState("");
   const [returnMessage, setReturnMessage] = useState("");
   const [returnKind, setReturnKind] = useState<PaymentReturnState | null>(null);
-  const [invoiceTab, setInvoiceTab] = useState<"all" | "unpaid" | "paid" | "overdue">("all");
-  const [search, setSearch] = useState("");
-  const [dateFilter, setDateFilter] = useState("");
   const returnState = paymentReturnState();
 
   const loadInvoices = useCallback(async () => {
@@ -428,130 +4253,1024 @@ function WorkspaceInvoices({ path }: { path: string }) {
     try {
       const rows = await listWorkspaceInvoices();
       setInvoices(rows);
-      setSelectedIds((current) => new Set([...current].filter((id) => rows.some((row) => row.id === id && row.status === "sent"))));
+      setSelectedIds(
+        (current) =>
+          new Set(
+            [...current].filter((id) =>
+              rows.some((row) => row.id === id && row.status === "sent"),
+            ),
+          ),
+      );
     } catch (cause) {
-      setListError(cause instanceof Error ? cause.message : "Could not load your invoices.");
+      setListError(
+        cause instanceof Error
+          ? cause.message
+          : "Could not load your invoices.",
+      );
     } finally {
       setListLoading(false);
     }
   }, []);
   const loadDetail = useCallback(async (id: string) => {
-    if (!id) { setDetail(null); setDetailError(""); return; }
+    if (!id) {
+      setDetail(null);
+      setDetailError("");
+      return;
+    }
     setDetailLoading(true);
     setDetailError("");
     setDetail(null);
     try {
       setDetail(await getWorkspaceInvoiceDetail(id));
     } catch (cause) {
-      setDetailError(cause instanceof Error ? cause.message : "Could not load this invoice.");
+      setDetailError(
+        cause instanceof Error ? cause.message : "Could not load this invoice.",
+      );
     } finally {
       setDetailLoading(false);
     }
   }, []);
-  useEffect(() => { void loadInvoices(); }, [loadInvoices]);
-  useEffect(() => { void loadDetail(detailId); }, [detailId, loadDetail]);
+  useEffect(() => {
+    void loadInvoices();
+  }, [loadInvoices]);
+  useEffect(() => {
+    void loadDetail(detailId);
+  }, [detailId, loadDetail]);
   useEffect(() => {
     if (!returnState) return;
-    const labels: Record<string, string> = { success: "Payment returned successfully. We’re checking the latest invoice status.", cancelled: "Payment was cancelled. Your invoices were not changed.", pending: "Payment is still processing. Invoice status will update after confirmation.", failed: "Payment could not be completed. Your invoices were not changed." };
+    const labels: Record<string, string> = {
+      success:
+        "Payment returned successfully. We’re checking the latest invoice status.",
+      cancelled: "Payment was cancelled. Your invoices were not changed.",
+      pending:
+        "Payment is still processing. Invoice status will update after confirmation.",
+      failed: "Payment could not be completed. Your invoices were not changed.",
+    };
     setReturnMessage(labels[returnState]);
     setReturnKind(returnState);
     void (async () => {
       await loadInvoices();
       if (detailId) await loadDetail(detailId);
       const url = new URL(window.location.href);
-      ["stripe_return", "payment", "checkout"].forEach((key) => url.searchParams.delete(key));
+      ["stripe_return", "payment", "checkout"].forEach((key) =>
+        url.searchParams.delete(key),
+      );
       history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
     })();
   }, [detailId, loadDetail, loadInvoices, returnState]);
 
-  const visibleInvoices = invoices.filter((invoice) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = !query || invoice.invoice_no.toLowerCase().includes(query);
-    const matchesTab = invoiceTab === "all" || (invoiceTab === "unpaid" && invoice.status === "sent") || (invoiceTab === "paid" && invoice.status === "paid") || (invoiceTab === "overdue" && invoice.effective_status === "overdue");
-    const matchesDate = !dateFilter || invoice.created_at.slice(0, 10) === dateFilter;
-    return matchesSearch && matchesTab && matchesDate;
-  });
-  const selectable = visibleInvoices.filter((invoice) => invoice.status === "sent");
-  const selectedInvoices = selectable.filter((invoice) => selectedIds.has(invoice.id));
-  const selectedTotal = selectedInvoices.reduce((sum, invoice) => sum + invoice.balance_cents, 0);
-  const allSelected = selectable.length > 0 && selectable.every((invoice) => selectedIds.has(invoice.id));
+  const selectable = invoices.filter((invoice) => invoice.status === "sent");
+  const selectedInvoices = selectable.filter((invoice) =>
+    selectedIds.has(invoice.id),
+  );
+  const selectedTotal = selectedInvoices.reduce(
+    (sum, invoice) => sum + invoice.balance_cents,
+    0,
+  );
+  const allSelected =
+    selectable.length > 0 &&
+    selectable.every((invoice) => selectedIds.has(invoice.id));
   function toggleInvoice(id: string) {
-    setSelectedIds((current) => { const next = new Set(current); if (next.has(id)) next.delete(id); else next.add(id); return next; });
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
   function toggleAll() {
-    setSelectedIds(allSelected ? new Set() : new Set(selectable.map((invoice) => invoice.id)));
+    setSelectedIds(
+      allSelected
+        ? new Set()
+        : new Set(selectable.map((invoice) => invoice.id)),
+    );
   }
   async function pay(invoiceIds: string[]) {
     if (checkoutBusy || !invoiceIds.length) return;
-    setCheckoutBusy(true); setCheckoutError("");
+    setCheckoutBusy(true);
+    setCheckoutError("");
     try {
       const checkout = await startWorkspaceInvoiceCheckout(invoiceIds);
       await loadInvoices();
       if (detailId) await loadDetail(detailId);
       window.location.assign(checkout.url);
     } catch (cause) {
-      setCheckoutError(cause instanceof Error ? cause.message : "Could not start payment.");
+      setCheckoutError(
+        cause instanceof Error ? cause.message : "Could not start payment.",
+      );
       await loadInvoices();
       if (detailId) await loadDetail(detailId);
-    } finally { setCheckoutBusy(false); }
+    } finally {
+      setCheckoutBusy(false);
+    }
   }
-  const listErrorSurface = listError ? <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void loadInvoices()}>Retry</MuiButton>}>{listError}</Alert> : null;
+  const listErrorSurface = listError ? (
+    <Alert
+      severity="error"
+      action={
+        <MuiButton
+          color="inherit"
+          size="small"
+          onClick={() => void loadInvoices()}
+        >
+          Retry
+        </MuiButton>
+      }
+    >
+      {listError}
+    </Alert>
+  ) : null;
   if (detailId) {
-    return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
-      <MuiButton variant="text" onClick={() => navigate("/dashboard/invoices")} sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}>← Back to invoices</MuiButton>
-      {returnMessage && <Alert severity={paymentReturnSeverity(returnKind)} onClose={() => { setReturnMessage(""); setReturnKind(null); }} role="status">{returnMessage}</Alert>}
-      {checkoutError && <Alert severity="error" onClose={() => setCheckoutError("")} role="alert">{checkoutError}</Alert>}
-      {detailLoading && <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Stack spacing={1.5}><Skeleton width="35%" height={34} /><Skeleton width="58%" /><Skeleton width="100%" height={80} /></Stack></RoundedSurface>}
-      {detailError && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void loadDetail(detailId)}>Retry</MuiButton>}>{detailError}</Alert>}
-      {detail && <Stack spacing={1.5}>
-        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+    return (
+      <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
+        <MuiButton
+          variant="text"
+          onClick={() => navigate("/dashboard/invoices")}
+          sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}
+        >
+          ← Back to invoices
+        </MuiButton>
+        {returnMessage && (
+          <Alert
+            severity={paymentReturnSeverity(returnKind)}
+            onClose={() => {
+              setReturnMessage("");
+              setReturnKind(null);
+            }}
+            role="status"
+          >
+            {returnMessage}
+          </Alert>
+        )}
+        {checkoutError && (
+          <Alert
+            severity="error"
+            onClose={() => setCheckoutError("")}
+            role="alert"
+          >
+            {checkoutError}
+          </Alert>
+        )}
+        {detailLoading && (
+          <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+            <Stack spacing={1.5}>
+              <Skeleton width="35%" height={34} />
+              <Skeleton width="58%" />
+              <Skeleton width="100%" height={80} />
+            </Stack>
+          </RoundedSurface>
+        )}
+        {detailError && (
+          <Alert
+            severity="error"
+            action={
+              <MuiButton
+                color="inherit"
+                size="small"
+                onClick={() => void loadDetail(detailId)}
+              >
+                Retry
+              </MuiButton>
+            }
+          >
+            {detailError}
+          </Alert>
+        )}
+        {detail && (
           <Stack spacing={1.5}>
-            <Stack direction="row" alignItems="flex-start" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1.25 }}><Box sx={{ minWidth: 0 }}><Typography variant="h1" sx={{ color: "#202936", fontSize: { xs: 27, sm: 34 }, overflowWrap: "anywhere" }}>{detail.invoice_no}</Typography><Typography sx={{ mt: .5, color: "#758091", fontSize: 13 }}>Due {invoiceDate(detail.due_date)}</Typography></Box><Chip label={invoiceStatusLabel(detail)} color={invoiceStatusColor(detail)} size="small" /></Stack>
-            <Divider />
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2,minmax(0,1fr))", sm: "repeat(3,minmax(0,1fr))" }, gap: 1.5 }}><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Total</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>{invoiceMoney(detail.total_cents)}</Typography></Box><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Balance</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>{invoiceMoney(detail.balance_cents)}</Typography></Box><Box><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Currency</Typography><Typography sx={{ mt: .3, fontWeight: 700 }}>USD</Typography></Box></Box>
-            <MuiButton variant="contained" disabled={detail.status !== "sent" || checkoutBusy} onClick={() => void pay([detail.id])} startIcon={checkoutBusy ? <CircularProgress size={16} color="inherit" /> : undefined} sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}>{checkoutBusy ? "Opening payment…" : detail.status === "sent" ? "Pay invoice" : detail.status === "paid" ? "Paid" : "Payment unavailable"}</MuiButton>
+            <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+              <Stack spacing={1.5}>
+                <Stack
+                  direction="row"
+                  alignItems="flex-start"
+                  sx={{
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 1.25,
+                  }}
+                >
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography
+                      variant="h1"
+                      sx={{
+                        color: "#202936",
+                        fontSize: { xs: 27, sm: 34 },
+                        overflowWrap: "anywhere",
+                      }}
+                    >
+                      {detail.invoice_no}
+                    </Typography>
+                    <Typography
+                      sx={{ mt: 0.5, color: "#758091", fontSize: 13 }}
+                    >
+                      Due {invoiceDate(detail.due_date)}
+                    </Typography>
+                  </Box>
+                  <Chip
+                    label={invoiceStatusLabel(detail)}
+                    color={invoiceStatusColor(detail)}
+                    size="small"
+                  />
+                </Stack>
+                <Divider />
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "repeat(2,minmax(0,1fr))",
+                      sm: "repeat(3,minmax(0,1fr))",
+                    },
+                    gap: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+                      Total
+                    </Typography>
+                    <Typography sx={{ mt: 0.3, fontWeight: 700 }}>
+                      {invoiceMoney(detail.total_cents)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+                      Balance
+                    </Typography>
+                    <Typography sx={{ mt: 0.3, fontWeight: 700 }}>
+                      {invoiceMoney(detail.balance_cents)}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+                      Currency
+                    </Typography>
+                    <Typography sx={{ mt: 0.3, fontWeight: 700 }}>
+                      USD
+                    </Typography>
+                  </Box>
+                </Box>
+                <MuiButton
+                  variant="contained"
+                  disabled={detail.status !== "sent" || checkoutBusy}
+                  onClick={() => void pay([detail.id])}
+                  startIcon={
+                    checkoutBusy ? (
+                      <CircularProgress size={16} color="inherit" />
+                    ) : undefined
+                  }
+                  sx={{ alignSelf: { xs: "stretch", sm: "flex-start" } }}
+                >
+                  {checkoutBusy
+                    ? "Opening payment…"
+                    : detail.status === "sent"
+                      ? "Pay invoice"
+                      : detail.status === "paid"
+                        ? "Paid"
+                        : "Payment unavailable"}
+                </MuiButton>
+              </Stack>
+            </RoundedSurface>
+            <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography sx={{ mb: 1.25, fontWeight: 700 }}>
+                Line items
+              </Typography>
+              {detail.items.length ? (
+                <Stack spacing={1}>
+                  {detail.items.map((item, index) => (
+                    <Box
+                      key={item.id || `${item.description}-${index}`}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0,1fr) auto",
+                        gap: 1,
+                        minWidth: 0,
+                      }}
+                    >
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography
+                          sx={{ fontSize: 13, overflowWrap: "anywhere" }}
+                        >
+                          {item.description}
+                        </Typography>
+                        <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
+                          {item.quantity} ×{" "}
+                          {invoiceMoney(item.unit_amount_cents)}
+                        </Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                        {invoiceMoney(item.line_total_cents)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography sx={{ color: "#758091", fontSize: 13 }}>
+                  No line items were returned.
+                </Typography>
+              )}
+            </RoundedSurface>
+            <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+              <Typography sx={{ mb: 1.25, fontWeight: 700 }}>
+                Payment history
+              </Typography>
+              {detail.payments.length ? (
+                <Stack spacing={1}>
+                  {detail.payments.map((payment, index) => (
+                    <Box
+                      key={payment.id || `${payment.provider}-${index}`}
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "minmax(0,1fr) auto",
+                        gap: 1,
+                      }}
+                    >
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography sx={{ fontSize: 13 }}>
+                          {payment.provider}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "#8a94a2",
+                            fontSize: 11,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {payment.reference || "Payment recorded"}
+                        </Typography>
+                      </Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                        {invoiceMoney(payment.amount_cents)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <Typography sx={{ color: "#758091", fontSize: 13 }}>
+                  No payments recorded yet.
+                </Typography>
+              )}
+            </RoundedSurface>
+            {detail.notes && (
+              <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography sx={{ mb: 0.75, fontWeight: 700 }}>
+                  Notes
+                </Typography>
+                <Typography
+                  sx={{
+                    color: "#758091",
+                    fontSize: 13,
+                    whiteSpace: "pre-wrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
+                  {detail.notes}
+                </Typography>
+              </RoundedSurface>
+            )}
           </Stack>
-        </RoundedSurface>
-        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: 1.25, fontWeight: 700 }}>Line items</Typography>{detail.items.length ? <Stack spacing={1}>{detail.items.map((item, index) => <Box key={item.id || `${item.description}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 1, minWidth: 0 }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 13, overflowWrap: "anywhere" }}>{item.description}</Typography><Typography sx={{ color: "#8a94a2", fontSize: 11 }}>{item.quantity} × {invoiceMoney(item.unit_amount_cents)}</Typography></Box><Typography sx={{ fontSize: 13, fontWeight: 700 }}>{invoiceMoney(item.line_total_cents)}</Typography></Box>)}</Stack> : <Typography sx={{ color: "#758091", fontSize: 13 }}>No line items were returned.</Typography>}</RoundedSurface>
-        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: 1.25, fontWeight: 700 }}>Payment history</Typography>{detail.payments.length ? <Stack spacing={1}>{detail.payments.map((payment, index) => <Box key={payment.id || `${payment.provider}-${index}`} sx={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", gap: 1 }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 13 }}>{payment.provider}</Typography><Typography sx={{ color: "#8a94a2", fontSize: 11, overflowWrap: "anywhere" }}>{payment.reference || "Payment recorded"}</Typography></Box><Typography sx={{ fontSize: 13, fontWeight: 700 }}>{invoiceMoney(payment.amount_cents)}</Typography></Box>)}</Stack> : <Typography sx={{ color: "#758091", fontSize: 13 }}>No payments recorded yet.</Typography>}</RoundedSurface>
-        {detail.notes && <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}><Typography sx={{ mb: .75, fontWeight: 700 }}>Notes</Typography><Typography sx={{ color: "#758091", fontSize: 13, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{detail.notes}</Typography></RoundedSurface>}
-      </Stack>}
-    </Stack>;
+        )}
+      </Stack>
+    );
   }
-  return <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
-    <Box><Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Workspace</Typography><Typography variant="h1" sx={{ mt: .6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}>Invoices</Typography><Typography sx={{ mt: .75, maxWidth: 600, color: "#758091", fontSize: 14, lineHeight: 1.55 }}>Review invoices from your Atelix workspace and pay sent balances securely.</Typography></Box>
-    <Box role="tablist" aria-label="Invoice status" sx={{ display: "flex", gap: { xs: 1.5, sm: 3 }, borderBottom: "1px solid #e3e8ed", overflowX: "auto" }}>{([ ["all", `All ${invoices.length}`], ["unpaid", `Unpaid ${invoices.filter((item) => item.status === "sent").length}`], ["paid", `Paid ${invoices.filter((item) => item.status === "paid").length}`], ["overdue", `Overdue ${invoices.filter((item) => item.effective_status === "overdue").length}`] ] as Array<[typeof invoiceTab, string]>).map(([value, label]) => <Box key={value} component="button" role="tab" aria-selected={invoiceTab === value} onClick={() => setInvoiceTab(value)} sx={{ minHeight: 48, px: .1, border: 0, borderBottom: invoiceTab === value ? "2px solid #5b8064" : "2px solid transparent", background: "transparent", color: invoiceTab === value ? "#4f7658" : "#929daa", font: "inherit", fontSize: 14, fontWeight: invoiceTab === value ? 700 : 500, cursor: "pointer", whiteSpace: "nowrap", "&:focus-visible": { outline: "3px solid rgba(75,118,87,.35)", outlineOffset: 2 } }}>{label}</Box>)}</Box>
-    <Box component="form" role="search" onSubmit={(event) => event.preventDefault()} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "minmax(240px,1fr) 184px auto" }, gap: 1.25 }}><Box component="input" type="search" value={search} onChange={(event: ChangeEvent<HTMLInputElement>) => setSearch(event.target.value)} placeholder="Search by invoice number or request" aria-label="Search by invoice number or request" sx={{ height: 54, px: 1.75, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#29323e", font: "inherit", fontSize: 14, outline: 0, "&:focus": { borderColor: "#93b59a", boxShadow: "0 0 0 3px rgba(111,174,134,.16)" }, "&::placeholder": { color: "#8994a2", opacity: 1 } }} /><Box component="label" sx={{ display: "flex", alignItems: "center", gap: .75, height: 54, px: 1.5, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#687587", fontSize: 13 }}><span>Invoice date</span><Box component="input" type="date" value={dateFilter} onChange={(event: ChangeEvent<HTMLInputElement>) => setDateFilter(event.target.value)} aria-label="Filter by invoice date" sx={{ minWidth: 0, flex: 1, border: 0, outline: 0, color: "#687587", font: "inherit", fontSize: 12 }} /></Box><Box component="select" defaultValue="due" aria-label="Sort invoices" sx={{ height: 54, px: 1.5, border: "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: "#fff", color: "#687587", font: "inherit", fontSize: 13 }}><option value="due">Sort: Due date</option><option value="created">Sort: Invoice date</option></Box></Box>
-    {returnMessage && <Alert severity={paymentReturnSeverity(returnKind)} onClose={() => { setReturnMessage(""); setReturnKind(null); }} role="status">{returnMessage}</Alert>}
-    {checkoutError && <Alert severity="error" onClose={() => setCheckoutError("")} role="alert">{checkoutError}</Alert>}
-    {listErrorSurface}
-    {listLoading ? <InvoiceSkeletonRows /> : !listError && !invoices.length ? <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No invoices yet</Typography><Typography sx={{ mt: .75, color: "#758091", fontSize: 13 }}>Invoices from your Atelix workspace will appear here when they are ready.</Typography></RoundedSurface> : !listError && <>
-      <RoundedSurface sx={{ p: { xs: 1.25, sm: 1.5 } }}><Stack direction="row" alignItems="center" sx={{ justifyContent: "space-between", flexWrap: "wrap", gap: 1 }}><Box component="label" sx={{ display: "flex", alignItems: "center", minWidth: 0, cursor: selectable.length ? "pointer" : "default" }}><Checkbox checked={allSelected} indeterminate={selectedIds.size > 0 && !allSelected} disabled={!selectable.length || checkoutBusy} onChange={toggleAll} slotProps={{ input: { "aria-label": "Select all sent invoices" } }} /><Typography sx={{ fontSize: 13, fontWeight: 600 }}>Select sent invoices</Typography></Box><Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0 }}><Typography sx={{ color: "#758091", fontSize: 12 }}>Selected balance</Typography><Typography sx={{ fontSize: 14, fontWeight: 700 }}>{invoiceMoney(selectedTotal)}</Typography><MuiButton size="small" variant="contained" disabled={!selectedIds.size || checkoutBusy} onClick={() => void pay([...selectedIds])} startIcon={checkoutBusy ? <CircularProgress size={15} color="inherit" /> : undefined}>{checkoutBusy ? "Opening…" : "Pay selected"}</MuiButton></Box></Stack></RoundedSurface>
-      <Box component="ul" aria-label="Invoices" sx={{ display: "grid", gap: 1.25, p: 0, m: 0, listStyle: "none" }}>{visibleInvoices.map((invoice) => { const selectableRow = invoice.status === "sent"; return <Box component="li" key={invoice.id}><Box sx={{ display: "grid", gridTemplateColumns: { xs: "34px minmax(0,1fr) auto", md: "34px minmax(220px,1.25fr) minmax(180px,1fr) 130px 150px auto" }, alignItems: "center", gap: { xs: 1, md: 2 }, p: { xs: 1.5, md: 1.75 }, border: selectedIds.has(invoice.id) ? "1px solid #cfe0d2" : "1px solid #e1e6eb", borderRadius: 2.5, backgroundColor: selectedIds.has(invoice.id) ? "#f7fbf7" : "#fff", "&:hover": { borderColor: "#b9cdbd" } }}><Checkbox checked={selectedIds.has(invoice.id)} disabled={!selectableRow || checkoutBusy} onChange={() => toggleInvoice(invoice.id)} slotProps={{ input: { "aria-label": `${selectableRow ? "Select" : "Invoice unavailable for payment"} ${invoice.invoice_no}` } }} sx={{ p: 0, flex: "0 0 auto" }} /><Box sx={{ minWidth: 0 }}><Typography sx={{ color: "#273140", fontSize: 15, fontWeight: 700, overflowWrap: "anywhere" }}>{invoice.invoice_no}</Typography><Typography sx={{ mt: .35, color: "#8d98a5", fontSize: 12 }}>Atelix invoice · {invoice.status === "paid" ? "Payment recorded" : "Balance due"}</Typography></Box><Typography sx={{ display: { xs: "none", md: "block" }, color: "#758091", fontSize: 13 }}>Due {invoiceDate(invoice.due_date)}</Typography><Typography sx={{ textAlign: { xs: "right", md: "left" }, color: invoice.effective_status === "overdue" ? "#9d5d4e" : "#273140", fontSize: 15, fontWeight: 700 }}>{invoiceMoney(invoice.total_cents)}<Box component="span" sx={{ display: "block", mt: .25, color: "#8d98a5", fontSize: 11, fontWeight: 500 }}>Balance {invoiceMoney(invoice.balance_cents)}</Box></Typography><InvoiceStatusMark invoice={invoice} /><Stack direction="row" spacing={.75} justifyContent="flex-end"><MuiButton size="small" variant="outlined" onClick={() => invoice.status === "sent" ? void pay([invoice.id]) : navigate(`/dashboard/invoices/${encodeURIComponent(invoice.id)}`)} aria-label={`${invoice.status === "sent" ? "Pay" : "View"} ${invoice.invoice_no}`} sx={{ minWidth: 72, borderColor: "#e1e6eb", color: "#596676" }}>{invoice.status === "sent" ? "Pay now" : "View"}</MuiButton></Stack></Box></Box>; })}</Box>
-    </>}
-  </Stack>;
+  return (
+    <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
+      <Box>
+        <Typography
+          sx={{
+            color: "#71917a",
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: ".08em",
+            textTransform: "uppercase",
+          }}
+        >
+          Workspace
+        </Typography>
+        <Typography
+          variant="h1"
+          sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}
+        >
+          Invoices
+        </Typography>
+        <Typography
+          sx={{
+            mt: 0.75,
+            maxWidth: 600,
+            color: "#758091",
+            fontSize: 14,
+            lineHeight: 1.55,
+          }}
+        >
+          Review invoices from your Atelix workspace and pay sent balances
+          securely.
+        </Typography>
+      </Box>
+      {returnMessage && (
+        <Alert
+          severity={paymentReturnSeverity(returnKind)}
+          onClose={() => {
+            setReturnMessage("");
+            setReturnKind(null);
+          }}
+          role="status"
+        >
+          {returnMessage}
+        </Alert>
+      )}
+      {checkoutError && (
+        <Alert
+          severity="error"
+          onClose={() => setCheckoutError("")}
+          role="alert"
+        >
+          {checkoutError}
+        </Alert>
+      )}
+      {listErrorSurface}
+      {listLoading ? (
+        <InvoiceSkeletonRows />
+      ) : !listError && !invoices.length ? (
+        <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
+          <Typography sx={{ fontWeight: 700 }}>No invoices yet</Typography>
+          <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>
+            Invoices from your Atelix workspace will appear here when they are
+            ready.
+          </Typography>
+        </RoundedSurface>
+      ) : (
+        !listError && (
+          <>
+            <RoundedSurface sx={{ p: { xs: 1.25, sm: 1.5 } }}>
+              <Stack
+                direction="row"
+                alignItems="center"
+                sx={{
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 1,
+                }}
+              >
+                <Box
+                  component="label"
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    minWidth: 0,
+                    cursor: selectable.length ? "pointer" : "default",
+                  }}
+                >
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={selectedIds.size > 0 && !allSelected}
+                    disabled={!selectable.length || checkoutBusy}
+                    onChange={toggleAll}
+                    slotProps={{
+                      input: { "aria-label": "Select all sent invoices" },
+                    }}
+                  />
+                  <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
+                    Select sent invoices
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  <Typography sx={{ color: "#758091", fontSize: 12 }}>
+                    Selected balance
+                  </Typography>
+                  <Typography sx={{ fontSize: 14, fontWeight: 700 }}>
+                    {invoiceMoney(selectedTotal)}
+                  </Typography>
+                  <MuiButton
+                    size="small"
+                    variant="contained"
+                    disabled={!selectedIds.size || checkoutBusy}
+                    onClick={() => void pay([...selectedIds])}
+                    startIcon={
+                      checkoutBusy ? (
+                        <CircularProgress size={15} color="inherit" />
+                      ) : undefined
+                    }
+                  >
+                    {checkoutBusy ? "Opening…" : "Pay selected"}
+                  </MuiButton>
+                </Box>
+              </Stack>
+            </RoundedSurface>
+            <Box
+              component="ul"
+              aria-label="Invoices"
+              sx={{ display: "grid", gap: 1.25, p: 0, m: 0, listStyle: "none" }}
+            >
+              {invoices.map((invoice) => {
+                const selectableRow = invoice.status === "sent";
+                const overdue = invoice.effective_status === "overdue";
+                const rowStyle = overdue
+                  ? { borderColor: "#e7d8ca", backgroundColor: "#fdf8f2" }
+                  : selectableRow
+                    ? { borderColor: "#cfe2d4", backgroundColor: "#f7fbf7" }
+                    : {
+                        borderColor: "rgba(214,220,229,.85)",
+                        backgroundColor: "#fff",
+                      };
+                return (
+                  <Box component="li" key={invoice.id}>
+                    <RoundedSurface
+                      sx={{ p: { xs: 1.25, sm: 1.75 }, ...rowStyle }}
+                    >
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ alignItems: "center", minWidth: 0 }}
+                      >
+                        <Checkbox
+                          checked={selectedIds.has(invoice.id)}
+                          disabled={!selectableRow || checkoutBusy}
+                          onChange={() => toggleInvoice(invoice.id)}
+                          slotProps={{
+                            input: {
+                              "aria-label": `${selectableRow ? "Select" : "Invoice unavailable for payment"} ${invoice.invoice_no}`,
+                            },
+                          }}
+                          sx={{ flex: "0 0 auto" }}
+                        />
+                        <Box
+                          sx={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                          onClick={() =>
+                            navigate(
+                              `/dashboard/invoices/${encodeURIComponent(invoice.id)}`,
+                            )
+                          }
+                        >
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{ alignItems: "center" }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: 14,
+                                fontWeight: 700,
+                                overflowWrap: "anywhere",
+                              }}
+                            >
+                              {invoice.invoice_no}
+                            </Typography>
+                            <Chip
+                              label={invoiceStatusLabel(invoice)}
+                              color={invoiceStatusColor(invoice)}
+                              size="small"
+                            />
+                          </Stack>
+                          <Typography
+                            sx={{ mt: 0.3, color: "#758091", fontSize: 12 }}
+                          >
+                            Due {invoiceDate(invoice.due_date)} · Balance{" "}
+                            {invoiceMoney(invoice.balance_cents)}
+                          </Typography>
+                        </Box>
+                        {selectableRow || overdue ? (
+                          <MuiButton
+                            size="small"
+                            variant="contained"
+                            sx={{
+                              flex: "0 0 auto",
+                              backgroundColor: "#4b7657",
+                              "&:hover": { backgroundColor: "#3d6548" },
+                            }}
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/invoices/${encodeURIComponent(invoice.id)}`,
+                              )
+                            }
+                          >
+                            Pay now
+                          </MuiButton>
+                        ) : (
+                          <MuiButton
+                            size="small"
+                            sx={{ flex: "0 0 auto" }}
+                            onClick={() =>
+                              navigate(
+                                `/dashboard/invoices/${encodeURIComponent(invoice.id)}`,
+                              )
+                            }
+                            aria-label={`View ${invoice.invoice_no}`}
+                          >
+                            View
+                          </MuiButton>
+                        )}
+                      </Stack>
+                    </RoundedSurface>
+                  </Box>
+                );
+              })}
+            </Box>
+          </>
+        )
+      )}
+    </Stack>
+  );
 }
 
 export function Dashboard({ path }: { path: string }) {
   const mobile = useMediaQuery(dashboardTheme.breakpoints.down("md"));
-  const [mobileOpen, setMobileOpen] = useState(false); const [sidebarCollapsed, setSidebarCollapsed] = useState(false); const [message, setMessage] = useState("");
-  const [profile, setProfile] = useState<UserProfile>({ username: "", name: "Workspace", role: "Buyer" });
-  const [rfq, setRfq] = useState<{ record: WorkspaceRfq; attachments: RfqAttachment[]; initialPhase?: RfqPhase } | null>(null); const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
-  useEffect(() => { let active = true; void getSession().then((session) => { if (!active) return; const user = session?.user; const name = String(user?.user_metadata?.full_name || user?.email || "Workspace"); setProfile({ username: user?.email || "", name, role: "Buyer" }); }).catch(() => undefined); return () => { active = false; }; }, []);
-  useEffect(() => { let active = true; void listRfqCases().then((cases) => { if (!active) return; setHistoryItems(cases); }).catch((cause) => { if (active) setMessage(cause instanceof Error ? cause.message : "Could not load your RFQs."); }); return () => { active = false; }; }, []);
-  const view: DashboardView = path === "/dashboard/requests" ? "requests" : path === "/dashboard/products" || /^\/dashboard\/products\/[^/]+$/.test(path) ? "products" : path === "/dashboard/favourites" ? "favourites" : path === "/dashboard/messages" ? "messages" : path === "/dashboard/invoices" || /^\/dashboard\/invoices\/[^/]+$/.test(path) ? "invoices" : path === "/dashboard/settings" ? "settings" : path === "/dashboard/library" ? "library" : path === "/dashboard/new-product-request" || path === "/dashboard/new-rfq" ? "new" : "dashboard";
-  const workspaceOpen = Boolean(rfq && (view === "dashboard" || view === "new"));
-  function go(item: typeof navItems[number]) { setMobileOpen(false); if (item.view === "new") setRfq(null); navigate(item.href); }
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [message, setMessage] = useState("");
+  const [profile, setProfile] = useState<UserProfile>({
+    username: "",
+    name: "Workspace",
+    role: "Buyer",
+  });
+  const [rfq, setRfq] = useState<{
+    record: WorkspaceRfq;
+    attachments: RfqAttachment[];
+    initialPhase?: RfqPhase;
+  } | null>(null);
+  const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
+  useEffect(() => {
+    let active = true;
+    void getSession()
+      .then((session) => {
+        if (!active) return;
+        const user = session?.user;
+        const name = String(
+          user?.user_metadata?.full_name || user?.email || "Workspace",
+        );
+        setProfile({ username: user?.email || "", name, role: "Buyer" });
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    void listRfqCases()
+      .then((cases) => {
+        if (!active) return;
+        setHistoryItems(cases);
+      })
+      .catch((cause) => {
+        if (active)
+          setMessage(
+            cause instanceof Error
+              ? cause.message
+              : "Could not load your RFQs.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const view: DashboardView =
+    path === "/dashboard/requests"
+      ? "requests"
+      : path === "/dashboard/products" ||
+          /^\/dashboard\/products\/[^/]+$/.test(path)
+        ? "products"
+        : path === "/dashboard/favourites"
+          ? "favourites"
+          : path === "/dashboard/messages"
+            ? "messages"
+            : path === "/dashboard/invoices" ||
+                /^\/dashboard\/invoices\/[^/]+$/.test(path)
+              ? "invoices"
+              : path === "/dashboard/settings"
+                ? "settings"
+                : path === "/dashboard/library"
+                  ? "library"
+                  : path === "/dashboard/new-product-request" ||
+                      path === "/dashboard/new-rfq"
+                    ? "new"
+                    : "dashboard";
+  const workspaceOpen = Boolean(
+    rfq && (view === "dashboard" || view === "new"),
+  );
+  function go(item: (typeof navItems)[number]) {
+    setMobileOpen(false);
+    if (item.view === "new") setRfq(null);
+    navigate(item.href);
+  }
   async function startRfq(brief: string, files: UploadFile[]) {
     setMessage("Saving your sourcing brief…");
     try {
-      const record = await createRfqCase({ title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief, brief: briefFromFields(brief, defaultRfqFields) });
-      const validFiles = files.filter((file) => file.state === "ready"); const attachments: RfqAttachment[] = [];
-      for (const item of validFiles) attachments.push(await uploadRfqAttachment(record.id, item.file));
-      setHistoryItems((current) => [record, ...current.filter((entry) => entry.id !== record.id)]); setRfq({ record, attachments, initialPhase: "drafting" }); setMessage("");
-    } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not save your sourcing brief."); }
+      const record = await createRfqCase({
+        title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
+        brief: briefFromFields(brief, defaultRfqFields),
+      });
+      const validFiles = files.filter((file) => file.state === "ready");
+      const attachments: RfqAttachment[] = [];
+      for (const item of validFiles)
+        attachments.push(await uploadRfqAttachment(record.id, item.file));
+      setHistoryItems((current) => [
+        record,
+        ...current.filter((entry) => entry.id !== record.id),
+      ]);
+      setRfq({ record, attachments, initialPhase: "drafting" });
+      setMessage("");
+    } catch (cause) {
+      setMessage(
+        cause instanceof Error
+          ? cause.message
+          : "Could not save your sourcing brief.",
+      );
+    }
   }
-  async function restoreHistory(item: StoredRfq) { setMobileOpen(false); setMessage("Loading your RFQ…"); try { const attachments = await listRfqAttachments(item.id); setRfq({ record: item, attachments }); setMessage(""); navigate("/dashboard"); } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Could not load your RFQ."); } }
-  function content() { if (rfq && (view === "dashboard" || view === "new")) { const summary = typeof rfq.record.brief.summary === "string" ? rfq.record.brief.summary : rfq.record.title; return <RfqWorkspace caseId={rfq.record.id} brief={summary} initialFields={fieldsFromBrief(rfq.record.brief)} files={rfq.attachments} status={rfq.record.status} initialPhase={rfq.initialPhase} onMessage={setMessage} />; } if (view === "requests") return <WorkspaceRequests requests={historyItems} onOpen={(item) => { void restoreHistory(item); }} />; if (view === "products") return <WorkspaceProducts path={path} onOpenRfq={(id) => { const record = historyItems.find((item) => item.id === id); if (record) void restoreHistory(record); else navigate("/dashboard/requests"); }} onReorder={(product) => { setRfq(null); navigate(`/dashboard/new-product-request?prefill=${encodeURIComponent(`Re-source ${product.name} · SKU ${product.sku} · ${product.units} units from the saved order record.`)}`); }} />; if (view === "invoices") return <WorkspaceInvoices path={path} />; if (["favourites", "messages", "settings", "library"].includes(view)) return <PlaceholderView view={view as Exclude<DashboardView, "dashboard" | "new" | "requests" | "products" | "invoices">} />; return <DashboardHome isNew={view === "new"} onStart={(brief, files) => { void startRfq(brief, files); }} onMessage={setMessage} />; }
-  return <ThemeProvider theme={dashboardTheme}><CssBaseline /><MotionConfig reducedMotion="user"><Box className="dashboard-root" sx={{ display: "flex", width: "100%", maxWidth: "100vw", minHeight: "100vh", overflowX: "hidden", color: "text.primary", backgroundColor: "#fbfbfc" }}>{!mobile && <Box component="aside" sx={{ width: sidebarCollapsed ? 76 : 264, height: "100vh", maxHeight: "100vh", flexShrink: 0, borderRight: "1px solid #ececef", backgroundColor: "#fff", transition: "width 220ms ease", overflow: "hidden" }}><Sidebar view={view} onNavigate={go} historyItems={historyItems} onRestore={(item) => { void restoreHistory(item); }} collapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed((current) => !current)} /></Box>}<Box sx={{ minWidth: 0, width: 0, flex: 1 }}><Box component="header" sx={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "space-between", minWidth: 0, width: "100%", minHeight: 68, px: { xs: 2, sm: 3 }, borderBottom: "1px solid #f0f0f2", backgroundColor: "rgba(255,255,255,.84)" }}>{mobile && <IconButton onClick={() => setMobileOpen(true)} aria-label="Open navigation"><MenuIcon /></IconButton>}{workspaceOpen && rfq && <Stack direction="row" spacing={1.25} alignItems="center" sx={{ minWidth: 0, ml: mobile ? 1 : 0 }}><Typography sx={{ flex: "0 0 auto", color: "#758091", fontFamily: "'DM Mono', monospace", fontSize: 12 }}>{rfq.record.case_no}</Typography><Divider orientation="vertical" flexItem sx={{ borderColor: "#e7ebf0" }} /><Typography noWrap sx={{ minWidth: 0, color: "#202936", fontSize: 13, fontWeight: 600 }}>{rfq.record.title}</Typography><Chip label={rfq.record.status === "draft" ? "Draft · awaiting your approval" : "Atelix review"} size="small" sx={{ display: { xs: "none", md: "inline-flex" }, color: "#4b7657", backgroundColor: "#eef4ee", fontSize: 11, fontWeight: 700 }} /></Stack>}<Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0, ml: workspaceOpen ? 1 : mobile ? 1 : "auto", position: { xs: "absolute", sm: "static" }, right: { xs: 2, sm: "auto" } }}><Typography sx={{ display: { xs: "none", sm: "block" }, minWidth: 0, color: "#737b86", fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{profile.name}</Typography><Tooltip title={`${profile.name}${profile.role ? ` · ${profile.role}` : ""}`}><Avatar aria-label={`Signed in as ${profile.name}`} sx={{ width: 34, height: 34, flex: "0 0 auto", backgroundColor: "#e5e7eb", color: "#5d6672", fontSize: 13 }}>{initials(profile.name)}</Avatar></Tooltip></Box></Box><Box component="main" id="main" sx={{ width: "100%", maxWidth: workspaceOpen ? "none" : { xs: "calc(100vw - 32px)", sm: "min(1060px, calc(100% - 48px))" }, px: workspaceOpen ? 0 : 0, minWidth: 0, boxSizing: "border-box", mx: "auto", py: workspaceOpen ? 0 : { xs: 3, sm: 4, md: 5 } }}>{content()}</Box>{message && <Box role="status" aria-live="polite" sx={{ position: "fixed", right: { xs: 16, sm: 24 }, bottom: 20, zIndex: 10, maxWidth: 420, px: 2, py: 1.5, borderRadius: 3, backgroundColor: "#344255", color: "#fff", boxShadow: "0 12px 28px rgba(44,56,73,.22)" }}><Stack direction="row" spacing={1} sx={{ alignItems: "center" }}><Typography sx={{ fontSize: 13, color: "inherit" }}>{message}</Typography><IconButton size="small" aria-label="Dismiss message" onClick={() => setMessage("")} sx={{ color: "#fff" }}><X fontSize="small" /></IconButton></Stack></Box>}</Box><Drawer open={mobileOpen} onClose={() => setMobileOpen(false)} ModalProps={{ keepMounted: true }}><Box sx={{ width: 280, height: "100%" }}><Sidebar view={view} onNavigate={go} historyItems={historyItems} onRestore={(item) => { void restoreHistory(item); }} mobile /></Box></Drawer></Box></MotionConfig></ThemeProvider>;
+  async function restoreHistory(item: StoredRfq) {
+    setMobileOpen(false);
+    setMessage("Loading your RFQ…");
+    try {
+      const attachments = await listRfqAttachments(item.id);
+      setRfq({ record: item, attachments });
+      setMessage("");
+      navigate("/dashboard");
+    } catch (cause) {
+      setMessage(
+        cause instanceof Error ? cause.message : "Could not load your RFQ.",
+      );
+    }
+  }
+  async function reorderProduct(product: WorkspaceProduct) {
+    setMessage("Starting a new RFQ from this product…");
+    try {
+      const title = `Reorder: ${product.name}`;
+      const fields = {
+        ...defaultRfqFields,
+        product: product.name,
+        quantity: `${product.units} units`,
+      };
+      const summary = `Reorder of ${product.name} (SKU ${product.sku}) previously sourced from ${product.supplier}.`;
+      const record = await createRfqCase({
+        title,
+        brief: briefFromFields(summary, fields),
+      });
+      setHistoryItems((current) => [
+        record,
+        ...current.filter((entry) => entry.id !== record.id),
+      ]);
+      setMessage("");
+      navigate("/dashboard/requests");
+    } catch (cause) {
+      setMessage(
+        cause instanceof Error ? cause.message : "Could not start a reorder.",
+      );
+    }
+  }
+  function content() {
+    if (rfq && (view === "dashboard" || view === "new")) {
+      const summary =
+        typeof rfq.record.brief.summary === "string"
+          ? rfq.record.brief.summary
+          : rfq.record.title;
+      return (
+        <RfqWorkspace
+          caseId={rfq.record.id}
+          brief={summary}
+          initialFields={fieldsFromBrief(rfq.record.brief)}
+          files={rfq.attachments}
+          status={rfq.record.status}
+          initialPhase={rfq.initialPhase}
+          onMessage={setMessage}
+        />
+      );
+    }
+    if (view === "requests")
+      return (
+        <WorkspaceRequests
+          requests={historyItems}
+          onOpen={(item) => {
+            void restoreHistory(item);
+          }}
+        />
+      );
+    if (view === "products")
+      return (
+        <WorkspaceProducts
+          path={path}
+          onOpenRfq={(id) => {
+            const record = historyItems.find((item) => item.id === id);
+            if (record) void restoreHistory(record);
+            else navigate("/dashboard/requests");
+          }}
+          onReorder={(product) => {
+            void reorderProduct(product);
+          }}
+        />
+      );
+    if (view === "invoices") return <WorkspaceInvoices path={path} />;
+    if (["favourites", "messages", "settings", "library"].includes(view))
+      return (
+        <PlaceholderView
+          view={
+            view as Exclude<
+              DashboardView,
+              "dashboard" | "new" | "requests" | "products" | "invoices"
+            >
+          }
+        />
+      );
+    return (
+      <DashboardHome
+        isNew={view === "new"}
+        onStart={(brief, files) => {
+          void startRfq(brief, files);
+        }}
+        onMessage={setMessage}
+      />
+    );
+  }
+  return (
+    <ThemeProvider theme={dashboardTheme}>
+      <CssBaseline />
+      <MotionConfig reducedMotion="user">
+        <Box
+          className="dashboard-root"
+          sx={{
+            display: "flex",
+            width: "100%",
+            maxWidth: "100vw",
+            minHeight: "100vh",
+            overflowX: "hidden",
+            color: "text.primary",
+            backgroundColor: "#fbfbfc",
+          }}
+        >
+          {!mobile && (
+            <Box
+              component="aside"
+              sx={{
+                width: sidebarCollapsed ? 76 : 264,
+                height: "100vh",
+                maxHeight: "100vh",
+                flexShrink: 0,
+                borderRight: "1px solid #ececef",
+                backgroundColor: "#fff",
+                transition: "width 220ms ease",
+                overflow: "hidden",
+              }}
+            >
+              <Sidebar
+                view={view}
+                onNavigate={go}
+                historyItems={historyItems}
+                onRestore={(item) => {
+                  void restoreHistory(item);
+                }}
+                collapsed={sidebarCollapsed}
+                onToggle={() => setSidebarCollapsed((current) => !current)}
+              />
+            </Box>
+          )}
+          <Box sx={{ minWidth: 0, width: 0, flex: 1 }}>
+            <Box
+              component="header"
+              sx={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minWidth: 0,
+                width: "100%",
+                minHeight: 68,
+                px: { xs: 2, sm: 4 },
+                borderBottom: "1px solid #f0f0f2",
+                backgroundColor: "rgba(255,255,255,.84)",
+              }}
+            >
+              {mobile && (
+                <IconButton
+                  onClick={() => setMobileOpen(true)}
+                  aria-label="Open navigation"
+                >
+                  <MenuIcon />
+                </IconButton>
+              )}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  minWidth: 0,
+                  ml: mobile ? 1 : "auto",
+                  position: { xs: "absolute", sm: "static" },
+                  right: { xs: 2, sm: "auto" },
+                }}
+              >
+                <Typography
+                  sx={{
+                    display: { xs: "none", sm: "block" },
+                    minWidth: 0,
+                    color: "#737b86",
+                    fontSize: 13,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {profile.name}
+                </Typography>
+                <Tooltip
+                  title={`${profile.name}${profile.role ? ` · ${profile.role}` : ""}`}
+                >
+                  <Avatar
+                    aria-label={`Signed in as ${profile.name}`}
+                    sx={{
+                      width: 34,
+                      height: 34,
+                      flex: "0 0 auto",
+                      backgroundColor: "#e5e7eb",
+                      color: "#5d6672",
+                      fontSize: 13,
+                    }}
+                  >
+                    {initials(profile.name)}
+                  </Avatar>
+                </Tooltip>
+              </Box>
+            </Box>
+            <Box
+              component="main"
+              id="main"
+              sx={{
+                width: "100%",
+                maxWidth: workspaceOpen
+                  ? "none"
+                  : {
+                      xs: "calc(100vw - 32px)",
+                      sm: "min(1060px, calc(100% - 48px))",
+                    },
+                px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0,
+                minWidth: 0,
+                boxSizing: "border-box",
+                mx: "auto",
+                py: { xs: 3, sm: 4, md: 5 },
+              }}
+            >
+              {content()}
+            </Box>
+            {message && (
+              <Box
+                role="status"
+                aria-live="polite"
+                sx={{
+                  position: "fixed",
+                  right: { xs: 16, sm: 24 },
+                  bottom: 20,
+                  zIndex: 10,
+                  maxWidth: 420,
+                  px: 2,
+                  py: 1.5,
+                  borderRadius: "12px",
+                  backgroundColor: "#344255",
+                  color: "#fff",
+                  boxShadow: "0 12px 28px rgba(44,56,73,.22)",
+                }}
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{ alignItems: "center" }}
+                >
+                  <Typography sx={{ fontSize: 13, color: "inherit" }}>
+                    {message}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    aria-label="Dismiss message"
+                    onClick={() => setMessage("")}
+                    sx={{ color: "#fff" }}
+                  >
+                    <X fontSize="small" />
+                  </IconButton>
+                </Stack>
+              </Box>
+            )}
+          </Box>
+          <Drawer
+            open={mobileOpen}
+            onClose={() => setMobileOpen(false)}
+            ModalProps={{ keepMounted: true }}
+          >
+            <Box sx={{ width: 280, height: "100%" }}>
+              <Sidebar
+                view={view}
+                onNavigate={go}
+                historyItems={historyItems}
+                onRestore={(item) => {
+                  void restoreHistory(item);
+                }}
+                mobile
+              />
+            </Box>
+          </Drawer>
+        </Box>
+      </MotionConfig>
+    </ThemeProvider>
+  );
 }
