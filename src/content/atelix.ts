@@ -818,7 +818,7 @@ export const atelixContent = {
       {
         id: "how-different",
         question:
-          "How is Atelix different from a mediocre sourcing agent? I've been disappointed multiple times using sourcing agents.",
+          "I've been burned by sourcing agents before — how is Atelix different?",
         answer:
           "We understand — that frustration is exactly why we built Atelix. Most sourcing agents take your money upfront, then go quiet for months. We don't charge a dime until we deliver results. By pairing dedicated human expertise with AI-powered tracking, we keep communication transparent and your project moving, with no hidden fees and no surprises.",
       },
