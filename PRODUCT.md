@@ -98,3 +98,7 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 ## Accessibility
 
 Target WCAG 2.2 Level AA. Support keyboard-only use, visible and unobscured focus, semantic status messages, reduced motion, 200% text resize, and 400% reflow without loss of task content.
+
+Access-request fields preserve native required validation without relying on
+visible asterisks. The optional phone number is entered as one international-
+format value so keyboard and mobile autofill behavior remain predictable.

@@ -285,7 +285,8 @@ export type FooterContent = {
   wordmarkPunctuation: string;
   wordmarkHref: string;
   description: string;
-  region: string;
+  addressLines: readonly string[];
+  addressEmail: string;
   linkGroups: readonly FooterLinkGroup[];
   newsletter: {
     heading: string;
@@ -864,8 +865,9 @@ export const atelixContent = {
     wordmark: "atelix",
     wordmarkPunctuation: ".",
     wordmarkHref: "/",
-    description: "Sourcing intelligence for better supplier decisions.",
-    region: "Across Asia-Pacific manufacturing",
+    description: "Connecting global brand owners with Asia suppliers.",
+    addressLines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"],
+    addressEmail: "info@arcanawangsa.com",
     linkGroups: [
       {
         id: "sourcing",
@@ -906,7 +908,7 @@ export const atelixContent = {
     contact: "info@arcanawangsa.com",
     newsletterSubject: "Atelix newsletter updates",
     newsletterBody: "Please add {email} to the Atelix newsletter.",
-    intro: "Sourcing intelligence for better supplier decisions.",
+    intro: "Connecting global brand owners with Asia suppliers.",
     sourcingLabel: "Sourcing",
     sourcingLinks: [
       { id: "sourcing-guide", label: "Sourcing Guide", href: "/sourcing-guide" },
