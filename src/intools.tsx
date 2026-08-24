@@ -52,6 +52,7 @@ import {
   getUserDisplayName,
   loginLocalIntools,
   listIntoolsAudit,
+  listIntoolsAgentKnowledge,
   listIntoolsInvoices,
   listIntoolsRfqs,
   getIntoolsRfqDetail,
@@ -62,6 +63,9 @@ import {
   listIntoolsRfqCases,
   listIntoolsRfqQuotes,
   listIntoolsSuppliers,
+  uploadIntoolsAgentKnowledge,
+  publishIntoolsAgentKnowledge,
+  archiveIntoolsAgentKnowledge,
   publishIntoolsRfqQuote,
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
@@ -85,6 +89,7 @@ import {
   type IntoolsRfqQuote,
   type IntoolsRfqSupplierMatch,
   type IntoolsSupplier,
+  type IntoolsAgentKnowledgeDocument,
   approveRegistrationRequest,
 } from "./supabase";
 import { IntoolsSuppliers } from "./intools-suppliers";
@@ -128,6 +133,7 @@ type Tab =
   | "orders"
   | "audit"
   | "registrations"
+  | "knowledge"
   | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
@@ -238,7 +244,7 @@ function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
       creatingInvoice: false,
       supplierId: null,
     };
-  const tab = pathname.match(/^\/intools\/(orders|audit|registrations)$/)?.[1] as
+  const tab = pathname.match(/^\/intools\/(orders|audit|registrations|knowledge)$/)?.[1] as
     | Exclude<Tab, "invoices" | "rfq" | "rfqs" | "suppliers">
     | undefined;
   return {
@@ -1996,6 +2002,319 @@ function AuditPanel() {
   );
 }
 
+const knowledgeDomains: Array<[string, string]> = [
+  ["rfq", "RFQ"],
+  ["sourcing", "Sourcing"],
+  ["operations", "Operations"],
+  ["payments-orders", "Payments and orders"],
+  ["policies", "Policies"],
+  ["support", "Support"],
+];
+const knowledgeStatuses: Array<[string, string]> = [
+  ["all", "All statuses"],
+  ["uploaded", "Uploaded"],
+  ["processing", "Processing"],
+  ["ready", "Ready"],
+  ["published", "Published"],
+  ["failed", "Failed"],
+  ["archived", "Archived"],
+];
+const knowledgeVisibility: Array<[string, string]> = [
+  ["all", "All visibility"],
+  ["buyer-safe", "Buyer-safe"],
+  ["operator-only", "Operator-only"],
+];
+const knowledgeMaxBytes = 25 * 1024 * 1024;
+const knowledgeMimeTypes = new Set([
+  "text/markdown",
+  "text/plain",
+]);
+
+function formatBytes(value: number | null | undefined) {
+  const bytes = Number(value) || 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+
+function KnowledgePanel() {
+  const [documents, setDocuments] = useState<IntoolsAgentKnowledgeDocument[]>([]);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [visibilityFilter, setVisibilityFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [busyAction, setBusyAction] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [form, setForm] = useState({
+    title: "",
+    domain: "rfq",
+    visibility: "buyer-safe",
+    file: null as File | null,
+  });
+
+  async function loadDocuments(nextStatus = statusFilter, nextVisibility = visibilityFilter) {
+    setLoading(true);
+    setError("");
+    try {
+      setDocuments(
+        await listIntoolsAgentKnowledge(
+          nextStatus === "all" ? null : nextStatus,
+          nextVisibility === "all" ? null : nextVisibility,
+        ),
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not load knowledge documents.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void loadDocuments();
+  }, [statusFilter, visibilityFilter]);
+
+  function chooseFile(file: File | undefined) {
+    setError("");
+    setMessage("");
+    if (!file) {
+      setForm((current) => ({ ...current, file: null }));
+      return;
+    }
+    const extension = file.name.toLowerCase().split(".").pop() || "";
+    const acceptedExtension = ["md", "txt"].includes(extension);
+    if (!acceptedExtension || (file.type && !knowledgeMimeTypes.has(file.type))) {
+      setForm((current) => ({ ...current, file: null }));
+      setError("Choose a Markdown or plain-text file. PDF and DOCX extraction is not enabled yet.");
+      return;
+    }
+    if (file.size > knowledgeMaxBytes) {
+      setForm((current) => ({ ...current, file: null }));
+      setError("Knowledge files must be 25 MB or smaller.");
+      return;
+    }
+    setForm((current) => ({ ...current, file }));
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    if (!form.title.trim()) {
+      setError("Add a title for this knowledge document.");
+      return;
+    }
+    if (!form.file) {
+      setError("Choose a Markdown or plain-text file to upload.");
+      return;
+    }
+    setUploading(true);
+    try {
+      await uploadIntoolsAgentKnowledge(form.file, {
+        title: form.title.trim(),
+        domain: form.domain,
+        visibility: form.visibility,
+      });
+      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", file: null });
+      setMessage("Knowledge document uploaded and queued for processing.");
+      await loadDocuments();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Could not upload the knowledge document.",
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function publish(document: IntoolsAgentKnowledgeDocument) {
+    if (document.status !== "ready" || !document.current_version_id) return;
+    setBusyAction(`${document.id}:publish`);
+    setError("");
+    setMessage("");
+    try {
+      await publishIntoolsAgentKnowledge(document.current_version_id);
+      setMessage(`${document.title} is now published.`);
+      await loadDocuments();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not publish this document.");
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function archive(document: IntoolsAgentKnowledgeDocument) {
+    if (document.status === "archived") return;
+    setBusyAction(`${document.id}:archive`);
+    setError("");
+    setMessage("");
+    try {
+      await archiveIntoolsAgentKnowledge(document.id);
+      setMessage(`${document.title} was archived.`);
+      await loadDocuments();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not archive this document.");
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  return (
+    <Stack spacing={2}>
+      <Surface component="form" onSubmit={submit} sx={{ p: { xs: 2, sm: 3 } }}>
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography variant="h2" sx={{ fontSize: 20 }}>
+              Upload knowledge
+            </Typography>
+            <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 13 }}>
+              Add approved context for the agent. Files stay private until an administrator publishes them.
+            </Typography>
+          </Box>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={1.25}>
+            <TextField
+              label="Document title"
+              value={form.title}
+              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+              required
+              fullWidth
+            />
+            <TextField
+              select
+              label="Domain"
+              value={form.domain}
+              onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))}
+              sx={{ minWidth: { md: 190 } }}
+            >
+              {knowledgeDomains.map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Visibility"
+              value={form.visibility}
+              onChange={(event) => setForm((current) => ({ ...current, visibility: event.target.value }))}
+              sx={{ minWidth: { md: 180 } }}
+            >
+              {knowledgeVisibility.slice(1).map(([value, label]) => (
+                <MenuItem key={value} value={value}>{label}</MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ alignItems: { sm: "center" } }}>
+            <Button component="label" variant="outlined" disabled={uploading}>
+              Choose file
+              <input
+                hidden
+                type="file"
+                accept=".md,.txt,text/markdown,text/plain"
+                onChange={(event) => chooseFile(event.target.files?.[0])}
+              />
+            </Button>
+            <Typography sx={{ color: form.file ? "text.primary" : "text.secondary", fontSize: 13 }}>
+              {form.file ? `${form.file.name} · ${formatBytes(form.file.size)}` : "Markdown or TXT · max 25 MB"}
+            </Typography>
+            <Button type="submit" variant="contained" disabled={uploading} startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <Add />}>
+              {uploading ? "Uploading…" : "Upload document"}
+            </Button>
+          </Stack>
+          {(error || message) && (
+            <Alert severity={error ? "error" : "success"} role={error ? "alert" : "status"}>
+              {error || message}
+            </Alert>
+          )}
+        </Stack>
+      </Surface>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
+        <Select
+          size="small"
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          aria-label="Filter knowledge by status"
+          sx={{ minWidth: 170 }}
+        >
+          {knowledgeStatuses.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+        </Select>
+        <Select
+          size="small"
+          value={visibilityFilter}
+          onChange={(event) => setVisibilityFilter(event.target.value)}
+          aria-label="Filter knowledge by visibility"
+          sx={{ minWidth: 170 }}
+        >
+          {knowledgeVisibility.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+        </Select>
+      </Stack>
+      {loading ? (
+        <Stack spacing={1} aria-label="Loading knowledge documents" role="status">
+          {[1, 2, 3].map((key) => <Surface key={key} sx={{ p: 2 }}><Skeleton width="42%" /><Skeleton width="70%" /></Surface>)}
+        </Stack>
+      ) : documents.length ? (
+        <Surface sx={{ overflow: "hidden" }}>
+          <Box
+            aria-hidden="true"
+            sx={{
+              display: { xs: "none", sm: "grid" },
+              gridTemplateColumns: "1.4fr .8fr .85fr .8fr auto",
+              gap: 1.5,
+              px: 2,
+              py: 1.25,
+              borderBottom: "1px solid #dfe4eb",
+              backgroundColor: "#f6f8fa",
+              color: "#526176",
+              fontSize: 11,
+              fontWeight: 800,
+              letterSpacing: ".04em",
+              textTransform: "uppercase",
+            }}
+          >
+            <Box>Document</Box><Box>Domain</Box><Box>Visibility</Box><Box>Status</Box><Box>Actions</Box>
+          </Box>
+          <Box component="ul" aria-label="Knowledge documents" sx={{ listStyle: "none", p: 0, m: 0 }}>
+            {documents.map((document) => {
+              const publishing = busyAction === `${document.id}:publish`;
+              const archiving = busyAction === `${document.id}:archive`;
+              return (
+                <Box component="li" key={document.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
+                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.4fr .8fr .85fr .8fr auto" }, alignItems: "center", gap: 1.5, p: { xs: 1.5, sm: 2 } }}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 800, fontSize: 14, overflowWrap: "anywhere" }}>{document.title}</Typography>
+                      <Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
+                        {document.original_name || "Original filename unavailable"} · {formatBytes(document.byte_size)} · updated {shortDate(document.updated_at)}
+                      </Typography>
+                    </Box>
+                    <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.domain)}</Typography>
+                    <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.visibility)}</Typography>
+                    <StatusChip status={document.status} />
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={0.75} sx={{ alignItems: { sm: "center" } }}>
+                      <Button size="small" variant="text" disabled={document.status !== "ready" || !document.current_version_id || Boolean(busyAction)} onClick={() => void publish(document)}>
+                        {publishing ? "Publishing…" : "Publish"}
+                      </Button>
+                      <Button size="small" variant="outlined" disabled={document.status === "archived" || Boolean(busyAction)} onClick={() => void archive(document)}>
+                        {archiving ? "Archiving…" : document.status === "archived" ? "Archived" : "Archive"}
+                      </Button>
+                    </Stack>
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+        </Surface>
+      ) : (
+        <Surface sx={{ p: 4, textAlign: "center" }}>
+          <Typography sx={{ fontWeight: 700 }}>No knowledge documents returned</Typography>
+          <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 13 }}>
+            Upload an approved context file to begin processing.
+          </Typography>
+        </Surface>
+      )}
+    </Stack>
+  );
+}
+
 type RfqQuoteFormState = {
   matchId: string | null;
   factoryId: string;
@@ -2990,6 +3309,7 @@ export function Intools() {
                   ["orders", "Orders"],
                   ["audit", "Audit history"],
                   ["registrations", "Sign-up requests"],
+                  ["knowledge", "Knowledge"],
                   ["suppliers", "Suppliers"],
                 ] as const
               ).map(([value, label]) => (
@@ -3127,6 +3447,7 @@ export function Intools() {
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
+            {tab === "knowledge" && <KnowledgePanel />}
             {tab === "suppliers" && (
               <IntoolsSuppliers
                 supplierId={supplierId}

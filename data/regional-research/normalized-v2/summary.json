@@ -1,14 +1,14 @@
 {
-  "input": "data/regional-research/raw_suppliers.jsonl",
-  "generated_at": "2026-08-24T04:11:37.715Z",
-  "input_rows": 42,
-  "accepted_unique_companies": 42,
+  "input": "data/regional-research/raw_suppliers.cleaned.jsonl",
+  "generated_at": "2026-08-24",
+  "input_rows": 5,
+  "accepted_unique_companies": 5,
   "rejected_rows": 0,
   "batches": 1,
   "countries": {
-    "Indonesia": 28,
-    "Vietnam": 2,
-    "Malaysia": 6,
-    "Thailand": 6
+    "Indonesia": 0,
+    "Vietnam": 3,
+    "Malaysia": 2,
+    "Thailand": 0
   }
 }

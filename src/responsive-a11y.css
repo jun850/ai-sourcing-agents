@@ -183,6 +183,9 @@ button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guid
 .conversation-composer textarea,
 .conversation-composer textarea:focus,
 .conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+.conversation-composer:focus-within::before { background: #526176; }
+.conversation-composer:focus-within textarea { color: #fff !important; caret-color: #fff; }
+.conversation-composer:focus-within textarea::placeholder { color: #eef3f8 !important; }
 .conversation-composer { position: relative; isolation: isolate; background: transparent !important; box-shadow: none !important; }
 .conversation-composer::before { content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: #fff; box-shadow: 0 12px 30px rgba(32,41,54,.10); pointer-events: none; }
 

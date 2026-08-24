@@ -34,6 +34,16 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Chat messages are persisted to the RFQ thread through guarded workspace RPCs;
   the assistant acknowledgement is status-only and must not invent supplier,
   price, MOQ, certification, capacity, availability, quote, or payment facts.
+- The RFQ conversation uses the server-side OpenRouter preset
+  `@preset/marketplace-copilot`. It may clarify, refine, or double-check the
+  active draft, but it can save only the eight reviewed RFQ fields (product,
+  quantity, material, certifications, colors, sizes, budget, and timeline)
+  through an optimistic, revision-checked server operation.
+- A conversational patch updates the live RFQ immediately, states the fields
+  changed, and offers a reversible undo while the RFQ is still a draft.
+  Questions alone never mutate the RFQ. Submitted RFQs remain read-only to the
+  agent. If authoritative payment or order context is unavailable, the agent
+  directs the buyer to `info@arcanawangsa.com` rather than guessing.
 - Requests are the durable RFQ index and timeline entry point. Products are
   buyer-owned immutable order-item snapshots, never a catalogue browse surface.
 - Opening an RFQ from Requests keeps the request-scoped route and Requests

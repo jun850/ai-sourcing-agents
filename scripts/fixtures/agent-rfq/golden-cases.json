@@ -1,0 +1,77 @@
+[
+  {
+    "id": "complete-apparel-brief",
+    "prompt": "Product: cotton t-shirt; Quantity: 500 units; Material: organic cotton; Certifications: OEKO-TEX; Colors: navy and cream; Sizes: S-XL; Budget: USD 12 per unit; Timeline: delivery by 2026-11-15.",
+    "current": {},
+    "expectedPatch": {
+      "product": "cotton t-shirt",
+      "quantity": "500 units",
+      "material": "organic cotton",
+      "certifications": "OEKO-TEX",
+      "colors": "navy and cream",
+      "sizes": "S-XL",
+      "budget": "USD 12 per unit",
+      "timeline": "delivery by 2026-11-15"
+    },
+    "expectedKind": "draft_updated"
+  },
+  {
+    "id": "partial-fabric-brief",
+    "prompt": "Product: linen tote; Quantity: 200 units; Material: linen; Colors: natural.",
+    "current": {},
+    "expectedPatch": {
+      "product": "linen tote",
+      "quantity": "200 units",
+      "material": "linen",
+      "colors": "natural"
+    },
+    "expectedKind": "clarifying_question",
+    "clarificationIncludes": "timeline"
+  },
+  {
+    "id": "quantity-correction",
+    "prompt": "Change the quantity to 800 units.",
+    "current": {
+      "product": "woven shirt",
+      "quantity": "300 units",
+      "material": "organic cotton",
+      "budget": "USD 18 per unit"
+    },
+    "expectedPatch": { "quantity": "800 units" },
+    "expectedKind": "draft_updated"
+  },
+  {
+    "id": "explicit-budget-removal",
+    "prompt": "Remove the budget for now; I do not want a target budget in this RFQ.",
+    "current": {
+      "product": "woven shirt",
+      "quantity": "300 units",
+      "budget": "USD 18 per unit"
+    },
+    "expectedPatch": { "budget": "" },
+    "expectedKind": "draft_updated"
+  },
+  {
+    "id": "double-check-is-read-only",
+    "prompt": "Can you double-check my RFQ and tell me what is still missing?",
+    "current": {
+      "product": "wool scarf",
+      "quantity": "100 units",
+      "material": "wool"
+    },
+    "expectedPatch": {},
+    "expectedKind": "answer",
+    "readOnly": true
+  },
+  {
+    "id": "payment-unknown-support",
+    "prompt": "Has my payment cleared and when will my order ship?",
+    "current": {
+      "product": "woven shirt",
+      "quantity": "300 units"
+    },
+    "expectedPatch": {},
+    "expectedKind": "support_handoff",
+    "supportEmail": "info@arcanawangsa.com"
+  }
+]

@@ -25,6 +25,33 @@ export type WorkspaceRfq = {
   updated_at: string;
   submitted_at: string | null;
   last_saved_at: string;
+  /** Optimistic-concurrency revision used only by the conversational RFQ agent. */
+  agent_revision?: number;
+};
+export type CopilotRfqField =
+  | "product"
+  | "quantity"
+  | "material"
+  | "certifications"
+  | "colors"
+  | "sizes"
+  | "budget"
+  | "timeline";
+export type CopilotAgentResponse = {
+  kind:
+    | "answer"
+    | "clarifying_question"
+    | "draft_updated"
+    | "support_handoff"
+    | "unavailable";
+  reply: string;
+  savedPatch: Partial<Record<CopilotRfqField, string>> | null;
+  changedFields: CopilotRfqField[];
+  revision: number;
+  undoToken: string | null;
+  verificationStatus: string | null;
+  supportHandoff: boolean | { email?: string; reason?: string } | null;
+  budgetState: { remainingTurns?: number | null } | number | null;
 };
 export type LegacyWorkspaceRfqQuote = {
   id: string;
@@ -575,6 +602,67 @@ export async function addRfqMessage(caseId: string, content: string) {
   rpcError(error);
   return (data ?? []) as WorkspaceChatMessage[];
 }
+export async function invokeRfqCopilot(input: {
+  rfqCaseId: string;
+  message?: string;
+  clientMessageId: string;
+  expectedRevision: number;
+  action?: "undo";
+  undoToken?: string;
+}) {
+  const { data, error } = await client().functions.invoke("copilot-agent", {
+    body: input,
+  });
+  rpcError(error);
+  if (!data || typeof data !== "object") {
+    throw new Error("Atelix AI could not return a response. Please try again shortly.");
+  }
+  const response = data as Partial<CopilotAgentResponse>;
+  if (
+    typeof response.kind !== "string" ||
+    typeof response.reply !== "string" ||
+    typeof response.revision !== "number"
+  ) {
+    throw new Error("Atelix AI returned an incomplete response. Please try again shortly.");
+  }
+  return {
+    kind: response.kind,
+    reply: response.reply,
+    savedPatch: response.savedPatch ?? null,
+    changedFields: Array.isArray(response.changedFields)
+      ? response.changedFields.filter(
+          (field): field is CopilotRfqField =>
+            typeof field === "string" &&
+            [
+              "product",
+              "quantity",
+              "material",
+              "certifications",
+              "colors",
+              "sizes",
+              "budget",
+              "timeline",
+            ].includes(field),
+        )
+      : [],
+    revision: response.revision,
+    undoToken: typeof response.undoToken === "string" ? response.undoToken : null,
+    verificationStatus:
+      typeof response.verificationStatus === "string"
+        ? response.verificationStatus
+        : null,
+    supportHandoff:
+      response.supportHandoff === true ||
+      (response.supportHandoff && typeof response.supportHandoff === "object")
+        ? response.supportHandoff
+        : null,
+    budgetState:
+      typeof response.budgetState === "number" ||
+      (response.budgetState && typeof response.budgetState === "object")
+        ? response.budgetState
+        : null,
+  } as CopilotAgentResponse;
+}
 export async function listWorkspaceProducts() {
   const { data, error } = await client().rpc("workspace_list_products");
   rpcError(error);
@@ -1026,5 +1114,127 @@ export async function listIntoolsAudit(
     p_target_type: targetType,
     p_target_id: targetId,
     p_limit: limit,
+  });
+}
+
+export type IntoolsAgentKnowledgeDocument = {
+  id: string;
+  title: string;
+  domain: string;
+  visibility: "buyer-safe" | "operator-only";
+  status: "uploaded" | "processing" | "ready" | "published" | "failed" | "archived";
+  current_version_id: string | null;
+  original_name: string | null;
+  mime_type: string | null;
+  byte_size: number | null;
+  updated_at: string;
+  extraction_error?: string | null;
+};
+
+type IntoolsAgentKnowledgeRow = {
+  documentId: string;
+  title: string;
+  domain: string;
+  visibility: "buyer-safe" | "operator-only";
+  archivedAt: string | null;
+  versionId: string | null;
+  originalName: string | null;
+  contentType: string | null;
+  byteSize: number | null;
+  status: IntoolsAgentKnowledgeDocument["status"] | null;
+  extractionError: string | null;
+  createdAt: string;
+};
+
+function mapIntoolsAgentKnowledge(row: IntoolsAgentKnowledgeRow): IntoolsAgentKnowledgeDocument {
+  return {
+    id: row.documentId,
+    title: row.title,
+    domain: row.domain,
+    visibility: row.visibility,
+    status: row.archivedAt ? "archived" : row.status ?? "uploaded",
+    current_version_id: row.versionId,
+    original_name: row.originalName,
+    mime_type: row.contentType,
+    byte_size: row.byteSize,
+    updated_at: row.createdAt,
+    extraction_error: row.extractionError,
+  };
+}
+
+export async function listIntoolsAgentKnowledge(
+  status: string | null = null,
+  visibility: string | null = null,
+) {
+  const rows = await intoolsRpc<IntoolsAgentKnowledgeRow[]>(
+    "intools_list_agent_knowledge",
+    { p_status: status, p_visibility: visibility },
+  );
+  return (rows ?? []).map(mapIntoolsAgentKnowledge);
+}
+
+export async function uploadIntoolsAgentKnowledge(
+  file: File,
+  input: { title: string; domain: string; visibility: string },
+) {
+  if (localIntoolsAdmin)
+    throw new Error("Knowledge uploads require a signed-in Supabase administrator session.");
+  const extension = file.name.toLowerCase().split(".").pop();
+  const inferredContentType =
+    extension === "pdf"
+      ? "application/pdf"
+      : extension === "docx"
+        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        : extension === "md"
+          ? "text/markdown"
+          : "text/plain";
+  const contentType = file.type || inferredContentType;
+  const created = await intoolsRpc<{
+    documentId: string;
+    versionId: string;
+    storagePath: string;
+    status: string;
+  }>("intools_create_agent_knowledge_version", {
+    p_payload: {
+      title: input.title,
+      domain: input.domain,
+      visibility: input.visibility,
+      originalName: file.name,
+      contentType,
+      byteSize: file.size,
+    },
+  });
+  const storage = client().storage.from("agent-knowledge");
+  const { error: uploadError } = await storage.upload(created.storagePath, file, {
+    contentType,
+    upsert: false,
+  });
+  if (uploadError) {
+    await intoolsRpc("intools_archive_agent_knowledge_document", {
+      p_document_id: created.documentId,
+    }).catch(() => undefined);
+    rpcError(uploadError);
+  }
+  // Extraction is server-side so private source content never enters another
+  // browser contract. A failed invocation leaves the immutable upload visible
+  // as `uploaded` for an operator retry instead of falsely marking it ready.
+  const { error: ingestError } = await client().functions.invoke(
+    "agent-knowledge-ingest",
+    { body: { versionId: created.versionId } },
+  );
+  if (ingestError && import.meta.env.DEV)
+    console.warn("Knowledge upload is waiting for ingestion.");
+  return created;
+}
+
+export async function publishIntoolsAgentKnowledge(versionId: string) {
+  return intoolsRpc("intools_publish_agent_knowledge_version", {
+    p_version_id: versionId,
+  });
+}
+
+export async function archiveIntoolsAgentKnowledge(documentId: string) {
+  return intoolsRpc("intools_archive_agent_knowledge_document", {
+    p_document_id: documentId,
   });
 }

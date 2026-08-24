@@ -67,12 +67,12 @@ import {
 } from "@mui/icons-material";
 import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
 import {
-  addRfqMessage,
   createRfqCase,
   getSession,
   getWorkspaceInvoiceDetail,
   getWorkspaceProduct,
   getWorkspaceRfqProduction,
+  invokeRfqCopilot,
   listRfqAttachments,
   listRfqCases,
   listRfqMessages,
@@ -91,6 +91,7 @@ import {
   type WorkspaceRfqProduction,
   type WorkspaceRfqQuote,
   type WorkspaceSelectedSupplier,
+  type CopilotAgentResponse,
   updateRfqCase,
   uploadRfqAttachment,
 } from "./supabase";
@@ -168,7 +169,39 @@ type RfqFields = {
   timeline: string;
 };
 type StoredRfq = WorkspaceRfq;
-type ConversationMessage = { from: "You" | "Atelix assistant"; text: string };
+type ConversationMessage = {
+  id: string;
+  from: "You" | "Atelix assistant";
+  text: string;
+};
+type AgentStatus = {
+  text: string;
+  tone: "success" | "info" | "warning" | "error";
+};
+
+const rfqFieldLabels: Record<keyof RfqFields, string> = {
+  product: "Product",
+  quantity: "Quantity",
+  material: "Material",
+  certifications: "Certifications",
+  colors: "Colors",
+  sizes: "Sizes",
+  budget: "Target budget",
+  timeline: "Timeline",
+};
+
+function newClientMessageId() {
+  return crypto.randomUUID();
+}
+
+function remainingTurnsFromBudget(
+  budgetState: CopilotAgentResponse["budgetState"],
+) {
+  if (typeof budgetState === "number") return budgetState;
+  return typeof budgetState?.remainingTurns === "number"
+    ? budgetState.remainingTurns
+    : null;
+}
 
 const navItems: Array<{
   label: string;
@@ -1011,13 +1044,21 @@ function CleanPromptComposer({
 }
 
 function ConversationChatPanel({
-  phase,
   messages: conversationMessages,
   onSend,
+  busy,
+  status,
+  remainingTurns,
+  onUndo,
+  canUndo,
 }: {
-  phase: RfqPhase;
   messages: ConversationMessage[];
-  onSend: (message: string) => void;
+  onSend: (message: string) => Promise<void>;
+  busy: boolean;
+  status: AgentStatus | null;
+  remainingTurns: number | null;
+  onUndo: () => Promise<void>;
+  canUndo: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -1030,27 +1071,27 @@ function ConversationChatPanel({
     target.style.overflowY = target.scrollHeight > 180 ? "auto" : "hidden";
     setExpanded(nextHeight > 52);
   }
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sendCurrentDraft() {
     const message = draft.trim();
-    if (!message) return;
-    onSend(message);
+    if (!message || busy) return;
     setDraft("");
     setExpanded(false);
+    await onSend(message);
+  }
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void sendCurrentDraft();
   }
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (
       event.key !== "Enter" ||
       event.shiftKey ||
-      event.nativeEvent.isComposing
+      event.nativeEvent.isComposing ||
+      event.keyCode === 229
     )
       return;
     event.preventDefault();
-    const message = draft.trim();
-    if (!message) return;
-    onSend(message);
-    setDraft("");
-    setExpanded(false);
+    void sendCurrentDraft();
   }
   return (
     <RoundedSurface
@@ -1081,7 +1122,7 @@ function ConversationChatPanel({
         <AnimatePresence initial={false}>
           {messages.map((message, index) => (
             <motion.div
-              key={`${message.from}-${index}-${message.text}`}
+              key={message.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{
@@ -1127,7 +1168,7 @@ function ConversationChatPanel({
             </motion.div>
           ))}
         </AnimatePresence>
-        {phase === "drafting" && (
+        {busy && (
           <Box
             aria-label="Atelix assistant is typing"
             sx={{
@@ -1159,6 +1200,54 @@ function ConversationChatPanel({
           </Box>
         )}
       </Box>
+      {(status || remainingTurns !== null || canUndo) && (
+        <Box
+          aria-live="polite"
+          role="status"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 1,
+            mt: 0.75,
+            px: 0.5,
+            color:
+              status?.tone === "error"
+                ? "#a4413e"
+                : status?.tone === "warning"
+                  ? "#81622c"
+                  : status?.tone === "success"
+                    ? "#426c4e"
+                    : "#566476",
+            fontSize: 12,
+            lineHeight: 1.45,
+          }}
+        >
+          <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
+            {status?.text ||
+              (remainingTurns !== null
+                ? `${remainingTurns} AI ${remainingTurns === 1 ? "reply" : "replies"} left this month.`
+                : "")}
+          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+            {remainingTurns !== null && status && (
+              <Typography component="span" sx={{ color: "#758091", fontSize: 11 }}>
+                {remainingTurns} left
+              </Typography>
+            )}
+            {canUndo && (
+              <MuiButton
+                size="small"
+                onClick={() => void onUndo()}
+                disabled={busy}
+                sx={{ minHeight: 30, px: 1, color: "#426c4e" }}
+              >
+                Undo change
+              </MuiButton>
+            )}
+          </Box>
+        </Box>
+      )}
       <Box
         component="form"
         className="conversation-composer"
@@ -1228,7 +1317,7 @@ function ConversationChatPanel({
         <IconButton
           type="submit"
           aria-label="Send message"
-          disabled={!hasDraft}
+          disabled={!hasDraft || busy}
           sx={{
             flex: "0 0 auto",
             alignSelf: expanded ? "flex-end" : "center",
@@ -1403,6 +1492,8 @@ function RfqDocumentPanel({
   onSubmit,
   onMessage,
   onQuoteSelected,
+  agentStatus,
+  changedFields,
 }: {
   phase: RfqPhase;
   fields: RfqFields;
@@ -1419,6 +1510,8 @@ function RfqDocumentPanel({
   onSubmit: () => void;
   onMessage: (message: string) => void;
   onQuoteSelected: () => void;
+  agentStatus: AgentStatus | null;
+  changedFields: Array<keyof RfqFields>;
 }) {
   const editing = phase === "editing";
   const tabs: RfqTab[] = ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
@@ -1577,6 +1670,37 @@ function RfqDocumentPanel({
         )}
         {tab === "RFQ" && (
           <>
+            {agentStatus && (
+              <Box
+                role="status"
+                aria-live="polite"
+                sx={{
+                  mb: 2,
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: "8px",
+                  backgroundColor:
+                    agentStatus.tone === "error"
+                      ? "#fdf0ef"
+                      : agentStatus.tone === "warning"
+                        ? "#fbf4e7"
+                        : "#eef4ee",
+                  color:
+                    agentStatus.tone === "error"
+                      ? "#923c39"
+                      : agentStatus.tone === "warning"
+                        ? "#705523"
+                        : "#426c4e",
+                  fontSize: 12.5,
+                  lineHeight: 1.5,
+                }}
+              >
+                {agentStatus.text}
+                {changedFields.length > 0
+                  ? ` Updated: ${changedFields.map((field) => rfqFieldLabels[field]).join(", ")}.`
+                  : ""}
+              </Box>
+            )}
             <Box sx={{ maxWidth: 820, mb: 3 }}>
               <Typography
                 sx={{ color: "#566476", fontSize: 14, lineHeight: 1.65 }}
@@ -2728,16 +2852,22 @@ function RfqWorkspace({
   initialFields,
   files,
   status,
+  initialRevision = 0,
+  initialAgentPrompt,
   initialPhase,
   onMessage,
+  onAgentDraftPatched,
 }: {
   caseId: string;
   brief: string;
   initialFields: RfqFields;
   files: RfqAttachment[];
   status: string;
+  initialRevision?: number;
+  initialAgentPrompt?: string;
   initialPhase?: RfqPhase;
   onMessage: (message: string) => void;
+  onAgentDraftPatched: (fields: RfqFields, revision: number) => void;
 }) {
   const persistedPhase = phaseForPersistedStatus(status);
   const restoredSubmitted =
@@ -2754,6 +2884,14 @@ function RfqWorkspace({
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
   >([]);
+  const [agentRevision, setAgentRevision] = useState(initialRevision);
+  const [agentPending, setAgentPending] = useState(false);
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+  const [changedFields, setChangedFields] = useState<Array<keyof RfqFields>>([]);
+  const [undoToken, setUndoToken] = useState<string | null>(null);
+  const [remainingTurns, setRemainingTurns] = useState<number | null>(null);
+  const [messagesLoaded, setMessagesLoaded] = useState(false);
+  const initialTurnStarted = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -2780,31 +2918,30 @@ function RfqWorkspace({
         if (active)
           setConversationMessages(
             next.map((message) => ({
+              id: message.id,
               from: (message.role === "buyer"
                 ? "You"
                 : "Atelix assistant") as ConversationMessage["from"],
               text: message.content,
             })),
           );
+        if (active) setMessagesLoaded(true);
       })
       .catch((cause) => {
-        if (active)
+        if (active) {
           onMessage(
             cause instanceof Error
               ? cause.message
               : "Could not load the RFQ conversation.",
           );
+          setMessagesLoaded(true);
+        }
       });
     return () => {
       active = false;
     };
   }, [caseId, onMessage]);
 
-  useEffect(() => {
-    if (phase !== "drafting") return;
-    const timer = window.setTimeout(() => setPhase("review"), 2300);
-    return () => window.clearTimeout(timer);
-  }, [phase]);
   useEffect(() => {
     if (phase !== "submitted" || restoredSubmitted) return;
     const timer = window.setTimeout(() => setPhase("matching"), 500);
@@ -2835,24 +2972,130 @@ function RfqWorkspace({
   function changeField(field: keyof RfqFields, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
   }
+  function applyAgentResponse(response: CopilotAgentResponse) {
+    const patch = response.savedPatch ?? {};
+    const safePatch = Object.fromEntries(
+      Object.entries(patch).filter(
+        ([field, value]) =>
+          Object.prototype.hasOwnProperty.call(defaultRfqFields, field) &&
+          typeof value === "string",
+      ),
+    ) as Partial<RfqFields>;
+    const responseChangedFields = response.changedFields.filter((field) =>
+      Object.prototype.hasOwnProperty.call(defaultRfqFields, field),
+    ) as Array<keyof RfqFields>;
+    const nextChangedFields = responseChangedFields.length
+      ? responseChangedFields
+      : (Object.keys(safePatch) as Array<keyof RfqFields>);
+    if (Object.keys(safePatch).length > 0) {
+      setFields((current) => {
+        const next = response.undoToken === null && response.kind === "draft_updated"
+          ? { ...defaultRfqFields, ...safePatch }
+          : { ...current, ...safePatch };
+        onAgentDraftPatched(next, response.revision);
+        return next;
+      });
+      setDraft((current) => ({ ...current, ...safePatch }));
+    }
+    setChangedFields(nextChangedFields);
+    setAgentRevision(response.revision);
+    setUndoToken(response.undoToken);
+    setRemainingTurns(remainingTurnsFromBudget(response.budgetState));
+    const supportRequested =
+      Boolean(response.supportHandoff) || response.kind === "support_handoff";
+    const unavailable = response.kind === "unavailable";
+    setAgentStatus({
+      tone: unavailable
+        ? "warning"
+        : supportRequested
+          ? "info"
+          : nextChangedFields.length
+            ? "success"
+            : "info",
+      text: unavailable
+        ? "Atelix AI is unavailable right now. You can keep editing this RFQ."
+        : supportRequested
+          ? "For payment or order clarification, contact info@arcanawangsa.com."
+          : response.verificationStatus ||
+            (nextChangedFields.length
+              ? "Your RFQ draft has been updated."
+              : "Atelix has checked the saved RFQ."),
+    });
+    setConversationMessages((current) => [
+      ...current,
+      {
+        id: newClientMessageId(),
+        from: "Atelix assistant",
+        text: response.reply,
+      },
+    ]);
+  }
   async function sendConversationMessage(message: string) {
+    if (agentPending) return;
+    const clientMessageId = newClientMessageId();
+    setAgentPending(true);
+    setChangedFields([]);
+    setUndoToken(null);
+    setAgentStatus({ tone: "info", text: "Atelix is checking your request…" });
+    setConversationMessages((current) => [
+      ...current,
+      { id: clientMessageId, from: "You", text: message },
+    ]);
     try {
-      const next = await addRfqMessage(caseId, message);
+      const response = await invokeRfqCopilot({
+        rfqCaseId: caseId,
+        message,
+        clientMessageId,
+        expectedRevision: agentRevision,
+      });
+      applyAgentResponse(response);
+    } catch (cause) {
+      const fallback =
+        "I’m sorry, I can’t check that just now. You can keep editing this RFQ, or contact info@arcanawangsa.com for payment or order clarification.";
+      setAgentStatus({
+        tone: "warning",
+        text: "Atelix AI is temporarily unavailable. Your RFQ was not changed.",
+      });
       setConversationMessages((current) => [
         ...current,
-        ...next.map((item) => ({
-          from: (item.role === "buyer"
-            ? "You"
-            : "Atelix assistant") as ConversationMessage["from"],
-          text: item.content,
-        })),
+        { id: newClientMessageId(), from: "Atelix assistant", text: fallback },
       ]);
-    } catch (cause) {
-      onMessage(
-        cause instanceof Error ? cause.message : "Could not save your message.",
-      );
+      onMessage(cause instanceof Error ? cause.message : "Could not reach Atelix AI.");
+    } finally {
+      setAgentPending(false);
     }
   }
+  async function undoAgentChange() {
+    if (!undoToken || agentPending) return;
+    setAgentPending(true);
+    setAgentStatus({ tone: "info", text: "Restoring the previous RFQ draft…" });
+    try {
+      const response = await invokeRfqCopilot({
+        rfqCaseId: caseId,
+        clientMessageId: newClientMessageId(),
+        expectedRevision: agentRevision,
+        action: "undo",
+        undoToken,
+      });
+      applyAgentResponse(response);
+    } catch (cause) {
+      setAgentStatus({
+        tone: "error",
+        text: "That change could not be undone. Your RFQ remains unchanged.",
+      });
+      onMessage(cause instanceof Error ? cause.message : "Could not undo the RFQ change.");
+    } finally {
+      setAgentPending(false);
+    }
+  }
+  useEffect(() => {
+    if (!initialAgentPrompt || !messagesLoaded || initialTurnStarted.current)
+      return;
+    initialTurnStarted.current = true;
+    void sendConversationMessage(initialAgentPrompt).finally(() =>
+      setPhase("review"),
+    );
+  }, [initialAgentPrompt, messagesLoaded]);
   function saveEdit() {
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
@@ -2865,6 +3108,7 @@ function RfqWorkspace({
         setConversationMessages((current) => [
           ...current,
           {
+            id: newClientMessageId(),
             from: "Atelix assistant",
             text: "Your RFQ changes are saved. Review the updated brief before requesting the draft.",
           },
@@ -2887,6 +3131,7 @@ function RfqWorkspace({
         setConversationMessages((current) => [
           ...current,
           {
+            id: newClientMessageId(),
             from: "Atelix assistant",
             text: "Your RFQ draft has been submitted for Atelix review.",
           },
@@ -2936,6 +3181,8 @@ function RfqWorkspace({
       onSubmit={submitRfq}
       onMessage={onMessage}
       onQuoteSelected={() => setStatusOverride("quote_selected")}
+      agentStatus={agentStatus}
+      changedFields={changedFields}
     />
   );
   return (
@@ -2952,9 +3199,13 @@ function RfqWorkspace({
       >
         {draftingPhase && (
           <ConversationChatPanel
-            phase={phase}
             messages={conversationMessages}
             onSend={sendConversationMessage}
+            busy={agentPending}
+            status={agentStatus}
+            remainingTurns={remainingTurns}
+            canUndo={Boolean(undoToken)}
+            onUndo={undoAgentChange}
           />
         )}
         <Box
@@ -5166,8 +5417,37 @@ export function Dashboard({ path }: { path: string }) {
           initialFields={fieldsFromBrief(rfq.record.brief)}
           files={rfq.attachments}
           status={rfq.record.status}
+          initialRevision={rfq.record.agent_revision ?? 0}
+          initialAgentPrompt={
+            rfq.initialPhase === "drafting" ? summary : undefined
+          }
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
+          onAgentDraftPatched={(nextFields, revision) => {
+            setRfq((current) =>
+              current
+                ? {
+                    ...current,
+                    record: {
+                      ...current.record,
+                      brief: briefFromFields(summary, nextFields),
+                      agent_revision: revision,
+                    },
+                  }
+                : current,
+            );
+            setHistoryItems((current) =>
+              current.map((item) =>
+                item.id === rfq.record.id
+                  ? {
+                      ...item,
+                      brief: briefFromFields(summary, nextFields),
+                      agent_revision: revision,
+                    }
+                  : item,
+              ),
+            );
+          }}
         />
       );
     }

@@ -63,7 +63,7 @@ type DryRunRow = {
 type DryRunResult = { run_id: string; status: string; rows: DryRunRow[] };
 
 function usage(): never {
-  console.error("Usage: npm run suppliers:import -- <file.csv|file.json> [--dry-run|--apply] [--overwrite] [--out path] [--rows 1,2]");
+  console.error("Usage: npm run suppliers:import -- <file.csv|file.json|file.jsonl> [--dry-run|--apply] [--overwrite] [--out path] [--rows 1,2]");
   process.exit(2);
 }
 
@@ -116,6 +116,7 @@ function parseCsv(text: string) {
 
 function sourceRows(text: string, extension: string): unknown[] {
   if (extension === ".csv") return parseCsv(text);
+  if (extension === ".jsonl") return text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
   const parsed: unknown = JSON.parse(text);
   if (Array.isArray(parsed)) return parsed;
   if (parsed && typeof parsed === "object" && Array.isArray((parsed as { rows?: unknown }).rows)) return (parsed as { rows: unknown[] }).rows;
@@ -193,7 +194,8 @@ async function main() {
   const overwrite = flag("--overwrite");
   const output = resolve(option("--out") || `artifacts/supplier-import-${new Date().toISOString().replace(/[:.]/g, "-")}`);
   const selectedRows = option("--rows")?.split(",").map((value) => Number(value.trim())).filter(Number.isInteger) || null;
-  const extension = input.toLowerCase().endsWith(".csv") ? ".csv" : ".json";
+  const lowerInput = input.toLowerCase();
+  const extension = lowerInput.endsWith(".csv") ? ".csv" : lowerInput.endsWith(".jsonl") ? ".jsonl" : ".json";
   const rawRows = sourceRows(await readFile(resolve(input), "utf8"), extension);
   if (rawRows.length < 1 || rawRows.length > MAX_ROWS) throw new Error(`Import must contain 1–${MAX_ROWS} rows; received ${rawRows.length}.`);
   const normalized: NormalizedRow[] = [];

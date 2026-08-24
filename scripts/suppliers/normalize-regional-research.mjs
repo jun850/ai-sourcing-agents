@@ -57,10 +57,13 @@ writeCsv('regional_supplier_contacts.csv', ['supplier_slug','supplier_name','cou
 writeCsv('regional_supplier_evidence.csv', ['supplier_slug','supplier_name','country','city','evidence_tier','source_url','source_type','source_value','observed_at','notes'], rows.flatMap((r) => r.source_records.length ? r.source_records.map((s) => [r.slug,r.name,r.country,r.city,r.evidence_tier,clean(s.url) || r.source_urls[0],clean(s.type),clean(s.value),clean(s.observed_at) || r.last_checked,clean(s.notes)]) : r.source_urls.map((url) => [r.slug,r.name,r.country,r.city,r.evidence_tier,url,'web','','',r.notes])));
 writeCsv('rejected_rows.csv', ['input_line','reason','name'], rejected);
 const batchDir = path.join(outDir, 'import_batches'); fs.mkdirSync(batchDir, { recursive: true });
+for (const file of fs.readdirSync(batchDir)) {
+  if (/^batch-\d{4}\.jsonl$/.test(file)) fs.unlinkSync(path.join(batchDir, file));
+}
 rows.forEach((r, index) => {
   const batch = Math.floor(index / 50) + 1, file = path.join(batchDir, `batch-${String(batch).padStart(4, '0')}.jsonl`);
   const payload = { source_system: 'regional_web', source_record_id: r.slug, source_url: r.source_urls[0], supplier: { slug: r.slug, name: r.name, type: r.supplier_type, region: r.country, city: r.city, loc: r.city, verify_state: 'pending', moq: r.moq || null, lead: r.lead_time || null, certs: r.certifications, tags: [...new Set([...r.sectors, ...r.capabilities])], phone: r.phone || null, web: r.website || null, bio: r.notes || null }, provenance: r.source_urls.map((url) => ({ field_name: 'supplier', source_url: url, value_origin: 'source', observed_at: r.last_checked })) };
   fs.appendFileSync(file, JSON.stringify(payload) + '\n');
 });
-fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify({ input, generated_at: new Date().toISOString(), input_rows: raw.length, accepted_unique_companies: rows.length, rejected_rows: rejected.length, batches: Math.ceil(rows.length / 50), countries: Object.fromEntries([...countries].map((country) => [country, rows.filter((r) => r.country === country).length])) }, null, 2) + '\n');
+fs.writeFileSync(path.join(outDir, 'summary.json'), JSON.stringify({ input, generated_at: rows.map((row) => row.last_checked).filter(Boolean).sort().at(-1) || null, input_rows: raw.length, accepted_unique_companies: rows.length, rejected_rows: rejected.length, batches: Math.ceil(rows.length / 50), countries: Object.fromEntries([...countries].map((country) => [country, rows.filter((r) => r.country === country).length])) }, null, 2) + '\n');
 console.log(JSON.stringify({ accepted: rows.length, rejected: rejected.length, batches: Math.ceil(rows.length / 50), outDir }, null, 2));

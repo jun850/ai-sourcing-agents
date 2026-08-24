@@ -8,9 +8,11 @@
     "build": "tsc --noEmit && vite build",
     "start": "node server/index.mjs",
     "lint": "tsc --noEmit",
+    "qa:agent-rfq": "node scripts/qa-agent-rfq.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
     "suppliers:queue": "node scripts/suppliers/build-research-queue.mjs",
-    "suppliers:normalize-regional": "node scripts/suppliers/normalize-regional-research.mjs",
+    "suppliers:clean-regional": "node scripts/suppliers/clean-regional-research.mjs",
+    "suppliers:normalize-regional": "node scripts/suppliers/normalize-regional-research.mjs data/regional-research/raw_suppliers.cleaned.jsonl data/regional-research/normalized-v2",
     "suppliers:crawl-regional": "node scripts/suppliers/crawl-regional-research.mjs"
   },
   "dependencies": {

@@ -40,6 +40,13 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Chat composer focus uses the slate-blue working state with white typed text;
   plain Enter sends, Shift+Enter inserts a newline, and IME composition never
   submits. The send control is moss/white in the focused state, not blue.
+- The RFQ conversation keeps agent outcomes within the existing conversation
+  and live-document pattern: concise text status announces checking, saved
+  fields, verification, unavailable, remaining-turn, and support-handoff
+  states without creating a second chat surface. Agent-applied updates name
+  their changed RFQ fields and offer one inline undo action while the draft is
+  editable. Use status text as well as color; unavailable or unknown payment
+  and order questions direct buyers to `info@arcanawangsa.com`.
 - Avoid local-only chat state, fake product catalogue rows, invented supplier
   quotes, or payment state. Read and write through the typed Supabase/RPC
   contracts and preserve server-authoritative status boundaries.
