@@ -65,7 +65,11 @@ import {
   VerifiedOutlined,
   X,
 } from "@mui/icons-material";
-import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
+import {
+  ArrowUp as PromptArrowUp,
+  Plus as PromptPlus,
+  Lock as ComposerLockIcon,
+} from "lucide-react";
 import {
   createRfqCase,
   getSession,
@@ -173,6 +177,7 @@ type ConversationMessage = {
   id: string;
   from: "You" | "Atelix assistant";
   text: string;
+  options?: string[] | null;
 };
 type AgentStatus = {
   text: string;
@@ -1164,21 +1169,65 @@ function ConversationChatPanel({
                 >
                   {message.text}
                 </Typography>
+                {message.from === "Atelix assistant" &&
+                  index === messages.length - 1 &&
+                  Boolean(message.options?.length) && (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 0.75,
+                        mt: 1.25,
+                      }}
+                    >
+                      {message.options!.map((option, optionIndex) => (
+                        <MuiButton
+                          key={option}
+                          size="small"
+                          disabled={busy}
+                          onClick={() => void onSend(option)}
+                          sx={{
+                            minHeight: 34,
+                            px: 1.5,
+                            borderRadius: "999px",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            textTransform: "none",
+                            border: "1px solid",
+                            borderColor: optionIndex === 0 ? "#4b7657" : "#d7dce2",
+                            color: optionIndex === 0 ? "#fff" : "#3d4652",
+                            backgroundColor:
+                              optionIndex === 0 ? "#4b7657" : "transparent",
+                            "&:hover": {
+                              backgroundColor:
+                                optionIndex === 0 ? "#3d6548" : "#f7f7f8",
+                              borderColor: optionIndex === 0 ? "#3d6548" : "#c3cad3",
+                            },
+                          }}
+                        >
+                          {option}
+                        </MuiButton>
+                      ))}
+                    </Box>
+                  )}
               </Box>
             </motion.div>
           ))}
         </AnimatePresence>
         {busy && (
           <Box
-            aria-label="Atelix assistant is typing"
+            aria-label="Atelix assistant is drafting your RFQ"
             sx={{
               display: "flex",
-              gap: 0.5,
+              gap: 0.75,
               alignItems: "center",
               minHeight: 18,
               pl: 0.25,
             }}
           >
+            <Typography sx={{ fontSize: 12.5, color: "#8a95a3", fontWeight: 600 }}>
+              Drafting your RFQ
+            </Typography>
             {[0, 1, 2].map((dot) => (
               <motion.span
                 key={dot}
@@ -1281,7 +1330,7 @@ function ConversationChatPanel({
           }}
           onKeyDown={handleComposerKeyDown}
           aria-label="Continue conversation"
-          placeholder="Refine the RFQ"
+          placeholder="Reply, or add colors, sizes, certifications…"
           sx={{
             flex: 1,
             minWidth: 0,
@@ -1336,6 +1385,21 @@ function ConversationChatPanel({
         >
           <PromptArrowUp size={21} strokeWidth={1.9} />
         </IconButton>
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 0.5,
+          mt: 0.75,
+          px: 0.5,
+        }}
+      >
+        <ComposerLockIcon size={11} strokeWidth={2} color="#9aa3af" />
+        <Typography sx={{ fontSize: 11, color: "#9aa3af", lineHeight: 1.4 }}>
+          Drafting aid only. Supplier, price, and payment facts come from
+          reviewed Atelix records.
+        </Typography>
       </Box>
     </RoundedSurface>
   );
@@ -3027,6 +3091,7 @@ function RfqWorkspace({
         id: newClientMessageId(),
         from: "Atelix assistant",
         text: response.reply,
+        options: response.options,
       },
     ]);
   }

@@ -53,6 +53,7 @@ export type CopilotAgentResponse = {
   verificationStatus: string | null;
   supportHandoff: boolean | { email?: string; reason?: string } | null;
   budgetState: { remainingTurns?: number | null } | number | null;
+  options: string[] | null;
 };
 export type LegacyWorkspaceRfqQuote = {
   id: string;
@@ -653,6 +654,12 @@ export async function invokeRfqCopilot(input: {
       (response.budgetState && typeof response.budgetState === "object")
         ? response.budgetState
         : null,
+    options: Array.isArray(response.options)
+      ? response.options.filter(
+          (option): option is string =>
+            typeof option === "string" && option.trim().length > 0,
+        ).slice(0, 3)
+      : null,
   } as CopilotAgentResponse;
 }
 export async function listWorkspaceProducts() {
