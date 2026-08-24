@@ -1069,6 +1069,12 @@ function ConversationChatPanel({
   const [expanded, setExpanded] = useState(false);
   const hasDraft = Boolean(draft.trim());
   const messages: ConversationMessage[] = conversationMessages;
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const node = messageListRef.current;
+    if (!node) return;
+    node.scrollTop = node.scrollHeight;
+  }, [messages.length, busy]);
   function resizeConversation(target: HTMLTextAreaElement) {
     target.style.height = "auto";
     const nextHeight = Math.min(target.scrollHeight, 180);
@@ -1113,6 +1119,7 @@ function ConversationChatPanel({
       }}
     >
       <Box
+        ref={messageListRef}
         sx={{
           display: "flex",
           flexDirection: "column",
