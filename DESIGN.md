@@ -11,6 +11,11 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Use the established neutral sans stack throughout product UI.
 - Keep one clear primary action per view; color communicates state rather than decoration.
 - Use existing components and tokens before adding variants. Do not add promotional strips or new content sections unless requested.
+- The Products workspace uses one bounded operational list per stage with
+  rectangular rows, visible columns on desktop, structured rows on narrow
+  screens, and no product-card/pill stack. Product detail is a read-only split
+  surface: immutable snapshot fields and order history on the left, one
+  stage-aware next action plus a prefilled-RFQ reorder action on the right.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
