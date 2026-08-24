@@ -928,7 +928,7 @@ function CleanPromptComposer({
             component="textarea"
             rows={1}
             aria-label="Product request"
-            placeholder="Tell us what you want to source. A sentence or a few details about quantity, material, or delivery is enough to start."
+            placeholder="Start sourcing with Atelix"
             {...promptRegistration}
             ref={(node: HTMLTextAreaElement | null) => {
               promptRegistration.ref(node);
@@ -955,20 +955,6 @@ function CleanPromptComposer({
               lineHeight: 1.4,
               py: { xs: 0.75, sm: 1.15 },
               "&::placeholder": { color: "#66717f" },
-            }}
-          />
-          <Box
-            component="img"
-            src="/atelix-ai-mode-badge.png"
-            alt="Atelix AI mode"
-            sx={{
-              flex: "0 0 auto",
-              alignSelf: expanded ? "flex-end" : "center",
-              width: { xs: 58, sm: 76 },
-              height: { xs: 34, sm: 42 },
-              objectFit: "contain",
-              opacity: brief.trim() ? 0.92 : 0.78,
-              transition: "opacity 180ms ease",
             }}
           />
           <Tooltip title="Start RFQ draft">
