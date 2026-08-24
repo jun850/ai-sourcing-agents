@@ -169,6 +169,24 @@ const emptyForm: InvoiceFormState = {
   notes: "",
   line: { description: "", quantity: "1", unitAmount: "", taxAmount: "0" },
 };
+function invoiceDraftFromSearch(search: string): Partial<InvoiceFormState> {
+  const params = new URLSearchParams(search);
+  const unitAmount = params.get("unitAmount");
+  const description = params.get("description");
+  return {
+    rfqCaseId: params.get("rfqCaseId") || "",
+    buyerProfileId: params.get("buyerProfileId") || "",
+    orderId: params.get("orderId") || "",
+    ...((unitAmount || description) && {
+      line: {
+        description: description || "",
+        quantity: "1",
+        unitAmount: unitAmount || "",
+        taxAmount: "0",
+      },
+    }),
+  };
+}
 
 function money(cents: number | null | undefined) {
   return new Intl.NumberFormat("en-US", {
@@ -641,6 +659,37 @@ function InvoiceCreateForm({
   const [form, setForm] = useState(() => ({ ...emptyForm, ...initial }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [lookupOrderNo, setLookupOrderNo] = useState("");
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState("");
+  const [buyerCountry, setBuyerCountry] = useState<string | null>(null);
+  async function lookupOrder() {
+    const orderNo = lookupOrderNo.trim();
+    if (!orderNo) return;
+    setLookupBusy(true);
+    setLookupError("");
+    try {
+      const detail = await getIntoolsOrderDetail(orderNo);
+      setForm((current) => ({
+        ...current,
+        buyerProfileId: detail.buyer_profile_id,
+        orderId: detail.id,
+        rfqCaseId: detail.rfq_case_id || "",
+        line: {
+          ...current.line,
+          description: current.line.description || `Order ${detail.order_no}`,
+          unitAmount: String(Math.round((detail.total || 0) * 100)),
+        },
+      }));
+      setBuyerCountry(detail.buyer.country || null);
+    } catch (cause) {
+      setLookupError(
+        cause instanceof Error ? cause.message : "Order not found.",
+      );
+    } finally {
+      setLookupBusy(false);
+    }
+  }
   function set<K extends keyof InvoiceFormState>(
     key: K,
     value: InvoiceFormState[K],
@@ -725,6 +774,36 @@ function InvoiceCreateForm({
         </Box>
         <Box
           sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "flex-end",
+            gap: 1,
+            p: 1.5,
+            border: "1px dashed #c9d0da",
+            borderRadius: 1.5,
+          }}
+        >
+          <TextField
+            label="Order number"
+            placeholder="e.g. ORD-2026-0412"
+            value={lookupOrderNo}
+            onChange={(event) => setLookupOrderNo(event.target.value)}
+            sx={{ minWidth: 220 }}
+          />
+          <Button
+            variant="outlined"
+            disabled={lookupBusy || !lookupOrderNo.trim()}
+            onClick={() => void lookupOrder()}
+          >
+            {lookupBusy ? "Looking up…" : "Fill from order"}
+          </Button>
+          <Typography sx={{ fontSize: 12, color: "text.secondary", flexBasis: "100%" }}>
+            {lookupError ||
+              "Auto-fills the buyer, order, RFQ, and line total below from an existing order."}
+          </Typography>
+        </Box>
+        <Box
+          sx={{
             display: "grid",
             gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))" },
             gap: 1.5,
@@ -735,7 +814,7 @@ function InvoiceCreateForm({
             label="Buyer profile ID"
             value={form.buyerProfileId}
             onChange={(event) => set("buyerProfileId", event.target.value)}
-            helperText="Use the confirmed profile UUID."
+            helperText="Use the confirmed profile UUID, or fill from an order above."
           />
           <TextField
             label="Due date"
@@ -762,8 +841,25 @@ function InvoiceCreateForm({
             inputMode="numeric"
             value={form.line.taxAmount}
             onChange={(event) => setLine("taxAmount", event.target.value)}
+            helperText={
+              buyerCountry
+                ? `Buyer country: ${buyerCountry}. Defaults to $0 -- see tax guidance below before charging.`
+                : "Defaults to $0 -- see tax guidance below before charging."
+            }
           />
         </Box>
+        <Alert severity="info" sx={{ fontSize: 12.5 }}>
+          <strong>Tax defaults to $0.</strong> Atelix is a US-based sourcing
+          broker invoicing for cross-border services, not tangible goods sold
+          domestically. Under general US sales-tax rules, a seller only
+          collects sales tax where it has nexus, and brokerage/services are
+          frequently exempt even then; for GST jurisdictions (AU, NZ, SG, IN,
+          CA, etc.) cross-border B2B services are commonly zero-rated or
+          reverse-charged to the buyer rather than taxed by the foreign
+          supplier. Neither rule is universal — confirm with a tax advisor
+          before charging tax on a specific invoice rather than relying on
+          this default.
+        </Alert>
         <Divider />
         <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
           Line item
@@ -1290,10 +1386,18 @@ function OrderDetail({
   order,
   onBack,
   onChanged,
+  onCreateInvoice,
 }: {
   order: IntoolsOrderDetail;
   onBack: () => void;
   onChanged: (order: IntoolsOrderDetail) => void;
+  onCreateInvoice: (input: {
+    buyerProfileId: string;
+    orderId: string;
+    rfqCaseId: string | null;
+    unitAmountCents: number;
+    description: string;
+  }) => void;
 }) {
   const [nextStatus, setNextStatus] = useState(order.status);
   const [note, setNote] = useState("");
@@ -1373,7 +1477,24 @@ function OrderDetail({
                 {buyer.company_name || buyer.full_name || "Buyer not named"}
               </Typography>
             </Box>
-            <StatusChip status={order.status} />
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() =>
+                  onCreateInvoice({
+                    buyerProfileId: order.buyer_profile_id,
+                    orderId: order.id,
+                    rfqCaseId: order.rfq_case_id,
+                    unitAmountCents: Math.round((order.total || 0) * 100),
+                    description: `Order ${order.order_no}`,
+                  })
+                }
+              >
+                Create invoice
+              </Button>
+              <StatusChip status={order.status} />
+            </Stack>
           </Stack>
         </Box>
 
@@ -1780,7 +1901,17 @@ function OrderDetail({
   );
 }
 
-function OrdersPanel() {
+function OrdersPanel({
+  onCreateInvoice,
+}: {
+  onCreateInvoice: (input: {
+    buyerProfileId: string;
+    orderId: string;
+    rfqCaseId: string | null;
+    unitAmountCents: number;
+    description: string;
+  }) => void;
+}) {
   const [orders, setOrders] = useState<IntoolsOrder[]>([]);
   const [selected, setSelected] = useState<IntoolsOrderDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -1821,6 +1952,7 @@ function OrdersPanel() {
       <OrderDetail
         order={selected}
         onBack={() => setSelected(null)}
+        onCreateInvoice={onCreateInvoice}
         onChanged={(updated) => {
           setSelected(updated);
           setOrders((items) =>
@@ -3015,15 +3147,9 @@ export function Intools() {
   const [invoices, setInvoices] = useState<IntoolsInvoice[]>([]);
   const [selected, setSelected] = useState<IntoolsInvoiceDetail | null>(null);
   const [creating, setCreating] = useState(false);
-  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(() => {
-    if (!route.creatingInvoice) return null;
-    const params = new URLSearchParams(location.search);
-    return {
-      rfqCaseId: params.get("rfqCaseId") || "",
-      buyerProfileId: params.get("buyerProfileId") || "",
-      orderId: params.get("orderId") || "",
-    };
-  });
+  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(() =>
+    route.creatingInvoice ? invoiceDraftFromSearch(location.search) : null,
+  );
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
@@ -3039,12 +3165,7 @@ export function Intools() {
   useEffect(() => {
     setTab(route.tab);
     if (route.creatingInvoice) {
-      const params = new URLSearchParams(location.search);
-      setInvoiceDraft({
-        rfqCaseId: params.get("rfqCaseId") || "",
-        buyerProfileId: params.get("buyerProfileId") || "",
-        orderId: params.get("orderId") || "",
-      });
+      setInvoiceDraft(invoiceDraftFromSearch(location.search));
       setCreating(true);
     } else if (route.tab !== "invoices") {
       setCreating(false);
@@ -3145,21 +3266,51 @@ export function Intools() {
       active = false;
     };
   }, []);
-  function startInvoiceFromRfq(input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) {
-    const params = new URLSearchParams({
-      rfqCaseId: input.rfqCaseId,
-      buyerProfileId: input.buyerProfileId,
-    });
+  function openInvoiceDraft(input: {
+    rfqCaseId: string | null;
+    buyerProfileId: string;
+    orderId: string | null;
+    unitAmountCents?: number;
+    description?: string;
+  }) {
+    const params = new URLSearchParams({ buyerProfileId: input.buyerProfileId });
+    if (input.rfqCaseId) params.set("rfqCaseId", input.rfqCaseId);
     if (input.orderId) params.set("orderId", input.orderId);
+    if (input.unitAmountCents != null) params.set("unitAmount", String(input.unitAmountCents));
+    if (input.description) params.set("description", input.description);
     setInvoiceDraft({
-      rfqCaseId: input.rfqCaseId,
+      rfqCaseId: input.rfqCaseId || "",
       buyerProfileId: input.buyerProfileId,
       orderId: input.orderId || "",
+      line: {
+        description: input.description || "",
+        quantity: "1",
+        unitAmount: input.unitAmountCents != null ? String(input.unitAmountCents) : "",
+        taxAmount: "0",
+      },
     });
     setSelected(null);
     setCreating(true);
     setTab("invoices");
     navigate(`/intools/invoices/new?${params.toString()}`);
+  }
+  function startInvoiceFromOrder(input: {
+    buyerProfileId: string;
+    orderId: string;
+    rfqCaseId: string | null;
+    unitAmountCents: number;
+    description: string;
+  }) {
+    openInvoiceDraft(input);
+  }
+  function startInvoiceFromRfq(input: {
+    rfqCaseId: string;
+    buyerProfileId: string;
+    orderId: string | null;
+    unitAmountCents?: number;
+    description?: string;
+  }) {
+    openInvoiceDraft(input);
   }
   async function selectInvoice(invoice: IntoolsInvoice) {
     setError("");
@@ -3444,7 +3595,9 @@ export function Intools() {
                 onBack={() => navigate("/intools/requests")}
               />
             )}
-            {tab === "orders" && <OrdersPanel />}
+            {tab === "orders" && (
+              <OrdersPanel onCreateInvoice={startInvoiceFromOrder} />
+            )}
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
             {tab === "knowledge" && <KnowledgePanel />}
@@ -3529,7 +3682,7 @@ function RfqReviewPanel({
   routeCaseId: string | null;
   onSelectCase: (id: string) => void;
   onBack: () => void;
-  onCreateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null }) => void;
+  onCreateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null; unitAmountCents?: number; description?: string }) => void;
 }) {
   const [statusFilter, setStatusFilter] = useState("needs_research");
   const [cases, setCases] = useState<IntoolsRfqCase[]>([]);
@@ -3719,6 +3872,8 @@ function RfqReviewPanel({
                     rfqCaseId: selected.id,
                     buyerProfileId: selected.buyer_profile_id,
                     orderId: (order || null)?.id ?? null,
+                    unitAmountCents: order ? Math.round(order.total * 100) : undefined,
+                    description: selected.title || `RFQ ${selected.case_no}`,
                   })
                 }
               >
