@@ -107,6 +107,7 @@ const intoolsTheme = createTheme({
     MuiDialog: {
       styleOverrides: { paper: { borderRadius: 14, maxWidth: 560 } },
     },
+    MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
   },
 });
 
@@ -200,7 +201,7 @@ function Surface({
       {...props}
       sx={{
         border: "1px solid #dfe4eb",
-        borderRadius: 1.75,
+        borderRadius: "14px",
         backgroundColor: "#fff",
         ...sx,
       }}
@@ -849,7 +850,7 @@ function InvoiceDetail({
             <Box
               component="form"
               onSubmit={saveDraft}
-              sx={{ p: 2, borderRadius: 2, backgroundColor: "#f6f8fa" }}
+              sx={{ p: 2, borderRadius: "12px", backgroundColor: "#f6f8fa" }}
             >
               <Stack spacing={1.5}>
                 <Typography sx={{ fontWeight: 800 }}>
@@ -940,7 +941,7 @@ function InvoiceDetail({
                     gridTemplateColumns: "minmax(0,1fr) auto",
                     gap: 1,
                     p: 1.25,
-                    borderRadius: 2,
+                    borderRadius: "10px",
                     backgroundColor: "#f6f8fa",
                   }}
                 >
@@ -1128,7 +1129,7 @@ function InvoiceDetail({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <Box sx={{ p: 1.25, borderRadius: 2, backgroundColor: "#f6f8fa" }}>
+    <Box sx={{ p: 1.25, borderRadius: "10px", backgroundColor: "#f6f8fa" }}>
       <Typography sx={{ color: "text.secondary", fontSize: 11 }}>
         {label}
       </Typography>
