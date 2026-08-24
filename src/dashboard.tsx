@@ -1213,7 +1213,7 @@ function ConversationChatPanel({
           }}
           onKeyDown={handleComposerKeyDown}
           aria-label="Continue conversation"
-          placeholder="Reply, or ask about MOQ, lead time, certification…"
+          placeholder="Refine the RFQ"
           sx={{
             flex: 1,
             minWidth: 0,
@@ -1268,21 +1268,6 @@ function ConversationChatPanel({
         >
           <PromptArrowUp size={21} strokeWidth={1.9} />
         </IconButton>
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
-          mt: 1.1,
-          pl: 0.5,
-          color: "#9ba1aa",
-          fontSize: 11,
-        }}
-      >
-        <LockOutlined sx={{ fontSize: 14 }} />
-        Drafting aid only. Supplier, price and payment facts come from reviewed
-        Atelix records.
       </Box>
     </RoundedSurface>
   );
