@@ -2952,6 +2952,7 @@ function RfqWorkspace({
   );
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [checkCount, setCheckCount] = useState(0);
+  const [trackAcknowledged, setTrackAcknowledged] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
   >([]);
@@ -3216,12 +3217,17 @@ function RfqWorkspace({
       );
   }
   function goToQuotes() {
+    // The buyer must see the completed matching checks and click through
+    // themselves; only this manual acknowledgement switches the panel away
+    // from SupplierMatchingStage, not the phase reaching "matched" on its own.
+    setTrackAcknowledged(true);
     setTab("Quotes");
   }
 
   const draftingPhase =
     phase === "drafting" || phase === "review" || phase === "editing";
-  const showMatchingAnimation = phase === "matching";
+  const showMatchingAnimation =
+    (phase === "matching" || phase === "matched") && !trackAcknowledged;
   const baseStatus =
     phase === "submitted" || phase === "matching" || phase === "matched"
       ? status === "draft"
@@ -3231,7 +3237,7 @@ function RfqWorkspace({
   const caseStatus = statusOverride ?? baseStatus;
   const rightPanel = showMatchingAnimation ? (
     <SupplierMatchingStage
-      phase="matching"
+      phase={phase === "matched" ? "matched" : "matching"}
       checkCount={checkCount}
       caseStatus={caseStatus}
       onQuotes={goToQuotes}
