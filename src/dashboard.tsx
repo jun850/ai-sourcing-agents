@@ -3877,10 +3877,20 @@ function ProductDetail({
   }, [product.rfq_case_id]);
   const invoice = production?.invoice;
   const invoicePending = Boolean(invoice && ["sent", "overdue"].includes(invoice.effective_status));
-  const openStage = () => {
-    if (invoice?.id && invoicePending) navigate(`/dashboard/invoices/${encodeURIComponent(invoice.id)}`);
-    else onOpenRfq(product.rfq_case_id);
-  };
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState("");
+  async function payInvoice() {
+    if (!invoice?.id || payBusy) return;
+    setPayBusy(true);
+    setPayError("");
+    try {
+      const checkout = await startWorkspaceInvoiceCheckout([invoice.id]);
+      window.location.assign(checkout.url);
+    } catch (cause) {
+      setPayError(cause instanceof Error ? cause.message : "Could not start payment.");
+      setPayBusy(false);
+    }
+  }
   return (
     <div className="product-detail-page">
       <div className="product-detail-toolbar">
@@ -3923,7 +3933,23 @@ function ProductDetail({
             <strong>{product.order_status === "awaiting_payment" ? "Invoice payment due" : productStageLabel(product.order_status)}</strong>
             <p>{productStageDescription(product.order_status, invoice?.invoice_no)}</p>
           </div>
-          {product.rfq_case_id && <MuiButton className="product-primary-button product-stage-action" fullWidth variant="contained" onClick={openStage}>{invoicePending ? "Go to production & invoice" : "Open linked request"}</MuiButton>}
+          {invoicePending ? (
+            <>
+              <MuiButton
+                className="product-primary-button product-stage-action"
+                fullWidth
+                variant="contained"
+                disabled={payBusy}
+                onClick={() => void payInvoice()}
+                startIcon={payBusy ? <CircularProgress size={16} color="inherit" /> : undefined}
+              >
+                {payBusy ? "Opening payment…" : "Pay invoice"}
+              </MuiButton>
+              {payError && <Alert severity="error" sx={{ mt: 1.25 }}>{payError}</Alert>}
+            </>
+          ) : (
+            product.rfq_case_id && <MuiButton className="product-primary-button product-stage-action" fullWidth variant="contained" onClick={() => onOpenRfq(product.rfq_case_id)}>Open linked request</MuiButton>
+          )}
           <div className="product-rail-divider" />
           <Typography className="product-rail-eyebrow">Also from here</Typography>
           <MuiButton className="product-outline-button product-reorder-button" fullWidth variant="outlined" onClick={onReorder} disabled={!finalized}>Reorder this spec</MuiButton>
