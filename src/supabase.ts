@@ -57,6 +57,7 @@ export type WorkspaceInvoice = {
   balance_cents: number;
   due_date: string | null;
   created_at: string;
+  rfq_case_id: string | null;
 };
 export type WorkspaceInvoiceItem = {
   id?: string;
@@ -86,6 +87,26 @@ export type RfqAttachment = {
   content_type: string;
   byte_size: number;
   created_at: string;
+};
+export type WorkspaceRfqQuote = {
+  id: string;
+  status: "published" | "selected" | "declined";
+  unit_price_cents: number;
+  moq: number;
+  lead_time_days: number;
+  certifications: string[];
+  certification_note: string | null;
+  recommended: boolean;
+  selected_at: string | null;
+  factory_id: string;
+  factory_name: string;
+  factory_region: string | null;
+  factory_years: number | null;
+};
+export type WorkspaceRfqProduction = {
+  quote: { id: string; unit_price_cents: number; moq: number; lead_time_days: number; selected_at: string | null; factory_name: string; factory_region: string | null } | null;
+  order: { id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null;
+  invoice: { id: string; invoice_no: string; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null } | null;
 };
 export type IntoolsInvoiceStatus =
   "draft" | "sent" | "paid" | "cancelled" | "overdue";
@@ -494,6 +515,22 @@ export async function startWorkspaceInvoiceCheckout(invoiceIds: string[]) {
   return data as { url: string; environment?: string; amountCents?: number; discountCents?: number };
 }
 
+export async function listWorkspaceRfqQuotes(caseId: string) {
+  const { data, error } = await client().rpc("workspace_list_rfq_quotes", { p_case_id: caseId });
+  rpcError(error);
+  return (data ?? []) as WorkspaceRfqQuote[];
+}
+export async function selectWorkspaceRfqQuote(quoteId: string) {
+  const { data, error } = await client().rpc("workspace_select_rfq_quote", { p_quote_id: quoteId });
+  rpcError(error);
+  return data as WorkspaceRfqQuote;
+}
+export async function getWorkspaceRfqProduction(caseId: string) {
+  const { data, error } = await client().rpc("workspace_get_rfq_production", { p_case_id: caseId });
+  rpcError(error);
+  return (data ?? { quote: null, order: null, invoice: null }) as WorkspaceRfqProduction;
+}
+
 async function intoolsRpc<T>(
   name: string,
   args: Record<string, unknown> = {},
@@ -616,9 +653,107 @@ export async function setIntoolsSupplierBrokerStatus(
     p_curation_locked: curationLocked,
   });
 }
+export type IntoolsRfqCase = {
+  id: string;
+  case_no: string;
+  title: string;
+  brief: Record<string, unknown>;
+  status: string;
+  buyer_name: string;
+  buyer_email: string;
+  match_count: number;
+  quote_count: number;
+  submitted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type IntoolsRfqSupplierMatch = {
+  id: string;
+  factory_id: string;
+  status: "suggested" | "selected" | "approved" | "rejected";
+  eligibility: Record<string, unknown>;
+  score: number;
+};
+export type IntoolsRfqQuote = {
+  id: string;
+  status: "draft" | "published" | "selected" | "declined";
+  unit_price_cents: number;
+  moq: number;
+  lead_time_days: number;
+  certifications: string[];
+  certification_note: string | null;
+  recommended: boolean;
+  notes: string | null;
+  selected_at: string | null;
+  factory_id: string;
+  factory_name: string;
+  factory_region: string | null;
+};
+export type IntoolsRfqQuotePayload = {
+  rfqCaseId: string;
+  factoryId: string;
+  unitPriceCents: number;
+  moq: number;
+  leadTimeDays: number;
+  certifications: string[];
+  certificationNote?: string | null;
+  recommended?: boolean;
+  notes?: string | null;
+};
+export async function listIntoolsRfqCases(status: string | null = null) {
+  return intoolsRpc<IntoolsRfqCase[]>("intools_list_rfq_cases", { p_status: status });
+}
 export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string) {
-  return intoolsRpc<Array<Record<string, unknown>>>("intools_generate_rfq_supplier_matches", {
+  return intoolsRpc<IntoolsRfqSupplierMatch[]>("intools_generate_rfq_supplier_matches", {
     p_case_id: rfqCaseId,
+  });
+}
+export async function setIntoolsRfqSupplierMatchStatus(matchId: string, status: "suggested" | "selected" | "approved" | "rejected") {
+  return intoolsRpc<IntoolsRfqSupplierMatch>("intools_set_rfq_supplier_match_status", {
+    p_match_id: matchId,
+    p_status: status,
+  });
+}
+export async function listIntoolsRfqQuotes(caseId: string) {
+  return intoolsRpc<IntoolsRfqQuote[]>("intools_list_rfq_quotes", { p_case_id: caseId });
+}
+export async function upsertIntoolsRfqQuote(quoteId: string | null, payload: IntoolsRfqQuotePayload) {
+  return intoolsRpc<IntoolsRfqQuote>("intools_upsert_rfq_quote", {
+    p_quote_id: quoteId,
+    p_payload: {
+      rfq_case_id: payload.rfqCaseId,
+      factory_id: payload.factoryId,
+      unit_price_cents: payload.unitPriceCents,
+      moq: payload.moq,
+      lead_time_days: payload.leadTimeDays,
+      certifications: payload.certifications,
+      certification_note: payload.certificationNote ?? null,
+      recommended: payload.recommended ?? false,
+      notes: payload.notes ?? null,
+    },
+  });
+}
+export async function publishIntoolsRfqQuote(quoteId: string) {
+  return intoolsRpc<IntoolsRfqQuote>("intools_publish_rfq_quote", { p_quote_id: quoteId });
+}
+export async function confirmIntoolsRfqOrder(input: { caseId: string; quoteId: string; qty: number; shipCountry?: string | null; shipAddress?: string | null; incoterms?: string | null }) {
+  return intoolsRpc<{ order_id: string; order_no: string; total: number }>("intools_confirm_rfq_order", {
+    p_case_id: input.caseId,
+    p_quote_id: input.quoteId,
+    p_qty: input.qty,
+    p_ship_country: input.shipCountry ?? null,
+    p_ship_address: input.shipAddress ?? null,
+    p_incoterms: input.incoterms ?? null,
+  });
+}
+export async function getIntoolsRfqOrder(caseId: string) {
+  return intoolsRpc<{ id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null>("intools_get_rfq_order", { p_case_id: caseId });
+}
+export async function updateIntoolsOrderProductionStage(orderId: string, stage: string, note?: string | null) {
+  return intoolsRpc<{ production_stage: string }>("intools_update_order_production_stage", {
+    p_order_id: orderId,
+    p_stage: stage,
+    p_note: note ?? null,
   });
 }
 export async function runIntoolsSupplierImportDryRun(

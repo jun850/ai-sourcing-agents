@@ -4,6 +4,7 @@ import {
   Avatar,
   Box,
   Button,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -11,6 +12,7 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  FormControlLabel,
   IconButton,
   MenuItem,
   Paper,
@@ -37,9 +39,12 @@ import {
 import {
   cancelIntoolsInvoice,
   assertIntoolsAdmin,
+  confirmIntoolsRfqOrder,
   createIntoolsInvoice,
+  generateIntoolsRfqSupplierMatches,
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
+  getIntoolsRfqOrder,
   getLocalIntoolsSession,
   getSession,
   loginLocalIntools,
@@ -47,9 +52,16 @@ import {
   listIntoolsInvoices,
   listIntoolsRegistrationRequests,
   listIntoolsOrders,
+  listIntoolsRfqCases,
+  listIntoolsRfqQuotes,
+  listIntoolsSuppliers,
+  publishIntoolsRfqQuote,
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
+  setIntoolsRfqSupplierMatchStatus,
   updateIntoolsInvoice,
+  updateIntoolsOrderProductionStage,
+  upsertIntoolsRfqQuote,
   type IntoolsCreateInvoicePayload,
   type IntoolsInvoice,
   type IntoolsInvoiceAudit,
@@ -57,6 +69,10 @@ import {
   type IntoolsManualPaymentPayload,
   type IntoolsOrder,
   type IntoolsRegistrationRequest,
+  type IntoolsRfqCase,
+  type IntoolsRfqQuote,
+  type IntoolsRfqSupplierMatch,
+  type IntoolsSupplier,
   approveRegistrationRequest,
 } from "./supabase";
 import { IntoolsSuppliers } from "./intools-suppliers";
@@ -92,7 +108,7 @@ const intoolsTheme = createTheme({
   },
 });
 
-type Tab = "invoices" | "orders" | "audit" | "registrations" | "suppliers";
+type Tab = "invoices" | "rfq" | "orders" | "audit" | "registrations" | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
   description: string;
@@ -1512,6 +1528,7 @@ export function Intools() {
               {(
                 [
                   ["invoices", "Invoices"],
+                  ["rfq", "RFQ review"],
                   ["orders", "Orders"],
                   ["audit", "Audit history"],
                   ["registrations", "Sign-up requests"],
@@ -1613,6 +1630,7 @@ export function Intools() {
                 )}
               </>
             )}
+            {tab === "rfq" && <RfqReviewPanel />}
             {tab === "orders" && <OrdersPanel />}
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
@@ -1628,6 +1646,210 @@ export function Intools() {
       </Box>
     </ThemeProvider>
   );
+}
+
+const rfqStatusFilters: Array<[string, string]> = [
+  ["needs_research", "Atelix review"],
+  ["awaiting_supplier", "Awaiting suppliers"],
+  ["supplier_replied", "Supplier replied"],
+  ["buyer_review", "Buyer deciding"],
+  ["quote_selected", "Confirming terms"],
+  ["in_production", "In production"],
+  ["draft", "Buyer drafting"],
+  ["closed", "Closed"],
+  ["all", "All"],
+];
+const productionStages: Array<[string, string]> = [
+  ["sampling", "Sampling"],
+  ["bulk_production", "Bulk production"],
+  ["quality_inspection", "Quality inspection"],
+  ["shipped", "Shipped"],
+  ["delivered", "Delivered"],
+];
+
+type QuoteDraft = { unitPrice: string; moq: string; leadTimeDays: string; certifications: string; certificationNote: string; recommended: boolean; notes: string };
+const emptyQuoteDraft: QuoteDraft = { unitPrice: "", moq: "", leadTimeDays: "", certifications: "", certificationNote: "", recommended: false, notes: "" };
+
+function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { caseId: string; factoryId: string; existing: IntoolsRfqQuote | null; onSaved: () => void; onMessage: (message: string) => void }) {
+  const [draft, setDraft] = useState<QuoteDraft>(existing ? { unitPrice: (existing.unit_price_cents / 100).toFixed(2), moq: String(existing.moq), leadTimeDays: String(existing.lead_time_days), certifications: existing.certifications.join(", "), certificationNote: existing.certification_note || "", recommended: existing.recommended, notes: existing.notes || "" } : emptyQuoteDraft);
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true);
+    try {
+      await upsertIntoolsRfqQuote(existing?.id ?? null, {
+        rfqCaseId: caseId, factoryId,
+        unitPriceCents: Math.round(parseFloat(draft.unitPrice || "0") * 100),
+        moq: parseInt(draft.moq || "0", 10),
+        leadTimeDays: parseInt(draft.leadTimeDays || "0", 10),
+        certifications: draft.certifications.split(",").map((value) => value.trim()).filter(Boolean),
+        certificationNote: draft.certificationNote.trim() || null,
+        recommended: draft.recommended,
+        notes: draft.notes.trim() || null,
+      });
+      onSaved();
+    } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not save this quote."); }
+    finally { setBusy(false); }
+  }
+  return <Stack spacing={1} sx={{ p: 1.5, border: "1px dashed #cfd6df", borderRadius: 2 }}>
+    <Stack direction="row" spacing={1}>
+      <TextField size="small" label="Unit price (USD)" value={draft.unitPrice} onChange={(event) => setDraft((current) => ({ ...current, unitPrice: event.target.value }))} sx={{ flex: 1 }} />
+      <TextField size="small" label="MOQ" value={draft.moq} onChange={(event) => setDraft((current) => ({ ...current, moq: event.target.value }))} sx={{ flex: 1 }} />
+      <TextField size="small" label="Lead time (days)" value={draft.leadTimeDays} onChange={(event) => setDraft((current) => ({ ...current, leadTimeDays: event.target.value }))} sx={{ flex: 1 }} />
+    </Stack>
+    <TextField size="small" label="Certifications (comma-separated)" value={draft.certifications} onChange={(event) => setDraft((current) => ({ ...current, certifications: event.target.value }))} />
+    <TextField size="small" label="Certification note (optional, e.g. pending renewal)" value={draft.certificationNote} onChange={(event) => setDraft((current) => ({ ...current, certificationNote: event.target.value }))} />
+    <TextField size="small" label="Internal notes (optional)" value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} multiline minRows={2} />
+    <FormControlLabel control={<Checkbox size="small" checked={draft.recommended} onChange={(event) => setDraft((current) => ({ ...current, recommended: event.target.checked }))} />} label="Mark as recommended" />
+    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{busy ? "Saving…" : existing ? "Save changes" : "Save draft quote"}</Button>
+  </Stack>;
+}
+
+function RfqReviewPanel() {
+  const [statusFilter, setStatusFilter] = useState("needs_research");
+  const [cases, setCases] = useState<IntoolsRfqCase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<IntoolsSupplier[]>([]);
+  const [matches, setMatches] = useState<IntoolsRfqSupplierMatch[] | null>(null);
+  const [quotes, setQuotes] = useState<IntoolsRfqQuote[] | null>(null);
+  const [order, setOrder] = useState<{ id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null | undefined>(undefined);
+  const [detailError, setDetailError] = useState("");
+  const [openQuoteFor, setOpenQuoteFor] = useState<string | null>(null);
+  const [orderForm, setOrderForm] = useState({ qty: "", shipCountry: "", shipAddress: "", incoterms: "" });
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  async function loadCases(nextFilter = statusFilter) {
+    setLoading(true); setError("");
+    try { setCases(await listIntoolsRfqCases(nextFilter === "all" ? null : nextFilter)); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load RFQs."); }
+    finally { setLoading(false); }
+  }
+  useEffect(() => { void loadCases(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { void listIntoolsSuppliers().then(setSuppliers).catch(() => undefined); }, []);
+
+  const selected = cases.find((item) => item.id === selectedId) || null;
+  async function loadDetail(caseId: string) {
+    setDetailError(""); setMatches(null); setQuotes(null); setOrder(undefined);
+    try {
+      const [nextMatches, nextQuotes, nextOrder] = await Promise.all([
+        generateIntoolsRfqSupplierMatches(caseId),
+        listIntoolsRfqQuotes(caseId),
+        getIntoolsRfqOrder(caseId),
+      ]);
+      setMatches(nextMatches); setQuotes(nextQuotes); setOrder(nextOrder);
+    } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not load this RFQ."); }
+  }
+  function selectCase(caseId: string) { setSelectedId(caseId); setOpenQuoteFor(null); void loadDetail(caseId); }
+
+  function supplierFor(factoryId: string) { return suppliers.find((item) => item.id === factoryId) || null; }
+  function quoteForFactory(factoryId: string) { return (quotes || []).find((quote) => quote.factory_id === factoryId) || null; }
+
+  async function setMatchStatus(matchId: string, status: "approved" | "rejected") {
+    if (!selected) return;
+    setBusyKey(matchId);
+    try { await setIntoolsRfqSupplierMatchStatus(matchId, status); await loadDetail(selected.id); }
+    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not update this match."); }
+    finally { setBusyKey(null); }
+  }
+  async function publishQuote(quoteId: string) {
+    if (!selected) return;
+    setBusyKey(quoteId);
+    try { await publishIntoolsRfqQuote(quoteId); await loadDetail(selected.id); await loadCases(); }
+    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not publish this quote."); }
+    finally { setBusyKey(null); }
+  }
+  const selectedQuote = (quotes || []).find((quote) => quote.status === "selected") || null;
+  async function confirmOrder() {
+    if (!selected || !selectedQuote) return;
+    setBusyKey("confirm-order");
+    try {
+      await confirmIntoolsRfqOrder({ caseId: selected.id, quoteId: selectedQuote.id, qty: parseFloat(orderForm.qty || "0"), shipCountry: orderForm.shipCountry.trim() || null, shipAddress: orderForm.shipAddress.trim() || null, incoterms: orderForm.incoterms.trim() || null });
+      await loadDetail(selected.id); await loadCases();
+    } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not confirm this order."); }
+    finally { setBusyKey(null); }
+  }
+  async function setStage(stage: string) {
+    if (!order) return;
+    setBusyKey("stage");
+    try { await updateIntoolsOrderProductionStage(order.id, stage); if (selected) await loadDetail(selected.id); }
+    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not update production stage."); }
+    finally { setBusyKey(null); }
+  }
+
+  return <Stack spacing={2}>
+    <Typography sx={{ color: "text.secondary", fontSize: 14 }}>Review buyer RFQs, approve supplier matches, publish quotes, and confirm orders once a buyer selects one.</Typography>
+    <Stack direction={{ xs: "column", lg: "row" }} spacing={2} sx={{ alignItems: "flex-start" }}>
+      <Stack spacing={1.25} sx={{ width: { xs: "100%", lg: 360 }, flexShrink: 0 }}>
+        <Select size="small" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); void loadCases(event.target.value); }} aria-label="Filter RFQs by status">
+          {rfqStatusFilters.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+        </Select>
+        {error && <Alert severity="error">{error}</Alert>}
+        {loading ? <LoadingRows /> : cases.length ? cases.map((item) => <Surface key={item.id} onClick={() => selectCase(item.id)} sx={{ p: 1.5, cursor: "pointer", borderColor: selectedId === item.id ? "#4b7657" : "#dfe4eb", backgroundColor: selectedId === item.id ? "#f7fbf7" : "#fff" }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 13.5, overflowWrap: "anywhere" }}>{item.title}</Typography>
+          <Typography sx={{ mt: .3, fontSize: 11.5, color: "text.secondary", fontFamily: "'DM Mono', monospace" }}>{item.case_no}</Typography>
+          <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: .75 }}>
+            <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{item.buyer_name}</Typography>
+            <Chip size="small" label={displayStatus(item.status)} />
+          </Stack>
+        </Surface>) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No RFQs in this state</Typography></Surface>}
+      </Stack>
+
+      {selected && <Stack spacing={2} sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+        <Surface sx={{ p: 2 }}>
+          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
+            <Box><Typography variant="h2" sx={{ fontSize: 20 }}>{selected.title}</Typography><Typography sx={{ mt: .3, fontSize: 12, color: "text.secondary" }}>{selected.case_no} · {selected.buyer_name} · {selected.buyer_email}</Typography></Box>
+            <StatusChip status={selected.status} />
+          </Stack>
+          {typeof selected.brief === "object" && selected.brief && <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{typeof (selected.brief as Record<string, unknown>).summary === "string" ? (selected.brief as Record<string, unknown>).summary as string : JSON.stringify(selected.brief)}</Typography>}
+        </Surface>
+        {detailError && <Alert severity="error">{detailError}</Alert>}
+
+        <Surface sx={{ p: 2 }}>
+          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}><Typography sx={{ fontWeight: 700, fontSize: 14 }}>Supplier matches</Typography><Button size="small" startIcon={<Refresh fontSize="small" />} onClick={() => void loadDetail(selected.id)}>Refresh</Button></Stack>
+          {matches === null ? <LoadingRows /> : matches.length ? <Stack spacing={1} sx={{ mt: 1.25 }}>{matches.map((match) => { const factory = supplierFor(match.factory_id); const quote = quoteForFactory(match.factory_id); return <Box key={match.id} sx={{ p: 1.5, border: "1px solid #eef0f3", borderRadius: 2 }}>
+            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+              <Box><Typography sx={{ fontWeight: 700, fontSize: 13 }}>{factory?.name || match.factory_id}</Typography><Typography sx={{ fontSize: 11.5, color: "text.secondary" }}>{factory?.region}</Typography></Box>
+              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+                <StatusChip status={match.status} />
+                {match.status === "suggested" && <><Button size="small" variant="contained" disabled={busyKey === match.id} onClick={() => void setMatchStatus(match.id, "approved")}>Approve</Button><Button size="small" color="error" disabled={busyKey === match.id} onClick={() => void setMatchStatus(match.id, "rejected")}>Reject</Button></>}
+              </Stack>
+            </Stack>
+            {match.status === "approved" && <Box sx={{ mt: 1.25 }}>
+              {quote ? <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
+                <Typography sx={{ fontSize: 12.5 }}>{money(quote.unit_price_cents)} · MOQ {quote.moq} · {quote.lead_time_days}d lead <StatusChip status={quote.status} /></Typography>
+                <Stack direction="row" spacing={1}>
+                  {quote.status === "draft" && <Button size="small" onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>Edit</Button>}
+                  {quote.status === "draft" && <Button size="small" variant="contained" disabled={busyKey === quote.id} onClick={() => void publishQuote(quote.id)}>Publish</Button>}
+                </Stack>
+              </Stack> : <Button size="small" variant="outlined" onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>{openQuoteFor === match.factory_id ? "Close" : "Add quote"}</Button>}
+              {openQuoteFor === match.factory_id && <Box sx={{ mt: 1 }}><RfqQuoteForm caseId={selected.id} factoryId={match.factory_id} existing={quote} onSaved={() => { setOpenQuoteFor(null); void loadDetail(selected.id); }} onMessage={setDetailError} /></Box>}
+            </Box>}
+          </Box>; })}</Stack> : <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary" }}>No eligible suppliers found for this brief yet.</Typography>}
+        </Surface>
+
+        {selectedQuote && <Surface sx={{ p: 2 }}>
+          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Order</Typography>
+          {order === undefined ? <LoadingRows /> : order ? <Stack spacing={1} sx={{ mt: 1.25 }}>
+            <Typography sx={{ fontSize: 13 }}>{order.order_no} · {money(Math.round(order.total * 100))} · placed {shortDate(order.placed_at)}</Typography>
+            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
+              <Select size="small" value={order.production_stage || "sampling"} onChange={(event) => void setStage(event.target.value)}>{productionStages.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</Select>
+              {busyKey === "stage" && <CircularProgress size={16} />}
+            </Stack>
+          </Stack> : <Stack spacing={1} sx={{ mt: 1.25 }}>
+            <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>Buyer selected {selectedQuote.factory_name}. Confirm the order to start production tracking.</Typography>
+            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+              <TextField size="small" label="Quantity" value={orderForm.qty} onChange={(event) => setOrderForm((current) => ({ ...current, qty: event.target.value }))} sx={{ width: 120 }} />
+              <TextField size="small" label="Ship country" value={orderForm.shipCountry} onChange={(event) => setOrderForm((current) => ({ ...current, shipCountry: event.target.value }))} sx={{ width: 150 }} />
+              <TextField size="small" label="Incoterms" value={orderForm.incoterms} onChange={(event) => setOrderForm((current) => ({ ...current, incoterms: event.target.value }))} sx={{ width: 120 }} />
+            </Stack>
+            <TextField size="small" label="Ship address" value={orderForm.shipAddress} onChange={(event) => setOrderForm((current) => ({ ...current, shipAddress: event.target.value }))} />
+            <Button size="small" variant="contained" disabled={busyKey === "confirm-order" || !orderForm.qty} onClick={() => void confirmOrder()} sx={{ alignSelf: "flex-start" }}>{busyKey === "confirm-order" ? "Confirming…" : "Confirm order"}</Button>
+          </Stack>}
+        </Surface>}
+      </Stack>}
+    </Stack>
+  </Stack>;
 }
 
 function RegistrationRequestsPanel() {
