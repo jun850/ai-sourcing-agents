@@ -1984,17 +1984,19 @@ function RfqReviewPanel() {
           {rfqStatusFilters.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
         </Select>
         {error && <Alert severity="error">{error}</Alert>}
-        {loading ? <LoadingRows /> : cases.length ? cases.map((item) => <Surface key={item.id} onClick={() => selectCase(item.id)} sx={{ p: 1.5, cursor: "pointer", borderColor: selectedId === item.id ? "#4b7657" : "#dfe4eb", backgroundColor: selectedId === item.id ? "#f7fbf7" : "#fff" }}>
+        {loading ? <LoadingRows /> : cases.length ? cases.map((item) => { const needsOrder = item.status === "quote_selected" && item.selected_factory_name; return <Surface key={item.id} onClick={() => selectCase(item.id)} sx={{ p: 1.5, cursor: "pointer", borderLeft: needsOrder ? "3px solid #4b7657" : undefined, borderColor: selectedId === item.id ? "#4b7657" : needsOrder ? "#cfe2d4" : "#dfe4eb", backgroundColor: selectedId === item.id ? "#f7fbf7" : needsOrder ? "#f9fdf9" : "#fff" }}>
           <Typography sx={{ fontWeight: 700, fontSize: 13.5, overflowWrap: "anywhere" }}>{item.title}</Typography>
           <Typography sx={{ mt: .3, fontSize: 11.5, color: "text.secondary", fontFamily: "'DM Mono', monospace" }}>{item.case_no}</Typography>
+          {item.selected_factory_name && <Typography sx={{ mt: .3, fontSize: 11.5, color: "#4b7657", fontWeight: 700 }}>Buyer selected: {item.selected_factory_name}</Typography>}
+          {item.has_unpaid_invoice && <Typography sx={{ mt: .2, fontSize: 11, color: "#9a4f47", fontWeight: 600 }}>Invoice sent · awaiting payment</Typography>}
           <Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between", mt: .75 }}>
             <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{item.buyer_name}</Typography>
             <Stack direction="row" spacing={.75} sx={{ alignItems: "center" }}>
               {item.quote_count > 0 && <Chip size="small" variant="outlined" label={`${item.quote_count} quoted`} />}
-              <Chip size="small" label={displayStatus(item.status)} />
+              <Chip size="small" label={needsOrder ? "Needs order" : displayStatus(item.status)} color={needsOrder ? "success" : "default"} />
             </Stack>
           </Stack>
-        </Surface>) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No RFQs in this state</Typography></Surface>}
+        </Surface>; }) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>No RFQs in this state</Typography></Surface>}
       </Stack>
 
       {selected && <Stack spacing={2} sx={{ flex: 1, minWidth: 0, width: "100%" }}>
@@ -2006,6 +2008,7 @@ function RfqReviewPanel() {
           {typeof selected.brief === "object" && selected.brief && <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{typeof (selected.brief as Record<string, unknown>).summary === "string" ? (selected.brief as Record<string, unknown>).summary as string : JSON.stringify(selected.brief)}</Typography>}
         </Surface>
         {detailError && <Alert severity="error">{detailError}</Alert>}
+        {selectedQuote && order === null && <Alert severity="success" action={<Button color="inherit" size="small" onClick={() => document.getElementById("rfq-order-section")?.scrollIntoView({ behavior: "smooth" })}>Confirm order</Button>}>Buyer selected <strong>{selectedQuote.factory_name}</strong> — confirm the order below to start production tracking.</Alert>}
 
         <Surface sx={{ p: 2 }}>
           <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
@@ -2041,7 +2044,7 @@ function RfqReviewPanel() {
           </Stack> : <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary" }}>No eligible suppliers found for this brief yet.</Typography>}
         </Surface>
 
-        {selectedQuote && <Surface sx={{ p: 2 }}>
+        {selectedQuote && <Surface id="rfq-order-section" sx={{ p: 2 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Order</Typography>
           {order === undefined ? <LoadingRows /> : order ? <Stack spacing={1} sx={{ mt: 1.25 }}>
             <Typography sx={{ fontSize: 13 }}>{order.order_no} · {money(Math.round(order.total * 100))} · placed {shortDate(order.placed_at)}</Typography>

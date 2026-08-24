@@ -728,6 +728,8 @@ export type IntoolsRfqCase = {
   buyer_email: string;
   match_count: number;
   quote_count: number;
+  selected_factory_name: string | null;
+  has_unpaid_invoice: boolean;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
