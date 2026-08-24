@@ -38,12 +38,32 @@ function options(value: unknown): string[] | null {
   const clean = value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0 && entry.trim().length <= 60).map((entry) => entry.trim()).slice(0, 3);
   return clean.length ? clean : null;
 }
+function fieldValue(source: unknown): string | null {
+  // Fields like colors/certifications read as plural nouns, so the model
+  // sometimes answers with an array (e.g. ["black"]) instead of the plain
+  // string our schema expects; join it into one rather than silently
+  // dropping buyer-confirmed info the model correctly understood but
+  // mis-typed.
+  if (typeof source === "string") return source.trim();
+  if (typeof source === "number" && Number.isFinite(source)) return String(source);
+  if (Array.isArray(source)) {
+    const joined = source
+      .filter((entry): entry is string | number => typeof entry === "string" || typeof entry === "number")
+      .map((entry) => String(entry).trim())
+      .filter(Boolean)
+      .join(", ");
+    return joined || null;
+  }
+  return null;
+}
 function patch(value: unknown): Partial<Record<Field, string>> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const clean: Partial<Record<Field, string>> = {};
   for (const field of FIELDS) {
-    const source = (value as Record<string, unknown>)[field];
-    if (typeof source === "string" && source.trim().length <= 500) clean[field] = source.trim();
+    // An explicit empty string is kept (it's how the model clears a field);
+    // fieldValue() only returns null when there was nothing usable to read.
+    const source = fieldValue((value as Record<string, unknown>)[field]);
+    if (source !== null && source.length <= 500) clean[field] = source;
   }
   return Object.keys(clean).length ? clean : null;
 }
@@ -130,10 +150,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   }
   const { data: budget, error: budgetError } = await admin.rpc("agent_rfq_reserve_budget", { p_profile_id: user.id, p_turn_id: turn.id, p_reservation_microusd: 10000 });
   if (budgetError || !budget?.allowed) {
-    const reply_ = budget?.reason === "budget"
-      ? "You’ve reached this month’s conversational AI budget across your RFQs. Your RFQ is still available to edit, and I can help route payment or order questions to our team."
-      : "This RFQ has used its 5 AI turns. Your RFQ is still available to edit, and I can help route payment or order questions to our team.";
-    const result = output("unavailable", reply_, revision, { budgetState: { remainingTurns: Number(budget?.remainingTurns || 0) } });
+    const result = output("unavailable", "You’ve reached this month’s conversational AI budget. Your RFQ is still available to edit, and I can help route payment or order questions to our team.", revision, { budgetState: { remainingTurns: Number(budget?.remainingTurns || 0) } });
     await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result);
   }
 
