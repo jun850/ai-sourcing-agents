@@ -130,7 +130,10 @@ export async function handleBrokerRfqAgent(request: Request) {
   }
   const { data: budget, error: budgetError } = await admin.rpc("agent_rfq_reserve_budget", { p_profile_id: user.id, p_turn_id: turn.id, p_reservation_microusd: 10000 });
   if (budgetError || !budget?.allowed) {
-    const result = output("unavailable", "You’ve reached this month’s conversational AI allowance. Your RFQ is still available to edit, and I can help route payment or order questions to our team.", revision, { budgetState: { remainingTurns: Number(budget?.remainingTurns || 0) } });
+    const reply_ = budget?.reason === "budget"
+      ? "You’ve reached this month’s conversational AI budget across your RFQs. Your RFQ is still available to edit, and I can help route payment or order questions to our team."
+      : "This RFQ has used its 5 AI turns. Your RFQ is still available to edit, and I can help route payment or order questions to our team.";
+    const result = output("unavailable", reply_, revision, { budgetState: { remainingTurns: Number(budget?.remainingTurns || 0) } });
     await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result);
   }
 
