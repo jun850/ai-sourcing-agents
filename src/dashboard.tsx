@@ -2422,7 +2422,7 @@ function QuotesTab({
                     {[
                       quote.factory_region,
                       quote.factory_years
-                        ? `${quote.factory_years} yrs on Atelix`
+                        ? `${quote.factory_years} yrs in business`
                         : null,
                     ]
                       .filter(Boolean)
