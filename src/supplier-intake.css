@@ -17,32 +17,6 @@ body.supplier-intake-open { overflow: hidden; }
 .supplier-intake-close:hover { background: #f4f6f5; color: var(--supplier-modal-ink); }
 .supplier-intake-form { display: flex; min-height: 0; flex-direction: column; }
 .supplier-intake-body { min-height: 0; overflow: auto; padding: 30px 48px 36px; scrollbar-gutter: stable; }
-.supplier-intake-section { display: grid; gap: 20px; padding: 32px 0; border-top: 1px solid #edf0f2; }
-.supplier-intake-section:first-of-type { padding-top: 0; border-top: 0; }
-.supplier-intake-section > h3 { margin: 0; color: var(--supplier-modal-ink); font-size: 14px; letter-spacing: .12em; line-height: 1.2; text-transform: uppercase; }
-.supplier-intake-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; }
-.supplier-intake-field { display: grid; min-width: 0; gap: 8px; }
-.supplier-intake-field > label, .supplier-choice-field legend, .supplier-export-regions legend { color: #3e4858; font-size: 16px; font-weight: 600; line-height: 1.35; }
-.supplier-required { color: #c25046; }
-.supplier-legend-hint, .supplier-intake-hint { margin-left: 8px; color: #9aa4b2; font-weight: 400; }
-.supplier-intake-hint { margin: -2px 0 0; font-size: 13px; line-height: 1.4; }
-.supplier-intake-field input, .supplier-intake-field textarea, .supplier-intake-field select, .supplier-intake-phone input, .supplier-intake-phone select { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid #d8dee5; border-radius: 10px; background: #fff; color: var(--supplier-modal-ink); font: inherit; font-size: 16px; }
-.supplier-intake-field textarea { min-height: 112px; padding-top: 12px; padding-bottom: 12px; resize: vertical; }
-.supplier-intake-field input::placeholder { color: #8b949f; }
-.supplier-intake-field input:focus, .supplier-intake-field textarea:focus, .supplier-intake-field select:focus { border-color: var(--supplier-modal-green); box-shadow: 0 0 0 3px rgba(136, 184, 99, .22); outline: 0; }
-.supplier-intake-field input[aria-invalid="true"], .supplier-intake-field textarea[aria-invalid="true"] { border-color: #bd554b; }
-.supplier-intake-phone { display: grid; grid-template-columns: minmax(190px, .72fr) minmax(0, 1fr); gap: 8px; }
-.supplier-intake-phone select { padding-right: 8px; font-size: 14px; }
-.supplier-choice-field, .supplier-export-regions { min-width: 0; margin: 0; padding: 0; border: 0; }
-.supplier-choice-field legend, .supplier-export-regions legend { margin-bottom: 10px; padding: 0; }
-.supplier-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 22px; }
-.supplier-choice-grid--inline { display: flex; flex-wrap: wrap; gap: 8px 26px; }
-.supplier-choice { display: inline-flex; align-items: center; min-height: 42px; gap: 10px; color: #566172; font-size: 16px; cursor: pointer; }
-.supplier-choice input { width: 20px; height: 20px; min-height: 20px; margin: 0; accent-color: var(--supplier-modal-green); }
-.supplier-choice input:focus-visible { outline: 3px solid #6c9d3f; outline-offset: 3px; }
-.supplier-export-regions { overflow: hidden; padding: 16px; border: 1px solid #cfe0cc; border-radius: 12px; background: var(--supplier-modal-tint); }
-.supplier-intake-field-error, .supplier-intake-service-error, .supplier-intake-summary { color: #ad4139; font-size: 13px; line-height: 1.4; }
-.supplier-intake-service-error, .supplier-intake-summary { margin: 0; padding: 12px 14px; border: 1px solid #efc6c1; border-radius: 10px; background: #fff8f7; }
 .supplier-intake-footer { position: sticky; bottom: 0; flex: none; padding: 18px 48px 22px; border-top: 1px solid #edf0f2; background: rgba(255, 255, 255, .97); }
 .supplier-intake-submit { display: inline-flex; width: 100%; min-height: 56px; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 999px; background: var(--supplier-modal-green); color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
 .supplier-intake-submit:hover:not(:disabled) { background: #174c32; }
@@ -62,10 +36,6 @@ body.supplier-intake-open { overflow: hidden; }
   .supplier-intake-header p { margin-top: 12px; margin-right: 22px; font-size: 16px; }
   .supplier-intake-close { top: 10px; right: 10px; }
   .supplier-intake-body { padding: 24px 20px 28px; }
-  .supplier-intake-section { gap: 18px; padding: 28px 0; }
-  .supplier-intake-grid, .supplier-choice-grid { grid-template-columns: 1fr; gap: 16px; }
-  .supplier-choice-grid--inline { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; }
-  .supplier-intake-phone { grid-template-columns: 1fr; }
   .supplier-intake-footer { padding: 14px 20px 18px; }
   .supplier-intake-footer p { line-height: 1.35; }
   .supplier-intake-success { min-height: 330px; padding: 32px 20px; }
