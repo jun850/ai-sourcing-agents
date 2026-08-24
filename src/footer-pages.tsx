@@ -744,6 +744,81 @@ function About() {
           />
         </div>
       </section>
+      <section className="resource-section resource-muted">
+        <div className="resource-wrap">
+          <h2>The team behind Atelix</h2>
+          <p className="about-team-lede">
+            Atelix is run by a two-person founding team shaped by both sides
+            of the market we serve. Jun has spent six years inside Southeast
+            Asia's marketplace and fintech leaders; Celina is native to the
+            China and Japan markets that anchor global textile manufacturing.
+            Both of us grew up between Asia and the West, and we previously
+            built{" "}
+            <a
+              href="https://arcanawangsa.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              ARCANA
+            </a>
+            , a fabric-led brand born in Melbourne—an experience that showed
+            us firsthand how fragmented fashion sourcing looks from every
+            side of the supply chain, from design and sourcing through
+            production and market operations.
+          </p>
+          <div className="about-team-grid">
+            <article>
+              <figure className="about-team-photo about-team-photo--jun">
+                <img
+                  src="/assets/team/jun-arcana.jpg"
+                  alt="Jun Arcana, Co-Founder and CEO of Atelix"
+                  width={900}
+                  height={1200}
+                  loading="lazy"
+                />
+              </figure>
+              <div>
+                <h3>Jun Arcana</h3>
+                <p className="about-team-role">Co-Founder &amp; CEO</p>
+                <p>
+                  A technical product manager with six years across
+                  Southeast Asia's marketplace and fintech leaders, including
+                  ByteDance Shop/Tokopedia, Blibli, and BukuWarung, plus
+                  martech at Melbourne-based IntelligenceBank. Jun founded
+                  Anakost, a local quick-commerce startup, in 2018 during his
+                  first year at university, and leads product and
+                  engineering at Atelix.
+                </p>
+              </div>
+            </article>
+            <article>
+              <figure className="about-team-photo about-team-photo--celina">
+                <img
+                  src="/assets/team/celina.jpg"
+                  alt="Celina, Co-Founder, COO and Creative Director of Atelix"
+                  width={800}
+                  height={1200}
+                  loading="lazy"
+                />
+              </figure>
+              <div>
+                <h3>Celina</h3>
+                <p className="about-team-role">
+                  Co-Founder, COO &amp; Creative Director
+                </p>
+                <p>
+                  An accounting and finance analyst with a master's degree
+                  in Accounting &amp; Finance, native to the China and Japan
+                  markets that anchor global textile manufacturing. Celina
+                  runs Atelix's financial operations and leads
+                  supplier-facing quality and creative direction across two
+                  of the industry's most important sourcing regions.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
       <ClosingCta />
     </>
   );
