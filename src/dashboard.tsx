@@ -4,7 +4,7 @@ import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { Alert, Avatar, Box, Button as MuiButton, Checkbox, Chip, CircularProgress, CssBaseline, Divider, Drawer, IconButton, List, ListItemButton, ListItemIcon, ListItemText, Paper, Skeleton, ThemeProvider, Tooltip, Typography, createTheme, useMediaQuery, type SxProps, type Theme } from "@mui/material";
 import { Add, ArrowForward, CheckCircle, ChevronLeft, ChevronRight, Circle, Description, EditOutlined, ErrorOutlined, Favorite, FileUploadOutlined, FolderOpen, Home, Image, Inbox, Inventory2, LibraryBooks, LockOutlined, Menu as MenuIcon, SaveOutlined, Search, Settings, VerifiedOutlined, X } from "@mui/icons-material";
 import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
-import { addRfqMessage, createRfqCase, getSession, getWorkspaceInvoiceDetail, getWorkspaceProduct, getWorkspaceRfqProduction, listRfqAttachments, listRfqCases, listRfqMessages, listWorkspaceInvoices, listWorkspaceProducts, listWorkspaceRfqQuotes, selectWorkspaceRfqQuote, startWorkspaceInvoiceCheckout, type RfqAttachment, type WorkspaceChatMessage, type WorkspaceInvoice, type WorkspaceInvoiceDetail, type WorkspaceProduct, type WorkspaceRfq, type WorkspaceRfqProduction, type WorkspaceRfqQuote, updateRfqCase, uploadRfqAttachment } from "./supabase";
+import { addRfqMessage, createRfqCase, getSession, getWorkspaceInvoiceDetail, getWorkspaceProduct, getWorkspaceRfqProduction, listRfqAttachments, listRfqCases, listRfqMessages, listWorkspaceInvoices, listWorkspaceProducts, listWorkspaceRfqQuotes, listWorkspaceSelectedSuppliers, selectWorkspaceRfqQuote, startWorkspaceInvoiceCheckout, type RfqAttachment, type WorkspaceChatMessage, type WorkspaceInvoice, type WorkspaceInvoiceDetail, type WorkspaceProduct, type WorkspaceRfq, type WorkspaceRfqProduction, type WorkspaceRfqQuote, type WorkspaceSelectedSupplier, updateRfqCase, uploadRfqAttachment } from "./supabase";
 import { MiniStageTimeline, nextStepOwner, StageTimeline } from "./dashboard-stage-timeline";
 
 const dashboardTheme = createTheme({
@@ -309,9 +309,11 @@ const stageDotColor: Record<string, string> = { draft: "#65a979", needs_research
 type RequestFilter = "all" | "needs_you" | "in_progress" | "closed";
 function WorkspaceRequests({ requests, onOpen }: { requests: StoredRfq[]; onOpen: (request: StoredRfq) => void }) {
   const [unpaidCaseIds, setUnpaidCaseIds] = useState<Set<string>>(new Set());
+  const [suppliers, setSuppliers] = useState<Map<string, WorkspaceSelectedSupplier>>(new Map());
   const [filter, setFilter] = useState<RequestFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => { let active = true; void listWorkspaceInvoices().then((rows) => { if (!active) return; setUnpaidCaseIds(new Set(rows.filter((row) => row.status === "sent" && row.rfq_case_id).map((row) => row.rfq_case_id as string))); }).catch(() => undefined); return () => { active = false; }; }, []);
+  useEffect(() => { let active = true; void listWorkspaceSelectedSuppliers().then((rows) => { if (!active) return; setSuppliers(new Map(rows.map((row) => [row.rfq_case_id, row]))); }).catch(() => undefined); return () => { active = false; }; }, []);
   function ownerFor(request: StoredRfq) { return nextStepOwner(request.status, unpaidCaseIds.has(request.id)); }
   const filtered = requests.filter((request) => {
     if (filter === "closed") return request.status === "closed";
@@ -332,6 +334,7 @@ function WorkspaceRequests({ requests, onOpen }: { requests: StoredRfq[]; onOpen
           <Box component="button" type="button" onClick={() => onOpen(request)} sx={{ display: "block", minWidth: 0, border: 0, p: 0, textAlign: "left", background: "transparent", cursor: "pointer", "&:focus-visible": { outline: "3px solid #4b7657", outlineOffset: 2, borderRadius: 1 } }}>
             <Typography sx={{ fontSize: 13.5, fontWeight: 600, color: "#202936", overflowWrap: "anywhere" }}>{request.title}</Typography>
             <Typography sx={{ mt: .35, color: "#9ba1aa", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{request.case_no}</Typography>
+            {suppliers.has(request.id) && <Typography sx={{ mt: .35, color: "#4b7657", fontSize: 11.5, fontWeight: 600 }}>Supplier: {suppliers.get(request.id)!.factory_name}</Typography>}
           </Box>
           <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: .85 }}><Box component="span" sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: stageDotColor[request.status] || "#b6bdc6", flexShrink: 0 }} /><Typography sx={{ fontSize: 12.5, fontWeight: 600, color: request.status === "closed" ? "#758091" : "#4b7657" }}>{stageCopy[request.status] || request.status}</Typography></Box>
           <Typography sx={{ display: { xs: "none", sm: "block" }, fontSize: 12.5, color: "#4a5667" }}>{owner}</Typography>
@@ -342,6 +345,7 @@ function WorkspaceRequests({ requests, onOpen }: { requests: StoredRfq[]; onOpen
         <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Stage timeline</Typography>
         <Typography sx={{ mt: 1, fontSize: 15, fontWeight: 600, color: "#202936", overflowWrap: "anywhere" }}>{selected.title}</Typography>
         <Typography sx={{ mt: .3, fontFamily: "'DM Mono', monospace", fontSize: 11.5, color: "#9ba1aa" }}>{selected.case_no}</Typography>
+        {suppliers.has(selected.id) && <Typography sx={{ mt: .3, color: "#4b7657", fontSize: 12, fontWeight: 600 }}>Supplier: {suppliers.get(selected.id)!.factory_name}{suppliers.get(selected.id)!.factory_region ? ` · ${suppliers.get(selected.id)!.factory_region}` : ""}</Typography>}
         <Box sx={{ mt: 2.5 }}><StageTimeline status={selected.status} onReviewDraft={() => onOpen(selected)} /></Box>
       </Box>}
     </Box>
