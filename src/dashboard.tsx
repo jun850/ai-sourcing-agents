@@ -76,6 +76,7 @@ import {
   listWorkspaceInvoices,
   listWorkspaceProducts,
   listWorkspaceRfqQuotes,
+  listWorkspaceSelectedSuppliers,
   selectWorkspaceRfqQuote,
   startWorkspaceInvoiceCheckout,
   type RfqAttachment,
@@ -86,6 +87,7 @@ import {
   type WorkspaceRfq,
   type WorkspaceRfqProduction,
   type WorkspaceRfqQuote,
+  type WorkspaceSelectedSupplier,
   updateRfqCase,
   uploadRfqAttachment,
 } from "./supabase";
@@ -3029,6 +3031,7 @@ function WorkspaceRequests({
   onOpen: (request: StoredRfq) => void;
 }) {
   const [unpaidCaseIds, setUnpaidCaseIds] = useState<Set<string>>(new Set());
+  const [suppliers, setSuppliers] = useState<Map<string, WorkspaceSelectedSupplier>>(new Map());
   const [filter, setFilter] = useState<RequestFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
@@ -3048,6 +3051,15 @@ function WorkspaceRequests({
     return () => {
       active = false;
     };
+  }, []);
+  useEffect(() => {
+    let active = true;
+    void listWorkspaceSelectedSuppliers()
+      .then((rows) => {
+        if (active) setSuppliers(new Map(rows.map((row) => [row.rfq_case_id, row])));
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
   }, []);
   function ownerFor(request: StoredRfq) {
     return nextStepOwner(request.status, unpaidCaseIds.has(request.id));
@@ -3266,6 +3278,11 @@ function WorkspaceRequests({
                     >
                       {request.case_no}
                     </Typography>
+                    {suppliers.has(request.id) && (
+                      <Typography sx={{ mt: 0.35, color: "#4b7657", fontSize: 11.5, fontWeight: 600 }}>
+                        Supplier: {suppliers.get(request.id)!.factory_name}
+                      </Typography>
+                    )}
                   </Box>
                   <Box
                     sx={{
@@ -3376,6 +3393,11 @@ function WorkspaceRequests({
             >
               {selected.case_no}
             </Typography>
+            {suppliers.has(selected.id) && (
+              <Typography sx={{ mt: 0.3, color: "#4b7657", fontSize: 12, fontWeight: 600 }}>
+                Supplier: {suppliers.get(selected.id)!.factory_name}{suppliers.get(selected.id)!.factory_region ? ` · ${suppliers.get(selected.id)!.factory_region}` : ""}
+              </Typography>
+            )}
             <Box sx={{ mt: 2.5 }}>
               <StageTimeline
                 status={selected.status}
