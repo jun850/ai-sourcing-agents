@@ -1140,8 +1140,8 @@ function ConversationChatPanel({
                   borderRadius:
                     message.from === "You" ? "16px 16px 4px 16px" : 0,
                   backgroundColor:
-                    message.from === "You" ? "#4b7657" : "transparent",
-                  color: message.from === "You" ? "#fff" : "#202936",
+                    message.from === "You" ? "#f0f1f3" : "transparent",
+                  color: "#202936",
                 }}
               >
                 <Typography
