@@ -1110,8 +1110,11 @@ function ConversationChatPanel({
         display: "flex",
         alignSelf: "stretch",
         flexDirection: "column",
-        height: { xs: "min(440px, calc(100dvh - 120px))", md: "auto" },
-        minHeight: { xs: 340, md: 610 },
+        height: {
+          xs: "min(440px, calc(100dvh - 120px))",
+          md: "min(610px, calc(100dvh - 200px))",
+        },
+        minHeight: { xs: 340, md: 480 },
         overflow: "hidden",
         border: 0,
         borderRadius: 0,
@@ -1129,6 +1132,15 @@ function ConversationChatPanel({
           flex: "1 1 auto",
           minHeight: 0,
           overflowY: "auto",
+          scrollbarWidth: "thin",
+          scrollbarColor: "#c7cdd6 transparent",
+          "&::-webkit-scrollbar": { width: 6 },
+          "&::-webkit-scrollbar-track": { background: "transparent" },
+          "&::-webkit-scrollbar-thumb": {
+            backgroundColor: "#c7cdd6",
+            borderRadius: 999,
+          },
+          "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#aeb6c1" },
         }}
       >
         <AnimatePresence initial={false}>
@@ -5515,6 +5527,7 @@ export function Dashboard({ path }: { path: string }) {
           : rfq.record.title;
       return (
         <RfqWorkspace
+          key={rfq.record.id}
           caseId={rfq.record.id}
           brief={summary}
           initialFields={fieldsFromBrief(rfq.record.brief)}
