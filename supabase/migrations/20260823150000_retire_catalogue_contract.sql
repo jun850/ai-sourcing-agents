@@ -289,7 +289,13 @@ DELETE FROM public.catalog_faqs;
 DELETE FROM public.catalog_price_breaks;
 DELETE FROM public.catalog_prices;
 DELETE FROM public.product_brand_assignments;
-DELETE FROM public.product_materials;
+DO $$
+BEGIN
+  IF to_regclass('public.product_materials') IS NOT NULL THEN
+    DELETE FROM public.product_materials;
+  END IF;
+END;
+$$;
 DELETE FROM public.product_media;
 DELETE FROM public.product_variants;
 DELETE FROM public.price_breaks;
@@ -304,7 +310,13 @@ DELETE FROM public.catalog_release_batches;
 DELETE FROM public.catalog_import_batches;
 DELETE FROM public.catalog_import_runs;
 DELETE FROM public.catalog_constructions;
-DELETE FROM public.catalog_materials;
+DO $$
+BEGIN
+  IF to_regclass('public.catalog_materials') IS NOT NULL THEN
+    DELETE FROM public.catalog_materials;
+  END IF;
+END;
+$$;
 DELETE FROM public.supplier_taxonomy_memberships;
 
 DO $$
@@ -320,10 +332,12 @@ BEGIN
 END;
 $$;
 
+-- Legacy catalogue assets are retained until a separate, backed-up Storage
+-- API cleanup. They must not block retiring the database catalogue contract.
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM storage.objects WHERE bucket_id='catalog-media') THEN
-    RAISE EXCEPTION 'catalog-media storage must be empty before retirement';
+    RAISE NOTICE 'catalog-media contains retained legacy assets; preserving objects and making the bucket private';
   END IF;
 END;
 $$;
@@ -339,28 +353,28 @@ DROP POLICY IF EXISTS catalog_media_public_read ON storage.objects;
 -- bucket only in Phase 7C after rotation, backup, observation, and verification.
 UPDATE storage.buckets SET public=false WHERE id='catalog-media';
 
-DROP TABLE public.algolia_sync_outbox;
-DROP TABLE public.catalog_faqs;
-DROP TABLE public.catalog_price_breaks;
-DROP TABLE public.catalog_prices;
-DROP TABLE public.product_brand_assignments;
-DROP TABLE public.product_materials;
-DROP TABLE public.product_media;
-DROP TABLE public.product_variants;
-DROP TABLE public.price_breaks;
-DROP TABLE public.cart_items;
-DROP TABLE public.saved_items;
-DROP TABLE public.carts;
-DROP TABLE public.products;
-DROP TABLE public.catalog_media_records;
-DROP TABLE public.catalog_source_identities;
-DROP TABLE public.catalog_staged_entities;
-DROP TABLE public.catalog_release_batches;
-DROP TABLE public.catalog_import_batches;
-DROP TABLE public.catalog_import_runs;
-DROP TABLE public.catalog_constructions;
-DROP TABLE public.catalog_materials;
-DROP TABLE public.supplier_taxonomy_memberships;
+DROP TABLE IF EXISTS public.algolia_sync_outbox;
+DROP TABLE IF EXISTS public.catalog_faqs;
+DROP TABLE IF EXISTS public.catalog_price_breaks;
+DROP TABLE IF EXISTS public.catalog_prices;
+DROP TABLE IF EXISTS public.product_brand_assignments;
+DROP TABLE IF EXISTS public.product_materials;
+DROP TABLE IF EXISTS public.product_media;
+DROP TABLE IF EXISTS public.product_variants;
+DROP TABLE IF EXISTS public.price_breaks;
+DROP TABLE IF EXISTS public.cart_items;
+DROP TABLE IF EXISTS public.saved_items;
+DROP TABLE IF EXISTS public.carts;
+DROP TABLE IF EXISTS public.products;
+DROP TABLE IF EXISTS public.catalog_media_records;
+DROP TABLE IF EXISTS public.catalog_source_identities;
+DROP TABLE IF EXISTS public.catalog_staged_entities;
+DROP TABLE IF EXISTS public.catalog_release_batches;
+DROP TABLE IF EXISTS public.catalog_import_batches;
+DROP TABLE IF EXISTS public.catalog_import_runs;
+DROP TABLE IF EXISTS public.catalog_constructions;
+DROP TABLE IF EXISTS public.catalog_materials;
+DROP TABLE IF EXISTS public.supplier_taxonomy_memberships;
 DROP TYPE IF EXISTS public.product_category;
 DROP TYPE IF EXISTS public.listing_status;
 DROP TYPE IF EXISTS public.pricing_mode;

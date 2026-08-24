@@ -9,6 +9,10 @@ const FACTORY_TYPES = [
   "fabric_mill",
   "garment_manufacturer",
   "trim_supplier",
+  "accessories_supplier",
+  "yarn_supplier",
+  "textile_trading_company",
+  "material_innovator",
 ] as const;
 const VerifyState = z.enum(["unverified", "pending", "verified"]);
 const SupplierPayload = z.object({
@@ -16,6 +20,7 @@ const SupplierPayload = z.object({
   name: z.string().trim().min(1).max(200),
   type: z.enum(FACTORY_TYPES),
   region: z.string().trim().max(160).nullable().optional(),
+  city: z.string().trim().max(240).nullable().optional(),
   loc: z.string().trim().max(240).nullable().optional(),
   verify_state: VerifyState.optional(),
   years: z.number().int().min(0).max(500).nullable().optional(),
@@ -38,7 +43,7 @@ const SupplierPayload = z.object({
   copy_i18n: z.record(z.unknown()).optional(),
 });
 const ImportRow = z.object({
-  source_system: z.enum(["manual", "apparelx"]),
+  source_system: z.enum(["manual", "apparelx", "regional_web"]),
   source_record_id: z.string().trim().min(1).max(240),
   source_url: z.string().url().nullable().optional(),
   supplier: SupplierPayload,
@@ -125,7 +130,7 @@ function normalizeRow(raw: unknown, rowNumber: number) {
     ...rawSupplier,
     type: rawSupplier.type,
     region: optionalString(rawSupplier.region),
-    loc: optionalString(rawSupplier.loc),
+    loc: optionalString(rawSupplier.loc || rawSupplier.city),
     verify_state: rawSupplier.verify_state || "pending",
     years: numberOrNull(rawSupplier.years),
     founded: numberOrNull(rawSupplier.founded),
@@ -155,6 +160,7 @@ function normalizeRow(raw: unknown, rowNumber: number) {
   const parsed = ImportRow.parse(candidate);
   if (parsed.source_system === "manual" && parsed.source_url) throw new Error("manual rows must not include a source URL");
   if (parsed.source_system === "apparelx" && !/^https:\/\/(www\.)?apparel-x\.com\//.test(parsed.source_url || "")) throw new Error("apparelx rows require an approved https://apparel-x.com/ source URL");
+  if (parsed.source_system === "regional_web" && !/^https:\/\//.test(parsed.source_url || "")) throw new Error("regional_web rows require an https source URL");
   const input_sha256 = createHash("sha256").update(JSON.stringify(parsed)).digest("hex");
   return { ...parsed, row_number: rowNumber, input_sha256 } satisfies NormalizedRow;
 }

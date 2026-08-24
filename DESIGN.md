@@ -17,6 +17,19 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
 - Avoid nested cards, decorative gradients, glass effects, oversized rounding, and dashboard metric-card filler.
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
+- The dashboard prompt remains the first screen. The RFQ workspace then uses a
+  split conversation + live RFQ review layout, followed by Requests, invoice,
+  and sourced Product records tied back to the RFQ.
+- Motion is functional: chat messages and request/product rows enter with a
+  short 150–250 ms ease-out, send/save actions acknowledge immediately, and
+  matching progress is only used for the review handoff. No page-load sequence
+  may delay task content. `MotionConfig reducedMotion="user"` is required.
+- Chat composer focus uses the slate-blue working state with white typed text;
+  plain Enter sends, Shift+Enter inserts a newline, and IME composition never
+  submits. The send control is moss/white in the focused state, not blue.
+- Avoid local-only chat state, fake product catalogue rows, invented supplier
+  quotes, or payment state. Read and write through the typed Supabase/RPC
+  contracts and preserve server-authoritative status boundaries.
 
 ## Accessibility target
 

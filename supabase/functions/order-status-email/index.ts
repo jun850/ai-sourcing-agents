@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { siteUrl } from "../_shared/stripe.ts";
 
 const STATUS_LABEL: Record<string, string> = {
   awaiting_payment: "Awaiting payment",
@@ -53,7 +54,7 @@ Deno.serve(async (req) => {
   }
 
   const label = STATUS_LABEL[status] || status;
-  const siteUrl = Deno.env.get("SITE_URL") || "https://atelix.app";
+  const appUrl = siteUrl();
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
         `<p>Your Atelix order <b>${orderNo}</b> status has been updated to <b>${label}</b>.</p>` +
         (note ? `<p>Note: ${note}</p>` : "") +
         `<p>Total: US$${Number(total || 0).toFixed(2)}</p>` +
-        `<p><a href="${siteUrl}/pages/order.html?no=${orderNo}">View your order</a></p>`,
+        `<p><a href="${appUrl}/pages/order.html?no=${orderNo}">View your order</a></p>`,
     }),
   });
 

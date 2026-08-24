@@ -1,0 +1,67 @@
+supplier_slug,supplier_name,source_kind,source_url,source_locator,source_claim,evidence_status,checked_at
+shenzhou-international,Shenzhou International,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+crystal-international,Crystal International,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+regina-miracle,Regina Miracle,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+lever-style,Lever Style,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+haers,Haers,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+zhejiang-jiayi,Zhejiang Jiayi,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+feijian-technology,Feijian Technology,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+nanlong-group,Nanlong Group,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+early-light-industrial,Early Light Industrial,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+alpha-group,Alpha Group,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+luxshare-precision,Luxshare Precision,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+goertek,Goertek,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+xinbao-electrical,Xinbao Electrical,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+biyi-electric,Biyi Electric,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+tianxi-holding,Tianxi Holding,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+ningbo-jiale,Ningbo Jiale,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+tianyuan-pet,Tianyuan Pet,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+guaibao-pet,Guaibao Pet,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+china-pet-foods,China Pet Foods,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+yiyi-hygiene,Yiyi Hygiene,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+cosmax-china,Cosmax China,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+intercos-china,Intercos China,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+yue-yuen,Yue Yuen,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+huali-group,Huali Group,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+stella-international,Stella International,pdf,data/suppliervol1.pdf,volume_1_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+lixuan-sports,Lixuan Sports,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+impulse-health-tech,Impulse Health Tech,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+rotai-health,Rotai Health,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+mobi-garden,Mobi Garden,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+zhejiang-natural,Zhejiang Natural,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+yangzhou-jinquan,Yangzhou Jinquan,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+jasan-group,Jasan Group,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+weixing,Weixing,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+luthai-textile,Luthai Textile,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+henglin-home,Henglin Home,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+loctek-ergonomic,Loctek Ergonomic,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+mlily-healthcare-co,Mlily / Healthcare Co.,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+great-star-industrial,Great Star Industrial,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+ningbo-dechang,Ningbo Dechang,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+chervon-holdings,Chervon Holdings,pdf,data/suppliervol2.pdf,volume_2_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+dream-international,Dream International,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+bloomage-biotech,Bloomage Biotech,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+jinbo-bio,Jinbo Bio,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+shenzhen-vicky-biotech,Shenzhen Vicky Biotech,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+supor,Supor,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+bafang-electric,Bafang Electric,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+conant-optical,Conant Optical,pdf,data/suppliervol3.pdf,volume_3_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+guangbo-group,Guangbo Group,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+kingking,Kingking,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+power-diamond,Power Diamond,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+longpack-games,LongPack Games,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+wingo-games,WinGo Games,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+rebecca,Rebecca,pdf,data/suppliervol4.pdf,volume_4_named_company_card,Named supplier card and category/location/How to Reach text,source_present_not_independently_verified,2026-08-24
+luxshare-precision,Luxshare Precision,official_website,https://www.luxshare-ict.com/about/contact.html,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+goertek,Goertek,official_website,https://www.goertek.com/en/index.html,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+xinbao-electrical,Xinbao Electrical,official_website,https://www.donlim.com/jbqk.jhtml,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+tianyuan-pet,Tianyuan Pet,official_website,https://www.tianyuanpet.com/,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+yiyi-hygiene,Yiyi Hygiene,official_website,https://www.yiyipad.com/,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+cosmax-china,Cosmax China,official_website,https://www.cosmax.com.cn/contact/partner/,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+intercos-china,Intercos China,official_website,https://www.intercos.com/offices/china-mainland/,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+stella-international,Stella International,official_website,https://www.stella.com.hk/enquiries,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+bloomage-biotech,Bloomage Biotech,official_website,https://www.bloomagebiotech.com/contact.html,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+supor,Supor,official_website,https://www.supor.com/Culture/MailBox,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+conant-optical,Conant Optical,official_website,https://www.conantoptical.com/services,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+guangbo-group,Guangbo Group,official_website,https://www.guangbogroup.com/en/,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24
+wingo-games,WinGo Games,official_website,https://wingogames.com/?m=link,public_contact_page_or_official_site,Public website/contact details found during web search,web_checked,2026-08-24

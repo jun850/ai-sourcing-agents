@@ -1,0 +1,913 @@
+  China Insider ●
+THE CHINA SOURCING DIRECTORY · VOL. 1 · 2026
+
+
+
+
+The Factories
+Behind the
+Brands
+25 verified Chinese manufacturers that produce for Lululemon,
+Stanley, Nike, Philips, Apple's ecosystem and more — every entry
+backed by official supplier lists, stock-exchange filings, or major
+business media. No TikTok rumors.
+
+PUBLIC EDITION · REDACTED AT CLIENT'S REQUEST
+
+
+
+
+chinainsider.news                                        @chinainsider · 1.5M followers
+  READ THIS FIRST
+
+
+
+Why this list is different
+This public edition has been redacted. Selected suppliers and details have been withheld at our client's request.
+
+
+In 2025, videos of Chinese factories claiming "we make Lululemon / Hermès / Dyson — buy direct from us at
+90% off" flooded TikTok. The wave was so big it briefly pushed the wholesale app DHgate to #2 on the US
+App Store. There was just one problem: fact-checkers found that most of the viral "brand factories" were
+nowhere to be found on the brands' actual supplier lists. They were trading companies borrowing famous
+names.
+
+Here's what almost nobody told you: many global brands publish their real supplier lists themselves.
+Lululemon posts a facility-by-facility list twice a year. Nike runs a public manufacturing map. Chinese
+factories listed on stock exchanges must disclose major clients in their filings.
+
+
+
+     How this was actually put together
+     Here's the uncomfortable truth about "trusted supplier lists": almost all of them are guesses, or worse —
+     trading companies paying to look like factories.
+
+     We took a slower route. Over several weeks we worked through brand-published supplier lists, stock-
+     exchange filings and IPO prospectuses from listed Chinese manufacturers, official supplier awards, and
+     years of Chinese-language business reporting that never gets read outside China. Each factory was then
+     cross-checked against a second independent source before it earned a place in this book.
+
+     None of this is secret. It's all public — if you know Lululemon posts a facility list twice a year, can find a stock
+     filing in Mandarin, and can read the line where a manufacturer names Stanley as a client. That's the hard
+     part. That's the part we did for you.
+
+
+
+Every factory in this directory carries a source tag telling you exactly how we know:
+
+
+
+     How every claim is verified
+       OFFICIAL      The relationship is disclosed by the brand or the factory itself: a published supplier list, a stock-
+     exchange filing / IPO prospectus, or an official supplier award.
+
+       REPORTED        Documented by major business media or securities research (21st Century Business Herald,
+     CNBC, SCMP, 36Kr, broker reports). Solid, but one step removed.
+
+     If a claim couldn't clear one of these two bars, it didn't make the book. That's it. That's the methodology.
+
+
+
+
+Public edition — redacted at client's request                China Insider                                                   2
+     ⚠ What this directory is — and is not
+        • It is not a place to buy branded goods cheap. You cannot buy Lululemon leggings from Lululemon's
+          factory. Contracts forbid it, and anyone offering "authentic brand overstock" is selling you fakes or stolen
+          goods.
+        • It is a map of proven manufacturing capability. The play: hire the same factory (or its industrial cluster)
+          to produce your own product, under your own brand, at factory economics.
+        • Big fish need big buyers. Several giants here only take enterprise orders. We list them anyway — as
+          supply-chain intelligence and as the quality benchmark — and we rate each factory's friendliness to
+          small buyers so you don't waste emails.
+
+
+
+SMALL-BUYER FRIENDLINESS SCALE
+
+● ● ● Actively courts small/mid buyers — B2B storefront, published sample fees, low MOQs
+● ● ● Realistic for mid-size orders (thousands of units) or via their trading arm
+● ● ● Enterprise-scale only — listed for intelligence and as a quality benchmark
+
+
+
+
+Public edition — redacted at client's request            China Insider                                                   3
+    CONTENTS
+
+
+
+What's inside
+01        Athleisure & Apparel                                                       Lululemon · Nike · Uniqlo · Victoria's Secret
+
+
+02        Bottles & Drinkware                                                               Stanley · YETI · Starbucks · Thermos
+
+
+03        Toys & Viral Kids' Products                                                        Mattel · the sensory-toy gold rush
+
+
+04        Consumer Electronics                                                             AirPods · Apple Watch · Meta Quest
+
+
+05        Home & Kitchen Appliances                                                           Philips · De'Longhi · Bosch · Cosori
+
+
+06        Pet Products                                                                      Walmart · Chewy · Petco · Amazon
+
+
+07        Beauty & Personal Care                                                           The ODMs behind global cosmetics
+
+
+08        Footwear & Sneakers                                                                      Nike · UGG · HOKA · Converse
+
+
++         The Playbook                                                1688 vs Alibaba · unmasking traders · first-order survival
+
+
+
+
+     Sourcing 101 — the five terms you need
+        • OEM (Original Equipment Manufacturer): you bring the design, the factory builds it.
+        • ODM (Original Design Manufacturer): the factory already has a designed product; you customize and put
+          your logo on it. Fastest, cheapest way to launch.
+        • MOQ (Minimum Order Quantity): the smallest order a factory accepts. Negotiable more often than you
+          think — especially on existing ODM molds.
+        • Tier 1 supplier: the factory that assembles the final product for a brand (vs. Tier 2, which supplies
+          materials to Tier 1).
+        • Factory vs. trading company: a factory makes things; a trader resells a factory's output with a markup.
+          Traders aren't evil — for small first orders a good one can help — but you must know which one you're
+          talking to. Page: The Playbook.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                                         4
+  CHAPTER 01
+
+
+
+Athleisure & Apparel
+The $128 legging economy runs through a handful of Asian mega-manufacturers — and unlike most
+industries, apparel names names: Lululemon, Nike and Uniqlo all publish facility-level supplier lists.
+These are the Chinese heavyweights on them, plus one house that actually welcomes startups.
+
+
+
+
+     Shenzhou International 申洲国际
+     NINGBO, ZHEJIANG · FOUNDED 1990 · ~90,000 EMPLOYEES · HKEX: 2313
+
+     VERIFIED CLIENTS
+       OFFICIAL    Lululemon (its Ningbo garment factory appears on Lululemon's published April 2025 supplier list)
+        REPORTED      Nike, Adidas, Uniqlo, Puma — consistently documented as its core client base.
+
+     WHAT THEY MAKE
+
+     Knit sportswear at colossal scale — the entire chain from yarn and fabric to finished garment happens in-
+     house, highly automated. Widely considered the quality benchmark for performance knitwear.
+     HOW TO REACH
+
+     Corporate site (shenzhouintl.com) / investor relations. No retail-facing B2B channel.
+
+     ● ● ● Vertically integrated giant; orders start in the hundreds of thousands of units. Study them, don't email them.
+
+
+
+
+     Crystal International 晶苑国际
+     HK HQ · PLANTS IN GUANGDONG & SE ASIA · ~470M GARMENTS/YR · HKEX: 2232
+
+     VERIFIED CLIENTS
+       OFFICIAL    Uniqlo, Levi's, H&M, GAP — disclosed across its listing documents and annual reports as core
+     customers.
+     WHAT THEY MAKE
+
+     One of the world's largest garment makers by volume: denim, intimates, casual and sportswear. The "how is
+     fast fashion this cheap" answer, at industrial scale.
+     HOW TO REACH
+
+     crystalgroup.com — business development contact for brand clients.
+
+     ● ● ● Enterprise programs only.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                                     5
+     Regina Miracle 维珍妮
+     SHENZHEN HQ · PLANTS IN SHENZHEN & VIETNAM · HKEX: 2199
+
+     VERIFIED CLIENTS
+
+       OFFICIAL    Its Vietnam factories appear on Lululemon's published supplier lists.   REPORTED   Long
+     documented as the maker behind Victoria's Secret bras and major sports-bra programs (Under Armour,
+     Adidas lines).
+     WHAT THEY MAKE
+
+     The hard stuff: molded bras, seamless intimates, sports bras — the highest-engineering corner of apparel,
+     where bonding and molding tech is the moat.
+     HOW TO REACH
+
+     reginamiracle.com.
+
+     ● ● ● Innovation-driven manufacturer for major lingerie/activewear brands.
+
+
+
+
+     Lever Style 利华成衣
+     HK HQ · NETWORK OF PARTNER FACTORIES ACROSS CHINA/ASIA · HKEX: 1346
+
+     VERIFIED CLIENTS
+
+       REPORTED      Built its name making shirts and tailored casualwear for premium labels (Theory, Hugo Boss lines
+     among documented clients) — then publicly pivoted to serve digital-native brands.
+     WHAT THEY MAKE
+
+     Premium wovens and casualwear. Its openly stated strategy: be the manufacturer for e-commerce and
+     emerging brands, with MOQs a fraction of what mega-factories demand.
+     HOW TO REACH
+
+     leverstyle.com — actively markets to smaller brands.
+
+     ● ● ● One of the few premium-tier houses that says yes to startups. Start here.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                                 6
+  CHAPTER 02
+
+
+
+Bottles & Drinkware
+China produces roughly 800 million insulated bottles a year — most of the world's supply — and the
+industry is concentrated in one place: the Yongkang–Wuyi cluster in Jinhua, Zhejiang. When your
+Stanley Quencher sold out three times, these are the factories that were running overtime.
+
+
+
+
+     Haers 哈尔斯
+     YONGKANG, ZHEJIANG · FOUNDED 1985 · ~100M BOTTLES/YR · SZSE: 002615
+
+     VERIFIED CLIENTS
+       OFFICIAL    Stanley — Haers announced on its own site that Stanley named it "Best Supplier 2023" at Stanley's
+     supplier conference.           REPORTED    YETI, PMI (Stanley/Starbucks drinkware), Takeya, S'well per 21st Century
+     Business Herald; also owns the Swiss brand SIGG outright.
+     WHAT THEY MAKE
+
+     Stainless vacuum bottles, tumblers, smart bottles. China's first listed drinkware company and the industry's
+     #1.
+     HOW TO REACH
+
+     haers.com — a full B2B/OEM site with published terms: samples from ~$50, custom bulk lead time ~45 days.
+
+     ● ● ● Rare: a giant with a real front door for smaller buyers. The benchmark first email.
+
+
+
+
+     Zhejiang Jiayi 嘉益股份
+     WUYI, ZHEJIANG · ~90% EXPORT OEM · SZSE: 301004
+
+     VERIFIED CLIENTS
+
+       REPORTED      PMI — the company that owns Stanley and Aladdin and supplies Starbucks drinkware — is
+     documented as a major Jiayi customer; industry press has photographed Aladdin production on its lines.
+     WHAT THEY MAKE
+
+     Insulated tumblers and travel mugs, almost entirely for export brands. The quieter twin of Haers, one town
+     over.
+     HOW TO REACH
+
+     Via Alibaba International / Canton Fair (Phase 2 houseware halls).
+
+     ● ● ● OEM-first culture; mid-size orders realistic.
+
+
+
+
+Public edition — redacted at client's request                    China Insider                                             7
+     Feijian Technology 飞剑科技
+     YONGKANG, ZHEJIANG · TITANIUM & STAINLESS DRINKWARE
+
+     VERIFIED CLIENTS
+
+       REPORTED      Thermos, Starbucks, 24Bottles, Hydro Flask, Xiaomi among documented OEM clients (Zhihu
+     industrial-supply-chain research citing company disclosures).
+     WHAT THEY MAKE
+
+     Premium bottles including titanium — the material trend that's next after stainless. Own brands: Simita,
+     Feijian.
+     HOW TO REACH
+
+     Alibaba storefront; Canton Fair.
+
+     ● ● ● Active on B2B platforms with ODM catalogs.
+
+
+
+
+     Nanlong Group 南龙集团
+     YONGKANG, ZHEJIANG · DIVERSIFIED METALS GROUP
+
+     VERIFIED CLIENTS
+
+       REPORTED      Thermos, Stanley, Aladdin, Starbucks, S'well, Contigo, Lock&Lock among documented OEM
+     relationships.
+     WHAT THEY MAKE
+
+     Vacuum bottles plus cookware — an export-OEM workhorse that has produced for nearly every major
+     Western and Japanese drinkware label.
+     HOW TO REACH
+
+     nanlong.com; Alibaba.
+
+     ● ● ● Export-OEM native; bring a spec sheet.
+
+
+
+
+     Cluster intel: Yongkang & Wuyi (Jinhua, Zhejiang)
+     Two adjacent counties make the majority of the world's insulated drinkware. Below the four names above sit
+     hundreds of capable mid-size factories with MOQs from ~500–1,000 units. Search 1688 for 保温杯 定制
+     (insulated bottle + customization) filtered to Jinhua, or walk the Yongkang Hardware Expo. If a drinkware
+     supplier claims to be a factory but isn't in Zhejiang or Guangdong, ask more questions.
+
+
+
+
+Public edition — redacted at client's request           China Insider                                             8
+  CHAPTER 03
+
+
+
+Toys & Viral Kids' Products
+The flapping sensory fish. The baby-soothing hand pillow. The dancing cactus. Every few months one
+of these products does 100M views and mints a wave of Amazon sellers. Here's the honest structure of
+this industry: global brand toys come from a few giants; viral novelty toys come from clusters — and
+knowing the difference is the whole game.
+
+
+
+
+     Early Light Industrial 旭日实业
+     HK HQ · MEGA-PLANTS IN SHAOGUAN & HEYUAN, GUANGDONG · FOUNDED 1972
+
+     VERIFIED CLIENTS
+
+       REPORTED      The world's largest toy manufacturer (per Wikipedia and decades of trade coverage), best
+     known as a longtime major supplier to Mattel — the Hot Wheels/Fisher-Price universe — and other global toy
+     brands.
+     WHAT THEY MAKE
+
+     Die-cast vehicles, electronic toys, ride-ons at a scale nobody else matches. Its Shaoguan complex is
+     functionally a toy city.
+     HOW TO REACH
+
+     earlylight.com.hk.
+
+     ● ● ● Brand-program scale. Intelligence entry: this is what "toy quality at scale" means.
+
+
+
+
+     Alpha Group 奥飞娱乐
+     SHANTOU (CHENGHAI DISTRICT), GUANGDONG · SZSE: 002292
+
+     VERIFIED CLIENTS
+       OFFICIAL    Listed company; China's biggest toy-and-animation group by its own filings — its Super Wings IP
+     airs in 100+ countries, and it manufactures both its own IP toys and licensed programs.
+     WHAT THEY MAKE
+
+     Action figures, transforming toys, IP merchandise. The anchor tenant of Chenghai, the world's densest toy-
+     manufacturing district.
+     HOW TO REACH
+
+     Corporate site / Chenghai Toys Fair.
+
+     ● ● ● Licensing-driven; mid-size programs possible via subsidiaries.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                              9
+     The real answer for viral toys: hunt the cluster, not the "brand factory"
+     Sensory fish, dancing cactuses, baby-soothe plush hands — these have no famous brand behind them, so
+     anyone claiming to be "the official factory" is marketing. They're born in two clusters: Chenghai, Shantou
+     (electronic & plastic toys — thousands of factories, MOQs often 100–500 units) and Yiwu, Zhejiang (plush &
+     novelty, plus the world's largest small-commodity market for instant stock).
+
+       1. Screenshot the viral product from the video you saw.
+       2. Image-search it on 1688 (camera icon in the search bar — works scarily well). You'll surface dozens of
+          makers with prices, usually 5–15% of the TikTok Shop retail price.
+       3. Filter for 实力工厂 (verified factory) tags, 3+ years on platform, and Chenghai/Yiwu locations.
+
+       4. Safety first: for anything touching children, demand EN71 (EU) or ASTM F963 / CPC (US) test reports before
+          you wire a cent. Real factories have them; traders stall.
+
+
+
+
+Public edition — redacted at client's request            China Insider                                                 10
+  CHAPTER 04
+
+
+
+Consumer Electronics
+The two companies below assemble the devices in your pocket and on your wrist right now. You will
+almost certainly never buy from them — and that's exactly why you should know them: they define
+the ceiling, and their home city gives you the realistic path.
+
+
+
+
+     Luxshare Precision 立讯精密
+     DONGGUAN HQ · PLANTS ACROSS CHINA & VIETNAM · SZSE: 002475
+
+     VERIFIED CLIENTS
+
+       REPORTED      Apple — assembles AirPods, iPhones and the Vision Pro (CNBC, SCMP; Tim Cook has toured its
+     plants). Reportedly tapped to build OpenAI's first consumer device.
+     WHAT THEY MAKE
+
+     Precision assembly for the world's most demanding hardware programs: acoustics, wearables, connectors,
+     automotive electronics.
+     HOW TO REACH
+
+     luxshare-ict.com (enterprise programs only).
+
+     ● ● ● You don't hire Luxshare; you aspire to.
+
+
+
+
+     Goertek 歌尔股份
+     WEIFANG, SHANDONG · SZSE: 002241
+
+     VERIFIED CLIENTS
+
+       REPORTED      Assembles AirPods, HomePods and Apple Watch units (CNBC); the documented manufacturing
+     muscle behind Meta Quest headsets. Approached by OpenAI for speaker modules.
+     WHAT THEY MAKE
+
+     Acoustics (it began as a speaker/microphone maker), TWS earbuds, VR/AR devices — the quiet giant of the
+     "hearables and headsets" era.
+     HOW TO REACH
+
+     goertek.com (enterprise).
+
+     ● ● ● Enterprise-scale only.
+
+
+
+
+Public edition — redacted at client's request            China Insider                                            11
+     Reality check — the realistic electronics path for a small brand
+     Consumer electronics is the one category where "find the brand's factory" genuinely doesn't work for small
+     buyers: certified assembly lines cost too much to interrupt. The workable route instead:
+
+        • Shenzhen's ODM layer. Beneath the giants sit thousands of ODMs selling ready-engineered earbuds,
+          chargers, trackers and smart gadgets you can brand — MOQs from 500–1,000 units. Global Sources
+          Consumer Electronics (HK, April & October) is the show built exactly for this.
+        • Certifications are non-negotiable: FCC (US) / CE-RED (EU), and UN38.3 for anything with a lithium
+          battery. A supplier who can't produce them instantly is a hard no — batteries are where cheap sourcing
+          becomes a house fire.
+        • Anker's open secret: the most successful Chinese electronics brand of the past decade doesn't own
+          factories — it designs in-house and contracts out. Own the design and QC, rent the manufacturing.
+
+
+
+
+Public edition — redacted at client's request            China Insider                                             12
+  CHAPTER 05
+
+
+
+Home & Kitchen Appliances
+Industry saying, quoted everywhere from Zhihu to broker reports: "of every 10 small appliances in the
+world, 1 is made by Xinbao." The kettle, air fryer and coffee machine business is a Chinese duopoly of
+clusters — Shunde in Guangdong and the Cixi–Lishui belt in Zhejiang — and it is unusually open to
+smaller buyers.
+
+
+
+
+     Xinbao Electrical 新宝股份
+     SHUNDE, FOSHAN · 100M+ UNITS/YR · 8,000+ SKUS · SZSE: 002705
+
+     VERIFIED CLIENTS
+
+       REPORTED      Philips, Bosch, Panasonic, Siemens, De'Longhi, Electrolux, Hamilton Beach, SEB, Morphy Richards —
+     the client roster documented across 36Kr, securities research and its own investor materials. Runs the
+     Morphy Richards brand in China.
+     WHAT THEY MAKE
+
+     Kettles, coffee machines, toasters, blenders, air fryers — China's #1 exporter in several of these categories.
+     20,000+ existing molds mean your product may already 80% exist.
+     HOW TO REACH
+
+     Via Canton Fair (its booth is a landmark) or gdxinbao.com.
+
+     ● ● ● Explicitly built "flexible small-order lines" to serve mid-size clients — documented strategy.
+
+
+
+
+     Biyi Electric 比依股份
+     NINGBO, ZHEJIANG · SHSE: 603215 · "THE AIR-FRYER STOCK"
+
+     VERIFIED CLIENTS
+
+       REPORTED      Philips — inventor of the home air fryer — is its documented #1 client; also produces for Newell
+     brands and SharkNinja per industry research.
+     WHAT THEY MAKE
+
+     Air fryers and deep fryers. If you've eaten anything air-fried in Europe, decent odds it came off a Biyi line.
+     HOW TO REACH
+
+     Alibaba International; Canton Fair.
+
+     ● ● ● ODM catalogs available to brand on.
+
+
+
+
+Public edition — redacted at client's request              China Insider                                                 13
+     Tianxi Holding 天喜控股
+     JINYUN, LISHUI, ZHEJIANG · CHINA'S #1 AIR-FRYER EXPORTER BY VALUE
+
+     VERIFIED CLIENTS
+
+       REPORTED      COSORI and Instant Pot — the two best-selling air-fryer brands in North America — documented
+     among its top clients, plus Midea and Haier domestically.
+     WHAT THEY MAKE
+
+     Air fryers, pressure cookers, cookware. Proof that a county factory can quietly own an Amazon category.
+     HOW TO REACH
+
+     Alibaba; Canton Fair.
+
+     ● ● ● Export-native, catalog-driven, samples readily quoted.
+
+
+
+
+     Ningbo Jiale 宁波嘉乐
+     CIXI, NINGBO · ~35% OF GLOBAL AIR-FRYER ODM OUTPUT
+
+     VERIFIED CLIENTS
+
+       REPORTED      Panasonic, Costco, Electrolux, Joyoung, Supor — and it makes Xiaomi's air fryer; Xiaomi is also an
+     investor.
+     WHAT THEY MAKE
+
+     The world's largest air-fryer ODM base, with hundreds of patents around one product it does better than
+     anyone.
+     HOW TO REACH
+
+     Alibaba; Cixi appliance cluster.
+
+     ● ● ● Deep ODM menu — pick a body, add your brand.
+
+
+
+
+Public edition — redacted at client's request              China Insider                                                  14
+  CHAPTER 06
+
+
+
+Pet Products
+Half the pet aisle at Walmart, Petco and Chewy is designed and made by Chinese companies you've
+never heard of — and because all four below are listed companies, their client rosters are on the
+public record. This is the single most transparent chapter in the book.
+
+
+
+
+     Tianyuan Pet 天元宠物
+     HANGZHOU, ZHEJIANG · FOUNDED 2003 · SZSE: 301335
+
+     VERIFIED CLIENTS
+       OFFICIAL    Walmart, Amazon, Chewy, Petco, Fressnapf (Europe's #1 pet chain), Kmart Australia — named
+     directly in its own stock-exchange filings.
+     WHAT THEY MAKE
+
+     Cat trees, pet beds, toys, apparel — 5,000+ catalog items, 2,000 new designs a year. Design-and-supply-
+     chain company that coordinates Zhejiang's workshop network.
+     HOW TO REACH
+
+     Exhibits at every major show: Interzoo (Nuremberg), Global Pet Expo (Orlando), CIPS (China). Also on Alibaba.
+
+     ● ● ● Catalog model is built for buyers of all sizes.
+
+
+
+
+     Guaibao Pet 乖宝宠物
+     LIAOCHENG, SHANDONG · SZSE: 301498 · OWNS BRAND MYFOODIE 麦富迪
+
+     VERIFIED CLIENTS
+       OFFICIAL    Walmart disclosed in its IPO documents as its largest OEM client (~33% of OEM revenue); also
+     supplies Smucker's and Spectrum Brands per filings. Acquired the US treat brand Waggin' Train.
+     WHAT THEY MAKE
+
+     Pet food and treats — China's #1 domestic pet-food brand that still runs a big export OEM book.
+     HOW TO REACH
+
+     Corporate site; pet trade shows.
+
+     ● ● ● Food = regulatory moat; mid-size private-label programs possible.
+
+
+
+
+     China Pet Foods 中宠股份
+     YANTAI, SHANDONG · SZSE: 002891 · OWNS BRAND WANPY 顽皮
+
+     VERIFIED CLIENTS
+       OFFICIAL    ~75% of revenue historically from export OEM per filings, supplying major North American,
+     European and Japanese pet brands; plants in China, US, Canada, NZ and SE Asia.
+     WHAT THEY MAKE
+
+     Jerky treats, wet food, dental chews — one of the earliest and biggest Chinese pet-treat exporters (listed
+     2017).
+     HOW TO REACH
+
+     chinapetfoods.com; Interzoo / Global Pet Expo.
+
+     ● ● ● Private-label treats are its bread and butter.
+
+
+
+
+Public edition — redacted at client's request                China Insider                                           15
+     Yiyi Hygiene 依依股份
+     TIANJIN · SZSE: 001206 · PET PADS & DIAPERS
+
+     VERIFIED CLIENTS
+
+       REPORTED      Amazon, PetSmart, Walmart, Costco among documented clients; 4.8B+ pet pads/yr capacity,
+     30%+ of China's exports in the category.
+     WHAT THEY MAKE
+
+     The unglamorous gold mine: training pads, pet diapers — repeat-purchase consumables with subscription
+     economics.
+     HOW TO REACH
+
+     Alibaba; corporate site.
+
+     ● ● ● Consumables OEM welcomes private label at moderate MOQs.
+
+
+
+
+Public edition — redacted at client's request          China Insider                                           16
+  CHAPTER 07
+
+
+
+Beauty & Personal Care
+Beauty runs on ODMs more than any other category — the formula in a prestige serum and an indie
+brand's serum may come from the same tank. Two ODM giants operate massive Chinese plants and
+openly serve the world's biggest beauty companies. One caution up front: cosmetics is the most
+regulated category in this book.
+
+
+
+
+     Cosmax China 科丝美诗
+     SHANGHAI & GUANGZHOU PLANTS · KOREAN-OWNED, WORLD'S LARGEST COSMETICS ODM
+
+     VERIFIED CLIENTS
+       OFFICIAL    Cosmax publicly identifies L'Oréal among its clients and states it serves hundreds of global and
+     Chinese beauty brands from its China plants — its entire business model is being the brand behind brands.
+     WHAT THEY MAKE
+
+     Skincare, color cosmetics, sunscreen — formulation to filling. Many viral C-beauty and K-beauty products
+     are Cosmax formulas with different labels.
+     HOW TO REACH
+
+     cosmax.com — ODM inquiry channels for brands.
+
+     ● ● ● MOQs typically 3,000–10,000 units per SKU — startup-heavy client base regardless.
+
+
+
+
+     Intercos China 莹特丽
+     SUZHOU PLANTS · ITALIAN GROUP, COLOR-COSMETICS SPECIALIST
+
+     VERIFIED CLIENTS
+       OFFICIAL    The Italian ODM group states it supplies most of the world's top-20 beauty groups; its Suzhou
+     operation is one of Asia's premier lipstick/powder plants.
+     WHAT THEY MAKE
+
+     Lipstick, powders, eyeshadow — the prestige end of makeup manufacturing.
+     HOW TO REACH
+
+     intercos.com.
+
+     ● ● ● Premium ODM; bring a brand plan, not just a logo.
+
+
+
+
+     Cluster intel + the regulatory red line
+     Makeup brushes: Qing County, Cangzhou (Hebei) makes the majority of the world's brushes — search 1688
+     for 化妆刷 沧州. Beauty devices: Shenzhen, alongside its electronics ecosystem. The red line: anything
+     applied to skin needs FDA facility registration + MoCRA compliance (US) or a CPNP notification + Responsible
+     Person (EU) before you sell a single unit. Legitimate ODMs handle this paperwork daily; if a supplier waves it
+     off, walk away. This is the category where cheap sourcing can end in a lawsuit, not just a refund.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                               17
+  CHAPTER 08
+
+
+
+Footwear & Sneakers
+Sneaker manufacturing is the most concentrated story in this book: a handful of Chinese-and-
+Taiwanese-run groups make billions of pairs for every brand you know. A twist to understand: their
+headquarters and R&D are in Guangdong, but much of the actual stitching now happens in their
+Vietnam and Indonesia plants — the "China supply chain" has become the "Chinese-run supply
+chain."
+
+
+
+
+     Yue Yuen 裕元集团
+     DONGGUAN BASE + VIETNAM/INDONESIA · ~220M PAIRS/YR · HKEX: 0551
+
+     VERIFIED CLIENTS
+       OFFICIAL    Nike, Adidas, Asics, New Balance, Salomon, Timberland — named in its own annual reports; Nike
+     and Adidas alone are ~60% of manufacturing revenue. The world's largest athletic-footwear maker.
+     WHAT THEY MAKE
+
+     Everything on your feet. 40+ years with Nike and Adidas; also makes for premium outdoor labels like Arc'teryx
+     per broker research.
+     HOW TO REACH
+
+     yueyuen.com (enterprise).
+
+     ● ● ● Half a million pairs is a small order here.
+
+
+
+
+     Huali Group 华利集团
+     HQ & DESIGN CENTER: ZHONGSHAN, GUANGDONG · PLANTS IN VIETNAM/INDONESIA · SZSE: 300979
+
+     VERIFIED CLIENTS
+       OFFICIAL    Nike, Converse, Vans, UGG, HOKA, Puma, Under Armour, Columbia — disclosed in its listing
+     documents and annual reports. ~200M pairs a year.
+     WHAT THEY MAKE
+
+     The growth star of sneaker OEM — the factory group behind HOKA's rise. Development and design happen in
+     Zhongshan even though production is offshore.
+     HOW TO REACH
+
+     Corporate site (brand programs).
+
+     ● ● ● Brand-scale programs only.
+
+
+
+
+Public edition — redacted at client's request            China Insider                                               18
+     Stella International 九兴控股
+     HK/DONGGUAN ROOTS · HKEX: 1836 · PREMIUM & LUXURY FOOTWEAR
+
+     VERIFIED CLIENTS
+       OFFICIAL    Per its filings, ~35% of manufacturing revenue comes from luxury and fashion categories — it
+     develops and manufactures for high-end international footwear and fashion houses as a one-stop design-
+     to-production partner.
+     WHAT THEY MAKE
+
+     Leather shoes, luxury sneakers, designer collaborations — the craftsmanship tier of Chinese footwear.
+     HOW TO REACH
+
+     stella.com.hk.
+
+     ● ● ● Takes smaller premium programs than the volume giants — if your brand is high-end.
+
+
+
+
+     Cluster intel: where small shoe brands actually start
+     Jinjiang, Fujian — hometown of Anta and Xtep, thousands of sneaker factories, MOQs from ~300–500 pairs.
+     Wenzhou, Zhejiang — leather shoes. Chengdu — women's fashion shoes. Search 1688 for 运动鞋 OEM 晋江, or
+     attend the Jinjiang Footwear Expo (April). The giants above prove the ceiling; the clusters are the door.
+
+
+
+
+Public edition — redacted at client's request             China Insider                                           19
+  THE PLAYBOOK
+
+
+
+From this PDF to a purchase order
+  CHANNEL                   WHAT IT IS                                             BEST FOR
+
+
+  1688.com                  China's domestic wholesale platform — factory          Lowest prices, tiny MOQs, viral-product
+                            prices, Chinese-language, ships domestically (use      hunting. 30–50% cheaper than
+                            an agent/freight forwarder to get goods out).          Alibaba for identical goods.
+
+
+  Alibaba Intl              Export-facing marketplace: English, Trade Assurance    First-timers. Pay the convenience
+                            escrow, export-ready suppliers.                        premium until you have an agent on
+                                                                                   the ground.
+
+
+  Canton Fair               The world's largest trade fair, Guangzhou, April &     Meeting factories face-to-face,
+                            October. Every factory in this book or its neighbors   touching samples, judging who's real
+                            exhibits.                                              in 30 seconds.
+
+
+  Global Sources            HK-based B2B platform + Hong Kong shows.               Electronics especially.
+
+
+
+
+     Five questions that unmask a trading company
+       1. "Can we do a live video walk of your production line — today?" Factories say yes; traders schedule, stall,
+          or show a suspiciously quiet floor.
+       2. "What's your business license scope?" Ask for the license (营业执照); if the scope says 贸易 / 商贸 (trading)
+          with no 生产 / 制造 (production), it's a trader.
+       3. "Which machines do you run, and how many?" Real factories answer in模具-and-tonnage detail
+          instantly; traders get vague.
+       4. "Can I see the test report with your company's name on it?" Borrowed certificates carry someone else's
+          name. Match the name to the license.
+       5. "What DON'T you make?" A factory has a narrow answer ("we only do stainless drinkware"). A trader can
+          magically make everything.
+
+     A good trader with real factory relationships can still be worth it for a small first order — just never pay
+     factory-direct prices for trader-level service.
+
+
+
+
+     First-order survival rules
+        • Sample first, always. $50–150 well spent; factories usually credit it against the bulk order.
+        • Payment: 30% deposit / 70% after inspection, before shipment. Never 100% up front. On Alibaba, keep it
+          inside Trade Assurance.
+        • Third-party inspection (~$100–300): QIMA, SGS or V-Trust checks your goods at the factory before the
+          balance is paid. The single highest-ROI line item in importing.
+        • Use a freight forwarder for anything beyond a few cartons; they handle customs, duties and the
+          alphabet soup (FOB is the incoterm you want as a beginner).
+        • Confirm compliance per category: toys EN71/ASTM F963 · electronics FCC/CE + UN38.3 · cosmetics FDA-
+          MoCRA/CPNP · anything food-contact LFGB/FDA food-grade.
+
+
+
+
+Public edition — redacted at client's request                 China Insider                                                  20
+  ABOUT
+
+
+
+Who made this
+China Insider is a digital media brand covering Chinese travel, culture, technology and business for a
+global audience. We report on China's viral products for a living — and increasingly, on the factories and
+supply chains behind them. This directory is one of the studies that work produces.
+
+
+
+
+      About this list
+      This is one of several sourcing studies we've produced for clients. At our client's request, certain details
+      have been redacted and a number of suppliers held back from this public version.
+
+      What remains is still, we think, more than most people ever manage to find.
+
+      — The China Insider team
+
+
+
+
+Sources & verification. Client relationships tagged OFFICIAL are drawn from brand-published supplier lists (e.g., Lululemon Supplier
+List, April 2025), companies' stock-exchange filings, IPO prospectuses, annual/interim reports, or official supplier awards published by
+the companies themselves. Relationships tagged REPORTED are documented by major business media and securities research,
+including 21st Century Business Herald, CNBC, South China Morning Post, 36Kr, STCN and broker reports. Supplier relationships change;
+brand lists are updated periodically and a factory's presence on a past list does not guarantee a current contract.
+
+Disclaimer. This directory is editorial research, published for information only. China Insider has no commercial relationship with any
+factory listed, receives no commission from any transaction, and does not guarantee, endorse or warrant any supplier's products,
+pricing, capacity, compliance or conduct. Inclusion is not a recommendation; conduct your own due diligence, sample testing and
+third-party inspection before any purchase. All trademarks belong to their respective owners; brand names appear solely to describe
+documented manufacturing relationships. Nothing here suggests you can purchase branded merchandise from these factories — you
+cannot.
+
+© 2026 China Insider · chinainsider.news · Version 1.0 · July 2026
+
+
+
+
+Public edition — redacted at client's request                   China Insider                                                              21
+

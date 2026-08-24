@@ -26,6 +26,26 @@ export type WorkspaceRfq = {
   submitted_at: string | null;
   last_saved_at: string;
 };
+export type WorkspaceChatMessage = {
+  id: string;
+  role: "buyer" | "agent" | "system";
+  content: string;
+  created_at: string;
+};
+export type WorkspaceProduct = {
+  id: string;
+  sku: string;
+  name: string;
+  supplier: string;
+  unit_price: number;
+  units: number;
+  line_total: number;
+  order_id: string;
+  order_no: string;
+  order_status: string;
+  placed_at: string | null;
+  rfq_case_id: string | null;
+};
 export type WorkspaceInvoiceStatus = "draft" | "sent" | "paid" | "cancelled" | "overdue";
 export type WorkspaceInvoice = {
   id: string;
@@ -374,6 +394,33 @@ export async function listRfqAttachments(caseId: string) {
     .order("created_at");
   rpcError(error);
   return (data ?? []) as RfqAttachment[];
+}
+export async function listRfqMessages(caseId: string) {
+  const { data, error } = await client().rpc("workspace_list_rfq_messages", {
+    p_case_id: caseId,
+  });
+  rpcError(error);
+  return (data ?? []) as WorkspaceChatMessage[];
+}
+export async function addRfqMessage(caseId: string, content: string) {
+  const { data, error } = await client().rpc("workspace_add_rfq_message", {
+    p_case_id: caseId,
+    p_content: content,
+  });
+  rpcError(error);
+  return (data ?? []) as WorkspaceChatMessage[];
+}
+export async function listWorkspaceProducts() {
+  const { data, error } = await client().rpc("workspace_list_products");
+  rpcError(error);
+  return (data ?? []) as WorkspaceProduct[];
+}
+export async function getWorkspaceProduct(itemId: string) {
+  const { data, error } = await client().rpc("workspace_get_product", {
+    p_item_id: itemId,
+  });
+  rpcError(error);
+  return data as WorkspaceProduct | null;
 }
 export async function uploadRfqAttachment(caseId: string, file: File) {
   if (

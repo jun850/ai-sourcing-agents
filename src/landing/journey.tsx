@@ -63,7 +63,7 @@ function QuotesPreview({ content }: PreviewProps<"quotes">) {
   return (
     <div className="journey-preview journey-preview--quotes">
       <div className="journey-quotes-heading">
-        <span className="journey-product-icon" aria-hidden="true">👕</span>
+        <span className="journey-product-icon" aria-hidden="true">👖</span>
         <strong>{content.productLabel}</strong>
         <em>{content.status}</em>
       </div>

@@ -27,6 +27,18 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Quality, logistics, invoice, and payment states are authoritative only when recorded by guarded server workflows.
 - Every consequential change is attributable and auditable.
 
+## Workspace flow contract
+
+- The buyer starts on the existing dashboard prompt. Creating a request creates
+  the durable RFQ case and its buyer/assistant chat thread together.
+- Chat messages are persisted to the RFQ thread through guarded workspace RPCs;
+  the assistant acknowledgement is status-only and must not invent supplier,
+  price, MOQ, certification, capacity, availability, quote, or payment facts.
+- Requests are the durable RFQ index and timeline entry point. Products are
+  buyer-owned immutable order-item snapshots, never a catalogue browse surface.
+- Invoices continue through workspace invoice RPCs and Stripe Checkout; the
+  browser may request checkout but cannot set totals or settlement state.
+
 ## Accessibility
 
 Target WCAG 2.2 Level AA. Support keyboard-only use, visible and unobscured focus, semantic status messages, reduced motion, 200% text resize, and 400% reflow without loss of task content.

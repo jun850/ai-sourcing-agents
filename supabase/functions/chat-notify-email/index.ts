@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { siteUrl } from "../_shared/stripe.ts";
 
 // One-way "you have a new message" email, fired after a chat message is sent.
 // Not a reply-by-email bridge (that needs inbound email routing on a verified
@@ -71,7 +72,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  const siteUrl = Deno.env.get("SITE_URL") || "https://atelix.app";
+  const appUrl = siteUrl();
 
   const resp = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -82,7 +83,7 @@ Deno.serve(async (req) => {
       subject: `New message from ${senderName} on Atelix`,
       html: `<p>You have a new message from <b>${senderName}</b> on Atelix.</p>` +
         (preview ? `<p style="color:#54534e">“${String(preview).slice(0, 200)}”</p>` : "") +
-        `<p><a href="${siteUrl}/${linkPath}">Reply on Atelix</a></p>` +
+        `<p><a href="${appUrl}/${linkPath}">Reply on Atelix</a></p>` +
         `<p style="color:#8a8a85;font-size:12px">Replying to this email won’t reach them — reply from the link above.</p>`,
     }),
   });

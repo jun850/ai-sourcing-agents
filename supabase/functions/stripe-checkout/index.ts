@@ -1,12 +1,11 @@
-import { admin, cents, cors, json, mode, stripe, userFrom } from "../_shared/stripe.ts";
+import { admin, cents, corsJson, mode, preflight, requireAllowedOrigin, siteUrl, stripe, userFrom } from "../_shared/stripe.ts";
 
 type CheckoutRequest =
   | { kind: "order"; orderNo: string; promotionCode?: string }
   | { kind: "invoices"; invoiceIds: string[] };
 
 const sessionSuffix = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => String.fromCharCode(97 + (byte % 26))).join("");
-const siteUrl = () => (Deno.env.get("SITE_URL") || "http://localhost:8090").replace(/\/$/, "");
-const checkoutResponse = (session: Record<string, unknown>, kind: CheckoutRequest["kind"]) => json({
+const checkoutResponse = (req: Request, session: Record<string, unknown>, kind: CheckoutRequest["kind"]) => corsJson(req, {
   url: session.url,
   environment: mode(),
   amountCents: Number(session.amount_total || 0),
@@ -26,7 +25,7 @@ async function releaseUnattachedAttempt(db: ReturnType<typeof admin>, attemptId:
   if (error) console.error("invoice checkout release", error.message);
 }
 
-async function createInvoiceSession(db: ReturnType<typeof admin>, user: { email?: string | null }, attempt: { attemptId: string; amountCents: number }) {
+async function createInvoiceSession(req: Request, db: ReturnType<typeof admin>, user: { email?: string | null }, attempt: { attemptId: string; amountCents: number }) {
   const amount = Number(attempt.amountCents);
   if (!Number.isInteger(amount) || amount <= 0) throw new Error("Invalid invoice Checkout amount");
   const returnUrl = `${siteUrl()}/dashboard/invoices`;
@@ -57,22 +56,22 @@ async function createInvoiceSession(db: ReturnType<typeof admin>, user: { email?
   // the same attempt idempotency key; retry the attach once before surfacing it.
   if (attachError) ({ error: attachError } = await db.rpc("invoice_checkout_attach_session", { p_attempt_id: attempt.attemptId, p_session_id: session.id }));
   if (attachError) throw attachError;
-  return checkoutResponse(session, "invoices");
+  return checkoutResponse(req, session, "invoices");
 }
 
-async function checkoutInvoices(user: { id: string; email?: string | null }, input: Extract<CheckoutRequest, { kind: "invoices" }>) {
+async function checkoutInvoices(req: Request, user: { id: string; email?: string | null }, input: Extract<CheckoutRequest, { kind: "invoices" }>) {
   if (!Array.isArray(input.invoiceIds) || input.invoiceIds.length < 1 || input.invoiceIds.length > 25 || input.invoiceIds.some((id) => typeof id !== "string")) throw new Error("Select one to 25 invoices to pay.");
   const db = admin();
   const { data: attempt, error: attemptError } = await db.rpc("invoice_checkout_create_attempt", { p_buyer_id: user.id, p_invoice_ids: input.invoiceIds, p_environment: mode() });
   if (attemptError || !attempt?.attemptId) throw attemptError || new Error("Unable to prepare invoice Checkout");
   if (!attempt.created) {
-    if (!attempt.sessionId) return createInvoiceSession(db, user, { attemptId: String(attempt.attemptId), amountCents: Number(attempt.amountCents) });
-    return checkoutResponse(await existingInvoiceSession(String(attempt.sessionId)), "invoices");
+    if (!attempt.sessionId) return createInvoiceSession(req, db, user, { attemptId: String(attempt.attemptId), amountCents: Number(attempt.amountCents) });
+    return checkoutResponse(req, await existingInvoiceSession(String(attempt.sessionId)), "invoices");
   }
-  return createInvoiceSession(db, user, { attemptId: String(attempt.attemptId), amountCents: Number(attempt.amountCents) });
+  return createInvoiceSession(req, db, user, { attemptId: String(attempt.attemptId), amountCents: Number(attempt.amountCents) });
 }
 
-async function checkoutOrder(user: { id: string; email?: string | null }, input: Extract<CheckoutRequest, { kind: "order" }>) {
+async function checkoutOrder(req: Request, user: { id: string; email?: string | null }, input: Extract<CheckoutRequest, { kind: "order" }>) {
   if (!input.orderNo || typeof input.orderNo !== "string") throw new Error("Order number is required");
   const db = admin();
   const { data: order, error } = await db
@@ -89,7 +88,7 @@ async function checkoutOrder(user: { id: string; email?: string | null }, input:
   if (existingError) throw existingError;
   if (existing?.stripe_checkout_session_id && ["checkout_created", "processing"].includes(existing.state)) {
     const prior = await stripe(`/checkout/sessions/${existing.stripe_checkout_session_id}`);
-    if (prior.status === "open" && Boolean(prior.livemode) === (mode() === "live") && prior.url) return checkoutResponse(prior, "order");
+    if (prior.status === "open" && Boolean(prior.livemode) === (mode() === "live") && prior.url) return checkoutResponse(req, prior, "order");
   }
   const amount = cents(order.total);
   let promotionId: string | null = null;
@@ -111,12 +110,13 @@ async function checkoutOrder(user: { id: string; email?: string | null }, input:
   const { error: saveError } = await db.from("stripe_payments").upsert({ order_id: order.id, environment: mode(), state: session.payment_status === "paid" || session.payment_status === "no_payment_required" ? "paid" : "checkout_created", currency: "usd", gross_amount_cents: amount, discount_amount_cents: discount, net_amount_cents: Number(session.amount_total), stripe_checkout_session_id: session.id, promotion_code_id: promotionId, promotion_code: promotionLabel }, { onConflict: "order_id" });
   if (saveError) throw saveError;
   if (!session.url) throw new Error("Stripe did not return a hosted checkout URL");
-  return checkoutResponse(session, "order");
+  return checkoutResponse(req, session, "order");
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  if (req.method === "OPTIONS") return preflight(req);
+  try { requireAllowedOrigin(req); } catch { return new Response("Origin not allowed", { status: 403, headers: { "Vary": "Origin" } }); }
+  if (req.method !== "POST") return corsJson(req, { error: "Method not allowed" }, 405);
   try {
     const user = await userFrom(req);
     const payload = await req.json() as Record<string, unknown>;
@@ -124,9 +124,9 @@ Deno.serve(async (req) => {
     const input: CheckoutRequest = payload.kind === "invoices"
       ? { kind: "invoices", invoiceIds: payload.invoiceIds as string[] }
       : { kind: "order", orderNo: String(payload.orderNo || ""), promotionCode: typeof payload.promotionCode === "string" ? payload.promotionCode : undefined };
-    return input.kind === "invoices" ? await checkoutInvoices(user, input) : await checkoutOrder(user, input);
+    return input.kind === "invoices" ? await checkoutInvoices(req, user, input) : await checkoutOrder(req, user, input);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to start payment";
-    return json({ error: message }, /Unauthorized|Forbidden/.test(message) ? 401 : 400);
+    return corsJson(req, { error: message }, /Unauthorized|Forbidden/.test(message) ? 401 : 400);
   }
 });

@@ -8,7 +8,10 @@
     "build": "tsc --noEmit && vite build",
     "start": "node server/index.mjs",
     "lint": "tsc --noEmit",
-    "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts"
+    "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
+    "suppliers:queue": "node scripts/suppliers/build-research-queue.mjs",
+    "suppliers:normalize-regional": "node scripts/suppliers/normalize-regional-research.mjs",
+    "suppliers:crawl-regional": "node scripts/suppliers/crawl-regional-research.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
