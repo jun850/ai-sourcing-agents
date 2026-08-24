@@ -74,7 +74,10 @@ export function HeroSection() {
 
 export function BrandRail() {
   const { label, brands } = atelixContent.brandRail;
-  return <section className="brand-rail" aria-label="Retail destinations"><div className="brand-rail-inner"><p className="brand-rail-label">{label}</p><div className="brand-rail-window"><div className="brand-rail-track">{[...brands, ...brands].map((brand, index) => <span className={`brand-rail-item brand-rail-item--${brand.id}`} key={`${brand.id}-${index}`} aria-hidden={index >= brands.length}><img src={brand.src} alt={index >= brands.length ? "" : brand.name} width={brand.width} height={brand.height} /></span>)}</div></div></div></section>;
+  const cycleSeconds = 12;
+  const stepSeconds = cycleSeconds / brands.length;
+  const slots = brands.slice(0, 5);
+  return <section className="brand-rail" aria-label="Retail destinations"><div className="brand-rail-inner"><p className="brand-rail-label">{label}</p><div className="brand-rail-window" tabIndex={0} aria-label={`${label}: ${brands.map((brand) => brand.name).join(", ")}`}><div className="brand-blur-grid" aria-hidden="true">{slots.map((slot, slotIndex) => <span className="brand-blur-slot" key={slot.id}>{brands.map((brand, brandIndex) => <img className={`brand-blur-logo brand-blur-logo--${brand.id}`} src={brand.src} alt="" width={brand.width} height={brand.height} key={brand.id} style={{ animationDelay: `${-(brandIndex + slotIndex) * stepSeconds}s` }} />)}</span>)}</div></div></div></section>;
 }
 
 function BriefPreview() { return <div className="preview"><p><Sparkles size={14} aria-hidden="true" /> Looking for 1,000 heavyweight jersey tees. Washed finish, relaxed fit, delivery to Melbourne.</p><div className="input-sim">Upload a tech pack or describe your item <Paperclip size={16} aria-hidden="true" /><Send size={16} aria-hidden="true" /></div></div>; }

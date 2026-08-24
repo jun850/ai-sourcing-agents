@@ -113,3 +113,8 @@ Landing and resource-page FAQs keep their existing sourcing questions and
 answers in one shared native, keyboard-operable disclosure pattern. Expanding
 a row reveals only its canonical answer and does not create a new route or
 sourcing claim.
+
+The landing trusted-brand rail presents only the canonical local logo assets.
+Its blur transition changes presentation, not the represented brand set, and
+the full list remains available as one accessible label when motion is paused
+or reduced.

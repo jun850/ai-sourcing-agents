@@ -11,6 +11,7 @@ import "./atelix-sourcing-section.css";
 import "./landing/primitives.css";
 import "./landing/journey.css";
 import "./landing/faq.css";
+import "./landing/brand-blur.css";
 import { App } from "./App";
 import { atelixMaterialTheme } from "./material-theme";
 

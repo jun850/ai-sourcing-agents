@@ -1,0 +1,124 @@
+.brand-rail {
+  overflow: hidden;
+  padding: 28px 0;
+  border: 0;
+  background: transparent;
+}
+
+.brand-rail-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(32px, 4vw, 64px);
+  width: min(1180px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.brand-rail-window {
+  min-width: 0;
+  flex: 1;
+  padding-block: 12px;
+  overflow: hidden;
+}
+
+.brand-blur-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(18px, 3vw, 48px);
+}
+
+.brand-blur-slot {
+  display: grid;
+  position: relative;
+  min-width: 0;
+  height: 42px;
+  place-items: center;
+}
+
+.brand-blur-logo {
+  position: absolute;
+  display: block;
+  width: auto;
+  height: 30px;
+  max-width: 132px;
+  object-fit: contain;
+  opacity: 0;
+  filter: grayscale(1) blur(8px);
+  transform: translateY(-14px);
+  animation: brand-logo-blur-cycle 12s linear infinite;
+}
+
+.brand-blur-logo--1ldk,
+.brand-blur-logo--incu { height: 26px; }
+.brand-blur-logo--united-arrows { height: 16px; }
+.brand-blur-logo--club21 { width: 38px; height: 38px; }
+
+.brand-blur-slot:hover .brand-blur-logo {
+  filter: blur(0) saturate(1) !important;
+}
+
+.brand-rail-window:hover .brand-blur-logo,
+.brand-rail-window:focus .brand-blur-logo,
+.brand-rail-window:focus-within .brand-blur-logo { animation-play-state: paused; }
+
+@keyframes brand-logo-blur-cycle {
+  0%, 11% {
+    opacity: .66;
+    filter: grayscale(1) blur(0);
+    transform: translateY(0);
+  }
+  16% {
+    opacity: 0;
+    filter: grayscale(1) blur(8px);
+    transform: translateY(14px);
+  }
+  95% {
+    opacity: 0;
+    filter: grayscale(1) blur(8px);
+    transform: translateY(-14px);
+  }
+  100% {
+    opacity: .66;
+    filter: grayscale(1) blur(0);
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .brand-blur-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .brand-blur-slot:nth-child(5) { display: none; }
+}
+
+@media (max-width: 600px) {
+  .brand-rail { padding: 20px 0; }
+  .brand-rail-inner {
+    display: block;
+    width: calc(100% - 32px);
+  }
+  .brand-rail-label { margin-bottom: 10px; }
+  .brand-rail-window { padding-block: 8px; }
+  .brand-blur-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .brand-blur-slot { height: 38px; }
+  .brand-blur-slot:nth-child(n+4) { display: none; }
+  .brand-blur-logo { max-width: 96px; height: 25px; }
+  .brand-blur-logo--united-arrows { height: 13px; }
+  .brand-blur-logo--club21 { width: 32px; height: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-blur-slot img { display: none; animation: none; }
+  .brand-blur-slot img:first-child {
+    display: block;
+    opacity: .66;
+    filter: grayscale(1);
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .brand-rail-window { border: 1px solid CanvasText; }
+  .brand-blur-logo { filter: none; }
+}
