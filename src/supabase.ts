@@ -1,4 +1,4 @@
-import { createClient, type Session } from "@supabase/supabase-js";
+import { createClient, type Session, type User } from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
@@ -25,6 +25,31 @@ export type WorkspaceRfq = {
   updated_at: string;
   submitted_at: string | null;
   last_saved_at: string;
+};
+export type LegacyWorkspaceRfqQuote = {
+  id: string;
+  factory_id: string | null;
+  supplier_name: string;
+  supplier_region: string | null;
+  unit_price_cents: number;
+  quote_total_cents: number | null;
+  quantity: number | null;
+  moq: number | null;
+  lead_days: number | null;
+  certifications: string[];
+  quote_notes: string | null;
+  status: "suggested" | "selected" | "approved" | "rejected";
+  recommended: boolean;
+  verified: boolean;
+  updated_at: string;
+};
+export type WorkspaceRfqDecision = {
+  case: WorkspaceRfq & { selected_match_id: string | null; accepted_at: string | null };
+  quotes: LegacyWorkspaceRfqQuote[];
+  invoice_id: string | null;
+  invoice_no: string | null;
+  order_no: string | null;
+  invoice_status: WorkspaceInvoiceStatus | null;
 };
 export type WorkspaceChatMessage = {
   id: string;
@@ -171,6 +196,36 @@ export type IntoolsRegistrationRequest = {
   invitation_requested_at: string | null;
   created_at: string;
   updated_at: string;
+};
+export type IntoolsRfq = {
+  id: string;
+  case_no: string;
+  title: string;
+  status: string;
+  buyer_name: string | null;
+  buyer_email: string | null;
+  quote_count: number;
+  selected_supplier: string | null;
+  invoice_no: string | null;
+  updated_at: string;
+  created_at: string;
+};
+export type IntoolsRfqDetail = WorkspaceRfqDecision & {
+  buyer_name: string | null;
+  buyer_email: string | null;
+};
+export type LegacyIntoolsRfqQuotePayload = {
+  factoryId?: string | null;
+  supplierName: string;
+  supplierRegion?: string | null;
+  unitPriceCents: number;
+  quoteTotalCents?: number | null;
+  quantity?: number | null;
+  moq?: number | null;
+  leadDays?: number | null;
+  certifications?: string[];
+  quoteNotes?: string | null;
+  recommended?: boolean;
 };
 export type IntoolsOrder = {
   id: string;
@@ -417,6 +472,20 @@ export async function getSession(): Promise<Session | null> {
   rpcError(error);
   return data.session;
 }
+export async function getUserDisplayName(user: User): Promise<string> {
+  const { data } = await client()
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  const profileName = typeof data?.full_name === "string" ? data.full_name.trim() : "";
+  if (profileName) return profileName;
+  const metadata = user.user_metadata;
+  const metadataName = [metadata.full_name, metadata.name, metadata.preferred_username]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+  if (metadataName) return metadataName.trim();
+  return user.email?.split("@")[0] || "Administrator";
+}
 export async function signInWithMagicLink(email: string, redirectTo: string) {
   const { error } = await client().auth.signInWithOtp({
     email,
@@ -555,6 +624,21 @@ export async function listWorkspaceInvoices() {
   rpcError(error);
   return (data ?? []) as WorkspaceInvoice[];
 }
+export async function getWorkspaceRfqDecision(caseId: string) {
+  const { data, error } = await client().rpc("workspace_get_rfq_decision", {
+    p_case_id: caseId,
+  });
+  rpcError(error);
+  return data as WorkspaceRfqDecision;
+}
+export async function selectWorkspaceRfqSupplier(caseId: string, matchId: string) {
+  const { data, error } = await client().rpc("workspace_select_rfq_supplier", {
+    p_case_id: caseId,
+    p_match_id: matchId,
+  });
+  rpcError(error);
+  return data as WorkspaceRfqDecision;
+}
 export async function getWorkspaceInvoiceDetail(invoiceId: string) {
   const { data, error } = await client().rpc("workspace_get_invoice_detail", {
     p_invoice_id: invoiceId,
@@ -657,6 +741,30 @@ export async function loginLocalIntools(username: string, password: string) {
 export async function listIntoolsInvoices(status: string | null = null) {
   return intoolsRpc<IntoolsInvoice[]>("intools_list_invoices", {
     p_status: status,
+  });
+}
+export async function listIntoolsRfqs(status: string | null = null) {
+  return intoolsRpc<IntoolsRfq[]>("intools_list_rfq_cases", {
+    p_status: status,
+  });
+}
+export async function getIntoolsRfqDetail(caseId: string) {
+  return intoolsRpc<IntoolsRfqDetail>("intools_get_rfq_case_detail", {
+    p_case_id: caseId,
+  });
+}
+export async function updateIntoolsRfqStatus(caseId: string, status: string, note: string | null) {
+  return intoolsRpc<IntoolsRfqDetail>("intools_update_rfq_status", {
+    p_case_id: caseId,
+    p_status: status,
+    p_note: note,
+  });
+}
+export async function saveIntoolsRfqQuote(caseId: string, matchId: string | null, payload: LegacyIntoolsRfqQuotePayload) {
+  return intoolsRpc<IntoolsRfqDetail>("intools_upsert_rfq_quote", {
+    p_case_id: caseId,
+    p_match_id: matchId,
+    p_payload: payload,
   });
 }
 export async function listIntoolsRegistrationRequests(status: string | null = "pending_review") {
