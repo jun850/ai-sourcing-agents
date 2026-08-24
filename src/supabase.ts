@@ -58,6 +58,7 @@ export type WorkspaceInvoice = {
   due_date: string | null;
   created_at: string;
   rfq_case_id: string | null;
+  order_id: string | null;
 };
 export type WorkspaceInvoiceItem = {
   id?: string;

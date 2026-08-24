@@ -3819,16 +3819,32 @@ function ProductTable({
 
 function ProductDetail({
   product,
+  payableInvoiceId,
   onBack,
   onOpenRfq,
   onReorder,
 }: {
   product: WorkspaceProduct;
+  payableInvoiceId: string | null;
   onBack: () => void;
   onOpenRfq: (id: string | null) => void;
   onReorder: () => void;
 }) {
   const finalized = product.order_status === "completed";
+  const [payBusy, setPayBusy] = useState(false);
+  const [payError, setPayError] = useState("");
+  async function payInvoice() {
+    if (!payableInvoiceId || payBusy) return;
+    setPayBusy(true);
+    setPayError("");
+    try {
+      const checkout = await startWorkspaceInvoiceCheckout([payableInvoiceId]);
+      window.location.assign(checkout.url);
+    } catch (cause) {
+      setPayError(cause instanceof Error ? cause.message : "Could not start payment.");
+      setPayBusy(false);
+    }
+  }
   return (
     <Stack spacing={2} sx={{ width: "100%", maxWidth: 1120, mx: "auto" }}>
       <MuiButton variant="text" onClick={onBack} sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}>← Back to products</MuiButton>
@@ -3858,6 +3874,21 @@ function ProductDetail({
             <Typography sx={{ color: "#33513c", fontSize: 15, fontWeight: 700 }}>{productStageLabel(product.order_status)}</Typography>
             <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13, lineHeight: 1.55 }}>{finalized ? "This sourced product is in your finalized library." : "Atelix is coordinating this order against the saved RFQ and supplier record."}</Typography>
           </Box>
+          {payableInvoiceId && (
+            <>
+              <MuiButton
+                fullWidth
+                variant="contained"
+                disabled={payBusy}
+                onClick={() => void payInvoice()}
+                startIcon={payBusy ? <CircularProgress size={16} color="inherit" /> : undefined}
+                sx={{ mt: 1.75, backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}
+              >
+                {payBusy ? "Opening payment…" : "Pay invoice"}
+              </MuiButton>
+              {payError && <Alert severity="error" sx={{ mt: 1.25 }}>{payError}</Alert>}
+            </>
+          )}
           {product.rfq_case_id && <MuiButton fullWidth variant="contained" onClick={() => onOpenRfq(product.rfq_case_id)} sx={{ mt: 1.75 }}>Open request</MuiButton>}
           <Divider sx={{ my: 2.5 }} />
           <Typography sx={{ color: "#8d98a5", fontSize: 10.5, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>Also from here</Typography>
@@ -3881,6 +3912,7 @@ function WorkspaceProducts({
   const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
   const [products, setProducts] = useState<WorkspaceProduct[]>([]);
   const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
+  const [payableInvoiceId, setPayableInvoiceId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [supplier, setSupplier] = useState("all");
   const [status, setStatus] = useState<"all" | "in_progress" | "finalized">("all");
@@ -3895,12 +3927,24 @@ function WorkspaceProducts({
   }, []);
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
-    if (!detailId) { setDetail(null); return; }
+    if (!detailId) { setDetail(null); setPayableInvoiceId(null); return; }
     let active = true;
     void getWorkspaceProduct(decodeURIComponent(detailId)).then((next) => { if (active) setDetail(next); }).catch((cause) => { if (active) setError(cause instanceof Error ? cause.message : "Could not load this product."); });
     return () => { active = false; };
   }, [detailId]);
-  if (detailId && detail) return <ProductDetail product={detail} onBack={() => navigate("/dashboard/products")} onOpenRfq={onOpenRfq} onReorder={() => onReorder(detail)} />;
+  useEffect(() => {
+    if (!detail) { setPayableInvoiceId(null); return; }
+    let active = true;
+    void listWorkspaceInvoices()
+      .then((rows) => {
+        if (!active) return;
+        const match = rows.find((row) => row.status === "sent" && row.order_id === detail.order_id);
+        setPayableInvoiceId(match ? match.id : null);
+      })
+      .catch(() => { if (active) setPayableInvoiceId(null); });
+    return () => { active = false; };
+  }, [detail]);
+  if (detailId && detail) return <ProductDetail product={detail} payableInvoiceId={payableInvoiceId} onBack={() => navigate("/dashboard/products")} onOpenRfq={onOpenRfq} onReorder={() => onReorder(detail)} />;
   const suppliers = Array.from(new Set(products.map((product) => product.supplier))).sort();
   const filtered = products.filter((product) => {
     const haystack = `${product.name} ${product.supplier} ${product.sku} ${product.rfq_case_id || ""}`.toLowerCase();
