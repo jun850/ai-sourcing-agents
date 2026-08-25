@@ -38,18 +38,25 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   and sourced Product records tied back to the RFQ.
 - Motion is functional: chat messages and request/product rows enter with a
   short 150–250 ms ease-out, send/save actions acknowledge immediately, and
-  matching progress is only used for the review handoff. No page-load sequence
-  may delay task content. `MotionConfig reducedMotion="user"` is required.
+  matching progress is only used for the review handoff. After RFQ submission,
+  show a compact queued-for-review acknowledgement before the matching
+  progress view; use one contained checkmark and a restrained three-dot drift,
+  never a spinner or decorative confetti. No page-load sequence may delay task
+  content. `MotionConfig reducedMotion="user"` is required.
 - Chat composer focus uses the slate-blue working state with white typed text;
   plain Enter sends, Shift+Enter inserts a newline, and IME composition never
-  submits. The send control is moss/white in the focused state, not blue.
+  submits. On desktop, the conversation fills the split workspace row and pins
+  the composer to its bottom edge, aligned with the RFQ document's primary
+  action; only the message history scrolls. The send control is moss/white in
+  the focused state, not blue.
 - The RFQ conversation keeps agent outcomes within the existing conversation
   and live-document pattern: concise text status announces checking, saved
-  fields, verification, unavailable, remaining-turn, and support-handoff
+  fields, unavailable, remaining-turn, and support-handoff
   states without creating a second chat surface. Agent-applied updates name
   their changed RFQ fields and offer one inline undo action while the draft is
-  editable. Use status text as well as color; unavailable or unknown payment
-  and order questions direct buyers to `info@arcanawangsa.com`.
+  editable. A routine `verified` response does not leave a standalone status
+  label above the composer. Use status text as well as color; unavailable or
+  unknown payment and order questions direct buyers to `info@arcanawangsa.com`.
 - Avoid local-only chat state, fake product catalogue rows, invented supplier
   quotes, or payment state. Read and write through the typed Supabase/RPC
   contracts and preserve server-authoritative status boundaries.

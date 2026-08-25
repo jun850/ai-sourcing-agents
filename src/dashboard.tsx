@@ -1108,7 +1108,7 @@ function ConversationChatPanel({
         flexDirection: "column",
         height: {
           xs: "min(440px, calc(100dvh - 120px))",
-          md: "min(610px, calc(100dvh - 200px))",
+          md: "100%",
         },
         minHeight: { xs: 340, md: 480 },
         overflow: "hidden",
@@ -1299,7 +1299,8 @@ function ConversationChatPanel({
           display: "flex",
           alignItems: expanded ? "flex-end" : "center",
           gap: { xs: 0.25, sm: 0.5 },
-          mt: 1,
+          mt: "auto",
+          flex: "0 0 auto",
           p: { xs: 0.5, sm: 0.75 },
           pl: { xs: 0.75, sm: 1 },
           border: "1px solid #e7ebf0",
@@ -1890,50 +1891,31 @@ function SupplierMap({ complete }: { complete: boolean }) {
         overflow: "hidden",
         border: "1px solid #dfe8e1",
         borderRadius: "14px",
-        background:
-          "radial-gradient(circle at 30% 20%, rgba(232,244,235,.9), rgba(249,251,250,.98) 60%)",
+        backgroundColor: "#f8fbf8",
       }}
     >
-      <svg
-        viewBox="0 0 760 320"
+      <Box
+        component="div"
         role="img"
-        aria-labelledby="matching-map-title matching-map-description"
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-        }}
+        aria-label="A playful route showing the brief moving through RFQ structuring, eligibility checks, and Atelix review."
+        sx={{ position: "absolute", inset: 0 }}
       >
-        <title id="matching-map-title">RFQ review pipeline</title>
-        <desc id="matching-map-description">
-          Your brief moves through structuring, eligibility checks and into
-          Atelix review.
-        </desc>
-        <path
-          d="M80 125 C200 45 300 68 385 122 S560 195 680 158"
-          fill="none"
-          stroke="#e2ece4"
-          strokeWidth="2"
+        <motion.img
+          src="/assets/rfq-review-route.png"
+          alt=""
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: complete ? 1.01 : 1 }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: "absolute",
+            top: "24%",
+            left: "2%",
+            width: "96%",
+            height: "auto",
+            maxWidth: "none",
+          }}
         />
-        <motion.path
-          d="M80 125 C200 45 300 68 385 122 S560 195 680 158"
-          fill="none"
-          stroke="#4b7657"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          pathLength="1"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: complete ? 1 : 0.72 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-        />
-        <g fill="#ffffff" stroke="#4b7657" strokeWidth="2.5">
-          <circle cx="80" cy="125" r="8" />
-          <circle cx="385" cy="122" r="6" />
-          <circle cx="520" cy="171" r="6" />
-          <circle cx="680" cy="158" r="8" />
-        </g>
-      </svg>
+      </Box>
       <Box
         sx={{
           position: "absolute",
@@ -2191,6 +2173,74 @@ function SupplierMatchingStage({
           </Typography>
           <Box sx={{ mt: 1.5 }}>
             <MiniStageTimeline status={caseStatus} />
+          </Box>
+        </Box>
+      </Box>
+    </RoundedSurface>
+  );
+}
+
+function SubmissionQueuedStage() {
+  return (
+    <RoundedSurface
+      role="status"
+      aria-live="polite"
+      sx={{
+        minHeight: { xs: 0, md: 610 },
+        p: { xs: 0, md: 0 },
+        border: 0,
+        borderRadius: 0,
+        backgroundColor: "transparent",
+      }}
+    >
+      <Box
+        sx={{
+          display: "grid",
+          minHeight: { xs: 430, md: 560 },
+          placeItems: "center",
+          px: { xs: 1, md: 4 },
+          py: 5,
+          textAlign: "center",
+        }}
+      >
+        <Box sx={{ maxWidth: 470 }}>
+          <Box aria-hidden="true" sx={{ position: "relative", width: 132, height: 104, mx: "auto", mb: 3 }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.72, rotate: -8, y: 10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              style={{ position: "absolute", inset: "13px 20px 11px", display: "grid", placeItems: "center", border: "1px solid #cfe0d2", borderRadius: 18, background: "#f4faf3", color: "#4b7657", transformOrigin: "center bottom" }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.28, duration: 0.38, ease: "easeOut" }}
+                style={{ display: "grid" }}
+              >
+                <CheckCircle sx={{ fontSize: 37 }} />
+              </motion.div>
+            </motion.div>
+            {[{ left: 4, top: 38, delay: 0 }, { right: 5, top: 19, delay: 0.08 }, { right: 14, bottom: 2, delay: 0.16 }].map((dot) => (
+              <motion.span
+                key={`${dot.left ?? dot.right}-${dot.top ?? dot.bottom}`}
+                animate={{ y: [0, -6, 0], opacity: [0.45, 1, 0.45] }}
+                transition={{ duration: 1.6, repeat: Infinity, delay: dot.delay, ease: "easeInOut" }}
+                style={{ position: "absolute", left: dot.left, right: dot.right, top: dot.top, bottom: dot.bottom, width: 8, height: 8, borderRadius: "50%", background: "#9bc477" }}
+              />
+            ))}
+          </Box>
+          <Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>
+            RFQ sent
+          </Typography>
+          <Typography variant="h2" sx={{ mt: 0.7, color: "#202936", fontWeight: 500, letterSpacing: "-.035em", fontSize: { xs: 26, md: 32 } }}>
+            Atelix has your brief
+          </Typography>
+          <Typography sx={{ mt: 1.2, color: "#758091", fontSize: 14, lineHeight: 1.65 }}>
+            Your draft is queued for a human review. We’ll check the details before any supplier is contacted.
+          </Typography>
+          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, mt: 2.5, px: 1.5, py: 1, border: "1px solid #dce9df", borderRadius: "10px", backgroundColor: "#fbfdfb", color: "#4b7657", fontSize: 12, fontWeight: 700 }}>
+            <CheckCircle sx={{ fontSize: 17 }} aria-hidden="true" />
+            Review queue updated
           </Box>
         </Box>
       </Box>
@@ -2973,7 +3023,7 @@ function RfqWorkspace({
 
   useEffect(() => {
     if (phase !== "submitted" || restoredSubmitted) return;
-    const timer = window.setTimeout(() => setPhase("matching"), 500);
+    const timer = window.setTimeout(() => setPhase("matching"), 1500);
     return () => window.clearTimeout(timer);
   }, [phase, restoredSubmitted]);
   useEffect(() => {
@@ -3033,23 +3083,33 @@ function RfqWorkspace({
     const supportRequested =
       Boolean(response.supportHandoff) || response.kind === "support_handoff";
     const unavailable = response.kind === "unavailable";
-    setAgentStatus({
-      tone: unavailable
-        ? "warning"
-        : supportRequested
-          ? "info"
-          : nextChangedFields.length
-            ? "success"
-            : "info",
-      text: unavailable
-        ? "Atelix AI is unavailable right now. You can keep editing this RFQ."
-        : supportRequested
-          ? "For payment or order clarification, contact info@arcanawangsa.com."
-          : response.verificationStatus ||
-            (nextChangedFields.length
-              ? "Your RFQ draft has been updated."
-              : "Atelix has checked the saved RFQ."),
-    });
+    const verificationStatus = response.verificationStatus?.trim() || null;
+    if (
+      !unavailable &&
+      !supportRequested &&
+      nextChangedFields.length === 0 &&
+      verificationStatus?.toLowerCase() === "verified"
+    ) {
+      setAgentStatus(null);
+    } else {
+      setAgentStatus({
+        tone: unavailable
+          ? "warning"
+          : supportRequested
+            ? "info"
+            : nextChangedFields.length
+              ? "success"
+              : "info",
+        text: unavailable
+          ? "Atelix AI is unavailable right now. You can keep editing this RFQ."
+          : supportRequested
+            ? "For payment or order clarification, contact info@arcanawangsa.com."
+            : verificationStatus ||
+              (nextChangedFields.length
+                ? "Your RFQ draft has been updated."
+                : "Atelix has checked the saved RFQ."),
+      });
+    }
     setConversationMessages((current) => [
       ...current,
       {
@@ -3192,7 +3252,9 @@ function RfqWorkspace({
         : status
       : status;
   const caseStatus = statusOverride ?? baseStatus;
-  const rightPanel = showMatchingAnimation ? (
+  const rightPanel = phase === "submitted" && !restoredSubmitted ? (
+    <SubmissionQueuedStage />
+  ) : showMatchingAnimation ? (
     <SupplierMatchingStage
       phase={phase === "matched" ? "matched" : "matching"}
       checkCount={checkCount}
