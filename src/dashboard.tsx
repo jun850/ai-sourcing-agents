@@ -945,14 +945,14 @@ function CleanPromptComposer({
             minHeight: { xs: 68, sm: 74 },
             p: { xs: 0.5, sm: 0.75 },
             pl: { xs: 0.75, sm: 1 },
-            border: "1px solid #dfe3e8",
+            border: 0,
             borderRadius: expanded ? "16px" : "14px",
             backgroundColor: "#fff",
             boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             transition:
               "border-color 180ms ease, box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
             "&:focus-within": {
-              borderColor: "#dfe3e8",
+              border: 0,
               boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             },
           }}
@@ -1350,7 +1350,7 @@ function ConversationChatPanel({
           flex: "0 0 auto",
           p: { xs: 0.5, sm: 0.75 },
           pl: { xs: 0.75, sm: 1 },
-          border: "1px solid #e7ebf0",
+          border: 0,
           borderRadius: expanded ? "16px" : "14px",
           backgroundColor: "#fff",
           colorScheme: "light",
@@ -1358,7 +1358,7 @@ function ConversationChatPanel({
           transition:
             "box-shadow 180ms ease, border-color 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
           "&:focus-within": {
-            borderColor: "#cfe2d4",
+            border: 0,
             boxShadow: "0 4px 8px rgba(32,41,54,.05)",
           },
         }}

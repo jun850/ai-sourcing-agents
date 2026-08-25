@@ -9,3 +9,9 @@
 - Run local lint, build, database/RLS, route, keyboard, responsive, and payment regression gates before any production action.
 - Stripe Checkout amounts and eligibility are computed server-side. Verified, idempotent webhooks are the only payment-settlement authority.
 - Never place service-role, Stripe secret, webhook, or OpenRouter credentials in Vite code or `VITE_*` variables.
+- Treat the dashboard main flow as a protected visual contract. The primary prompt
+  and authenticated conversation composer use a white rounded surface with a
+  soft shadow, no CSS border, and no green `:focus-within` frame. Any dashboard
+  change must check both `/dashboard` and the post-login RFQ workspace states;
+  run `npm run qa:dashboard-prompt`, build, and the RFQ contract tests before
+  release. Do not restore the old bordered or green-ring treatment.

@@ -41,6 +41,9 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   and the existing reference-aware composer. Avoid decorative glows. Submission
   keeps the entered brief visible and disables repeat actions until the guarded
   request succeeds.
+- The main prompt and authenticated chat composer are white rounded surfaces
+  with a soft shadow and no CSS border. Their focused states must not add a green
+  outline or frame; only the controls inside may expose their own focus state.
 - Motion is functional: chat messages and request/product rows enter with a
   short 150–250 ms ease-out, send/save actions acknowledge immediately, and
   matching progress is only used for the review handoff. After RFQ submission,

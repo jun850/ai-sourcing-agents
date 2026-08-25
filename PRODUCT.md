@@ -37,6 +37,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   RFQ route. The first agent turn uses document-shaped skeletons until reviewed
   RFQ fields are available; empty optional fields remain explicit rather than
   being filled with inferred requirements.
+- The dashboard prompt and authenticated conversation composer share the same
+  white rounded, soft-shadow surface. They must remain borderless in default and
+  focused states; focus must not add a green frame or outline around the
+  composer container.
 - Chat messages are persisted to the RFQ thread through guarded workspace RPCs;
   the assistant acknowledgement is status-only and must not invent supplier,
   price, MOQ, certification, capacity, availability, quote, or payment facts.

@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "start": "node server/index.mjs",
     "lint": "tsc --noEmit",
+    "qa:dashboard-prompt": "node scripts/qa-dashboard-prompt.mjs",
     "qa:agent-rfq": "node scripts/qa-agent-rfq.mjs",
     "qa:rfq-ops-chat": "node scripts/qa-rfq-ops-chat.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
