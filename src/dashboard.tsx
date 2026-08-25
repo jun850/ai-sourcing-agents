@@ -548,7 +548,10 @@ function Sidebar({
             <ListItemButton
               key={item.view}
               selected={view === item.view}
-              onClick={() => onNavigate(item)}
+              onClick={(event) => {
+                event.preventDefault();
+                onNavigate(item);
+              }}
               component="a"
               href={item.href}
               aria-label={item.label}
@@ -1134,7 +1137,10 @@ function ConversationChatPanel({
           xs: "min(440px, calc(100dvh - 120px))",
           md: "100%",
         },
-        minHeight: { xs: 340, md: 480 },
+        minHeight: {
+          xs: "min(340px, calc(100dvh - 120px))",
+          md: 480,
+        },
         overflow: "hidden",
         border: 0,
         borderRadius: 0,
@@ -1652,7 +1658,7 @@ function RfqDocumentPanel({
         <Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
           <Typography
             sx={{
-              color: "#8d98a5",
+              color: "#667384",
               fontSize: 11,
               fontWeight: 700,
               letterSpacing: ".08em",
@@ -1688,22 +1694,26 @@ function RfqDocumentPanel({
             </Typography>
           )}
         </Box>
-        <Chip
-          label={
-            phase === "matching" || phase === "matched"
-              ? "Submitted"
-              : editing
-                ? "Editing"
-                : "Ready to review"
-          }
-          size="small"
-          aria-busy={actionPending}
-          sx={{
-            color: editing ? "#81622c" : "#58745d",
-            backgroundColor: editing ? "#fbf4e7" : "#eef4ee",
-            fontWeight: 700,
-          }}
-        />
+        {preparing ? (
+          <Skeleton variant="rounded" width={96} height={24} />
+        ) : (
+          <Chip
+            label={
+              phase === "matching" || phase === "matched"
+                ? "Submitted"
+                : editing
+                  ? "Editing"
+                  : "Ready to review"
+            }
+            size="small"
+            aria-busy={actionPending}
+            sx={{
+              color: editing ? "#81622c" : "#58745d",
+              backgroundColor: editing ? "#fbf4e7" : "#eef4ee",
+              fontWeight: 700,
+            }}
+          />
+        )}
       </Box>
       <Box
         role="tablist"
@@ -1738,11 +1748,15 @@ function RfqDocumentPanel({
               borderBottom:
                 tab === item ? "2px solid #4b7657" : "2px solid transparent",
               background: "transparent",
-              color: tab === item ? "#4b7657" : "#9aa4b0",
+              color: tab === item ? "#4b7657" : "#647184",
               font: "inherit",
               fontSize: 12,
               fontWeight: tab === item ? 700 : 500,
               cursor: "pointer",
+              "&:focus-visible": {
+                outline: "3px solid rgba(75,118,87,.32)",
+                outlineOffset: 2,
+              },
             }}
           >
             {item}
@@ -3258,8 +3272,7 @@ function RfqWorkspace({
 
   const draftingPhase =
     phase === "drafting" || phase === "review" || phase === "editing";
-  const preparingDocument =
-    phase === "drafting" && agentPending && conversationMessages.length <= 1;
+  const preparingDocument = phase === "drafting";
   const showMatchingAnimation =
     (phase === "matching" || phase === "matched") && !trackClicked;
   const baseStatus =
