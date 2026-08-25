@@ -124,6 +124,8 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   Buyers use `/dashboard/messages`; confirmed administrators use `/intools/messages`.
   Realtime updates, attachment access, unread state, and reply reminders use
   guarded RFQ Ops server contracts, never direct browser table writes.
+- Buyer-authored message labels use the buyer's personal profile name, not the
+  company name attached to the sourcing case.
 - An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;
   an unanswered Operations message reminds the buyer’s authenticated email.
   Reminders recur daily until an opposite-party reply and respect the buyer’s

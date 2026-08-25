@@ -146,6 +146,8 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   reduced motion is immediate. Keep the composer a working control, not an AI
   drafting surface, and expose loading, empty, error, attachment, and unread
   states with text as well as color.
+- Message metadata identifies buyer-authored messages by the buyer's personal
+  name; company names remain request context rather than chat authorship.
 
 ## Accessibility target
 
