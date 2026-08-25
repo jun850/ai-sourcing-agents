@@ -5846,25 +5846,32 @@ export function Dashboard({ path }: { path: string }) {
               id="main"
               sx={{
                 width: "100%",
-                maxWidth: workspaceOpen
-                  ? "none"
-                  : view === "products"
-                    ? {
-                        xs: "calc(100vw - 32px)",
-                        sm: "min(1450px, calc(100% - 80px))",
-                      }
-                  : {
-                      xs: "calc(100vw - 32px)",
-                      sm: "min(1060px, calc(100% - 48px))",
-                    },
-                px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0,
                 minWidth: 0,
                 boxSizing: "border-box",
-                mx: "auto",
-                py: { xs: 3, sm: 4, md: 5 },
               }}
             >
-              {content()}
+              <Box
+                sx={{
+                  width: "100%",
+                  maxWidth: workspaceOpen
+                    ? "none"
+                    : view === "products"
+                      ? {
+                          xs: "calc(100vw - 32px)",
+                          sm: "min(1450px, calc(100% - 80px))",
+                        }
+                      : {
+                          xs: "calc(100vw - 32px)",
+                          sm: "min(1060px, calc(100% - 48px))",
+                        },
+                  px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0,
+                  mx: "auto",
+                  py: { xs: 3, sm: 4, md: 5 },
+                  boxSizing: "border-box",
+                }}
+              >
+                {content()}
+              </Box>
             </Box>
             {message && (
               <Box

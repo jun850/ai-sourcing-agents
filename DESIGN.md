@@ -21,6 +21,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   tab and consequential actions use moss. Product detail uses a 64px back
   toolbar, a 350px stage rail on desktop, and a stacked rail on narrow screens.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
+- The authenticated Dashboard and Intools work areas own vertical scrolling across the full available width. Keep the scrollbar at the right edge of the workspace and center only the inner content measure or table surface.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
 - Loading states use layout-shaped skeletons within the existing route or list surface. Do not render visible loading sentences or swap stable action labels for progress wording; keep `aria-busy` on the affected region or control and stop shimmer when reduced motion is requested.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.

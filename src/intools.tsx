@@ -3442,13 +3442,10 @@ export function Intools() {
           id="main-content"
           sx={{
             width: "100%",
-            maxWidth: 1240,
-            mx: "auto",
-            px: { xs: 2, sm: 3, md: 4 },
-            py: { xs: 3, sm: 4, md: 5 },
+            minWidth: 0,
           }}
         >
-          <Stack spacing={2.5}>
+          <Stack spacing={2.5} sx={{ width: "100%", maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, sm: 4, md: 5 }, boxSizing: "border-box" }}>
             <Box>
               <Typography variant="h1" sx={{ fontSize: { xs: 30, sm: 40 } }}>
                 Intools
