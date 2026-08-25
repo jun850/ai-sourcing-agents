@@ -17,6 +17,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const MIGRATIONS = join(ROOT, "supabase", "migrations");
 const SOURCE = readFileSync(join(ROOT, "src", "supabase.ts"), "utf8");
+const WORKSPACE_SOURCE = readFileSync(join(ROOT, "src", "rfq-ops-messages.tsx"), "utf8");
 const sqlFiles = readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql"));
 
 const sqlByFile = sqlFiles.map((name) => ({
@@ -102,6 +103,7 @@ check(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.[a-z0-9_]*(?:unread|read)
 for (const typeName of ["RfqOpsConversation", "RfqOpsMessage", "RfqOpsMessageAttachment", "RfqOpsSendMessageInput"]) check(new RegExp(`(?:export\\s+)?type\\s+${typeName}\\b`).test(SOURCE), `src/supabase.ts must export ${typeName}`);
 check(/export\s+async\s+function\s+\w*(?:Ops|RfqOps|BuyerMessage|OpsMessage)\w*/.test(SOURCE), "src/supabase.ts must expose typed RFQ Ops API wrappers");
 check(/postgres_changes[\s\S]{0,800}(?:rfq|ops|message)/i.test(SOURCE) && /export\s+function\s+subscribeTo(?:RfqOps|OpsRfq|Ops)Messages/.test(SOURCE), "src/supabase.ts must expose a named Realtime subscription helper");
+check(/subscribeToRfqOpsMessages\s*\([\s\S]{0,1200}setMessages[\s\S]{0,700}loadThread/i.test(WORKSPACE_SOURCE), "Messages workspace must render a Realtime row immediately and hydrate it without refresh");
 check(/export\s+type\s+RfqOpsCursor\s*=\s*Readonly<\{\s*created_at:\s*string;\s*id:\s*string\s*\}>/.test(SOURCE), "typed cursor must include created_at and id");
 const rfqOpsWrapperRpcNames = [...SOURCE.matchAll(/(?:rpc|intoolsRpc)(?:<[^>]+>)?\(\s*\"([a-z0-9_]+)\"/g)]
   .map((match) => match[1])

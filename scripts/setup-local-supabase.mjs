@@ -46,7 +46,9 @@ async function localAdminUser() {
   return (await loginResponse.json()).user.id;
 }
 
-const profileId = process.env.ATELIX_LOCAL_ADMIN_PROFILE_ID || await localAdminUser();
+// A local database reset replaces Auth UUIDs. Always resolve the current local
+// user instead of trusting the persisted mapping in .env.local.
+const profileId = await localAdminUser();
 await new Promise((resolve) => setTimeout(resolve, 250));
 if (!/^[0-9a-f-]{36}$/i.test(profileId)) throw new Error("Local admin profile id is not a UUID.");
 execFileSync("docker", ["exec", "supabase_db_marketplace", "psql", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c", `alter table public.profiles disable trigger user; update public.profiles set role = 'admin', full_name = 'Local administrator' where id = '${profileId}'::uuid; alter table public.profiles enable trigger user;`], { cwd: root, stdio: "ignore" });

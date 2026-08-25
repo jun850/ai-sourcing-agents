@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert, Box, Button, Chip, Divider, IconButton, List, ListItemButton,
+  Alert, Avatar, Box, Button, Chip, Divider, IconButton, List, ListItemButton,
   Skeleton, Stack, TextField, Typography,
 } from "@mui/material";
 import { AttachFile, Close, Description, InsertDriveFile, Send } from "@mui/icons-material";
@@ -76,15 +76,16 @@ export function RfqOpsMessagesWorkspace({
     finally { conversationLoading.current = false; setLoadingList(false); }
   }, []);
 
-  const loadThread = useCallback(async (conversation: RfqOpsConversation) => {
-    setLoadingThread(true); setError(""); setActive(conversation);
+  const loadThread = useCallback(async (conversation: RfqOpsConversation, silent = false) => {
+    if (!silent) setLoadingThread(true);
+    setError(""); setActive(conversation);
     try {
       const page = await (mode === "buyer" ? listWorkspaceOpsMessages(conversation.id, { limit: 50 }) : listIntoolsBuyerMessages(conversation.id, { limit: 50 }));
       setMessages([...page.messages].reverse());
       const last = page.messages[0]?.id ?? null;
       await (mode === "buyer" ? markWorkspaceOpsConversationRead(conversation.id, last) : markIntoolsBuyerConversationRead(conversation.id, last));
     } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not load this conversation."); }
-    finally { setLoadingThread(false); }
+    finally { if (!silent) setLoadingThread(false); }
   }, []);
 
   useEffect(() => { void loadConversations(); }, [loadConversations]);
@@ -104,8 +105,13 @@ export function RfqOpsMessagesWorkspace({
   }, [active?.id, conversations, loadThread, selectedCaseId]);
   useEffect(() => {
     if (!active) return;
-    const subscription = subscribeToRfqOpsMessages(active.id, () => {
-      void loadThread(active); void loadConversations(); onUnreadCount?.();
+    const subscription = subscribeToRfqOpsMessages(active.id, (incoming) => {
+      // Realtime gives the immutable message row first, so render it immediately
+      // and then hydrate any private attachment metadata through the guarded RPC.
+      setMessages((current) => current.some((item) => item.id === incoming.id)
+        ? current
+        : [...current, { ...incoming, attachments: [] }]);
+      void loadThread(active, true); void loadConversations(); onUnreadCount?.();
     });
     return subscription.unsubscribe;
   }, [active, loadConversations, loadThread, onUnreadCount]);
@@ -171,7 +177,21 @@ export function RfqOpsMessagesWorkspace({
         </Box>
       </Box>
       <Stack sx={{ height: { md: "100%" }, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-        {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2}>{messages.map((item) => <Box key={item.id} sx={{ alignSelf: item.sender_kind === "buyer" ? "flex-end" : "flex-start", maxWidth: "78%" }}><Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: item.sender_kind === "buyer" ? "right" : "left" }}>{item.sender_label} · {messageTime(item.created_at)}</Typography><Box sx={{ px: 1.5, py: 1.25, borderRadius: item.sender_kind === "buyer" ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: item.sender_kind === "buyer" ? "#edf1ee" : "#fff", border: item.sender_kind === "buyer" ? "none" : "1px solid #e5e9ee" }}><Typography sx={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 14, lineHeight: 1.55 }}>{item.body}</Typography>{item.attachments.map((attachment) => <Button key={attachment.id} size="small" startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />} onClick={() => void createRfqOpsAttachmentSignedUrl(attachment).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))} sx={{ mt: .75, justifyContent: "flex-start", color: "#45556b" }}>{attachment.original_name}</Button>)}</Box></Box>)}</Stack>}</Box>{newMessagesBelow && <Button size="small" onClick={() => { const node = scrollRef.current; if (!node) return; node.scrollTo({ top: node.scrollHeight, behavior: "smooth" }); setNewMessagesBelow(false); }}>New messages</Button>}<Divider/><Stack spacing={1} sx={{ flexShrink: 0, p: { xs: 1.5, sm: 2 }}}>{attachments.length > 0 && <Stack direction="row" spacing={.75} sx={{ flexWrap: "wrap" }}>{attachments.map((item) => <Chip key={item.id} label={item.file.name} onDelete={() => void removeAttachment(item)} deleteIcon={<Close />} sx={{ maxWidth: "100%" }}/>)}</Stack>}<TextField multiline minRows={2} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message to Atelix…" slotProps={{ htmlInput: { maxLength: 12000, "aria-label": "Message to Atelix" } }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} disabled={sending}/><Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}><IconButton aria-label="Add an attachment" onClick={() => fileInput.current?.click()} disabled={sending || attachments.length >= 10}><AttachFile /></IconButton><input ref={fileInput} hidden type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { void chooseFiles(event.target.files); event.currentTarget.value = ""; }}/><Button variant="contained" endIcon={<Send />} disabled={sending || (!draft.trim() && !attachments.length)} onClick={() => void send()} aria-busy={sending}>{sending ? "Sending" : "Send message"}</Button></Stack></Stack></>}
+        {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2.25}>{messages.map((item) => {
+          const isBuyer = item.sender_kind === "buyer";
+          const sentByCurrentUser = mode === "buyer" ? isBuyer : !isBuyer;
+          const senderName = item.sender_label || (isBuyer ? "Buyer" : "Atelix Operations");
+          return <Stack key={item.id} direction="row" spacing={1} sx={{ alignSelf: sentByCurrentUser ? "flex-end" : "flex-start", alignItems: "flex-end", maxWidth: "78%", flexDirection: sentByCurrentUser ? "row-reverse" : "row" }}>
+            {!sentByCurrentUser && <Avatar aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: isBuyer ? "#65758a" : "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: sentByCurrentUser ? "right" : "left" }}>{senderName} · {messageTime(item.created_at)}</Typography>
+              <Box sx={{ px: 1.5, py: 1.25, borderRadius: sentByCurrentUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: sentByCurrentUser ? "#fce99a" : "#fff", border: sentByCurrentUser ? "1px solid #f1d66f" : "1px solid #e5e9ee" }}>
+                <Typography sx={{ color: sentByCurrentUser ? "#332d20" : "#202936", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 14, lineHeight: 1.55 }}>{item.body}</Typography>
+                {item.attachments.map((attachment) => <Button key={attachment.id} size="small" startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />} onClick={() => void createRfqOpsAttachmentSignedUrl(attachment).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))} sx={{ mt: .75, justifyContent: "flex-start", color: sentByCurrentUser ? "#55491f" : "#45556b" }}>{attachment.original_name}</Button>)}
+              </Box>
+            </Box>
+          </Stack>;
+        })}</Stack>}</Box>{newMessagesBelow && <Button size="small" onClick={() => { const node = scrollRef.current; if (!node) return; node.scrollTo({ top: node.scrollHeight, behavior: "smooth" }); setNewMessagesBelow(false); }}>New messages</Button>}<Divider/><Stack spacing={1} sx={{ flexShrink: 0, p: { xs: 1.5, sm: 2 }}}>{attachments.length > 0 && <Stack direction="row" spacing={.75} sx={{ flexWrap: "wrap" }}>{attachments.map((item) => <Chip key={item.id} label={item.file.name} onDelete={() => void removeAttachment(item)} deleteIcon={<Close />} sx={{ maxWidth: "100%" }}/>)}</Stack>}<TextField multiline minRows={2} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message to Atelix…" slotProps={{ htmlInput: { maxLength: 12000, "aria-label": "Message to Atelix" } }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} disabled={sending}/><Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}><IconButton aria-label="Add an attachment" onClick={() => fileInput.current?.click()} disabled={sending || attachments.length >= 10}><AttachFile /></IconButton><input ref={fileInput} hidden type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { void chooseFiles(event.target.files); event.currentTarget.value = ""; }}/><Button variant="contained" endIcon={<Send />} disabled={sending || (!draft.trim() && !attachments.length)} onClick={() => void send()} aria-busy={sending}>{sending ? "Sending" : "Send message"}</Button></Stack></Stack></>}
       </Stack>
     </Box>
   </Box>;

@@ -152,6 +152,11 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   inside one fixed-height inbox. The composer remains pinned to the thread's
   bottom edge while browsing either list, matching the durable chat posture of
   an operations inbox.
+- Message party is encoded by consistent position, a text author label, and
+  controlled bubble color: the current participant is warm yellow on the right;
+  the other party is white on the left with a compact identifying avatar. This
+  mapping mirrors in the buyer and Intools workspaces rather than assuming one
+  party is always local.
 
 ## Accessibility target
 
