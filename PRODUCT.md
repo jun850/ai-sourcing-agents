@@ -131,10 +131,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Message authorship is structural as well as textual: buyer messages are warm
   and right-aligned; Atelix Operations messages are white and left-aligned with
   an identifying avatar in both buyer and Intools views.
-- An open conversation behaves as live chat: new messages appear without a page
-  refresh, existing history uses the same party mapping, and a silent visible-tab
-  fallback keeps the local operations seam current when it cannot authenticate a
-  browser Realtime channel.
+- An open conversation behaves as live chat: private, RFQ-scoped Supabase
+  Broadcast delivery appends new messages without a page refresh or polling.
+  Existing history uses the same party mapping, and attachment enrichment never
+  replaces the active thread.
 - Buyer-authored message labels use the buyer's personal profile name, not the
   company name attached to the sourcing case.
 - An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;

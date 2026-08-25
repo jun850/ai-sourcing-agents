@@ -6,7 +6,7 @@ import {
 import { AttachFile, Close, Description, InsertDriveFile, Send } from "@mui/icons-material";
 import {
   cancelRfqOpsAttachmentUpload, createRfqOpsAttachmentSignedUrl,
-  createRfqOpsMessageId, listIntoolsBuyerConversations, listIntoolsBuyerMessages,
+  createRfqOpsMessageId, getRfqOpsMessage, listIntoolsBuyerConversations, listIntoolsBuyerMessages,
   listWorkspaceOpsConversations, listWorkspaceOpsMessages, markIntoolsBuyerConversationRead,
   markWorkspaceOpsConversationRead, reserveIntoolsBuyerUpload, reserveWorkspaceOpsUpload,
   sendIntoolsBuyerMessage, sendWorkspaceOpsMessage, subscribeToRfqOpsMessages,
@@ -88,6 +88,22 @@ export function RfqOpsMessagesWorkspace({
     finally { if (!silent) setLoadingThread(false); }
   }, []);
 
+  const mergeMessage = useCallback((next: RfqOpsMessage) => {
+    setMessages((current) => {
+      const existing = current.findIndex((item) => item.id === next.id);
+      const merged = existing === -1 ? [...current, next] : current.map((item) => item.id === next.id ? { ...item, ...next } : item);
+      return [...merged].sort((left, right) => left.created_at.localeCompare(right.created_at) || left.id.localeCompare(right.id));
+    });
+  }, []);
+  const updateConversationPreview = useCallback((message: Pick<RfqOpsMessage, "conversation_id" | "body" | "created_at" | "sender_role">) => {
+    setConversations((current) => [...current.map((item) => item.id === message.conversation_id ? {
+      ...item,
+      last_message_body: message.body,
+      last_message_at: message.created_at,
+      last_message_sender_role: message.sender_role,
+    } : item)].sort((left, right) => (right.last_message_at || "").localeCompare(left.last_message_at || "")));
+  }, []);
+
   useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => {
     const node = conversationSentinel.current;
@@ -105,27 +121,34 @@ export function RfqOpsMessagesWorkspace({
   }, [active?.id, conversations, loadThread, selectedCaseId]);
   useEffect(() => {
     if (!active) return;
-    const subscription = subscribeToRfqOpsMessages(active.id, (incoming) => {
-      // Realtime gives the immutable message row first, so render it immediately
-      // and then hydrate any private attachment metadata through the guarded RPC.
-      setMessages((current) => current.some((item) => item.id === incoming.id)
-        ? current
-        : [...current, {
-          ...incoming,
-          sender_role: incoming.sender_kind === "buyer" ? "buyer" : "ops",
-          attachments: [],
-        }]);
-      void loadThread(active, true); void loadConversations(); onUnreadCount?.();
+    let cancelled = false;
+    let unsubscribe = () => {};
+    void subscribeToRfqOpsMessages(active.id, (incoming) => {
+      // Broadcast is the fast path: place the immutable message row directly
+      // into this thread. The guarded one-message read below merely enriches
+      // it with attachment metadata; it never refreshes the conversation.
+      mergeMessage({
+        ...incoming,
+        sender_role: incoming.sender_kind === "buyer" ? "buyer" : "ops",
+        attachments: [],
+      });
+      updateConversationPreview({
+        ...incoming,
+        sender_role: incoming.sender_kind === "buyer" ? "buyer" : "ops",
+      });
+      void getRfqOpsMessage(incoming.id).then(mergeMessage).catch(() => {
+        // The text row already rendered; a failed enrichment must not interrupt live chat.
+      });
+      void (mode === "buyer" ? markWorkspaceOpsConversationRead(active.id, incoming.id) : markIntoolsBuyerConversationRead(active.id, incoming.id));
+      onUnreadCount?.();
+    }).then((subscription) => {
+      if (cancelled) subscription.unsubscribe();
+      else unsubscribe = subscription.unsubscribe;
+    }).catch((cause) => {
+      if (!cancelled) setError(cause instanceof Error ? cause.message : "Live updates are unavailable.");
     });
-    // Local Intools authenticates through its loopback-only review seam rather
-    // than a browser Supabase session. Realtime remains primary, while this
-    // silent fallback keeps that authenticated local view current too.
-    const fallback = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      void loadThread(active, true); void loadConversations(); onUnreadCount?.();
-    }, 5000);
-    return () => { subscription.unsubscribe(); window.clearInterval(fallback); };
-  }, [active, loadConversations, loadThread, onUnreadCount]);
+    return () => { cancelled = true; unsubscribe(); };
+  }, [active, mergeMessage, mode, onUnreadCount, updateConversationPreview]);
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
@@ -168,8 +191,9 @@ export function RfqOpsMessagesWorkspace({
       const clientMessageId = uploadMessageId || createRfqOpsMessageId();
       const input = { client_message_id: clientMessageId, body: draft, attachments: attachments.flatMap((item) => item.upload ? [item.upload] : []) };
       const sent = await (mode === "buyer" ? sendWorkspaceOpsMessage(active.id, input) : sendIntoolsBuyerMessage(active.id, input));
-      setMessages((current) => current.some((item) => item.id === sent.id) ? current : [...current, sent]);
-      setDraft(""); setAttachments([]); setUploadMessageId(""); void loadConversations(); onUnreadCount?.();
+      mergeMessage(sent);
+      updateConversationPreview(sent);
+      setDraft(""); setAttachments([]); setUploadMessageId(""); onUnreadCount?.();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not send your message. Your draft is still here."); }
     finally { setSending(false); }
   }

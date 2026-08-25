@@ -102,15 +102,23 @@ check(/CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.[a-z0-9_]*(?:unread|read)
 // not a shipped messaging feature.
 for (const typeName of ["RfqOpsConversation", "RfqOpsMessage", "RfqOpsMessageAttachment", "RfqOpsSendMessageInput"]) check(new RegExp(`(?:export\\s+)?type\\s+${typeName}\\b`).test(SOURCE), `src/supabase.ts must export ${typeName}`);
 check(/export\s+async\s+function\s+\w*(?:Ops|RfqOps|BuyerMessage|OpsMessage)\w*/.test(SOURCE), "src/supabase.ts must expose typed RFQ Ops API wrappers");
-check(/postgres_changes[\s\S]{0,800}(?:rfq|ops|message)/i.test(SOURCE) && /export\s+function\s+subscribeTo(?:RfqOps|OpsRfq|Ops)Messages/.test(SOURCE), "src/supabase.ts must expose a named Realtime subscription helper");
-check(/subscribeToRfqOpsMessages\s*\([\s\S]{0,1200}setMessages[\s\S]{0,700}loadThread/i.test(WORKSPACE_SOURCE), "Messages workspace must render a Realtime row immediately and hydrate it without refresh");
+const broadcastMigration = sqlByFile.find(({ sql: candidate }) =>
+  /rfq_ops_broadcast_insert/i.test(candidate)
+  && /realtime\.broadcast_changes/i.test(candidate)
+  && /rfq_ops_can_access_realtime_topic/i.test(candidate),
+);
+assert.ok(broadcastMigration, "must add a private RFQ Ops Broadcast migration");
+assert.ok(/CREATE\s+POLICY\s+rfq_ops_receive_private_broadcast[\s\S]{0,900}realtime\.topic\s*\(\s*\)/i.test(broadcastMigration.sql), "Broadcast receive policy must authorize the RFQ-scoped topic");
+check(/config:\s*\{\s*private:\s*true\s*\}/i.test(SOURCE) && /\.on\(\s*["']broadcast["']\s*,\s*\{\s*event:\s*["']INSERT["']/i.test(SOURCE) && /export\s+async\s+function\s+subscribeTo(?:RfqOps|OpsRfq|Ops)Messages/.test(SOURCE), "src/supabase.ts must expose an authorized private Broadcast subscription helper");
+check(/subscribeToRfqOpsMessages\s*\([\s\S]{0,1500}mergeMessage[\s\S]{0,900}getRfqOpsMessage/i.test(WORKSPACE_SOURCE), "Messages workspace must render a Broadcast row immediately and enrich it without refresh");
+check(!/setInterval\s*\(/.test(WORKSPACE_SOURCE), "Messages workspace must not poll or replace live threads");
 check(/sender_role:\s*["']buyer["']\s*\|\s*["']ops["']/.test(SOURCE) && /sender_role:\s*incoming\.sender_kind/.test(WORKSPACE_SOURCE) && /item\.sender_role\s*===\s*["']buyer["']/.test(WORKSPACE_SOURCE), "stored and Realtime message roles must share one buyer-versus-Operations display mapping");
 check(/export\s+type\s+RfqOpsCursor\s*=\s*Readonly<\{\s*created_at:\s*string;\s*id:\s*string\s*\}>/.test(SOURCE), "typed cursor must include created_at and id");
 const rfqOpsWrapperRpcNames = [...SOURCE.matchAll(/(?:rpc|intoolsRpc)(?:<[^>]+>)?\(\s*\"([a-z0-9_]+)\"/g)]
   .map((match) => match[1])
   .filter((rpc) => /(?:ops|buyer_(?:conversation|message)|buyer_read|buyer_unread)/i.test(rpc));
 for (const rpc of new Set(rfqOpsWrapperRpcNames)) {
-  check(new RegExp(`CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.${rpc}\\b`, "i").test(sql), `typed wrapper RPC ${rpc} must exist in the migration`);
+  assert.ok(sqlByFile.some(({ sql: migrationSql }) => new RegExp(`CREATE\\s+(?:OR\\s+REPLACE\\s+)?FUNCTION\\s+public\\.${rpc}\\b`, "i").test(migrationSql)), `typed wrapper RPC ${rpc} must exist in an additive migration`);
 }
 
 const serverSource = readFileSync(join(ROOT, "server", "index.mjs"), "utf8");

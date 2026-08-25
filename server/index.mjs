@@ -45,6 +45,7 @@ const allowedRpcs = new Set([
   "intools_generate_rfq_supplier_matches", "intools_set_rfq_supplier_match_status",
   "intools_list_buyer_conversations", "intools_get_buyer_conversation",
   "intools_list_buyer_messages", "intools_send_buyer_message",
+  "rfq_ops_get_message",
   "intools_mark_buyer_conversation_read", "intools_get_buyer_unread_count",
   "intools_reserve_buyer_upload",
   "intools_list_agent_knowledge", "intools_create_agent_knowledge_version",
@@ -86,6 +87,19 @@ if (localIntoolsEnabled) {
     const { username, password } = request.body ?? {};
     if (username !== "admin" || password !== "123456") return response.status(401).json({ error: "Invalid local administrator credentials." });
     setCookie(response); return response.setHeader("Cache-Control", "no-store").json({ localAdmin: true });
+  });
+  // This is intentionally loopback-only and protected by the short-lived
+  // HttpOnly local review cookie. It lets the local Intools seam authorize a
+  // private Supabase Realtime channel without exposing a service credential.
+  app.get("/api/intools/realtime-token", async (request, response) => {
+    if (!configured()) return response.status(404).end();
+    if (!readCookie(request)) return response.status(401).json({ error: "Intools unavailable." });
+    try {
+      const accessToken = await checkedAdminToken();
+      return response.setHeader("Cache-Control", "no-store").json({ accessToken });
+    } catch (error) {
+      return response.status(403).json({ error: error instanceof Error ? error.message : "Intools unavailable." });
+    }
   });
   app.post("/api/intools/rpc", async (request, response) => {
     if (!configured()) return response.status(404).end();

@@ -1102,6 +1102,16 @@ export async function sendWorkspaceOpsMessage(
   return data as RfqOpsMessage;
 }
 
+/** Read one just-broadcast message without reloading the active conversation. */
+export async function getRfqOpsMessage(messageId: string) {
+  if (!messageId) throw new Error("A message ID is required.");
+  if (localIntoolsAdmin)
+    return intoolsRpc<RfqOpsMessage>("rfq_ops_get_message", { p_message_id: messageId });
+  const { data, error } = await client().rpc("rfq_ops_get_message", { p_message_id: messageId });
+  rpcError(error);
+  return data as RfqOpsMessage;
+}
+
 export async function markWorkspaceOpsConversationRead(
   conversationId: string,
   throughMessageId: string | null = null,
@@ -1119,27 +1129,53 @@ export async function markWorkspaceOpsConversationRead(
   };
 }
 
-/** Subscribe only to new rows in one human RFQ conversation; call unsubscribe on unmount. */
-export function subscribeToRfqOpsMessages(
+async function getRfqOpsRealtimeAccessToken() {
+  if (localIntoolsAdmin) {
+    const response = await fetch("/api/intools/realtime-token", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || typeof payload.accessToken !== "string")
+      throw new Error(typeof payload.error === "string" ? payload.error : "Live updates are unavailable.");
+    return payload.accessToken;
+  }
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Sign in to receive live messages.");
+  return session.access_token;
+}
+
+/** Subscribe to a private Broadcast topic for one RFQ conversation. */
+export async function subscribeToRfqOpsMessages(
   conversationId: string,
   onInsert: (message: RfqOpsMessageInsert) => void,
-): RfqOpsMessageSubscription {
+): Promise<RfqOpsMessageSubscription> {
   if (!conversationId) throw new Error("A conversation ID is required.");
   const db = client();
+  await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
   const channel = db
-    .channel(`rfq-ops-message:${conversationId}:${crypto.randomUUID()}`)
+    .channel(`rfq-ops:${conversationId}:messages`, { config: { private: true } })
     .on(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "rfq_ops_messages",
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => onInsert(payload.new as RfqOpsMessageInsert),
+      "broadcast",
+      { event: "INSERT" },
+      (payload) => onInsert(payload.payload.record as RfqOpsMessageInsert),
+    )
+    .on(
+      "broadcast",
+      { event: "UPDATE" },
+      (payload) => onInsert(payload.payload.record as RfqOpsMessageInsert),
     )
     .subscribe();
-  return { channel, unsubscribe: () => void db.removeChannel(channel) };
+  const { data: { subscription: authSubscription } } = db.auth.onAuthStateChange((_, session) => {
+    if (!localIntoolsAdmin && session?.access_token) void db.realtime.setAuth(session.access_token);
+  });
+  return {
+    channel,
+    unsubscribe: () => {
+      authSubscription.unsubscribe();
+      void db.removeChannel(channel);
+    },
+  };
 }
 
 async function intoolsRpc<T>(

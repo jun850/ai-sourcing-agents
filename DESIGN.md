@@ -156,10 +156,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   controlled bubble color: buyer messages are warm yellow on the right; Atelix
   Operations messages are white on the left with a compact identifying avatar.
   The mapping is stable in both buyer and Intools workspaces.
-- Conversation updates are immediate and do not reset the visible thread. The
-  same buyer/Operations mapping applies to historical and live rows; local
-  operations uses a quiet visible-tab fallback when its review-only session
-  cannot join Supabase Realtime directly.
+- Conversation updates arrive on authorized private Broadcast channels and do
+  not reset, poll, or reload the visible thread. The same buyer/Operations
+  mapping applies to historical and live rows; the local operations seam joins
+  the same private channel with a short-lived loopback-only administrator JWT.
 
 ## Accessibility target
 
