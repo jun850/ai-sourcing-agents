@@ -31,6 +31,12 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 
 - The buyer starts on the existing dashboard prompt. Creating a request creates
   the durable RFQ case and its buyer/assistant chat thread together.
+- The initial prompt remains one restrained, editorial working surface. While a
+  request is being created, its text and references stay in place, duplicate
+  submission is disabled, and success moves directly into the request-scoped
+  RFQ route. The first agent turn uses document-shaped skeletons until reviewed
+  RFQ fields are available; empty optional fields remain explicit rather than
+  being filled with inferred requirements.
 - Chat messages are persisted to the RFQ thread through guarded workspace RPCs;
   the assistant acknowledgement is status-only and must not invent supplier,
   price, MOQ, certification, capacity, availability, quote, or payment facts.

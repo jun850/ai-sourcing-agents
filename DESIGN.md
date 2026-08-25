@@ -36,6 +36,11 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - The dashboard prompt remains the first screen. The RFQ workspace then uses a
   split conversation + live RFQ review layout, followed by Requests, invoice,
   and sourced Product records tied back to the RFQ.
+- The initial dashboard prompt is a flat, left-aligned editorial composition on
+  the existing neutral workspace surface: one concise heading, one instruction,
+  and the existing reference-aware composer. Avoid decorative glows. Submission
+  keeps the entered brief visible and disables repeat actions until the guarded
+  request succeeds.
 - Motion is functional: chat messages and request/product rows enter with a
   short 150–250 ms ease-out, send/save actions acknowledge immediately, and
   matching progress is only used for the review handoff. After RFQ submission,
@@ -61,6 +66,12 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   editable. A routine `verified` response does not leave a standalone status
   label above the composer. Use status text as well as color; unavailable or
   unknown payment and order questions direct buyers to `info@arcanawangsa.com`.
+- During the initial agent turn, the live document preserves its final geometry
+  with title, summary, and field-row skeletons. Field updates use one concise
+  `Updated ...` notice in the document and one reversible status beside the
+  composer; they never repeat raw model verification wording. Unspecified fields
+  render an em dash, and certification requirements come only from the saved
+  RFQ field.
 - Avoid local-only chat state, fake product catalogue rows, invented supplier
   quotes, or payment state. Read and write through the typed Supabase/RPC
   contracts and preserve server-authoritative status boundaries.
