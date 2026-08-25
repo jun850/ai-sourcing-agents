@@ -1,4 +1,9 @@
-import { createClient, type Session, type User } from "@supabase/supabase-js";
+import {
+  createClient,
+  type RealtimeChannel,
+  type Session,
+  type User,
+} from "@supabase/supabase-js";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
@@ -85,6 +90,101 @@ export type WorkspaceChatMessage = {
   role: "buyer" | "agent" | "system";
   content: string;
   created_at: string;
+};
+/**
+ * A human-to-human conversation about one RFQ. This is deliberately separate
+ * from `WorkspaceChatMessage`, which is the buyer's AI drafting conversation.
+ */
+export type RfqOpsConversation = {
+  id: string;
+  rfq_case_id: string;
+  case_no: string;
+  rfq_title: string;
+  rfq_status: string;
+  buyer_profile_id: string | null;
+  buyer_name: string;
+  buyer_email: string | null;
+  created_at: string;
+  updated_at: string;
+  last_message_id?: string | null;
+  last_message_body?: string | null;
+  last_message_sender_role?: "buyer" | "ops" | null;
+  last_message_at?: string | null;
+  buyer_unread_count?: number;
+  ops_unread_count?: number;
+};
+export type RfqOpsMessageAttachment = {
+  id: string;
+  storage_path: string;
+  original_name: string;
+  content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+  byte_size: number;
+  created_at: string;
+};
+export type RfqOpsMessage = {
+  id: string;
+  conversation_id: string;
+  client_message_id: string;
+  sender_profile_id: string | null;
+  sender_kind: "buyer" | "atelix_ops";
+  sender_label: string;
+  body: string;
+  attachments: RfqOpsMessageAttachment[];
+  created_at: string;
+};
+/** The INSERT shape delivered by Realtime; attachments must be hydrated by RPC. */
+export type RfqOpsMessageInsert = {
+  id: string;
+  conversation_id: string;
+  client_message_id: string;
+  sender_profile_id: string | null;
+  sender_kind: "buyer" | "atelix_ops";
+  sender_label: string;
+  body: string;
+  created_at: string;
+};
+/** A stable, exclusive upper bound for the next RPC page. */
+export type RfqOpsCursor = Readonly<{ created_at: string; id: string }>;
+export type RfqOpsListOptions = {
+  before?: RfqOpsCursor | null;
+  limit?: number;
+};
+/** Client-side descriptor validated against the immutable private upload path by the send RPC. */
+export type RfqOpsAttachmentUpload = {
+  id: string;
+  storage_path: string;
+  original_name: string;
+  content_type: RfqOpsMessageAttachment["content_type"];
+  byte_size: number;
+};
+/** Server-authorized private path for one upload, valid only until `expires_at`. */
+export type RfqOpsUploadReservation = {
+  id: string;
+  conversation_id: string;
+  rfq_case_id: string;
+  client_message_id: string;
+  storage_path: string;
+  original_name: string;
+  expires_at: string;
+};
+export type RfqOpsSendMessageInput = {
+  /** Generated client-side so attachment paths can be immutable before send. */
+  client_message_id: string;
+  body?: string;
+  attachments?: RfqOpsAttachmentUpload[];
+};
+export type RfqOpsMessageSubscription = {
+  channel: RealtimeChannel;
+  unsubscribe: () => void;
+};
+export type RfqOpsConversationPage = {
+  conversations: RfqOpsConversation[];
+  next_before: RfqOpsCursor | null;
+};
+export type RfqOpsMessagePage = {
+  conversation: RfqOpsConversation;
+  messages: RfqOpsMessage[];
+  next_before: RfqOpsCursor | null;
 };
 export type WorkspaceProduct = {
   id: string;
@@ -769,6 +869,251 @@ export async function listWorkspaceSelectedSuppliers() {
   return (data ?? []) as WorkspaceSelectedSupplier[];
 }
 
+const RFQ_OPS_ATTACHMENT_BUCKET = "rfq-message-attachments";
+const RFQ_OPS_ATTACHMENT_TYPES = new Set<RfqOpsMessageAttachment["content_type"]>([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+const RFQ_OPS_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
+
+function normalizeRfqOpsPageOptions(options: RfqOpsListOptions = {}) {
+  const limit = options.limit ?? 50;
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100)
+    throw new Error("Message pages must contain between 1 and 100 items.");
+  return { p_before: options.before ?? null, p_limit: limit };
+}
+
+/** Build a cursor for a message page. Conversation pages must use server `next_before`. */
+export function getRfqOpsMessageCursor(
+  message: Pick<RfqOpsMessage, "created_at" | "id">,
+): RfqOpsCursor {
+  return { created_at: message.created_at, id: message.id };
+}
+
+function normalizeRfqOpsSendInput(input: RfqOpsSendMessageInput) {
+  if (!input.client_message_id) throw new Error("A message ID is required.");
+  const body = input.body?.trim() ?? "";
+  const attachments = input.attachments ?? [];
+  if (!body && !attachments.length)
+    throw new Error("Write a message or attach a file before sending.");
+  if (body.length > 12000) throw new Error("Messages can contain up to 12,000 characters.");
+  if (new Set(attachments.map((attachment) => attachment.id)).size !== attachments.length)
+    throw new Error("Each attachment can be included only once.");
+  return { body, attachments };
+}
+
+/** Generate the immutable message ID used to reserve attachments and send an idempotent message. */
+export function createRfqOpsMessageId() {
+  return crypto.randomUUID();
+}
+
+function normalizeRfqOpsOriginalName(originalName: string) {
+  const name = originalName.trim();
+  if (!name || name.length > 255 || /[\\/]/.test(name))
+    throw new Error("Attachment names must be 1–255 characters and cannot contain slashes.");
+  return name;
+}
+
+async function reserveRfqOpsUpload(
+  reserve: (args: Record<string, unknown>) => Promise<RfqOpsUploadReservation>,
+  input: {
+    conversationId: string;
+    clientMessageId: string;
+    originalName: string;
+    attachmentId?: string;
+  },
+) {
+  if (!input.conversationId || !input.clientMessageId)
+    throw new Error("A conversation and message ID are required.");
+  const originalName = normalizeRfqOpsOriginalName(input.originalName);
+  return reserve({
+    p_conversation_id: input.conversationId,
+    p_client_message_id: input.clientMessageId,
+    p_attachment_id: input.attachmentId ?? crypto.randomUUID(),
+    p_original_name: originalName,
+  });
+}
+
+export async function reserveWorkspaceOpsUpload(input: {
+  conversationId: string;
+  clientMessageId: string;
+  originalName: string;
+  attachmentId?: string;
+}) {
+  return reserveRfqOpsUpload(
+    async (args) => {
+      const { data, error } = await client().rpc("workspace_reserve_ops_upload", args);
+      rpcError(error);
+      return data as RfqOpsUploadReservation;
+    },
+    input,
+  );
+}
+
+export async function reserveIntoolsBuyerUpload(input: {
+  conversationId: string;
+  clientMessageId: string;
+  originalName: string;
+  attachmentId?: string;
+}) {
+  return reserveRfqOpsUpload(
+    (args) => intoolsRpc<RfqOpsUploadReservation>("intools_reserve_buyer_upload", args),
+    input,
+  );
+}
+
+/**
+ * Uploads exactly to a server-reserved path. The send RPC consumes the
+ * reservation atomically with its append-only message record.
+ */
+export async function uploadRfqOpsAttachment(input: {
+  reservation: RfqOpsUploadReservation;
+  file: File;
+}): Promise<RfqOpsAttachmentUpload> {
+  const { reservation, file } = input;
+  if (!reservation?.storage_path || !reservation.id)
+    throw new Error("Reserve an attachment upload before uploading.");
+  if (normalizeRfqOpsOriginalName(file.name || "attachment") !== reservation.original_name)
+    throw new Error("The file name no longer matches its upload reservation.");
+  if (!RFQ_OPS_ATTACHMENT_TYPES.has(file.type as RfqOpsMessageAttachment["content_type"]) ||
+      file.size > RFQ_OPS_ATTACHMENT_MAX_BYTES)
+    throw new Error("Use a JPG, PNG, WebP, or PDF up to 25 MB.");
+  const session = await getSession();
+  if (!session) throw new Error("Sign in to attach files to an Ops message.");
+  const { error } = await client().storage.from(RFQ_OPS_ATTACHMENT_BUCKET).upload(reservation.storage_path, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  rpcError(error);
+  return {
+    id: reservation.id,
+    storage_path: reservation.storage_path,
+    original_name: reservation.original_name,
+    content_type: file.type as RfqOpsMessageAttachment["content_type"],
+    byte_size: file.size,
+  };
+}
+
+/** Cancels an unconsumed reservation by removing its private Storage object. */
+export async function cancelRfqOpsAttachmentUpload(
+  reservation: Pick<RfqOpsUploadReservation, "storage_path">,
+) {
+  if (!reservation.storage_path) throw new Error("Upload reservation storage path is required.");
+  const { error } = await client().storage
+    .from(RFQ_OPS_ATTACHMENT_BUCKET)
+    .remove([reservation.storage_path]);
+  rpcError(error);
+}
+
+/** Returns a short-lived URL only after Storage RLS authorizes the reader. */
+export async function createRfqOpsAttachmentSignedUrl(
+  attachment: Pick<RfqOpsMessageAttachment, "storage_path"> | string,
+  expiresIn = 60 * 60,
+) {
+  if (!Number.isInteger(expiresIn) || expiresIn < 1 || expiresIn > 24 * 60 * 60)
+    throw new Error("Attachment links can be valid for between 1 second and 24 hours.");
+  const storagePath = typeof attachment === "string" ? attachment : attachment.storage_path;
+  if (!storagePath) throw new Error("Attachment storage path is required.");
+  const { data, error } = await client().storage
+    .from(RFQ_OPS_ATTACHMENT_BUCKET)
+    .createSignedUrl(storagePath, expiresIn);
+  rpcError(error);
+  if (!data?.signedUrl) throw new Error("The attachment link could not be created.");
+  return data.signedUrl;
+}
+
+export async function listWorkspaceOpsConversations(options: RfqOpsListOptions = {}) {
+  const { data, error } = await client().rpc("workspace_list_ops_conversations", {
+    ...normalizeRfqOpsPageOptions(options),
+  });
+  rpcError(error);
+  return (data ?? { conversations: [], next_before: null }) as RfqOpsConversationPage;
+}
+
+/** Retrieves the buyer-owned Ops thread for a specific RFQ. */
+export async function getWorkspaceOpsConversation(rfqCaseId: string) {
+  const { data, error } = await client().rpc("rfq_ops_get_buyer_conversation", {
+    p_rfq_case_id: rfqCaseId,
+  });
+  rpcError(error);
+  return data as RfqOpsConversation;
+}
+
+export async function getWorkspaceOpsUnreadCount() {
+  const { data, error } = await client().rpc("rfq_ops_get_buyer_unread_count");
+  rpcError(error);
+  return data as { unread_count: number };
+}
+
+export async function listWorkspaceOpsMessages(
+  conversationId: string,
+  options: RfqOpsListOptions = {},
+) {
+  const { data, error } = await client().rpc("workspace_list_ops_messages", {
+    p_conversation_id: conversationId,
+    ...normalizeRfqOpsPageOptions(options),
+  });
+  rpcError(error);
+  return (data ?? { conversation: null, messages: [], next_before: null }) as RfqOpsMessagePage;
+}
+
+export async function sendWorkspaceOpsMessage(
+  conversationId: string,
+  input: RfqOpsSendMessageInput,
+) {
+  const { body, attachments } = normalizeRfqOpsSendInput(input);
+  const { data, error } = await client().rpc("workspace_send_ops_message", {
+    p_conversation_id: conversationId,
+    p_client_message_id: input.client_message_id,
+    p_body: body,
+    p_attachments: attachments,
+  });
+  rpcError(error);
+  return data as RfqOpsMessage;
+}
+
+export async function markWorkspaceOpsConversationRead(
+  conversationId: string,
+  throughMessageId: string | null = null,
+) {
+  const { data, error } = await client().rpc("workspace_mark_ops_conversation_read", {
+    p_conversation_id: conversationId,
+    p_through_message_id: throughMessageId,
+  });
+  rpcError(error);
+  return data as {
+    conversation_id: string;
+    reader_kind: "buyer";
+    last_read_message_id: string | null;
+    last_read_at: string;
+  };
+}
+
+/** Subscribe only to new rows in one human RFQ conversation; call unsubscribe on unmount. */
+export function subscribeToRfqOpsMessages(
+  conversationId: string,
+  onInsert: (message: RfqOpsMessageInsert) => void,
+): RfqOpsMessageSubscription {
+  if (!conversationId) throw new Error("A conversation ID is required.");
+  const db = client();
+  const channel = db
+    .channel(`rfq-ops-message:${conversationId}:${crypto.randomUUID()}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "rfq_ops_messages",
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => onInsert(payload.new as RfqOpsMessageInsert),
+    )
+    .subscribe();
+  return { channel, unsubscribe: () => void db.removeChannel(channel) };
+}
+
 async function intoolsRpc<T>(
   name: string,
   args: Record<string, unknown> = {},
@@ -836,6 +1181,66 @@ export async function listIntoolsRfqs(status: string | null = null) {
   return intoolsRpc<IntoolsRfq[]>("intools_list_rfq_cases", {
     p_status: status,
   });
+}
+export type IntoolsOpsConversationOptions = RfqOpsListOptions & {
+  query?: string | null;
+  status?: string | null;
+};
+export async function listIntoolsBuyerConversations(
+  options: IntoolsOpsConversationOptions = {},
+) {
+  return intoolsRpc<RfqOpsConversationPage>("intools_list_buyer_conversations", {
+    p_query: options.query?.trim() || null,
+    p_status: options.status ?? null,
+    ...normalizeRfqOpsPageOptions(options),
+  });
+}
+/** Retrieves (or initializes) the admin-visible Ops thread for a specific RFQ. */
+export async function getIntoolsBuyerConversation(rfqCaseId: string) {
+  return intoolsRpc<RfqOpsConversation>("intools_get_buyer_conversation", {
+    p_rfq_case_id: rfqCaseId,
+  });
+}
+export async function getIntoolsBuyerUnreadCount() {
+  return intoolsRpc<{ unread_count: number }>("intools_get_buyer_unread_count");
+}
+export async function listIntoolsBuyerMessages(
+  conversationId: string,
+  options: RfqOpsListOptions = {},
+) {
+  return intoolsRpc<RfqOpsMessagePage>("intools_list_buyer_messages", {
+    p_conversation_id: conversationId,
+    ...normalizeRfqOpsPageOptions(options),
+  });
+}
+export async function sendIntoolsBuyerMessage(
+  conversationId: string,
+  input: RfqOpsSendMessageInput,
+) {
+  const { body, attachments } = normalizeRfqOpsSendInput(input);
+  return intoolsRpc<RfqOpsMessage>("intools_send_buyer_message", {
+    p_conversation_id: conversationId,
+    p_client_message_id: input.client_message_id,
+    p_body: body,
+    p_attachments: attachments,
+  });
+}
+export async function markIntoolsBuyerConversationRead(
+  conversationId: string,
+  throughMessageId: string | null = null,
+) {
+  return intoolsRpc<{
+    conversation_id: string;
+    reader_kind: "atelix_ops";
+    last_read_message_id: string | null;
+    last_read_at: string;
+  }>(
+    "intools_mark_buyer_conversation_read",
+    {
+      p_conversation_id: conversationId,
+      p_through_message_id: throughMessageId,
+    },
+  );
 }
 export async function getIntoolsRfqDetail(caseId: string) {
   return intoolsRpc<IntoolsRfqDetail>("intools_get_rfq_case_detail", {

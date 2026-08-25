@@ -32,6 +32,10 @@ const allowedRpcs = new Set([
   "intools_supplier_import_dry_run", "intools_promote_supplier_import_rows",
   "intools_promote_supplier_intake", "intools_set_supplier_broker_status",
   "intools_generate_rfq_supplier_matches", "intools_set_rfq_supplier_match_status",
+  "intools_list_buyer_conversations", "intools_get_buyer_conversation",
+  "intools_list_buyer_messages", "intools_send_buyer_message",
+  "intools_mark_buyer_conversation_read", "intools_get_buyer_unread_count",
+  "intools_reserve_buyer_upload",
   "intools_list_agent_knowledge", "intools_create_agent_knowledge_version",
   "intools_publish_agent_knowledge_version", "intools_archive_agent_knowledge_document",
 ]);

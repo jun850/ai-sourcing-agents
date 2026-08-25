@@ -9,6 +9,7 @@
     "start": "node server/index.mjs",
     "lint": "tsc --noEmit",
     "qa:agent-rfq": "node scripts/qa-agent-rfq.mjs",
+    "qa:rfq-ops-chat": "node scripts/qa-rfq-ops-chat.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
     "suppliers:queue": "node scripts/suppliers/build-research-queue.mjs",
     "suppliers:clean-regional": "node scripts/suppliers/clean-regional-research.mjs",
