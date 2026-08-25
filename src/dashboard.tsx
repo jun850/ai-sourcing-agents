@@ -441,7 +441,7 @@ function Sidebar({
             width: compact ? 36 : "auto",
             height: compact ? 36 : "auto",
             p: 0,
-            border: 0,
+            border: "1px solid #dfe3e8",
             borderRadius: "10px",
             backgroundColor: compact && logoHovered ? "#f0f1f3" : "transparent",
             color: "#16181c",
@@ -947,13 +947,13 @@ function CleanPromptComposer({
             pl: { xs: 0.75, sm: 1 },
             border: 0,
             borderRadius: expanded ? "16px" : "14px",
-            backgroundColor: "transparent",
-            boxShadow: "none",
+            backgroundColor: "#fff",
+            boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             transition:
               "border-color 180ms ease, box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
             "&:focus-within": {
-              border: 0,
-              boxShadow: "none",
+              borderColor: "#dfe3e8",
+              boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             },
           }}
         >
