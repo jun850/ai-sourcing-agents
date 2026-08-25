@@ -1068,6 +1068,7 @@ function ConversationChatPanel({
   messages: conversationMessages,
   onSend,
   busy,
+  loading,
   status,
   remainingTurns,
   onUndo,
@@ -1076,6 +1077,7 @@ function ConversationChatPanel({
   messages: ConversationMessage[];
   onSend: (message: string) => Promise<void>;
   busy: boolean;
+  loading: boolean;
   status: AgentStatus | null;
   remainingTurns: number | null;
   onUndo: () => Promise<void>;
@@ -1128,7 +1130,7 @@ function ConversationChatPanel({
   }
   return (
     <RoundedSurface
-      aria-busy={busy}
+      aria-busy={busy || loading}
       sx={{
         display: "flex",
         alignSelf: "stretch",
@@ -1159,99 +1161,107 @@ function ConversationChatPanel({
           minHeight: 0,
           overflowY: "auto",
         }}
-      >
-        <AnimatePresence initial={false}>
-          {messages.map((message, index) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                duration: 0.24,
-                delay: index === messages.length - 1 ? 0.08 : 0,
-              }}
-            >
-              <Box
-                sx={{
-                  alignSelf: message.from === "You" ? "flex-end" : "flex-start",
-                  maxWidth: message.from === "You" ? "84%" : "68ch",
-                  ml: message.from === "You" ? "auto" : 0,
-                  px: message.from === "You" ? { xs: 1.75, md: 2.25 } : 0,
-                  py: message.from === "You" ? { xs: 1.25, md: 1.5 } : 0,
-                  borderRadius:
-                    message.from === "You" ? "16px 16px 4px 16px" : 0,
-                  backgroundColor:
-                    message.from === "You" ? "#f0f1f3" : "transparent",
-                  color: "#202936",
+        >
+        {loading ? (
+          <Stack spacing={1.5} aria-hidden="true" sx={{ pt: 0.5 }}>
+            <Skeleton variant="text" width={76} sx={{ fontSize: 12 }} />
+            <Skeleton variant="text" width="82%" sx={{ fontSize: 15 }} />
+            <Skeleton variant="text" width="64%" sx={{ fontSize: 15 }} />
+          </Stack>
+        ) : (
+          <AnimatePresence initial={false}>
+            {messages.map((message, index) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.24,
+                  delay: index === messages.length - 1 ? 0.08 : 0,
                 }}
               >
-                <Typography
+                <Box
                   sx={{
-                    display: message.from === "You" ? "none" : "block",
-                    mb: 0.7,
-                    color: "#667384",
-                    fontSize: 11.5,
-                    fontWeight: 700,
+                    alignSelf: message.from === "You" ? "flex-end" : "flex-start",
+                    maxWidth: message.from === "You" ? "84%" : "68ch",
+                    ml: message.from === "You" ? "auto" : 0,
+                    px: message.from === "You" ? { xs: 1.75, md: 2.25 } : 0,
+                    py: message.from === "You" ? { xs: 1.25, md: 1.5 } : 0,
+                    borderRadius:
+                      message.from === "You" ? "16px 16px 4px 16px" : 0,
+                    backgroundColor:
+                      message.from === "You" ? "#f0f1f3" : "transparent",
+                    color: "#202936",
                   }}
                 >
-                  {message.from}
-                </Typography>
-                <Typography
-                  sx={{
-                    minWidth: 0,
-                    overflowWrap: "anywhere",
-                    fontSize: { xs: 14, md: 15 },
-                    lineHeight: 1.6,
-                    color: "inherit",
-                  }}
-                >
-                  {message.text}
-                </Typography>
-                {message.from === "Atelix assistant" &&
-                  index === messages.length - 1 &&
-                  Boolean(message.options?.length) && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 0.75,
-                        mt: 1.25,
-                      }}
-                    >
-                      {message.options!.map((option, optionIndex) => (
-                        <MuiButton
-                          key={option}
-                          size="small"
-                          disabled={busy}
-                          onClick={() => void onSend(option)}
-                          sx={{
-                            minHeight: 34,
-                            px: 1.5,
-                            borderRadius: "999px",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            textTransform: "none",
-                            border: "1px solid",
-                            borderColor: optionIndex === 0 ? "#4b7657" : "#d7dce2",
-                            color: optionIndex === 0 ? "#fff" : "#3d4652",
-                            backgroundColor:
-                              optionIndex === 0 ? "#4b7657" : "transparent",
-                            "&:hover": {
+                  <Typography
+                    sx={{
+                      display: message.from === "You" ? "none" : "block",
+                      mb: 0.7,
+                      color: "#667384",
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {message.from}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      minWidth: 0,
+                      overflowWrap: "anywhere",
+                      fontSize: { xs: 14, md: 15 },
+                      lineHeight: 1.6,
+                      color: "inherit",
+                    }}
+                  >
+                    {message.text}
+                  </Typography>
+                  {message.from === "Atelix assistant" &&
+                    index === messages.length - 1 &&
+                    Boolean(message.options?.length) && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: 0.75,
+                          mt: 1.25,
+                        }}
+                      >
+                        {message.options!.map((option, optionIndex) => (
+                          <MuiButton
+                            key={option}
+                            size="small"
+                            disabled={busy}
+                            onClick={() => void onSend(option)}
+                            sx={{
+                              minHeight: 34,
+                              px: 1.5,
+                              borderRadius: "999px",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              textTransform: "none",
+                              border: "1px solid",
+                              borderColor: optionIndex === 0 ? "#4b7657" : "#d7dce2",
+                              color: optionIndex === 0 ? "#fff" : "#3d4652",
                               backgroundColor:
-                                optionIndex === 0 ? "#3d6548" : "#f7f7f8",
-                              borderColor: optionIndex === 0 ? "#3d6548" : "#c3cad3",
-                            },
-                          }}
-                        >
-                          {option}
-                        </MuiButton>
-                      ))}
-                    </Box>
-                  )}
-              </Box>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                                optionIndex === 0 ? "#4b7657" : "transparent",
+                              "&:hover": {
+                                backgroundColor:
+                                  optionIndex === 0 ? "#3d6548" : "#f7f7f8",
+                                borderColor: optionIndex === 0 ? "#3d6548" : "#c3cad3",
+                              },
+                            }}
+                          >
+                            {option}
+                          </MuiButton>
+                        ))}
+                      </Box>
+                    )}
+                </Box>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
         {busy && (
           <Box
             aria-label="Atelix assistant is drafting your RFQ"
@@ -3331,6 +3341,7 @@ function RfqWorkspace({
             messages={conversationMessages}
             onSend={sendConversationMessage}
             busy={agentPending}
+            loading={!messagesLoaded}
             status={agentStatus}
             remainingTurns={remainingTurns}
             canUndo={Boolean(undoToken)}
