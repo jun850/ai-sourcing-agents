@@ -29,6 +29,18 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - FAQ surfaces use one shared stack of independent soft-neutral disclosure rows: 1180px wide on the landing page to align with sourcing intelligence, and the existing content measure on resource pages. Each native summary has a circled plus that rotates to a close mark when expanded, while the answer remains inside the same rounded row. Preserve each route's canonical FAQ copy, visible focus, full-row keyboard activation, reduced-motion behavior, and compact mobile padding.
 - The landing trusted-brand rail uses five fixed logo slots instead of a horizontal marquee. Each slot cycles through the canonical local brand assets with a vertical blur-and-fade handoff; hovering an individual slot reveals that logo's original color, hover or keyboard focus pauses the sequence, reduced motion shows a static logo per slot, and narrow screens reduce the visible slot count without changing the accessible brand list.
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
+- Every authenticated interaction must read as a sourcing-agent workspace,
+  never as a marketplace. Use case queues, evidence rows, RFQ context,
+  reviewed states, and next-step ownership. Do not use storefront cards,
+  browse/discover patterns, seller language, carts, wishlists, product
+  recommendation patterns, or ecommerce calls to action.
+- The dashboard should feel conversational-first: a restrained ChatGPT-like
+  composer and message history beside a live RFQ document. Structured fields,
+  evidence, and human approval remain visible; the agent is a drafting aid,
+  not a seller or autonomous commercial actor.
+- Long authenticated lists use one operational queue vocabulary and shared
+  cursor-loading behavior. Appended rows preserve scroll and selection,
+  loading uses geometry-matched skeletons, and end/error states remain inline.
 - Opening an RFQ from Requests keeps the Requests navigation item selected and
   preserves that request context on refresh/deep link.
 - Intools section tabs are route-backed, with one canonical `/intools/<section>`
@@ -126,6 +138,13 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   autosave/review explanation, and single Submit RFQ action visible. Use moss
   only for current state and consequential actions; the request remains a
   draft until the guarded submission has queued Atelix review.
+- Messages uses a list-first RFQ inbox: the request list is visible before a
+  thread is chosen, then the selected human Operations conversation fills the
+  adjacent panel. On narrow screens, list and thread stack without horizontal
+  scrolling. Thread selection and incoming messages use short ease-out motion;
+  reduced motion is immediate. Keep the composer a working control, not an AI
+  drafting surface, and expose loading, empty, error, attachment, and unread
+  states with text as well as color.
 
 ## Accessibility target
 

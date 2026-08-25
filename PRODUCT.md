@@ -108,6 +108,26 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   files records in one workspace. Empty tabs remain explicit until guarded
   records exist, and the assistant presents drafting progress only, never
   invented supplier or commercial facts.
+- Authenticated interactions are sourcing-agent interactions, not marketplace
+  interactions. Requests are operational cases, products are immutable order
+  snapshots, suppliers are reviewed private records, and queues expose the
+  next sourcing decision. Do not introduce browsing, storefront, seller,
+  cart, wishlist, recommendation, or shopping metaphors.
+- The buyer dashboard is conversational-first, similar to a ChatGPT-style
+  drafting workspace beside a live RFQ document. Agent output remains a draft
+  aid and must distinguish supplied facts, missing evidence, and human review;
+  it never invents supplier or commercial truth.
+- Authenticated long lists use stable cursor pages, append loading, duplicate
+  protection, retry, end-of-queue feedback, and preserved selection/scroll
+  context. They are operational queues rather than catalogue grids.
+- Messages are human buyer–Atelix Operations conversations scoped to one RFQ.
+  Buyers use `/dashboard/messages`; confirmed administrators use `/intools/messages`.
+  Realtime updates, attachment access, unread state, and reply reminders use
+  guarded RFQ Ops server contracts, never direct browser table writes.
+- An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;
+  an unanswered Operations message reminds the buyer’s authenticated email.
+  Reminders recur daily until an opposite-party reply and respect the buyer’s
+  transactional-email preference.
 
 ## Accessibility
 

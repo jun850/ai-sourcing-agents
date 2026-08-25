@@ -45,6 +45,7 @@ import {
   declineIntoolsRfqQuote,
   generateIntoolsRfqSupplierMatches,
   getIntoolsInvoiceDetail,
+  getIntoolsBuyerUnreadCount,
   getIntoolsOrderDetail,
   getIntoolsRfqOrder,
   getLocalIntoolsSession,
@@ -93,6 +94,7 @@ import {
   approveRegistrationRequest,
 } from "./supabase";
 import { IntoolsSuppliers } from "./intools-suppliers";
+import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 
 const intoolsTheme = createTheme({
   typography: {
@@ -134,6 +136,7 @@ type Tab =
   | "audit"
   | "registrations"
   | "knowledge"
+  | "messages"
   | "suppliers";
 type ActionDialog = "cancel" | "payment" | null;
 type DraftLine = {
@@ -220,6 +223,9 @@ type IntoolsRoute = {
 };
 
 function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
+  const messages = /^\/intools\/messages(?:\/([^/]+))?$/.exec(pathname);
+  if (messages)
+    return { tab: "messages", rfqId: null, requestId: messages[1] ? decodeURIComponent(messages[1]) : null, invoiceId: null, creatingInvoice: false, supplierId: null };
   const supplier = /^\/intools\/suppliers(?:\/([^/]+))?$/.exec(pathname);
   if (supplier)
     return {
@@ -3154,11 +3160,14 @@ export function Intools() {
   const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
   const [operatorName, setOperatorName] = useState("");
+  const [messageUnreadCount, setMessageUnreadCount] = useState<number | null>(null);
+  const refreshMessageUnreadCount = () => { void getIntoolsBuyerUnreadCount().then((next) => setMessageUnreadCount(next.unread_count)).catch(() => setMessageUnreadCount(null)); };
   useEffect(() => {
     const listener = () => setRouteVersion((value) => value + 1);
     addEventListener("popstate", listener);
     return () => removeEventListener("popstate", listener);
   }, []);
+  useEffect(() => { refreshMessageUnreadCount(); }, []);
   useEffect(() => {
     if (location.pathname === "/intools") navigate("/intools/invoices");
   }, []);
@@ -3349,15 +3358,20 @@ export function Intools() {
   return (
     <ThemeProvider theme={intoolsTheme}>
       <Box
-        className="intools-root"
+        className="intools-root workspace-shell workspace-shell--intools"
         sx={{
+          display: "flex",
+          flexDirection: "column",
           minHeight: "100vh",
+          height: "100dvh",
+          overflow: "hidden",
           backgroundColor: "#f4f6f9",
           color: "text.primary",
         }}
       >
         <Box
           component="header"
+          className="workspace-shell__header"
           sx={{
             display: "flex",
             alignItems: "center",
@@ -3424,6 +3438,7 @@ export function Intools() {
         </Box>
         <Box
           component="main"
+          className="workspace-shell__content"
           id="main-content"
           sx={{
             width: "100%",
@@ -3461,6 +3476,7 @@ export function Intools() {
                   ["audit", "Audit history"],
                   ["registrations", "Sign-up requests"],
                   ["knowledge", "Knowledge"],
+                  ["messages", "Messages"],
                   ["suppliers", "Suppliers"],
                 ] as const
               ).map(([value, label]) => (
@@ -3601,6 +3617,7 @@ export function Intools() {
             {tab === "audit" && <AuditPanel />}
             {tab === "registrations" && <RegistrationRequestsPanel />}
             {tab === "knowledge" && <KnowledgePanel />}
+            {tab === "messages" && <RfqOpsMessagesWorkspace mode="intools" selectedCaseId={route.requestId} onSelectCase={(id) => navigate(`/intools/messages/${encodeURIComponent(id)}`)} unreadCount={messageUnreadCount} onUnreadCount={refreshMessageUnreadCount} />}
             {tab === "suppliers" && (
               <IntoolsSuppliers
                 supplierId={supplierId}

@@ -74,12 +74,13 @@ import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
 import {
   createRfqCase,
   getSession,
+  getWorkspaceOpsUnreadCount,
   getWorkspaceInvoiceDetail,
   getWorkspaceProduct,
   getWorkspaceRfqProduction,
   invokeRfqCopilot,
   listRfqAttachments,
-  listRfqCases,
+  listRfqCasesPage,
   listRfqMessages,
   listWorkspaceInvoices,
   listWorkspaceProducts,
@@ -100,6 +101,8 @@ import {
   updateRfqCase,
   uploadRfqAttachment,
 } from "./supabase";
+import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
+import { AppendSkeleton } from "./workspace-ui";
 import {
   MiniStageTimeline,
   nextStepOwner,
@@ -409,7 +412,7 @@ function Sidebar({
         height: "100%",
         overflow: "hidden",
         p: compact ? 1.25 : mobile ? 2 : 2.25,
-        transition: "padding 220ms ease",
+        transition: "background-color 160ms ease",
       }}
     >
       <Box
@@ -1089,12 +1092,19 @@ function ConversationChatPanel({
   const messages: ConversationMessage[] = conversationMessages;
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const [newMessagesBelow, setNewMessagesBelow] = useState(false);
   const reduceMotion = useReducedMotion();
   useEffect(() => {
     const node = messageListRef.current;
     if (!node) return;
-    node.scrollTop = node.scrollHeight;
-  }, [messages.length, busy]);
+    const nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 96;
+    if (nearBottom) {
+      node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+      setNewMessagesBelow(false);
+    } else {
+      setNewMessagesBelow(true);
+    }
+  }, [messages.length, busy, reduceMotion]);
   function resizeConversation(target: HTMLTextAreaElement) {
     target.style.height = "auto";
     const nextHeight = Math.min(target.scrollHeight, 180);
@@ -1261,6 +1271,20 @@ function ConversationChatPanel({
               </motion.div>
             ))}
           </AnimatePresence>
+        )}
+        {newMessagesBelow && (
+          <MuiButton
+            size="small"
+            onClick={() => {
+              const node = messageListRef.current;
+              if (!node) return;
+              node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+              setNewMessagesBelow(false);
+            }}
+            sx={{ alignSelf: "center", flexShrink: 0, mt: 1 }}
+          >
+            New messages
+          </MuiButton>
         )}
         {busy && (
           <Box
@@ -3386,10 +3410,17 @@ type RequestFilter = "all" | "needs_you" | "in_progress" | "closed";
 function WorkspaceRequests({
   requests,
   onOpen,
+  onLoadMore,
+  hasMore = false,
+  loadingMore = false,
 }: {
   requests: StoredRfq[];
   onOpen: (request: StoredRfq) => void;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
 }) {
+  const loadMoreSentinel = useRef<HTMLDivElement | null>(null);
   const [unpaidCaseIds, setUnpaidCaseIds] = useState<Set<string>>(new Set());
   const [suppliers, setSuppliers] = useState<Map<string, WorkspaceSelectedSupplier>>(new Map());
   const [filter, setFilter] = useState<RequestFilter>("all");
@@ -3412,6 +3443,15 @@ function WorkspaceRequests({
       active = false;
     };
   }, []);
+  useEffect(() => {
+    const node = loadMoreSentinel.current;
+    if (!node || !onLoadMore || !hasMore) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting) onLoadMore();
+    }, { rootMargin: "320px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
   useEffect(() => {
     let active = true;
     void listWorkspaceSelectedSuppliers()
@@ -3699,6 +3739,8 @@ function WorkspaceRequests({
                 </Box>
               );
             })}
+            <Box ref={loadMoreSentinel} sx={{ minHeight: hasMore ? 24 : 0 }} aria-hidden="true" />
+            {loadingMore && <AppendSkeleton rows={2} />}
           </Box>
         ) : (
           <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
@@ -5404,7 +5446,17 @@ export function Dashboard({ path }: { path: string }) {
   } | null>(null);
   const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
+  const historyCursor = useRef<{ updatedAt: string; id: string } | null>(null);
+  const historyHasMore = useRef(true);
+  const historyRequest = useRef(false);
   const [rfqLoading, setRfqLoading] = useState(false);
+  const [messageUnreadCount, setMessageUnreadCount] = useState<number | null>(null);
+  const refreshMessageUnreadCount = useCallback(() => {
+    void getWorkspaceOpsUnreadCount()
+      .then((next) => setMessageUnreadCount(next.unread_count))
+      .catch(() => setMessageUnreadCount(null));
+  }, []);
   useEffect(() => {
     let active = true;
     void getSession()
@@ -5421,29 +5473,30 @@ export function Dashboard({ path }: { path: string }) {
       active = false;
     };
   }, []);
-  useEffect(() => {
-    let active = true;
-    void listRfqCases()
-      .then((cases) => {
-        if (!active) return;
-        setHistoryItems(cases);
-      })
-      .catch((cause) => {
-        if (active)
-          setMessage(
-            cause instanceof Error
-              ? cause.message
-              : "Could not load your RFQs.",
-          );
-      })
-      .finally(() => {
-        if (active) setHistoryLoading(false);
+  useEffect(() => { refreshMessageUnreadCount(); }, [refreshMessageUnreadCount]);
+  const loadHistory = useCallback(async (append = false) => {
+    if (historyRequest.current || (append && !historyHasMore.current)) return;
+    historyRequest.current = true;
+    append ? setHistoryLoadingMore(true) : setHistoryLoading(true);
+    try {
+      const page = await listRfqCasesPage({ cursor: append ? historyCursor.current : null, limit: 40 });
+      setHistoryItems((current) => {
+        const source = append ? [...current, ...page.items] : page.items;
+        return Array.from(new Map(source.map((item) => [item.id, item])).values());
       });
-    return () => {
-      active = false;
-    };
+      historyCursor.current = page.nextCursor;
+      historyHasMore.current = page.hasMore;
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Could not load your RFQs.");
+    } finally {
+      historyRequest.current = false;
+      setHistoryLoading(false);
+      setHistoryLoadingMore(false);
+    }
   }, []);
+  useEffect(() => { void loadHistory(); }, [loadHistory]);
   const requestDetailId = requestDetailIdFromPath(path);
+  const messageCaseId = /^\/dashboard\/messages\/([^/]+)$/.exec(path)?.[1] || null;
   useEffect(() => {
     if (!requestDetailId) return;
     const item = historyItems.find((entry) => entry.id === requestDetailId);
@@ -5476,7 +5529,7 @@ export function Dashboard({ path }: { path: string }) {
         ? "products"
         : path === "/dashboard/favourites"
           ? "favourites"
-          : path === "/dashboard/messages"
+          : path === "/dashboard/messages" || /^\/dashboard\/messages\/[^/]+$/.test(path)
             ? "messages"
             : path === "/dashboard/invoices" ||
                 /^\/dashboard\/invoices\/[^/]+$/.test(path)
@@ -5624,6 +5677,9 @@ export function Dashboard({ path }: { path: string }) {
       return (
         <WorkspaceRequests
           requests={historyItems}
+          hasMore={historyHasMore.current}
+          loadingMore={historyLoadingMore}
+          onLoadMore={() => { void loadHistory(true); }}
           onOpen={(item) => {
             void restoreHistory(item);
           }}
@@ -5644,7 +5700,14 @@ export function Dashboard({ path }: { path: string }) {
         />
       );
     if (view === "invoices") return <WorkspaceInvoices path={path} />;
-    if (["favourites", "messages", "settings", "library"].includes(view))
+    if (view === "messages")
+      return <RfqOpsMessagesWorkspace
+        selectedCaseId={messageCaseId ? decodeURIComponent(messageCaseId) : null}
+        onSelectCase={(caseId) => navigate(`/dashboard/messages/${encodeURIComponent(caseId)}`)}
+        unreadCount={messageUnreadCount}
+        onUnreadCount={refreshMessageUnreadCount}
+      />;
+    if (["favourites", "settings", "library"].includes(view))
       return (
         <PlaceholderView
           view={
@@ -5668,13 +5731,15 @@ export function Dashboard({ path }: { path: string }) {
       <CssBaseline />
       <MotionConfig reducedMotion="user">
         <Box
-          className="dashboard-root"
+          className="dashboard-root workspace-shell"
           sx={{
             display: "flex",
             width: "100%",
             maxWidth: "100vw",
             minHeight: "100vh",
+            height: "100dvh",
             overflowX: "hidden",
+            overflowY: "hidden",
             color: "text.primary",
             backgroundColor: "#fbfbfc",
           }}
@@ -5682,14 +5747,16 @@ export function Dashboard({ path }: { path: string }) {
           {!mobile && (
             <Box
               component="aside"
+              className="workspace-shell__navigation"
               sx={{
                 width: sidebarCollapsed ? 76 : 264,
                 height: "100vh",
+                minHeight: 0,
                 maxHeight: "100vh",
                 flexShrink: 0,
                 borderRight: "1px solid #ececef",
                 backgroundColor: "#fff",
-                transition: "width 220ms ease",
+                transition: "background-color 160ms ease",
                 overflow: "hidden",
               }}
             >
@@ -5705,9 +5772,10 @@ export function Dashboard({ path }: { path: string }) {
               />
             </Box>
           )}
-          <Box sx={{ minWidth: 0, width: 0, flex: 1 }}>
+          <Box className="workspace-shell__main" sx={{ minWidth: 0, width: 0, flex: 1 }}>
             <Box
               component="header"
+              className="workspace-shell__header"
               sx={{
                 position: "relative",
                 display: "flex",
@@ -5774,6 +5842,7 @@ export function Dashboard({ path }: { path: string }) {
             </Box>
             <Box
               component="main"
+              className="workspace-shell__content"
               id="main"
               sx={{
                 width: "100%",

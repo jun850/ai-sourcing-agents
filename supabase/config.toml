@@ -1,5 +1,21 @@
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = [
+  "http://127.0.0.1:3000/**",
+  "http://localhost:8091/**",
+  "http://127.0.0.1:8091/**",
+]
+
+[auth.email]
+enable_confirmations = false
+double_confirm_changes = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.request-magic-link]
+verify_jwt = false
+
+[functions.rfq-ops-reminder-dispatch]
 verify_jwt = false

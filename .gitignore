@@ -16,3 +16,4 @@ supabase/.temp/
 *.log
 .vercel
 .env*
+!.env.local.example

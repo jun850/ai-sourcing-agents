@@ -649,6 +649,33 @@ export async function listRfqCases() {
   rpcError(error);
   return (data ?? []) as WorkspaceRfq[];
 }
+export type WorkspaceListCursor = { updatedAt: string; id: string };
+export async function listRfqCasesPage({
+  cursor = null,
+  limit = 40,
+}: { cursor?: WorkspaceListCursor | null; limit?: number } = {}) {
+  let query = client()
+    .from("atelix_rfq_workspace")
+    .select("*")
+    .order("updated_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100));
+  if (cursor)
+    query = query.or(
+      `updated_at.lt.${encodeURIComponent(cursor.updatedAt)},and(updated_at.eq.${encodeURIComponent(cursor.updatedAt)},id.lt.${encodeURIComponent(cursor.id)})`,
+    );
+  const { data, error } = await query;
+  rpcError(error);
+  const items = (data ?? []) as WorkspaceRfq[];
+  const last = items.at(-1);
+  return {
+    items,
+    nextCursor: items.length === Math.min(Math.max(limit, 1), 100) && last
+      ? { updatedAt: last.updated_at, id: last.id }
+      : null,
+    hasMore: items.length === Math.min(Math.max(limit, 1), 100),
+  };
+}
 export async function createRfqCase(input: {
   title: string;
   brief: Record<string, unknown>;

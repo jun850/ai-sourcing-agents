@@ -1,5 +1,16 @@
 import crypto from "node:crypto";
+import fs from "node:fs";
 import express from "express";
+
+if (process.env.NODE_ENV !== "production") {
+  const envPath = new URL("../.env.local", import.meta.url);
+  if (fs.existsSync(envPath)) {
+    for (const line of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+      if (match && process.env[match[1]] === undefined) process.env[match[1]] = match[2].replace(/^['\"]|['\"]$/g, "");
+    }
+  }
+}
 
 const app = express();
 const port = Number(process.env.ATELIX_API_PORT || 3001);
