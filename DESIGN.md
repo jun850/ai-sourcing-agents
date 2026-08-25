@@ -153,10 +153,13 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   bottom edge while browsing either list, matching the durable chat posture of
   an operations inbox.
 - Message party is encoded by consistent position, a text author label, and
-  controlled bubble color: the current participant is warm yellow on the right;
-  the other party is white on the left with a compact identifying avatar. This
-  mapping mirrors in the buyer and Intools workspaces rather than assuming one
-  party is always local.
+  controlled bubble color: buyer messages are warm yellow on the right; Atelix
+  Operations messages are white on the left with a compact identifying avatar.
+  The mapping is stable in both buyer and Intools workspaces.
+- Conversation updates are immediate and do not reset the visible thread. The
+  same buyer/Operations mapping applies to historical and live rows; local
+  operations uses a quiet visible-tab fallback when its review-only session
+  cannot join Supabase Realtime directly.
 
 ## Accessibility target
 

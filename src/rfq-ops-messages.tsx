@@ -110,10 +110,21 @@ export function RfqOpsMessagesWorkspace({
       // and then hydrate any private attachment metadata through the guarded RPC.
       setMessages((current) => current.some((item) => item.id === incoming.id)
         ? current
-        : [...current, { ...incoming, attachments: [] }]);
+        : [...current, {
+          ...incoming,
+          sender_role: incoming.sender_kind === "buyer" ? "buyer" : "ops",
+          attachments: [],
+        }]);
       void loadThread(active, true); void loadConversations(); onUnreadCount?.();
     });
-    return subscription.unsubscribe;
+    // Local Intools authenticates through its loopback-only review seam rather
+    // than a browser Supabase session. Realtime remains primary, while this
+    // silent fallback keeps that authenticated local view current too.
+    const fallback = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void loadThread(active, true); void loadConversations(); onUnreadCount?.();
+    }, 5000);
+    return () => { subscription.unsubscribe(); window.clearInterval(fallback); };
   }, [active, loadConversations, loadThread, onUnreadCount]);
   useEffect(() => {
     const node = scrollRef.current;
@@ -178,16 +189,15 @@ export function RfqOpsMessagesWorkspace({
       </Box>
       <Stack sx={{ height: { md: "100%" }, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
         {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2.25}>{messages.map((item) => {
-          const isBuyer = item.sender_kind === "buyer";
-          const sentByCurrentUser = mode === "buyer" ? isBuyer : !isBuyer;
+          const isBuyer = item.sender_role === "buyer";
           const senderName = item.sender_label || (isBuyer ? "Buyer" : "Atelix Operations");
-          return <Stack key={item.id} direction="row" spacing={1} sx={{ alignSelf: sentByCurrentUser ? "flex-end" : "flex-start", alignItems: "flex-end", maxWidth: "78%", flexDirection: sentByCurrentUser ? "row-reverse" : "row" }}>
-            {!sentByCurrentUser && <Avatar aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: isBuyer ? "#65758a" : "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
+          return <Stack key={item.id} direction="row" spacing={1} sx={{ alignSelf: isBuyer ? "flex-end" : "flex-start", alignItems: "flex-end", maxWidth: "78%", flexDirection: isBuyer ? "row-reverse" : "row" }}>
+            {!isBuyer && <Avatar aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: sentByCurrentUser ? "right" : "left" }}>{senderName} · {messageTime(item.created_at)}</Typography>
-              <Box sx={{ px: 1.5, py: 1.25, borderRadius: sentByCurrentUser ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: sentByCurrentUser ? "#fce99a" : "#fff", border: sentByCurrentUser ? "1px solid #f1d66f" : "1px solid #e5e9ee" }}>
-                <Typography sx={{ color: sentByCurrentUser ? "#332d20" : "#202936", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 14, lineHeight: 1.55 }}>{item.body}</Typography>
-                {item.attachments.map((attachment) => <Button key={attachment.id} size="small" startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />} onClick={() => void createRfqOpsAttachmentSignedUrl(attachment).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))} sx={{ mt: .75, justifyContent: "flex-start", color: sentByCurrentUser ? "#55491f" : "#45556b" }}>{attachment.original_name}</Button>)}
+              <Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: isBuyer ? "right" : "left" }}>{senderName} · {messageTime(item.created_at)}</Typography>
+              <Box sx={{ px: 1.5, py: 1.25, borderRadius: isBuyer ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: isBuyer ? "#fce99a" : "#fff", border: isBuyer ? "1px solid #f1d66f" : "1px solid #e5e9ee" }}>
+                <Typography sx={{ color: isBuyer ? "#332d20" : "#202936", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 14, lineHeight: 1.55 }}>{item.body}</Typography>
+                {item.attachments.map((attachment) => <Button key={attachment.id} size="small" startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />} onClick={() => void createRfqOpsAttachmentSignedUrl(attachment).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))} sx={{ mt: .75, justifyContent: "flex-start", color: isBuyer ? "#55491f" : "#45556b" }}>{attachment.original_name}</Button>)}
               </Box>
             </Box>
           </Stack>;

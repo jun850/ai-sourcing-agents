@@ -128,10 +128,13 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   thread scroll independently while the thread composer stays visible at the
   bottom of its pane. Choosing a request replaces the thread without moving the
   surrounding workspace or hiding the composer.
-- Message authorship is structural as well as textual: the current participant
-  appears in a warm right-aligned bubble, while the other party appears in a
-  white left-aligned bubble with an identifying avatar. The same rule mirrors
-  correctly between buyer and Intools views.
+- Message authorship is structural as well as textual: buyer messages are warm
+  and right-aligned; Atelix Operations messages are white and left-aligned with
+  an identifying avatar in both buyer and Intools views.
+- An open conversation behaves as live chat: new messages appear without a page
+  refresh, existing history uses the same party mapping, and a silent visible-tab
+  fallback keeps the local operations seam current when it cannot authenticate a
+  browser Realtime channel.
 - Buyer-authored message labels use the buyer's personal profile name, not the
   company name attached to the sourcing case.
 - An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;

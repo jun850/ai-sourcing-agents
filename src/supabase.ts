@@ -126,7 +126,8 @@ export type RfqOpsMessage = {
   conversation_id: string;
   client_message_id: string;
   sender_profile_id: string | null;
-  sender_kind: "buyer" | "atelix_ops";
+  /** Read RPCs expose this stable display role; table inserts use sender_kind. */
+  sender_role: "buyer" | "ops";
   sender_label: string;
   body: string;
   attachments: RfqOpsMessageAttachment[];
