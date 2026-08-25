@@ -9,7 +9,12 @@ import {
   type ReactNode,
 } from "react";
 import { useForm } from "react-hook-form";
-import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import {
+  AnimatePresence,
+  MotionConfig,
+  motion,
+  useReducedMotion,
+} from "framer-motion";
 import {
   Alert,
   Avatar,
@@ -850,7 +855,7 @@ function CleanPromptComposer({
   onStart,
   onMessage,
 }: {
-  onStart: (brief: string, files: UploadFile[]) => void;
+  onStart: (brief: string, files: UploadFile[]) => Promise<boolean>;
   onMessage: (message: string) => void;
 }) {
   const { register, handleSubmit, watch, reset } = useForm<BriefForm>({
@@ -858,6 +863,7 @@ function CleanPromptComposer({
   });
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [expanded, setExpanded] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const promptRegistration = register("brief");
   const brief = watch("brief");
@@ -868,7 +874,7 @@ function CleanPromptComposer({
     target.style.overflowY = target.scrollHeight > 248 ? "auto" : "hidden";
     setExpanded(nextHeight > 88);
   }
-  function submit(values: BriefForm) {
+  async function submit(values: BriefForm) {
     if (!values.brief.trim()) {
       onMessage("Describe what you need before creating a product request.");
       return;
@@ -879,16 +885,23 @@ function CleanPromptComposer({
       );
       return;
     }
-    onStart(values.brief.trim(), files);
-    reset();
-    setFiles([]);
-    setExpanded(false);
-    requestAnimationFrame(() => {
-      if (promptRef.current) {
-        promptRef.current.style.height = "";
-        promptRef.current.style.overflowY = "hidden";
-      }
-    });
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const started = await onStart(values.brief.trim(), files);
+      if (!started) return;
+      reset();
+      setFiles([]);
+      setExpanded(false);
+      requestAnimationFrame(() => {
+        if (promptRef.current) {
+          promptRef.current.style.height = "";
+          promptRef.current.style.overflowY = "hidden";
+        }
+      });
+    } finally {
+      setSubmitting(false);
+    }
   }
   function handleComposerKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (
@@ -910,6 +923,7 @@ function CleanPromptComposer({
         boxSizing: "border-box",
       }}
       onSubmit={handleSubmit(submit)}
+      aria-busy={submitting}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: "easeOut" }}
@@ -928,15 +942,15 @@ function CleanPromptComposer({
             minHeight: { xs: 68, sm: 74 },
             p: { xs: 0.5, sm: 0.75 },
             pl: { xs: 0.75, sm: 1 },
-            border: 0,
-            borderRadius: expanded ? "18px" : "16px",
+            border: "1px solid #dfe3e8",
+            borderRadius: expanded ? "16px" : "14px",
             backgroundColor: "#fff",
-            boxShadow: "0 12px 30px rgba(32,41,54,.10)",
+            boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             transition:
-              "box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
+              "border-color 180ms ease, box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
             "&:focus-within": {
-              border: 0,
-              boxShadow: "0 12px 30px rgba(32,41,54,.10)",
+              borderColor: "#73917b",
+              boxShadow: "0 0 0 3px rgba(75,118,87,.14)",
             },
           }}
         >
@@ -946,6 +960,7 @@ function CleanPromptComposer({
               component="label"
               htmlFor="product-reference-upload"
               aria-label="Add reference files"
+              disabled={submitting}
               sx={{
                 flex: "0 0 auto",
                 width: 48,
@@ -961,6 +976,7 @@ function CleanPromptComposer({
           <Box
             component="textarea"
             rows={1}
+            disabled={submitting}
             aria-label="Product request"
             placeholder="Start sourcing with Atelix"
             {...promptRegistration}
@@ -985,7 +1001,7 @@ function CleanPromptComposer({
               background: "transparent",
               color: "#202936",
               font: "inherit",
-              fontSize: { xs: 15, sm: 17 },
+              fontSize: { xs: 15, sm: 16 },
               lineHeight: 1.4,
               py: { xs: 0.75, sm: 1.15 },
               "&::placeholder": { color: "#66717f" },
@@ -1003,7 +1019,8 @@ function CleanPromptComposer({
               <IconButton
                 type="submit"
                 aria-label="Start RFQ draft"
-                disabled={!brief.trim()}
+                disabled={!brief.trim() || submitting}
+                aria-busy={submitting}
                 sx={{
                   flex: "0 0 auto",
                   width: 44,
@@ -1066,6 +1083,8 @@ function ConversationChatPanel({
   const hasDraft = Boolean(draft.trim());
   const messages: ConversationMessage[] = conversationMessages;
   const messageListRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const reduceMotion = useReducedMotion();
   useEffect(() => {
     const node = messageListRef.current;
     if (!node) return;
@@ -1083,6 +1102,10 @@ function ConversationChatPanel({
     if (!message || busy) return;
     setDraft("");
     setExpanded(false);
+    if (composerRef.current) {
+      composerRef.current.style.height = "";
+      composerRef.current.style.overflowY = "hidden";
+    }
     await onSend(message);
   }
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -1102,6 +1125,7 @@ function ConversationChatPanel({
   }
   return (
     <RoundedSurface
+      aria-busy={busy}
       sx={{
         display: "flex",
         alignSelf: "stretch",
@@ -1122,21 +1146,12 @@ function ConversationChatPanel({
         sx={{
           display: "flex",
           flexDirection: "column",
-          gap: { xs: 2.25, md: 3 },
+          gap: { xs: 1.75, md: 2.25 },
           p: { xs: 0, md: 1.25 },
           pt: { xs: 1.5, md: 1.75 },
           flex: "1 1 auto",
           minHeight: 0,
           overflowY: "auto",
-          scrollbarWidth: "thin",
-          scrollbarColor: "#c7cdd6 transparent",
-          "&::-webkit-scrollbar": { width: 6 },
-          "&::-webkit-scrollbar-track": { background: "transparent" },
-          "&::-webkit-scrollbar-thumb": {
-            backgroundColor: "#c7cdd6",
-            borderRadius: 999,
-          },
-          "&::-webkit-scrollbar-thumb:hover": { backgroundColor: "#aeb6c1" },
         }}
       >
         <AnimatePresence initial={false}>
@@ -1153,7 +1168,7 @@ function ConversationChatPanel({
               <Box
                 sx={{
                   alignSelf: message.from === "You" ? "flex-end" : "flex-start",
-                  maxWidth: message.from === "You" ? "88%" : "100%",
+                  maxWidth: message.from === "You" ? "84%" : "68ch",
                   ml: message.from === "You" ? "auto" : 0,
                   px: message.from === "You" ? { xs: 1.75, md: 2.25 } : 0,
                   py: message.from === "You" ? { xs: 1.25, md: 1.5 } : 0,
@@ -1168,8 +1183,8 @@ function ConversationChatPanel({
                   sx={{
                     display: message.from === "You" ? "none" : "block",
                     mb: 0.7,
-                    color: "#8a95a3",
-                    fontSize: 11,
+                    color: "#667384",
+                    fontSize: 11.5,
                     fontWeight: 700,
                   }}
                 >
@@ -1177,8 +1192,10 @@ function ConversationChatPanel({
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: { xs: 14, md: 16 },
-                    lineHeight: 1.65,
+                    minWidth: 0,
+                    overflowWrap: "anywhere",
+                    fontSize: { xs: 14, md: 15 },
+                    lineHeight: 1.6,
                     color: "inherit",
                   }}
                 >
@@ -1232,6 +1249,8 @@ function ConversationChatPanel({
         {busy && (
           <Box
             aria-label="Atelix assistant is drafting your RFQ"
+            role="status"
+            aria-live="polite"
             sx={{
               display: "flex",
               gap: 0.75,
@@ -1246,10 +1265,14 @@ function ConversationChatPanel({
             {[0, 1, 2].map((dot) => (
               <motion.span
                 key={dot}
-                animate={{ opacity: [0.3, 1, 0.3], y: [0, -2, 0] }}
+                animate={
+                  reduceMotion
+                    ? { opacity: 0.72, y: 0 }
+                    : { opacity: [0.3, 1, 0.3], y: [0, -2, 0] }
+                }
                 transition={{
                   duration: 1,
-                  repeat: Infinity,
+                  repeat: reduceMotion ? 0 : Infinity,
                   delay: dot * 0.16,
                 }}
                 style={{
@@ -1271,7 +1294,8 @@ function ConversationChatPanel({
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            justifyContent: "space-between",
+            gap: 1.25,
             mt: 0.75,
             px: 0.5,
             color:
@@ -1282,13 +1306,30 @@ function ConversationChatPanel({
                   : status.tone === "success"
                     ? "#426c4e"
                     : "#566476",
-            fontSize: 12,
+            fontSize: 12.5,
             lineHeight: 1.45,
           }}
         >
-          <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
-            {status.text}
-          </Typography>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
+              {status.text}
+            </Typography>
+            {remainingTurns !== null && remainingTurns <= 2 && (
+              <Typography component="span" sx={{ ml: 0.75, color: "inherit", opacity: 0.78, fontSize: 11.5 }}>
+                {remainingTurns} {remainingTurns === 1 ? "turn" : "turns"} left
+              </Typography>
+            )}
+          </Box>
+          {canUndo && (
+            <MuiButton
+              size="small"
+              onClick={() => void onUndo()}
+              disabled={busy}
+              sx={{ flex: "0 0 auto", minHeight: 32, px: 1.25, color: "inherit" }}
+            >
+              Undo
+            </MuiButton>
+          )}
         </Box>
       )}
       <Box
@@ -1307,18 +1348,19 @@ function ConversationChatPanel({
           borderRadius: expanded ? "16px" : "14px",
           backgroundColor: "#fff",
           colorScheme: "light",
-          boxShadow: "0 1px 4px rgba(0,0,0,.05)",
+          boxShadow: "0 4px 8px rgba(32,41,54,.05)",
           transition:
             "box-shadow 180ms ease, border-color 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
           "&:focus-within": {
             borderColor: "#cfe2d4",
-            boxShadow: "0 1px 6px rgba(0,0,0,.06)",
+            boxShadow: "0 4px 8px rgba(32,41,54,.05)",
           },
         }}
       >
         <Box
           component="textarea"
           rows={1}
+          ref={composerRef}
           value={draft}
           onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
             setDraft(event.target.value);
@@ -1343,7 +1385,7 @@ function ConversationChatPanel({
             fontSize: { xs: 14, sm: 15 },
             lineHeight: 1.45,
             py: 1.05,
-            "&::placeholder": { color: "#858c96" },
+            "&::placeholder": { color: "#66717f" },
           }}
         />
         <IconButton
@@ -1378,6 +1420,7 @@ function RfqField({
   value,
   field,
   editing,
+  loading = false,
   draft,
   onChange,
 }: {
@@ -1385,6 +1428,7 @@ function RfqField({
   value: string;
   field: keyof RfqFields;
   editing: boolean;
+  loading?: boolean;
   draft: RfqFields;
   onChange: (field: keyof RfqFields, value: string) => void;
 }) {
@@ -1401,7 +1445,7 @@ function RfqField({
         borderBottom: "1px solid #edf0f3",
       }}
     >
-      <Typography sx={{ color: "#8a95a3", fontSize: 12 }}>{label}</Typography>
+      <Typography sx={{ color: "#667384", fontSize: 12.5 }}>{label}</Typography>
       {editing ? (
         <Box
           component="input"
@@ -1428,9 +1472,19 @@ function RfqField({
             },
           }}
         />
+      ) : loading ? (
+        <Skeleton sx={{ width: "min(220px, 72%)", fontSize: 13 }} />
       ) : (
-        <Typography sx={{ color: "#3f4c5e", fontSize: 13, lineHeight: 1.45 }}>
-          {value}
+        <Typography
+          sx={{
+            minWidth: 0,
+            color: value ? "#3f4c5e" : "#758091",
+            fontSize: 13,
+            lineHeight: 1.45,
+            overflowWrap: "anywhere",
+          }}
+        >
+          {value || "—"}
         </Typography>
       )}
     </Box>
@@ -1526,6 +1580,8 @@ function RfqDocumentPanel({
   onQuoteSelected,
   agentStatus,
   changedFields,
+  preparing = false,
+  actionPending = false,
 }: {
   phase: RfqPhase;
   fields: RfqFields;
@@ -1544,6 +1600,8 @@ function RfqDocumentPanel({
   onQuoteSelected: () => void;
   agentStatus: AgentStatus | null;
   changedFields: Array<keyof RfqFields>;
+  preparing?: boolean;
+  actionPending?: boolean;
 }) {
   const editing = phase === "editing";
   const tabs: RfqTab[] = ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
@@ -1551,11 +1609,23 @@ function RfqDocumentPanel({
     Files: attachments.length,
   };
   function moveTab(event: KeyboardEvent, index: number) {
-    const direction =
-      event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (!direction) return;
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : event.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : event.key === "ArrowLeft"
+              ? (index - 1 + tabs.length) % tabs.length
+              : -1;
+    if (nextIndex < 0) return;
     event.preventDefault();
-    setTab(tabs[(index + direction + tabs.length) % tabs.length]);
+    const nextTab = tabs[nextIndex];
+    setTab(nextTab);
+    requestAnimationFrame(() =>
+      document.getElementById(`rfq-tab-${nextTab.toLowerCase()}`)?.focus(),
+    );
   }
   return (
     <RoundedSurface
@@ -1573,12 +1643,13 @@ function RfqDocumentPanel({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 2,
+          flexWrap: "wrap",
           px: { xs: 0, md: 0 },
           py: 1.75,
           borderBottom: "1px solid #e7ebf0",
         }}
       >
-        <Box>
+        <Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
           <Typography
             sx={{
               color: "#8d98a5",
@@ -1590,13 +1661,32 @@ function RfqDocumentPanel({
           >
             RFQ
           </Typography>
-          <Typography
-            variant="h2"
-            sx={{ mt: 0.45, fontSize: { xs: 20, md: 24 }, color: "#334155" }}
-          >
-            RFQ: {fields.quantity.replace(/\s*units?$/i, "")} Units –{" "}
-            {fields.product}
-          </Typography>
+          {preparing ? (
+            <Skeleton
+              sx={{
+                mt: 0.45,
+                width: "min(420px, 86%)",
+                fontSize: { xs: 20, md: 24 },
+              }}
+            />
+          ) : (
+            <Typography
+              variant="h2"
+              sx={{
+                minWidth: 0,
+                mt: 0.45,
+                color: "#334155",
+                fontSize: { xs: 20, md: 24 },
+                lineHeight: 1.2,
+                overflowWrap: "anywhere",
+                textWrap: "balance",
+              }}
+            >
+              {fields.product || fields.quantity
+                ? `RFQ: ${fields.quantity.replace(/\s*units?$/i, "").trim() || "—"} Units – ${fields.product || "Product not specified"}`
+                : "RFQ draft"}
+            </Typography>
+          )}
         </Box>
         <Chip
           label={
@@ -1607,6 +1697,7 @@ function RfqDocumentPanel({
                 : "Ready to review"
           }
           size="small"
+          aria-busy={actionPending}
           sx={{
             color: editing ? "#81622c" : "#58745d",
             backgroundColor: editing ? "#fbf4e7" : "#eef4ee",
@@ -1702,7 +1793,10 @@ function RfqDocumentPanel({
         )}
         {tab === "RFQ" && (
           <>
-            {agentStatus && (
+            {agentStatus &&
+              (changedFields.length > 0 ||
+                agentStatus.tone === "error" ||
+                agentStatus.tone === "warning") && (
               <Box
                 role="status"
                 aria-live="polite"
@@ -1727,30 +1821,40 @@ function RfqDocumentPanel({
                   lineHeight: 1.5,
                 }}
               >
-                {agentStatus.text}
                 {changedFields.length > 0
-                  ? ` Updated: ${changedFields.map((field) => rfqFieldLabels[field]).join(", ")}.`
-                  : ""}
+                  ? `Updated ${changedFields.map((field) => rfqFieldLabels[field]).join(", ")}.`
+                  : agentStatus.text}
               </Box>
             )}
-            <Box sx={{ maxWidth: 820, mb: 3 }}>
-              <Typography
-                sx={{ color: "#566476", fontSize: 14, lineHeight: 1.65 }}
-              >
-                Dear Supplier,
-              </Typography>
-              <Typography
-                sx={{
-                  mt: 1.25,
-                  color: "#788596",
-                  fontSize: 14,
-                  lineHeight: 1.65,
-                }}
-              >
-                We are looking to source {fields.quantity.toLowerCase()} and
-                would like to request a quotation based on the following
-                requirements:
-              </Typography>
+            <Box sx={{ maxWidth: "70ch", mb: 3 }}>
+              {preparing ? (
+                <Stack spacing={0.75}>
+                  <Skeleton sx={{ width: 110, fontSize: 14 }} />
+                  <Skeleton sx={{ width: "min(620px, 92%)", fontSize: 14 }} />
+                </Stack>
+              ) : (
+                <>
+                  <Typography
+                    sx={{ color: "#4f5d6f", fontSize: 14, lineHeight: 1.65 }}
+                  >
+                    Dear Supplier,
+                  </Typography>
+                  <Typography
+                    sx={{
+                      mt: 1.25,
+                      color: "#596779",
+                      fontSize: 14,
+                      lineHeight: 1.65,
+                      textWrap: "pretty",
+                    }}
+                  >
+                    We are looking to source{" "}
+                    {fields.quantity.toLowerCase() ||
+                      "the product described in this RFQ"} and would like to
+                    request a quotation based on the following requirements:
+                  </Typography>
+                </>
+              )}
             </Box>
             <Box
               sx={{
@@ -1772,6 +1876,7 @@ function RfqDocumentPanel({
                 phase !== "matched" && (
                   <MuiButton
                     onClick={onEdit}
+                    disabled={actionPending || preparing}
                     startIcon={<EditOutlined />}
                     size="small"
                     sx={{ color: "#708092" }}
@@ -1799,31 +1904,11 @@ function RfqDocumentPanel({
                   value={fields[field]}
                   field={field}
                   editing={editing}
+                  loading={preparing}
                   draft={draft}
                   onChange={onChange}
                 />
               ))}
-            </Box>
-            <Box sx={{ mt: 3 }}>
-              <Typography
-                sx={{ color: "#4a5667", fontSize: 14, fontWeight: 700 }}
-              >
-                Certification Requirements
-              </Typography>
-              <Box
-                component="ul"
-                sx={{
-                  mt: 1,
-                  mb: 0,
-                  pl: 2.5,
-                  color: "#788596",
-                  fontSize: 13,
-                  lineHeight: 1.8,
-                }}
-              >
-                <li>OEKO-TEX Standard 100 for all materials and dyes</li>
-                <li>ISO 9001 quality management certification</li>
-              </Box>
             </Box>
             {editing ? (
               <Stack
@@ -1832,11 +1917,17 @@ function RfqDocumentPanel({
                 spacing={1}
                 sx={{ pt: 2 }}
               >
-                <MuiButton onClick={onCancel} sx={{ color: "#718092" }}>
+                <MuiButton
+                  onClick={onCancel}
+                  disabled={actionPending}
+                  sx={{ color: "#718092" }}
+                >
                   Cancel
                 </MuiButton>
                 <MuiButton
                   onClick={onSave}
+                  disabled={actionPending}
+                  aria-busy={actionPending}
                   variant="contained"
                   startIcon={<SaveOutlined />}
                   sx={{
@@ -1855,7 +1946,7 @@ function RfqDocumentPanel({
                 spacing={1.5}
                 sx={{ pt: 3, flexWrap: "wrap" }}
               >
-                <Typography sx={{ color: "#93a0ae", fontSize: 11 }}>
+                <Typography sx={{ color: "#687587", fontSize: 12 }}>
                   Review every detail before sending this draft to Atelix.
                 </Typography>
                 {phase !== "submitted" &&
@@ -1863,6 +1954,8 @@ function RfqDocumentPanel({
                   phase !== "matched" && (
                     <MuiButton
                       onClick={onSubmit}
+                      disabled={actionPending || preparing}
+                      aria-busy={actionPending}
                       endIcon={<ArrowForward />}
                       variant="contained"
                       sx={{
@@ -1897,111 +1990,27 @@ function SupplierMap({ complete }: { complete: boolean }) {
       <Box
         component="div"
         role="img"
-        aria-label="A playful route showing the brief moving through RFQ structuring, eligibility checks, and Atelix review."
-        sx={{ position: "absolute", inset: 0 }}
+        aria-label="A playful green route showing the brief moving through RFQ structuring, eligibility checks, and Atelix review."
+        sx={{
+          position: "absolute",
+          inset: 0,
+          display: "grid",
+          placeItems: "center",
+        }}
       >
         <motion.img
           src="/assets/rfq-review-route.png"
           alt=""
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: complete ? 1.01 : 1 }}
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: complete ? 1.02 : 1 }}
           transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
           style={{
-            position: "absolute",
-            top: "24%",
-            left: "2%",
-            width: "96%",
+            display: "block",
+            width: "94%",
             height: "auto",
-            maxWidth: "none",
+            maxWidth: 1080,
           }}
         />
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          left: "6%",
-          top: "44%",
-          width: 90,
-          color: "#4b7657",
-          fontSize: 11,
-          fontWeight: 700,
-        }}
-      >
-        Your brief
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          left: "42%",
-          top: "30%",
-          width: 100,
-          color: "#4b7657",
-          fontSize: 11,
-          fontWeight: 700,
-        }}
-      >
-        Structuring RFQ
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          left: "63%",
-          top: "60%",
-          width: 100,
-          color: "#4b7657",
-          fontSize: 11,
-          fontWeight: 700,
-        }}
-      >
-        Eligibility checks
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          right: "5%",
-          top: "44%",
-          width: 110,
-          textAlign: "right",
-          color: "#4b7657",
-          fontSize: 11,
-          fontWeight: 700,
-        }}
-      >
-        RFQ sent to Atelix
-      </Box>
-      <Box
-        sx={{
-          position: "absolute",
-          left: 20,
-          top: 18,
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          px: 1.5,
-          py: 0.8,
-          border: "1px solid #dce9df",
-          borderRadius: "10px",
-          backgroundColor: "rgba(255,255,255,.92)",
-          color: "#4b7657",
-          whiteSpace: "nowrap",
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: ".04em",
-          boxShadow: "0 4px 10px rgba(56,86,62,.08)",
-        }}
-      >
-        <Box
-          component="span"
-          sx={{
-            width: 7,
-            height: 7,
-            borderRadius: "50%",
-            backgroundColor: "#65a979",
-          }}
-        />
-        {complete
-          ? "RFQ MATCHED · READY TO REVIEW"
-          : "RFQ SAVED · REVIEW QUEUED"}
       </Box>
     </Box>
   );
@@ -2970,6 +2979,7 @@ function RfqWorkspace({
   const [undoToken, setUndoToken] = useState<string | null>(null);
   const [remainingTurns, setRemainingTurns] = useState<number | null>(null);
   const [messagesLoaded, setMessagesLoaded] = useState(false);
+  const [documentActionPending, setDocumentActionPending] = useState(false);
   const initialTurnStarted = useRef(false);
 
   useEffect(() => {
@@ -3104,10 +3114,9 @@ function RfqWorkspace({
           ? "Atelix AI is unavailable right now. You can keep editing this RFQ."
           : supportRequested
             ? "For payment or order clarification, contact info@arcanawangsa.com."
-            : verificationStatus ||
-              (nextChangedFields.length
-                ? "Your RFQ draft has been updated."
-                : "Atelix has checked the saved RFQ."),
+            : nextChangedFields.length
+              ? "RFQ updated."
+              : verificationStatus || "Atelix has checked the saved RFQ.",
       });
     }
     setConversationMessages((current) => [
@@ -3187,6 +3196,8 @@ function RfqWorkspace({
     );
   }, [initialAgentPrompt, messagesLoaded]);
   function saveEdit() {
+    if (documentActionPending) return;
+    setDocumentActionPending(true);
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
       brief: briefFromFields(brief, draft),
@@ -3208,9 +3219,12 @@ function RfqWorkspace({
         onMessage(
           cause instanceof Error ? cause.message : "Could not save your RFQ.",
         ),
-      );
+      )
+      .finally(() => setDocumentActionPending(false));
   }
   function submitRfq() {
+    if (documentActionPending) return;
+    setDocumentActionPending(true);
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
       brief: briefFromFields(brief, fields),
@@ -3231,7 +3245,8 @@ function RfqWorkspace({
         onMessage(
           cause instanceof Error ? cause.message : "Could not submit your RFQ.",
         ),
-      );
+      )
+      .finally(() => setDocumentActionPending(false));
   }
   function trackRequest() {
     // The timer-driven matching -> matched transition never switches the
@@ -3243,6 +3258,8 @@ function RfqWorkspace({
 
   const draftingPhase =
     phase === "drafting" || phase === "review" || phase === "editing";
+  const preparingDocument =
+    phase === "drafting" && agentPending && conversationMessages.length <= 1;
   const showMatchingAnimation =
     (phase === "matching" || phase === "matched") && !trackClicked;
   const baseStatus =
@@ -3280,6 +3297,8 @@ function RfqWorkspace({
       onQuoteSelected={() => setStatusOverride("quote_selected")}
       agentStatus={agentStatus}
       changedFields={changedFields}
+      preparing={preparingDocument}
+      actionPending={documentActionPending}
     />
   );
   return (
@@ -4530,7 +4549,7 @@ function DashboardHome({
   onMessage,
 }: {
   isNew: boolean;
-  onStart: (brief: string, files: UploadFile[]) => void;
+  onStart: (brief: string, files: UploadFile[]) => Promise<boolean>;
   onMessage: (message: string) => void;
 }) {
   return (
@@ -4539,24 +4558,22 @@ function DashboardHome({
       sx={{
         minWidth: 0,
         width: "100%",
-        maxWidth: 820,
+        maxWidth: 720,
         minHeight: { xs: "calc(100vh - 150px)", md: "calc(100vh - 120px)" },
-        rowGap: { xs: 2.25, md: 2.5 },
+        rowGap: { xs: 2.5, md: 3 },
         mx: "auto",
         justifyContent: "center",
-        borderRadius: 6,
-        background:
-          "radial-gradient(circle at 50% 48%, rgba(190,219,249,.72), rgba(251,251,252,0) 58%)",
+        backgroundColor: "transparent",
       }}
     >
       <Box
         sx={{
           minWidth: 0,
           width: "100%",
-          maxWidth: 640,
+          maxWidth: 620,
           mx: "auto",
           boxSizing: "border-box",
-          textAlign: "center",
+          textAlign: "left",
         }}
       >
         <Typography
@@ -4569,10 +4586,11 @@ function DashboardHome({
             m: 0,
             whiteSpace: "normal",
             overflowWrap: "anywhere",
-            wordBreak: "break-word",
+            textWrap: "balance",
             fontFamily: "inherit",
-            fontSize: { xs: 32, sm: 40, md: 44 },
-            lineHeight: 1.08,
+            fontSize: { xs: 32, sm: 38, md: 40 },
+            lineHeight: 1.1,
+            letterSpacing: "-.035em",
             color: "#202936",
           }}
         >
@@ -4582,19 +4600,20 @@ function DashboardHome({
           sx={{
             display: "block",
             width: "100%",
-            maxWidth: "100%",
             minWidth: 0,
             mt: 1.25,
-            color: "#7c8795",
+            maxWidth: "58ch",
+            color: "#596779",
             fontSize: { xs: 14, sm: 15 },
-            lineHeight: 1.5,
+            lineHeight: 1.6,
+            textWrap: "pretty",
           }}
         >
-          Our AI sourcing expert will help you find the best apparel
-          manufacturers
+          Describe the product, quantity, material, and timing. Add a reference
+          if you have one.
         </Typography>
       </Box>
-      <Box sx={{ width: "100%", maxWidth: 660, mx: "auto" }}>
+      <Box sx={{ width: "100%", maxWidth: 620, mx: "auto" }}>
         <CleanPromptComposer onStart={onStart} onMessage={onMessage} />
       </Box>
     </Stack>
@@ -5454,7 +5473,7 @@ export function Dashboard({ path }: { path: string }) {
     if (item.view === "new" || item.view === "requests") setRfq(null);
     navigate(item.href);
   }
-  async function startRfq(brief: string, files: UploadFile[]) {
+  async function startRfq(brief: string, files: UploadFile[]): Promise<boolean> {
     setMessage("Saving your sourcing brief…");
     try {
       const record = await createRfqCase({
@@ -5471,12 +5490,15 @@ export function Dashboard({ path }: { path: string }) {
       ]);
       setRfq({ record, attachments, initialPhase: "drafting" });
       setMessage("");
+      navigate(`/dashboard/requests/${encodeURIComponent(record.id)}`);
+      return true;
     } catch (cause) {
       setMessage(
         cause instanceof Error
           ? cause.message
           : "Could not save your sourcing brief.",
       );
+      return false;
     }
   }
   async function restoreHistory(item: StoredRfq) {
@@ -5612,9 +5634,7 @@ export function Dashboard({ path }: { path: string }) {
     return (
       <DashboardHome
         isNew={view === "new"}
-        onStart={(brief, files) => {
-          void startRfq(brief, files);
-        }}
+        onStart={startRfq}
         onMessage={setMessage}
       />
     );

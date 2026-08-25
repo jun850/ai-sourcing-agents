@@ -240,15 +240,16 @@ button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guid
 .clean-prompt-form textarea,
 .clean-prompt-form textarea:focus,
 .clean-prompt-form textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
-.clean-prompt-form > .MuiPaper-root:focus-within { border: 0 !important; box-shadow: 0 12px 30px rgba(32,41,54,.10) !important; }
+.clean-prompt-form .MuiPaper-root:focus-within { outline: 3px solid rgba(75,118,87,.32); outline-offset: 3px; }
 .conversation-composer textarea,
 .conversation-composer textarea:focus,
 .conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+.conversation-composer:focus-within { outline: 3px solid rgba(75,118,87,.32); outline-offset: 3px; }
 .conversation-composer:focus-within::before { background: #526176; }
 .conversation-composer:focus-within textarea { color: #fff !important; caret-color: #fff; }
 .conversation-composer:focus-within textarea::placeholder { color: #eef3f8 !important; }
 .conversation-composer { position: relative; isolation: isolate; background: transparent !important; box-shadow: none !important; }
-.conversation-composer::before { content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: #fff; box-shadow: 0 12px 30px rgba(32,41,54,.10); pointer-events: none; }
+.conversation-composer::before { content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; background: #fff; box-shadow: 0 4px 8px rgba(32,41,54,.05); pointer-events: none; }
 
 /* The conversation composer is intentionally borderless; focus is carried by
    the surface shadow so the surrounding page stays transparent. */

@@ -43,6 +43,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   progress view; use one contained checkmark and a restrained three-dot drift,
   never a spinner or decorative confetti. No page-load sequence may delay task
   content. `MotionConfig reducedMotion="user"` is required.
+- The matching-stage visual uses one centered transparent green route artwork;
+  do not layer waypoint labels or status badges over it. The artwork is
+  decorative context only; the surrounding heading, checks, and timeline
+  remain the source of status meaning.
 - Chat composer focus uses the slate-blue working state with white typed text;
   plain Enter sends, Shift+Enter inserts a newline, and IME composition never
   submits. On desktop, the conversation fills the split workspace row and pins
