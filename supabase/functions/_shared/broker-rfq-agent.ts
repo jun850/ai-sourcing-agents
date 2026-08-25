@@ -184,7 +184,7 @@ export async function handleBrokerRfqAgent(request: Request) {
     // default thinking mode. A reasoning-disable request param is
     // deliberately not sent, since not every provider/model behind the
     // preset accepts that field.
-    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix Marketplace" }, body: JSON.stringify({ model: PRESET, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }) });
+    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing" }, body: JSON.stringify({ model: PRESET, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }) });
     if (!upstream.ok) {
       console.error("agent_rfq_upstream_failed", JSON.stringify({ turnId: turn.id, status: upstream.status, body: (await upstream.text()).slice(0, 2000) }));
       throw new Error("openrouter_unavailable");

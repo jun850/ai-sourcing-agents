@@ -73,7 +73,7 @@ const privateLabelFaqs: FaqEntry[] = [
   },
   {
     q: "How is private label different from standard sourcing with Atelix?",
-    a: "Standard sourcing finds and manages a factory for a product you've already speced. Private label adds two things on top: brand and packaging execution (your logo, your packaging design, your inserts, your barcode placement) and market-readiness (getting the finished product compliant and correctly labeled for wherever it's actually going to sell, whether that's a US Amazon FBA warehouse, a UK retailer, an EU marketplace, or an Australian distributor). The sourcing and QC process underneath is the same, five-country network, same fee structure, private label is the layer on top.",
+    a: "Standard sourcing finds and manages a factory for a product you've already speced. Private label adds two things on top: brand and packaging execution (your logo, your packaging design, your inserts, your barcode placement) and market-readiness (getting the finished product compliant and correctly labeled for wherever it's actually going to sell, whether that's a US Amazon FBA warehouse, a UK retailer, an EU retail channel, or an Australian distributor). The sourcing and QC process underneath is the same, five-country network, same fee structure, private label is the layer on top.",
   },
   {
     q: "What's the minimum order quantity for a private label run?",
@@ -914,7 +914,7 @@ function About() {
           <h2>The team behind Atelix</h2>
           <p className="about-team-lede">
             Jun and Celina met in Australia during their Master's studies—one
-            building marketplace product across Southeast Asia, the other
+            building digital commerce products across Southeast Asia, the other
             native to the China and Japan markets that anchor global textile
             manufacturing. That meeting became a decision to build together,
             starting with{" "}
@@ -946,7 +946,7 @@ function About() {
                 <p className="about-team-role">Co-Founder &amp; CEO</p>
                 <p>
                   A technical product manager with six years across
-                  Southeast Asia's marketplace and fintech leaders, including
+                  Southeast Asia's commerce and fintech leaders, including
                   ByteDance Shop/Tokopedia, Blibli, and BukuWarung, plus
                   martech at Melbourne-based IntelligenceBank. Jun founded
                   Anakost, a local quick-commerce startup, in 2018 during his

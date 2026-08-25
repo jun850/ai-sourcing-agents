@@ -16,7 +16,7 @@ const checks = [
   ["RFQ Operations conversation cursor appends", files.messages.includes("conversationCursor") && files.messages.includes("loadConversations(true)")],
   ["chat does not unconditionally jump to bottom", !files.dashboard.includes("node.scrollTop = node.scrollHeight")],
   ["shell avoids width layout animation", !files.dashboard.includes('transition: "width 220ms ease"')],
-  ["sourcing-agent product rule is documented", files.product.includes("not marketplace") && files.design.includes("never as a marketplace")],
+  ["sourcing-agent product rule is documented", files.product.includes("not retail-commerce") && files.design.includes("never as a retail-commerce surface")],
   ["borderless prompt contract remains", files.responsive.includes(".conversation-composer:focus-within") && files.responsive.includes("border: 0 !important")],
 ];
 

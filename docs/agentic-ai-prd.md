@@ -1,6 +1,6 @@
 # Atelix agentic AI PRD
 
-**Tags:** `marketplace` `agentic-ai` `openrouter` `supabase` `rfq` `fashion-sourcing`
+**Tags:** `ai-sourcing` `agentic-ai` `openrouter` `supabase` `rfq` `fashion-sourcing`
 
 **Status:** implementation contract for the existing RFQ workspace
 

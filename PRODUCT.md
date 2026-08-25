@@ -108,7 +108,7 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   files records in one workspace. Empty tabs remain explicit until guarded
   records exist, and the assistant presents drafting progress only, never
   invented supplier or commercial facts.
-- Authenticated interactions are sourcing-agent interactions, not marketplace
+- Authenticated interactions are sourcing-agent interactions, not retail-commerce
   interactions. Requests are operational cases, products are immutable order
   snapshots, suppliers are reviewed private records, and queues expose the
   next sourcing decision. Do not introduce browsing, storefront, seller,

@@ -31,7 +31,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - The landing trusted-brand rail uses five fixed logo slots instead of a horizontal marquee. Each slot cycles through the canonical local brand assets with a vertical blur-and-fade handoff; hovering an individual slot reveals that logo's original color, hover or keyboard focus pauses the sequence, reduced motion shows a static logo per slot, and narrow screens reduce the visible slot count without changing the accessible brand list.
 - Preserve current routes and their guarded boundaries; do not reintroduce public shopping or unreviewed supplier-discovery surfaces.
 - Every authenticated interaction must read as a sourcing-agent workspace,
-  never as a marketplace. Use case queues, evidence rows, RFQ context,
+  never as a retail-commerce surface. Use case queues, evidence rows, RFQ context,
   reviewed states, and next-step ownership. Do not use storefront cards,
   browse/discover patterns, seller language, carts, wishlists, product
   recommendation patterns, or ecommerce calls to action.
