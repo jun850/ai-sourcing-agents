@@ -148,6 +148,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   states with text as well as color.
 - Message metadata identifies buyer-authored messages by the buyer's personal
   name; company names remain request context rather than chat authorship.
+- On desktop, the Messages request queue and thread history scroll independently
+  inside one fixed-height inbox. The composer remains pinned to the thread's
+  bottom edge while browsing either list, matching the durable chat posture of
+  an operations inbox.
 
 ## Accessibility target
 

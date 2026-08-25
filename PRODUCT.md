@@ -124,6 +124,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   Buyers use `/dashboard/messages`; confirmed administrators use `/intools/messages`.
   Realtime updates, attachment access, unread state, and reply reminders use
   guarded RFQ Ops server contracts, never direct browser table writes.
+- On desktop, Messages is a bounded inbox: the request queue and selected
+  thread scroll independently while the thread composer stays visible at the
+  bottom of its pane. Choosing a request replaces the thread without moving the
+  surrounding workspace or hiding the composer.
 - Buyer-authored message labels use the buyer's personal profile name, not the
   company name attached to the sourcing case.
 - An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;
