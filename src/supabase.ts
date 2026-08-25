@@ -129,6 +129,7 @@ export type RfqOpsMessage = {
   /** Read RPCs expose this stable display role; table inserts use sender_kind. */
   sender_role: "buyer" | "ops";
   sender_label: string;
+  sender_avatar_url?: string | null;
   body: string;
   attachments: RfqOpsMessageAttachment[];
   created_at: string;
@@ -178,6 +179,7 @@ export type RfqOpsMessageSubscription = {
   channel: RealtimeChannel;
   unsubscribe: () => void;
 };
+export type RfqOpsPresence = { name: string; avatarUrl: string | null; role: "buyer" | "ops" };
 export type RfqOpsConversationPage = {
   conversations: RfqOpsConversation[];
   next_before: RfqOpsCursor | null;
@@ -617,6 +619,29 @@ export async function getUserDisplayName(user: User): Promise<string> {
     .find((value): value is string => typeof value === "string" && value.trim().length > 0);
   if (metadataName) return metadataName.trim();
   return user.email?.split("@")[0] || "Administrator";
+}
+export type WorkspaceProfile = { full_name: string; avatar_url: string | null; email: string | null };
+export async function getWorkspaceProfile() {
+  const { data, error } = await client().rpc("workspace_get_profile");
+  rpcError(error);
+  return data as WorkspaceProfile;
+}
+export async function updateWorkspaceProfile(input: { fullName: string; avatarUrl: string | null }) {
+  const { data, error } = await client().rpc("workspace_update_profile", {
+    p_full_name: input.fullName,
+    p_avatar_url: input.avatarUrl,
+  });
+  rpcError(error);
+  return data as WorkspaceProfile;
+}
+export async function uploadWorkspaceAvatar(userId: string, file: File) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error("Use a JPG, PNG, or WebP image.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Use an image up to 5 MB.");
+  const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+  const path = `${userId}/avatars/${crypto.randomUUID()}.${extension}`;
+  const { error } = await client().storage.from("uploads").upload(path, file, { contentType: file.type, upsert: false });
+  rpcError(error);
+  return client().storage.from("uploads").getPublicUrl(path).data.publicUrl;
 }
 export async function signInWithMagicLink(email: string, redirectTo: string) {
   const { error } = await client().functions.invoke("request-magic-link", {
@@ -1176,6 +1201,14 @@ export async function subscribeToRfqOpsMessages(
       void db.removeChannel(channel);
     },
   };
+}
+export async function subscribeToRfqOpsPresence(conversationId: string, presence: RfqOpsPresence, onSync: (people: RfqOpsPresence[]) => void) {
+  const db = client();
+  await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
+  const channel = db.channel(`rfq-ops:${conversationId}:presence`, { config: { private: true, presence: { key: `${presence.role}:${presence.name}` } } })
+    .on("presence", { event: "sync" }, () => onSync(Object.values(channel.presenceState<RfqOpsPresence>()).flat()))
+    .subscribe((status) => { if (status === "SUBSCRIBED") void channel.track(presence); });
+  return { unsubscribe: () => { void db.removeChannel(channel); } };
 }
 
 async function intoolsRpc<T>(

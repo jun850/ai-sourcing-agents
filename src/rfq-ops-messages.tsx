@@ -9,10 +9,11 @@ import {
   createRfqOpsMessageId, getRfqOpsMessage, listIntoolsBuyerConversations, listIntoolsBuyerMessages,
   listWorkspaceOpsConversations, listWorkspaceOpsMessages, markIntoolsBuyerConversationRead,
   markWorkspaceOpsConversationRead, reserveIntoolsBuyerUpload, reserveWorkspaceOpsUpload,
-  sendIntoolsBuyerMessage, sendWorkspaceOpsMessage, subscribeToRfqOpsMessages,
+  sendIntoolsBuyerMessage, sendWorkspaceOpsMessage, subscribeToRfqOpsMessages, subscribeToRfqOpsPresence, getWorkspaceProfile,
   uploadRfqOpsAttachment, type RfqOpsAttachmentUpload, type RfqOpsConversation,
-  type RfqOpsMessage, type RfqOpsCursor,
+  type RfqOpsMessage, type RfqOpsCursor, type RfqOpsPresence,
 } from "./supabase";
+import { useInfiniteList } from "./use-infinite-list";
 
 const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -43,14 +44,9 @@ export function RfqOpsMessagesWorkspace({
   onUnreadCount?: () => void;
   mode?: "buyer" | "intools";
 }) {
-  const [conversations, setConversations] = useState<RfqOpsConversation[]>([]);
-  const conversationCursor = useRef<RfqOpsCursor | null>(null);
-  const conversationHasMore = useRef(true);
-  const conversationLoading = useRef(false);
   const conversationSentinel = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<RfqOpsMessage[]>([]);
   const [active, setActive] = useState<RfqOpsConversation | null>(null);
-  const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [error, setError] = useState("");
   const [draft, setDraft] = useState("");
@@ -60,21 +56,13 @@ export function RfqOpsMessagesWorkspace({
   const fileInput = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [newMessagesBelow, setNewMessagesBelow] = useState(false);
+  const [present, setPresent] = useState<RfqOpsPresence[]>([]);
 
-  const loadConversations = useCallback(async (append = false) => {
-    if (conversationLoading.current || (append && !conversationHasMore.current)) return;
-    conversationLoading.current = true;
-    if (!append) setLoadingList(true);
-    try {
-      const page = await (mode === "buyer"
-        ? listWorkspaceOpsConversations({ before: append ? conversationCursor.current : null, limit: 50 })
-        : listIntoolsBuyerConversations({ before: append ? conversationCursor.current : null, limit: 50 }));
-      setConversations((current) => append ? [...current, ...page.conversations] : page.conversations);
-      conversationCursor.current = page.next_before;
-      conversationHasMore.current = Boolean(page.next_before);
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not load your messages."); }
-    finally { conversationLoading.current = false; setLoadingList(false); }
-  }, []);
+  const loadConversationPage = useCallback(async ({ cursor }: { cursor: RfqOpsCursor | null; signal: AbortSignal }) => {
+    const page = await (mode === "buyer" ? listWorkspaceOpsConversations({ before: cursor, limit: 50 }) : listIntoolsBuyerConversations({ before: cursor, limit: 50 }));
+    return { items: page.conversations, nextCursor: page.next_before, hasMore: Boolean(page.next_before) };
+  }, [mode]);
+  const { items: conversations, setItems: setConversations, loading: loadingList, hasMore: conversationHasMore, error: conversationError, reload: reloadConversations, loadMore: loadMoreConversations } = useInfiniteList<RfqOpsConversation, RfqOpsCursor>(`rfq-ops-conversations:${mode}`, loadConversationPage);
 
   const loadThread = useCallback(async (conversation: RfqOpsConversation, silent = false) => {
     if (!silent) setLoadingThread(true);
@@ -104,16 +92,15 @@ export function RfqOpsMessagesWorkspace({
     } : item)].sort((left, right) => (right.last_message_at || "").localeCompare(left.last_message_at || "")));
   }, []);
 
-  useEffect(() => { void loadConversations(); }, [loadConversations]);
   useEffect(() => {
     const node = conversationSentinel.current;
     if (!node) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) void loadConversations(true);
+      if (entries[0]?.isIntersecting) void loadMoreConversations();
     }, { rootMargin: "240px" });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [conversations.length, loadConversations]);
+  }, [conversations.length, loadMoreConversations]);
   useEffect(() => {
     if (!selectedCaseId || !conversations.length) return;
     const next = conversations.find((item) => item.rfq_case_id === selectedCaseId);
@@ -149,6 +136,12 @@ export function RfqOpsMessagesWorkspace({
     });
     return () => { cancelled = true; unsubscribe(); };
   }, [active, mergeMessage, mode, onUnreadCount, updateConversationPreview]);
+  useEffect(() => {
+    if (!active) return;
+    let unsubscribe = () => {};
+    void getWorkspaceProfile().then((profile) => subscribeToRfqOpsPresence(active.id, { name: profile.full_name, avatarUrl: profile.avatar_url, role: mode === "buyer" ? "buyer" : "ops" }, setPresent)).then((subscription) => { unsubscribe = subscription.unsubscribe; }).catch(() => setPresent([]));
+    return () => unsubscribe();
+  }, [active, mode]);
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
@@ -203,20 +196,20 @@ export function RfqOpsMessagesWorkspace({
       <Typography component="h1" sx={{ color: "#202936", fontSize: { xs: 30, sm: 38 }, fontWeight: 500, letterSpacing: "-.04em" }}>Messages</Typography>
       <Typography sx={{ color: "#667384", fontSize: 14 }}>Human updates with Atelix about each sourcing request.</Typography>
     </Stack>
-    {error && <Alert severity="error" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" onClick={() => { void loadConversations(); if (active) void loadThread(active); }}>Retry</Button>}>{error}</Alert>}
+    {(error || conversationError) && <Alert severity="error" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" onClick={() => { void reloadConversations(); if (active) void loadThread(active); }}>Retry</Button>}>{error || conversationError}</Alert>}
     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(280px, .72fr) minmax(0,1.55fr)" }, height: { md: "calc(100dvh - 232px)" }, minHeight: 0, border: "1px solid #dfe4eb", borderRadius: "14px", overflow: "hidden", bgcolor: "#fff" }}>
       <Box sx={{ display: "flex", minHeight: 0, flexDirection: "column", borderRight: { md: "1px solid #e7ebf0" }, borderBottom: { xs: "1px solid #e7ebf0", md: 0 }, minWidth: 0 }}>
         <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontSize: 12, fontWeight: 800, color: "#526176", letterSpacing: ".04em", textTransform: "uppercase" }}>Requests {typeof unreadCount === "number" && unreadCount > 0 ? <Chip size="small" label={unreadCount} sx={{ ml: .75, height: 22, bgcolor: "#e8f2eb", color: "#326143", fontWeight: 800 }} /> : null}</Typography></Box>
         <Box sx={{ minHeight: 0, flex: 1, maxHeight: { xs: 380, md: "none" }, overflowY: "auto", overscrollBehavior: "contain" }}>
-          {loadingList ? <Stack spacing={1.25} sx={{ p: 2 }}><Skeleton height={48}/><Skeleton height={48}/><Skeleton height={48}/></Stack> : conversations.length ? <List disablePadding aria-label="Request conversations">{conversations.map((item) => <ListItemButton key={item.id} selected={item.id === active?.id} onClick={() => { onSelectCase(item.rfq_case_id); void loadThread(item); }} sx={{ display: "block", px: 2, py: 1.5, borderRadius: 0, borderBottom: "1px solid #eef0f3", "&.Mui-selected": { bgcolor: "#f2f7f3", boxShadow: "inset 3px 0 #4b7657" } }}><Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography noWrap sx={{ minWidth: 0, fontSize: 13, fontWeight: 800 }}>{conversationTitle(item)}</Typography><Typography sx={{ flexShrink: 0, color: "#778191", fontSize: 11 }}>{messageTime(item.last_message_at)}</Typography></Stack><Typography noWrap sx={{ mt: .4, color: "#667384", fontSize: 12 }}>{item.last_message_body || "No messages yet"}</Typography></ListItemButton>)}<Box ref={conversationSentinel} sx={{ minHeight: 1 }} />{conversationHasMore.current && <Typography role="status" sx={{ px: 2, py: 1, color: "#778191", fontSize: 11 }}>More conversations load as you reach the end.</Typography>}</List> : <Box sx={{ p: 3 }}><Typography sx={{ fontWeight: 700 }}>No request conversations yet</Typography><Typography sx={{ mt: .5, color: "#667384", fontSize: 13 }}>Messages appear here when an Atelix team member updates a request.</Typography></Box>}
+          {loadingList ? <Stack spacing={1.25} sx={{ p: 2 }}><Skeleton height={48}/><Skeleton height={48}/><Skeleton height={48}/></Stack> : conversations.length ? <List disablePadding aria-label="Request conversations">{conversations.map((item) => <ListItemButton key={item.id} selected={item.id === active?.id} onClick={() => { onSelectCase(item.rfq_case_id); void loadThread(item); }} sx={{ display: "block", px: 2, py: 1.5, borderRadius: 0, borderBottom: "1px solid #eef0f3", "&.Mui-selected": { bgcolor: "#f2f7f3", boxShadow: "inset 3px 0 #4b7657" } }}><Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography noWrap sx={{ minWidth: 0, fontSize: 13, fontWeight: 800 }}>{conversationTitle(item)}</Typography><Typography sx={{ flexShrink: 0, color: "#778191", fontSize: 11 }}>{messageTime(item.last_message_at)}</Typography></Stack><Typography noWrap sx={{ mt: .4, color: "#667384", fontSize: 12 }}>{item.last_message_body || "No messages yet"}</Typography></ListItemButton>)}<Box ref={conversationSentinel} sx={{ minHeight: 1 }} />{conversationHasMore && <Typography role="status" sx={{ px: 2, py: 1, color: "#778191", fontSize: 11 }}>More conversations load as you reach the end.</Typography>}</List> : <Box sx={{ p: 3 }}><Typography sx={{ fontWeight: 700 }}>No request conversations yet</Typography><Typography sx={{ mt: .5, color: "#667384", fontSize: 13 }}>Messages appear here when an Atelix team member updates a request.</Typography></Box>}
         </Box>
       </Box>
       <Stack sx={{ height: { md: "100%" }, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-        {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2.25}>{messages.map((item) => {
+        {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}><Box><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box>{present.length > 0 && <Stack direction="row" spacing={-.5} aria-label={`${present.length} participant${present.length === 1 ? "" : "s"} active in this thread`}>{present.slice(0, 4).map((person, index) => <Avatar key={`${person.role}-${person.name}-${index}`} src={person.avatarUrl || undefined} sx={{ width: 26, height: 26, fontSize: 10, border: "2px solid #fff", bgcolor: person.role === "ops" ? "#4b7657" : "#b78a20" }}>{person.name.slice(0, 1).toUpperCase()}</Avatar>)}</Stack>}</Stack></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2.25}>{messages.map((item) => {
           const isBuyer = item.sender_role === "buyer";
           const senderName = item.sender_label || (isBuyer ? "Buyer" : "Atelix Operations");
           return <Stack key={item.id} direction="row" spacing={1} sx={{ alignSelf: isBuyer ? "flex-end" : "flex-start", alignItems: "flex-end", maxWidth: "78%", flexDirection: isBuyer ? "row-reverse" : "row" }}>
-            {!isBuyer && <Avatar aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
+            {!isBuyer && <Avatar src={item.sender_avatar_url || undefined} aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
             <Box sx={{ minWidth: 0 }}>
               <Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: isBuyer ? "right" : "left" }}>{senderName} · {messageTime(item.created_at)}</Typography>
               <Box sx={{ px: 1.5, py: 1.25, borderRadius: isBuyer ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: isBuyer ? "#fce99a" : "#fff", border: isBuyer ? "1px solid #f1d66f" : "1px solid #e5e9ee" }}>

@@ -1,23 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type ListCursor = { updatedAt: string; id: string };
-export type CursorPage<T> = {
+export type CursorPage<T, C = ListCursor> = {
   items: T[];
-  nextCursor: ListCursor | null;
+  nextCursor: C | null;
   hasMore: boolean;
 };
 
-type Loader<T> = (options: {
-  cursor: ListCursor | null;
+type Loader<T, C> = (options: {
+  cursor: C | null;
   signal: AbortSignal;
-}) => Promise<CursorPage<T>>;
+}) => Promise<CursorPage<T, C>>;
 
-export function useInfiniteList<T extends { id: string }>(
+/** Cursor-backed Supabase/RPC queues: deduped pages, abort-safe resets, and explicit append state. */
+export function useInfiniteList<T extends { id: string }, C = ListCursor>(
   key: string,
-  loadPage: Loader<T>,
+  loadPage: Loader<T, C>,
 ) {
   const [items, setItems] = useState<T[]>([]);
-  const [cursor, setCursor] = useState<ListCursor | null>(null);
+  const [cursor, setCursor] = useState<C | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -65,6 +66,7 @@ export function useInfiniteList<T extends { id: string }>(
 
   return {
     items,
+    setItems,
     loading,
     loadingMore,
     hasMore,

@@ -74,6 +74,7 @@ import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
 import {
   createRfqCase,
   getSession,
+  getWorkspaceProfile,
   getWorkspaceOpsUnreadCount,
   getWorkspaceInvoiceDetail,
   getWorkspaceProduct,
@@ -98,9 +99,12 @@ import {
   type WorkspaceRfqQuote,
   type WorkspaceSelectedSupplier,
   type CopilotAgentResponse,
+  type WorkspaceProfile,
   updateRfqCase,
   uploadRfqAttachment,
 } from "./supabase";
+import { ProfileMenu } from "./profile-menu";
+import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { AppendSkeleton } from "./workspace-ui";
 import {
@@ -267,16 +271,6 @@ const defaultRfqFields: RfqFields = {
   budget: "",
   timeline: "",
 };
-
-type UserProfile = { username: string; name: string; role?: string };
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return (
-    parts.length > 1
-      ? `${parts[0][0]}${parts[parts.length - 1][0]}`
-      : parts[0]?.slice(0, 2) || "A"
-  ).toUpperCase();
-}
 
 type StackProps = {
   direction?: "row" | "column";
@@ -4455,11 +4449,13 @@ function WorkspaceProducts({
 
 function PlaceholderView({
   view,
+  onEditProfile,
 }: {
   view: Exclude<
     DashboardView,
     "dashboard" | "new" | "requests" | "products" | "invoices"
   >;
+  onEditProfile?: () => void;
 }) {
   const content = {
     products: [
@@ -4588,8 +4584,9 @@ function PlaceholderView({
                 Profile
               </Typography>
               <Typography sx={{ mt: 0.45, color: "#818894", fontSize: 13 }}>
-                Atelix Review · Brand owner
+                Keep the personal name and avatar shown in your messages current.
               </Typography>
+              {view === "settings" && <MuiButton variant="outlined" size="small" startIcon={<EditOutlined />} onClick={onEditProfile} sx={{ mt: 1.25 }}>Edit profile</MuiButton>}
             </Box>
             <Divider sx={{ borderColor: "#f0f0f2" }} />
             <Box>
@@ -5434,22 +5431,15 @@ export function Dashboard({ path }: { path: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [message, setMessage] = useState("");
-  const [profile, setProfile] = useState<UserProfile>({
-    username: "",
-    name: "Workspace",
-    role: "Buyer",
-  });
+  const [profile, setProfile] = useState<WorkspaceProfile>({ full_name: "Workspace", avatar_url: null, email: null });
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [rfq, setRfq] = useState<{
     record: WorkspaceRfq;
     attachments: RfqAttachment[];
     initialPhase?: RfqPhase;
   } | null>(null);
-  const [historyItems, setHistoryItems] = useState<StoredRfq[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [historyLoadingMore, setHistoryLoadingMore] = useState(false);
-  const historyCursor = useRef<{ updatedAt: string; id: string } | null>(null);
-  const historyHasMore = useRef(true);
-  const historyRequest = useRef(false);
+  const loadHistoryPage = useCallback(async ({ cursor }: { cursor: { updatedAt: string; id: string } | null; signal: AbortSignal }) => listRfqCasesPage({ cursor, limit: 40 }), []);
+  const { items: historyItems, setItems: setHistoryItems, loading: historyLoading, loadingMore: historyLoadingMore, hasMore: historyHasMore, loadMore: loadHistory } = useInfiniteList<StoredRfq>("workspace-rfq-requests", loadHistoryPage);
   const [rfqLoading, setRfqLoading] = useState(false);
   const [messageUnreadCount, setMessageUnreadCount] = useState<number | null>(null);
   const refreshMessageUnreadCount = useCallback(() => {
@@ -5462,11 +5452,8 @@ export function Dashboard({ path }: { path: string }) {
     void getSession()
       .then((session) => {
         if (!active) return;
-        const user = session?.user;
-        const name = String(
-          user?.user_metadata?.full_name || user?.email || "Workspace",
-        );
-        setProfile({ username: user?.email || "", name, role: "Buyer" });
+        if (!session) return;
+        void getWorkspaceProfile().then((next) => { if (active) setProfile(next); });
       })
       .catch(() => undefined);
     return () => {
@@ -5474,27 +5461,6 @@ export function Dashboard({ path }: { path: string }) {
     };
   }, []);
   useEffect(() => { refreshMessageUnreadCount(); }, [refreshMessageUnreadCount]);
-  const loadHistory = useCallback(async (append = false) => {
-    if (historyRequest.current || (append && !historyHasMore.current)) return;
-    historyRequest.current = true;
-    append ? setHistoryLoadingMore(true) : setHistoryLoading(true);
-    try {
-      const page = await listRfqCasesPage({ cursor: append ? historyCursor.current : null, limit: 40 });
-      setHistoryItems((current) => {
-        const source = append ? [...current, ...page.items] : page.items;
-        return Array.from(new Map(source.map((item) => [item.id, item])).values());
-      });
-      historyCursor.current = page.nextCursor;
-      historyHasMore.current = page.hasMore;
-    } catch (cause) {
-      setMessage(cause instanceof Error ? cause.message : "Could not load your RFQs.");
-    } finally {
-      historyRequest.current = false;
-      setHistoryLoading(false);
-      setHistoryLoadingMore(false);
-    }
-  }, []);
-  useEffect(() => { void loadHistory(); }, [loadHistory]);
   const requestDetailId = requestDetailIdFromPath(path);
   const messageCaseId = /^\/dashboard\/messages\/([^/]+)$/.exec(path)?.[1] || null;
   useEffect(() => {
@@ -5677,9 +5643,9 @@ export function Dashboard({ path }: { path: string }) {
       return (
         <WorkspaceRequests
           requests={historyItems}
-          hasMore={historyHasMore.current}
+          hasMore={historyHasMore}
           loadingMore={historyLoadingMore}
-          onLoadMore={() => { void loadHistory(true); }}
+          onLoadMore={() => { void loadHistory(); }}
           onOpen={(item) => {
             void restoreHistory(item);
           }}
@@ -5716,6 +5682,7 @@ export function Dashboard({ path }: { path: string }) {
               "dashboard" | "new" | "requests" | "products" | "invoices"
             >
           }
+          onEditProfile={() => setProfileEditorOpen(true)}
         />
       );
     return (
@@ -5819,25 +5786,9 @@ export function Dashboard({ path }: { path: string }) {
                     textOverflow: "ellipsis",
                   }}
                 >
-                  {profile.name}
+                  {profile.full_name}
                 </Typography>
-                <Tooltip
-                  title={`${profile.name}${profile.role ? ` · ${profile.role}` : ""}`}
-                >
-                  <Avatar
-                    aria-label={`Signed in as ${profile.name}`}
-                    sx={{
-                      width: 34,
-                      height: 34,
-                      flex: "0 0 auto",
-                      backgroundColor: "#e5e7eb",
-                      color: "#5d6672",
-                      fontSize: 13,
-                    }}
-                  >
-                    {initials(profile.name)}
-                  </Avatar>
-                </Tooltip>
+                <Tooltip title="Profile and account settings"><ProfileMenu profile={profile} onProfileChange={setProfile} editOpen={profileEditorOpen} onEditOpenChange={setProfileEditorOpen} /></Tooltip>
               </Box>
             </Box>
             <Box
