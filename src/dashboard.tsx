@@ -952,8 +952,8 @@ function CleanPromptComposer({
             transition:
               "border-color 180ms ease, box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
             "&:focus-within": {
-              borderColor: "#73917b",
-              boxShadow: "0 0 0 3px rgba(75,118,87,.14)",
+              borderColor: "#dfe3e8",
+              boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             },
           }}
         >
