@@ -2001,14 +2001,11 @@ function RfqDocumentPanel({
             ) : (
               <Stack
                 direction="row"
-                justifyContent="space-between"
+                justifyContent="flex-end"
                 alignItems="center"
                 spacing={1.5}
                 sx={{ pt: 3, flexWrap: "wrap" }}
               >
-                <Typography sx={{ color: "#687587", fontSize: 12 }}>
-                  Review every detail before sending this draft to Atelix.
-                </Typography>
                 {phase !== "submitted" &&
                   phase !== "matching" &&
                   phase !== "matched" && (
