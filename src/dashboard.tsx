@@ -48,7 +48,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Circle,
   Description,
   EditOutlined,
   ErrorOutlined,
@@ -109,8 +108,8 @@ import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { AppendSkeleton } from "./workspace-ui";
 import {
-  MiniStageTimeline,
   nextStepOwner,
+  RfqReviewPipeline,
   StageTimeline,
 } from "./dashboard-stage-timeline";
 import "./product-workspace.css";
@@ -167,9 +166,7 @@ type RfqPhase =
   | "drafting"
   | "review"
   | "editing"
-  | "submitted"
-  | "matching"
-  | "matched";
+  | "submitted";
 type RfqTab = "RFQ" | "Timeline" | "Quotes" | "Orders" | "Files";
 type RfqFields = {
   product: string;
@@ -257,11 +254,6 @@ const acceptedTypes = new Set([
 ]);
 const acceptedExtensions = /\.(jpe?g|png|webp|pdf)$/i;
 const maxFileSize = 25 * 1024 * 1024;
-const matchingChecks = [
-  "Brief saved to your Atelix workspace",
-  "Reference files attached securely",
-  "Atelix team review queued",
-];
 const defaultRfqFields: RfqFields = {
   product: "",
   quantity: "",
@@ -1635,6 +1627,7 @@ function RfqDocumentPanel({
   changedFields,
   preparing = false,
   actionPending = false,
+  justSubmitted = false,
 }: {
   phase: RfqPhase;
   fields: RfqFields;
@@ -1655,6 +1648,7 @@ function RfqDocumentPanel({
   changedFields: Array<keyof RfqFields>;
   preparing?: boolean;
   actionPending?: boolean;
+  justSubmitted?: boolean;
 }) {
   const editing = phase === "editing";
   const tabs: RfqTab[] = ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
@@ -1745,13 +1739,7 @@ function RfqDocumentPanel({
           <Skeleton variant="rounded" width={96} height={24} />
         ) : (
           <Chip
-            label={
-              phase === "matching" || phase === "matched"
-                ? "Submitted"
-                : editing
-                  ? "Editing"
-                  : "Ready to review"
-            }
+            label={justSubmitted ? "Submitted" : editing ? "Editing" : "Ready to review"}
             size="small"
             aria-busy={actionPending}
             sx={{
@@ -1932,9 +1920,7 @@ function RfqDocumentPanel({
                 Product Specifications
               </Typography>
               {!editing &&
-                phase !== "submitted" &&
-                phase !== "matching" &&
-                phase !== "matched" && (
+                phase !== "submitted" && (
                   <MuiButton
                     onClick={onEdit}
                     disabled={actionPending || preparing}
@@ -2007,309 +1993,25 @@ function RfqDocumentPanel({
                 spacing={1.5}
                 sx={{ pt: 3, flexWrap: "wrap" }}
               >
-                {phase !== "submitted" &&
-                  phase !== "matching" &&
-                  phase !== "matched" && (
-                    <MuiButton
-                      onClick={onSubmit}
-                      disabled={actionPending || preparing}
-                      aria-busy={actionPending}
-                      endIcon={<ArrowForward />}
-                      variant="contained"
-                      sx={{
-                        backgroundColor: "#4b7657",
-                        "&:hover": { backgroundColor: "#3d6548" },
-                      }}
-                    >
-                      Request RFQ Draft
-                    </MuiButton>
-                  )}
+                {phase !== "submitted" && (
+                  <MuiButton
+                    onClick={onSubmit}
+                    disabled={actionPending || preparing}
+                    aria-busy={actionPending}
+                    endIcon={<ArrowForward />}
+                    variant="contained"
+                    sx={{
+                      backgroundColor: "#4b7657",
+                      "&:hover": { backgroundColor: "#3d6548" },
+                    }}
+                  >
+                    Request RFQ Draft
+                  </MuiButton>
+                )}
               </Stack>
             )}
           </>
         )}
-      </Box>
-    </RoundedSurface>
-  );
-}
-
-function SupplierMap({ complete }: { complete: boolean }) {
-  return (
-    <Box
-      sx={{
-        position: "relative",
-        minHeight: { xs: 260, md: 320 },
-        overflow: "hidden",
-        border: "1px solid #dfe8e1",
-        borderRadius: "14px",
-        backgroundColor: "#f8fbf8",
-      }}
-    >
-      <Box
-        component="div"
-        role="img"
-        aria-label="A playful green route showing the brief moving through RFQ structuring, eligibility checks, and Atelix review."
-        sx={{
-          position: "absolute",
-          inset: 0,
-          display: "grid",
-          placeItems: "center",
-        }}
-      >
-        <motion.img
-          src="/assets/rfq-review-route.png"
-          alt=""
-          initial={{ opacity: 0, scale: 0.94 }}
-          animate={{ opacity: 1, scale: complete ? 1.02 : 1 }}
-          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-          style={{
-            display: "block",
-            width: "94%",
-            height: "auto",
-            maxWidth: 1080,
-          }}
-        />
-      </Box>
-    </Box>
-  );
-}
-
-function SupplierMatchingStage({
-  phase,
-  checkCount,
-  caseStatus,
-  onQuotes,
-}: {
-  phase: "matching" | "matched";
-  checkCount: number;
-  caseStatus: string;
-  onQuotes: () => void;
-}) {
-  const complete = phase === "matched";
-  return (
-    <RoundedSurface
-      sx={{
-        minHeight: { xs: 0, md: 610 },
-        p: { xs: 0, md: 0 },
-        border: 0,
-        borderRadius: 0,
-        backgroundColor: "transparent",
-      }}
-    >
-      <Box>
-        <Typography
-          sx={{
-            color: "#71917a",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-          }}
-        >
-          Supplier matching
-        </Typography>
-        <Typography
-          variant="h2"
-          sx={{
-            mt: 0.6,
-            color: "#202936",
-            fontWeight: 500,
-            letterSpacing: "-.035em",
-            fontSize: { xs: 24, md: 30 },
-          }}
-        >
-          {complete ? "Your RFQ has been matched" : "We’re matching your RFQ"}
-        </Typography>
-        <Typography
-          sx={{
-            maxWidth: 560,
-            mt: 1,
-            color: "#758091",
-            fontSize: 13.5,
-            lineHeight: 1.6,
-          }}
-        >
-          Your brief is checked against vetted supplier profiles and compliance
-          requirements. An Atelix reviewer confirms the shortlist before any
-          supplier is contacted.
-        </Typography>
-      </Box>
-      <Box sx={{ mt: 2.75 }}>
-        <SupplierMap complete={complete} />
-      </Box>
-      <Box
-        sx={{
-          mt: 3,
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", sm: "minmax(0,1fr) 300px" },
-          gap: 3.5,
-          alignItems: "stretch",
-        }}
-      >
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          <Typography
-            sx={{
-              color: "#8b978e",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-            }}
-          >
-            Compliance checks
-          </Typography>
-          <Stack spacing={1.15} sx={{ mt: 1.25 }}>
-            {matchingChecks.map((check, index) => (
-              <motion.div
-                key={check}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{
-                  opacity: index < checkCount || complete ? 1 : 0.38,
-                  x: 0,
-                }}
-                transition={{ duration: 0.24, delay: index * 0.04 }}
-              >
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Box
-                    sx={{
-                      display: "grid",
-                      placeItems: "center",
-                      width: 20,
-                      height: 20,
-                      color:
-                        index < checkCount || complete ? "#4b7657" : "#b8c8ba",
-                    }}
-                  >
-                    {index < checkCount || complete ? (
-                      <CheckCircle sx={{ fontSize: 19 }} />
-                    ) : (
-                      <Circle sx={{ fontSize: 13 }} />
-                    )}
-                  </Box>
-                  <Typography
-                    sx={{
-                      color:
-                        index < checkCount || complete ? "#4a5667" : "#9ba79d",
-                      fontSize: 13,
-                    }}
-                  >
-                    {check}
-                  </Typography>
-                </Stack>
-              </motion.div>
-            ))}
-          </Stack>
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1.5}
-            sx={{ mt: "auto", pt: 2.75 }}
-          >
-            <MuiButton
-              onClick={onQuotes}
-              disabled={!complete}
-              endIcon={<ArrowForward />}
-              variant="contained"
-              sx={{
-                backgroundColor: "#4b7657",
-                "&:hover": { backgroundColor: "#3d6548" },
-              }}
-            >
-              Track this request
-            </MuiButton>
-          </Stack>
-        </Box>
-        <Box
-          sx={{
-            p: 2,
-            border: "1px solid #e7ebf0",
-            borderRadius: "12px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <Typography
-            sx={{
-              color: "#8d98a5",
-              fontSize: 10.5,
-              fontWeight: 700,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-            }}
-          >
-            What happens next
-          </Typography>
-          <Box sx={{ mt: 1.5 }}>
-            <MiniStageTimeline status={caseStatus} />
-          </Box>
-        </Box>
-      </Box>
-    </RoundedSurface>
-  );
-}
-
-function SubmissionQueuedStage() {
-  return (
-    <RoundedSurface
-      role="status"
-      aria-live="polite"
-      sx={{
-        minHeight: { xs: 0, md: 610 },
-        p: { xs: 0, md: 0 },
-        border: 0,
-        borderRadius: 0,
-        backgroundColor: "transparent",
-      }}
-    >
-      <Box
-        sx={{
-          display: "grid",
-          minHeight: { xs: 430, md: 560 },
-          placeItems: "center",
-          px: { xs: 1, md: 4 },
-          py: 5,
-          textAlign: "center",
-        }}
-      >
-        <Box sx={{ maxWidth: 470 }}>
-          <Box aria-hidden="true" sx={{ position: "relative", width: 132, height: 104, mx: "auto", mb: 3 }}>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.72, rotate: -8, y: 10 }}
-              animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-              style={{ position: "absolute", inset: "13px 20px 11px", display: "grid", placeItems: "center", border: "1px solid #cfe0d2", borderRadius: 18, background: "#f4faf3", color: "#4b7657", transformOrigin: "center bottom" }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.7 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.28, duration: 0.38, ease: "easeOut" }}
-                style={{ display: "grid" }}
-              >
-                <CheckCircle sx={{ fontSize: 37 }} />
-              </motion.div>
-            </motion.div>
-            {[{ left: 4, top: 38, delay: 0 }, { right: 5, top: 19, delay: 0.08 }, { right: 14, bottom: 2, delay: 0.16 }].map((dot) => (
-              <motion.span
-                key={`${dot.left ?? dot.right}-${dot.top ?? dot.bottom}`}
-                animate={{ y: [0, -6, 0], opacity: [0.45, 1, 0.45] }}
-                transition={{ duration: 1.6, repeat: Infinity, delay: dot.delay, ease: "easeInOut" }}
-                style={{ position: "absolute", left: dot.left, right: dot.right, top: dot.top, bottom: dot.bottom, width: 8, height: 8, borderRadius: "50%", background: "#9bc477" }}
-              />
-            ))}
-          </Box>
-          <Typography sx={{ color: "#71917a", fontSize: 11, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" }}>
-            RFQ sent
-          </Typography>
-          <Typography variant="h2" sx={{ mt: 0.7, color: "#202936", fontWeight: 500, letterSpacing: "-.035em", fontSize: { xs: 26, md: 32 } }}>
-            Atelix has your brief
-          </Typography>
-          <Typography sx={{ mt: 1.2, color: "#758091", fontSize: 14, lineHeight: 1.65 }}>
-            Your draft is queued for a human review. We’ll check the details before any supplier is contacted.
-          </Typography>
-          <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1, mt: 2.5, px: 1.5, py: 1, border: "1px solid #dce9df", borderRadius: "10px", backgroundColor: "#fbfdfb", color: "#4b7657", fontSize: 12, fontWeight: 700 }}>
-            <CheckCircle sx={{ fontSize: 17 }} aria-hidden="true" />
-            Review queue updated
-          </Box>
-        </Box>
       </Box>
     </RoundedSurface>
   );
@@ -2993,6 +2695,7 @@ function phaseForPersistedStatus(status: string): RfqPhase {
 
 function RfqWorkspace({
   caseId,
+  caseNo,
   brief,
   initialFields,
   files,
@@ -3004,6 +2707,7 @@ function RfqWorkspace({
   onAgentDraftPatched,
 }: {
   caseId: string;
+  caseNo: string;
   brief: string;
   initialFields: RfqFields;
   files: RfqAttachment[];
@@ -3025,7 +2729,6 @@ function RfqWorkspace({
     restoredSubmitted ? "Timeline" : "RFQ",
   );
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
-  const [checkCount, setCheckCount] = useState(0);
   const [trackClicked, setTrackClicked] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
@@ -3088,29 +2791,6 @@ function RfqWorkspace({
       active = false;
     };
   }, [caseId, onMessage]);
-
-  useEffect(() => {
-    if (phase !== "submitted" || restoredSubmitted) return;
-    const timer = window.setTimeout(() => setPhase("matching"), 1500);
-    return () => window.clearTimeout(timer);
-  }, [phase, restoredSubmitted]);
-  useEffect(() => {
-    if (phase !== "matching") return;
-    setCheckCount(0);
-    const timer = window.setInterval(
-      () =>
-        setCheckCount((current) =>
-          Math.min(current + 1, matchingChecks.length),
-        ),
-      640,
-    );
-    return () => window.clearInterval(timer);
-  }, [phase]);
-  useEffect(() => {
-    if (phase !== "matching" || checkCount < matchingChecks.length) return;
-    const timer = window.setTimeout(() => setPhase("matched"), 350);
-    return () => window.clearTimeout(timer);
-  }, [phase, checkCount]);
 
   function startEdit() {
     setDraft(fields);
@@ -3317,24 +2997,16 @@ function RfqWorkspace({
   const draftingPhase =
     phase === "drafting" || phase === "review" || phase === "editing";
   const preparingDocument = phase === "drafting";
-  const showMatchingAnimation =
-    (phase === "matching" || phase === "matched") && !trackClicked;
+  const justSubmitted = phase === "submitted" && !restoredSubmitted;
   const baseStatus =
-    phase === "submitted" || phase === "matching" || phase === "matched"
+    phase === "submitted"
       ? status === "draft"
         ? "needs_research"
         : status
       : status;
   const caseStatus = statusOverride ?? baseStatus;
-  const rightPanel = phase === "submitted" && !restoredSubmitted ? (
-    <SubmissionQueuedStage />
-  ) : showMatchingAnimation ? (
-    <SupplierMatchingStage
-      phase={phase === "matched" ? "matched" : "matching"}
-      checkCount={checkCount}
-      caseStatus={caseStatus}
-      onQuotes={trackRequest}
-    />
+  const rightPanel = justSubmitted && !trackClicked ? (
+    <RfqReviewPipeline caseNo={caseNo} status={caseStatus} onTrack={trackRequest} />
   ) : (
     <RfqDocumentPanel
       phase={phase}
@@ -3355,6 +3027,7 @@ function RfqWorkspace({
       agentStatus={agentStatus}
       changedFields={changedFields}
       preparing={preparingDocument}
+      justSubmitted={justSubmitted}
       actionPending={documentActionPending}
     />
   );
@@ -5617,6 +5290,7 @@ export function Dashboard({ path }: { path: string }) {
         <RfqWorkspace
           key={rfq.record.id}
           caseId={rfq.record.id}
+          caseNo={rfq.record.case_no}
           brief={summary}
           initialFields={fieldsFromBrief(rfq.record.brief)}
           files={rfq.attachments}
