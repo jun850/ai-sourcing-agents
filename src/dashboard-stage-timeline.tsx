@@ -1,5 +1,6 @@
-import { Box, Typography } from "@mui/material";
-import { Check } from "@mui/icons-material";
+import { Box, Button, Typography } from "@mui/material";
+import { Check, ArrowForward } from "@mui/icons-material";
+import { motion, useReducedMotion } from "framer-motion";
 
 export type RfqStatus =
   | "draft"
@@ -93,14 +94,7 @@ export function StageTimeline({ status, onReviewDraft }: { status: string; onRev
   </Box>;
 }
 
-const MINI_STAGES = [
-  { key: "submitted", label: "Submitted" },
-  { key: "review", label: "Atelix review" },
-  { key: "outreach", label: "Supplier outreach" },
-  { key: "quotes", label: "Quotes for your decision" },
-] as const;
-
-function miniStageIndex(status: string): number {
+export function miniStageIndex(status: string): number {
   switch (status as RfqStatus) {
     case "needs_research": return 1;
     case "awaiting_supplier":
@@ -113,26 +107,133 @@ function miniStageIndex(status: string): number {
   }
 }
 
-/** Compact 4-step "what happens next" rail used on the post-submit matching screen (1d). */
-export function MiniStageTimeline({ status }: { status: string }) {
-  const current = miniStageIndex(status);
-  return <Box sx={{ display: "grid", gap: 0 }}>
-    {MINI_STAGES.map((stage, index) => {
-      const state = stageState(index, current);
-      const last = index === MINI_STAGES.length - 1;
-      return <Box key={stage.key} sx={{ display: "grid", gridTemplateColumns: "16px minmax(0,1fr)", columnGap: 1.35 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <Box sx={{ display: "grid", placeItems: "center", width: 16, height: 16, borderRadius: "50%", flexShrink: 0, backgroundColor: state === "done" ? "#4b7657" : "#fff", border: state === "current" ? "2px solid #4b7657" : state === "done" ? "0" : "2px solid #e0e4e9" }}>
-            {state === "done" && <Check sx={{ fontSize: 12, color: "#fff" }} />}
-            {state === "current" && <Box sx={{ width: 6, height: 6, borderRadius: "50%", backgroundColor: "#4b7657" }} />}
-          </Box>
-          {!last && <Box sx={{ flex: 1, width: "2px", minHeight: 16, backgroundColor: state === "done" ? "#dfe8e1" : "#eef0f3" }} />}
+type PipelineStage = {
+  key: string;
+  label: string;
+  owner: string;
+  activeOwner: string;
+  timing: string;
+};
+
+const PIPELINE_STAGES: PipelineStage[] = [
+  { key: "submitted", label: "Submitted", owner: "You · just now", activeOwner: "You · just now", timing: "RFQ saved in Requests" },
+  { key: "review", label: "Atelix review", owner: "Atelix ops", activeOwner: "Atelix ops · in progress", timing: "1–2 business days" },
+  { key: "outreach", label: "Supplier outreach", owner: "Atelix ops", activeOwner: "Atelix ops · in progress", timing: "1–5 business days" },
+  { key: "quotes", label: "Quotes for your decision", owner: "Waiting on you", activeOwner: "Waiting on you", timing: "" },
+];
+
+function PipelineStageMarker({ state, reduceMotion }: { state: StageState; reduceMotion: boolean }) {
+  if (state === "done") {
+    return <Box sx={{ display: "grid", placeItems: "center", width: 56, height: 56, borderRadius: "50%", backgroundColor: "#4b7657", border: "2px solid #4b7657", color: "#fff" }}>
+      <Check sx={{ fontSize: 22 }} />
+    </Box>;
+  }
+  if (state === "current") {
+    return <Box sx={{ position: "relative", display: "grid", placeItems: "center", width: 56, height: 56, borderRadius: "50%", backgroundColor: "#fff", border: "2px solid #4b7657" }}>
+      {!reduceMotion && [0, 1.4].map((delay) => (
+        <motion.span
+          key={delay}
+          aria-hidden="true"
+          style={{ position: "absolute", inset: -2, border: "2px solid #4b7657", borderRadius: "50%" }}
+          animate={{ scale: [1, 2.3], opacity: [0.5, 0] }}
+          transition={{ duration: 2.8, repeat: Infinity, ease: "easeOut", delay }}
+        />
+      ))}
+      <Box sx={{ width: 14, height: 14, borderRadius: "50%", backgroundColor: "#4b7657" }} />
+    </Box>;
+  }
+  return <Box sx={{ display: "grid", placeItems: "center", width: 56, height: 56, borderRadius: "50%", backgroundColor: "#fff", border: "2px solid #e6e9ec" }}>
+    <Box sx={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: "#d7dbe0" }} />
+  </Box>;
+}
+
+/** Full-width "RFQ sent" holding screen shown right after submission, before the buyer tracks the request. Progress reflects the case's real server status, not a simulated timer. */
+export function RfqReviewPipeline({
+  caseNo,
+  status,
+  onTrack,
+}: {
+  caseNo: string;
+  status: string;
+  onTrack: () => void;
+}) {
+  const current = Math.max(1, miniStageIndex(status));
+  const reduceMotion = Boolean(useReducedMotion());
+  return <Box>
+    <Box sx={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 3, flexWrap: "wrap", mb: { xs: 3, md: 4.5 } }}>
+      <Box sx={{ maxWidth: 640 }}>
+        <Typography sx={{ mb: 1, fontSize: 12, fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "#7f8d84" }}>
+          Request {caseNo} · sent
+        </Typography>
+        <Typography variant="h1" sx={{ mb: 1, fontSize: { xs: 26, md: 34 }, lineHeight: 1.15, fontWeight: 700, letterSpacing: "-.02em", color: "#121714" }}>
+          We're reviewing your RFQ
+        </Typography>
+        <Typography sx={{ fontSize: { xs: 14.5, md: 15.5 }, lineHeight: 1.55, color: "#536059" }}>
+          Nothing else is needed from you. An Atelix reviewer confirms the shortlist against your compliance requirements before any supplier is contacted.
+        </Typography>
+      </Box>
+      <Box sx={{ display: "inline-flex", alignItems: "center", gap: 1.1, px: 2, py: 1.1, border: "1px solid #dfe5e0", borderRadius: "999px", backgroundColor: "#fff", flexShrink: 0 }}>
+        <motion.span
+          aria-hidden="true"
+          style={{ width: 7, height: 7, borderRadius: "50%", background: "#4b7657" }}
+          animate={reduceMotion ? undefined : { opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#1d5a3c" }}>In progress</Typography>
+      </Box>
+    </Box>
+
+    <Box sx={{ p: { xs: 3, md: 5 }, pb: { xs: 2.5, md: 3.5 }, border: "1px solid #e6ebe6", borderRadius: "20px", backgroundColor: "#fff" }}>
+      <Box sx={{ position: "relative" }}>
+        <Box aria-hidden="true" sx={{ position: "absolute", top: 27, left: "12.5%", right: "12.5%", display: "flex", zIndex: 0 }}>
+          {PIPELINE_STAGES.slice(0, -1).map((stage, index) => {
+            const segmentActive = index === current - 1;
+            const segmentDone = index < current - 1;
+            return <Box key={stage.key} sx={{ position: "relative", flex: 1, height: "2px", backgroundColor: segmentDone || segmentActive ? "#cfe0d3" : "#eef0f3" }}>
+              {segmentActive && !reduceMotion && [0, 1.7].map((delay) => (
+                <motion.span
+                  key={delay}
+                  style={{ position: "absolute", top: -3, marginLeft: -4, width: 8, height: 8, borderRadius: "50%", background: "#4b7657" }}
+                  animate={{ left: ["0%", "100%"], opacity: [0, 1, 1, 0] }}
+                  transition={{ duration: 3.4, repeat: Infinity, ease: "linear", delay, times: [0, 0.12, 0.84, 1] }}
+                />
+              ))}
+            </Box>;
+          })}
         </Box>
-        <Box sx={{ pb: last ? 0 : 1.75 }}>
-          <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: state === "upcoming" ? "#9aa4b0" : "#202936" }}>{stage.label}</Typography>
-          {state === "current" && <Typography sx={{ mt: .25, fontSize: 11.5, fontWeight: 600, color: "#4b7657" }}>In progress</Typography>}
+
+        <Box sx={{ position: "relative", zIndex: 1, display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", columnGap: { xs: 1.5, md: 3 } }}>
+          {PIPELINE_STAGES.map((stage, index) => {
+            const state = stageState(index, current);
+            return <Box key={stage.key} sx={{ display: "grid", justifyItems: "center", textAlign: "center" }}>
+              <PipelineStageMarker state={state} reduceMotion={reduceMotion} />
+              <Typography sx={{ mt: 2.75, px: 1, fontSize: { xs: 12.5, md: 15 }, lineHeight: 1.3, fontWeight: 700, color: state === "upcoming" ? "#9aa4b0" : "#121714" }}>
+                {stage.label}
+              </Typography>
+              <Typography sx={{ mt: 0.9, fontSize: { xs: 11, md: 13 }, lineHeight: 1.4, fontWeight: state === "current" ? 700 : 500, color: state === "current" ? "#4b7657" : state === "done" ? "#758091" : "#b6bdc6" }}>
+                {state === "current" ? stage.activeOwner : stage.owner}
+              </Typography>
+              {stage.timing && <Typography sx={{ mt: 0.9, fontSize: 11.5, lineHeight: 1.4, color: state === "upcoming" ? "#b6bdc6" : "#7f8d84" }}>
+                {stage.timing}
+              </Typography>}
+            </Box>;
+          })}
         </Box>
-      </Box>;
-    })}
+      </Box>
+
+      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4, flexWrap: "wrap", mt: { xs: 4, md: 5 }, pt: 3.5, borderTop: "1px solid #eef0f3" }}>
+        <Typography sx={{ maxWidth: 460, fontSize: 13.5, lineHeight: 1.5, color: "#7f8d84" }}>
+          You'll be notified via Message for the next step within 48 hours.
+        </Typography>
+        <Button
+          onClick={onTrack}
+          endIcon={<ArrowForward />}
+          variant="contained"
+          sx={{ borderRadius: "999px", px: 3.5, py: 1.5, backgroundColor: "#1d5a3c", fontSize: 15, fontWeight: 700, textTransform: "none", "&:hover": { backgroundColor: "#16472f" } }}
+        >
+          Track this request
+        </Button>
+      </Box>
+    </Box>
   </Box>;
 }
