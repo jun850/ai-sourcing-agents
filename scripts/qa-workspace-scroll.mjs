@@ -13,7 +13,7 @@ const checks = [
   ["dashboard shell owns viewport height", files.dashboard.includes('height: "100dvh"')],
   ["main workspace owns vertical scrolling", files.responsive.includes(".workspace-shell__content") && files.responsive.includes("overflow-y: auto")],
   ["dashboard request cursor contract exists", files.supabase.includes("listRfqCasesPage") && files.dashboard.includes("IntersectionObserver")],
-  ["RFQ Operations conversation cursor appends", files.messages.includes("conversationCursor") && files.messages.includes("loadConversations(true)")],
+  ["RFQ Operations conversation cursor appends", files.messages.includes("useInfiniteList") && files.messages.includes("conversationSentinel") && files.messages.includes("loadMoreConversations")],
   ["chat does not unconditionally jump to bottom", !files.dashboard.includes("node.scrollTop = node.scrollHeight")],
   ["shell avoids width layout animation", !files.dashboard.includes('transition: "width 220ms ease"')],
   ["sourcing-agent product rule is documented", files.product.includes("not retail-commerce") && files.design.includes("never as a retail-commerce surface")],

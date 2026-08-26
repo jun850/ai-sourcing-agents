@@ -1139,14 +1139,17 @@ function ConversationChatPanel({
         display: "flex",
         alignSelf: "stretch",
         flexDirection: "column",
+        position: { md: "sticky" },
+        top: { md: 2 },
         height: {
           xs: "min(440px, calc(100dvh - 120px))",
-          md: "100%",
+          md: "min(760px, calc(100dvh - 176px))",
         },
         minHeight: {
           xs: "min(340px, calc(100dvh - 120px))",
-          md: 480,
+          md: "min(480px, calc(100dvh - 176px))",
         },
+        minWidth: 0,
         overflow: "hidden",
         border: 0,
         borderRadius: 0,
@@ -1155,6 +1158,9 @@ function ConversationChatPanel({
     >
       <Box
         ref={messageListRef}
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
         sx={{
           display: "flex",
           flexDirection: "column",
@@ -1166,6 +1172,29 @@ function ConversationChatPanel({
           overflowY: "auto",
         }}
         >
+        {newMessagesBelow && (
+          <MuiButton
+            size="small"
+            onClick={() => {
+              const node = messageListRef.current;
+              if (!node) return;
+              node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
+              setNewMessagesBelow(false);
+            }}
+            sx={{
+              position: "sticky",
+              top: 0,
+              zIndex: 1,
+              alignSelf: "center",
+              flexShrink: 0,
+              px: 1.5,
+              backgroundColor: "#fff",
+              boxShadow: "0 2px 6px rgba(32, 41, 54, 0.1)",
+            }}
+          >
+            New messages
+          </MuiButton>
+        )}
         {loading ? (
           <Stack spacing={1.5} aria-hidden="true" sx={{ pt: 0.5 }}>
             <Skeleton variant="text" width={76} sx={{ fontSize: 12 }} />
@@ -1183,18 +1212,21 @@ function ConversationChatPanel({
                   duration: 0.24,
                   delay: index === messages.length - 1 ? 0.08 : 0,
                 }}
+                style={{ display: "flex", flexDirection: "column" }}
               >
                 <Box
                   sx={{
                     alignSelf: message.from === "You" ? "flex-end" : "flex-start",
-                    maxWidth: message.from === "You" ? "84%" : "68ch",
+                    maxWidth: message.from === "You" ? "84%" : "min(84%, 68ch)",
                     ml: message.from === "You" ? "auto" : 0,
-                    px: message.from === "You" ? { xs: 1.75, md: 2.25 } : 0,
-                    py: message.from === "You" ? { xs: 1.25, md: 1.5 } : 0,
+                    px: { xs: 1.75, md: 2.25 },
+                    py: { xs: 1.25, md: 1.5 },
                     borderRadius:
-                      message.from === "You" ? "16px 16px 4px 16px" : 0,
+                      message.from === "You" ? "16px 16px 4px 16px" : "4px 16px 16px 16px",
                     backgroundColor:
-                      message.from === "You" ? "#f0f1f3" : "transparent",
+                      message.from === "You" ? "#f0f1f3" : "#fff",
+                    boxShadow:
+                      message.from === "You" ? "none" : "0 4px 10px rgba(32, 41, 54, 0.06)",
                     color: "#202936",
                   }}
                 >
@@ -1265,20 +1297,6 @@ function ConversationChatPanel({
               </motion.div>
             ))}
           </AnimatePresence>
-        )}
-        {newMessagesBelow && (
-          <MuiButton
-            size="small"
-            onClick={() => {
-              const node = messageListRef.current;
-              if (!node) return;
-              node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
-              setNewMessagesBelow(false);
-            }}
-            sx={{ alignSelf: "center", flexShrink: 0, mt: 1 }}
-          >
-            New messages
-          </MuiButton>
         )}
         {busy && (
           <Box

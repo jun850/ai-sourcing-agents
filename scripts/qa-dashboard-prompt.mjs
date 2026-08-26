@@ -11,12 +11,17 @@ const conversation = dashboard.slice(
   conversationStart,
   dashboard.indexOf('component="textarea"', conversationStart),
 );
+const conversationPanel = dashboard.slice(
+  dashboard.indexOf("function ConversationChatPanel"),
+  dashboard.indexOf("function RfqField"),
+);
 
 const forbidden = [
   ["clean prompt bordered surface", /border:\s*["']1px solid/ , cleanPrompt],
   ["conversation bordered surface", /border:\s*["']1px solid/ , conversation],
   ["clean prompt green focus outline", /\.clean-prompt-form \.MuiPaper-root:focus-within\s*\{\s*outline:/, responsive],
   ["conversation green focus outline", /\.conversation-composer:focus-within\s*\{\s*outline:/, responsive],
+  ["conversation assistant bubble has no bounded visual surface", /message\.from === "You" \? "#f0f1f3" : "transparent"/, conversationPanel],
 ];
 
 for (const [label, pattern, source] of forbidden) {
@@ -36,4 +41,15 @@ for (const selector of [
   }
 }
 
-console.log("ok - dashboard prompt and authenticated composer remain borderless");
+for (const [label, expected] of [
+  ["conversation panel remains viewport-bounded on desktop", 'md: "min(760px, calc(100dvh - 176px))"'],
+  ["conversation panel remains visible beside a long RFQ", 'position: { md: "sticky" }'],
+  ["conversation history announces new messages", 'aria-relevant="additions text"'],
+]) {
+  if (!conversationPanel.includes(expected)) {
+    console.error(`fail - missing ${label}`);
+    process.exit(1);
+  }
+}
+
+console.log("ok - dashboard prompt, conversation visibility, and authenticated composer remain hardened");

@@ -103,8 +103,24 @@ function compactFields(value: unknown) {
 async function append(admin: any, caseId: string, profileId: string, role: "buyer" | "agent", content: string) {
   return await admin.rpc("agent_rfq_record_thread_message", { p_case_id: caseId, p_profile_id: profileId, p_role: role, p_content: content });
 }
-async function finish(admin: any, turnId: string, result: Record<string, unknown>, status: "settled" | "unavailable" | "failed" = "settled") {
-  await admin.from("agent_rfq_turns").update({ status, agent_reply: text(result.reply, 900), kind: result.kind, saved_patch: result.savedPatch, response: result, completed_at: new Date().toISOString() }).eq("id", turnId);
+async function finish(
+  admin: any,
+  turnId: string,
+  result: Record<string, unknown>,
+  status: "settled" | "unavailable" | "failed" = "settled",
+  fallbackReason: string | null = null,
+  startedAt?: number,
+) {
+  await admin.from("agent_rfq_turns").update({
+    status,
+    agent_reply: text(result.reply, 900),
+    kind: result.kind,
+    saved_patch: result.savedPatch,
+    response: result,
+    fallback_reason: fallbackReason,
+    latency_ms: typeof startedAt === "number" ? Date.now() - startedAt : null,
+    completed_at: new Date().toISOString(),
+  }).eq("id", turnId);
 }
 
 // Legacy function routes delegate here. All supplier, invoice, order, and
@@ -142,7 +158,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   const buyerWrite = await append(admin, rfqCaseId, user.id, "buyer", message);
   if (buyerWrite.error) {
     const result = output("unavailable", "I couldn’t save that message safely. Please try again.", revision);
-    await finish(admin, turn.id, result, "failed"); return reply(result, 503);
+    await finish(admin, turn.id, result, "failed", "message_persist_failed", startedAt); return reply(result, 503);
   }
 
   if (action === "undo") {
@@ -151,19 +167,21 @@ export async function handleBrokerRfqAgent(request: Request) {
     const result = error
       ? output("unavailable", "I can’t safely undo that change because the RFQ has changed since then. Your latest saved details are still intact.", revision)
       : output("draft_updated", "I restored the previous RFQ details. You can keep refining the draft whenever you’re ready.", Number(undone?.revision || revision), { savedPatch: undone?.restoredFields || null, changedFields: Object.keys(undone?.restoredFields || {}).filter((key) => FIELDS.includes(key as Field)) });
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, error ? "unavailable" : "settled");
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, error ? "unavailable" : "settled", error ? "undo_conflict" : null, startedAt);
     return reply(result, error ? 409 : 200);
   }
 
   const apiKey = Deno.env.get("OPENROUTER_API_KEY"); const model = Deno.env.get("OPENROUTER_MODEL");
-  if (Deno.env.get("AGENTIC_RFQ_ENABLED") !== "true" || !apiKey || model !== PRESET) {
+  const agenticEnabled = Deno.env.get("AGENTIC_RFQ_ENABLED") === "true";
+  if (!agenticEnabled || !apiKey || model !== PRESET) {
     const result = output("unavailable", "I can save and show your RFQ details, but conversational AI is not available right now. A member of the Atelix team can still review your draft.", revision);
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result);
+    const fallbackReason = !agenticEnabled ? "agent_disabled" : !apiKey ? "provider_key_missing" : "preset_mismatch";
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable", fallbackReason, startedAt); return reply(result);
   }
   const { data: budget, error: budgetError } = await admin.rpc("agent_rfq_reserve_budget", { p_profile_id: user.id, p_turn_id: turn.id, p_reservation_microusd: 10000 });
   if (budgetError || !budget?.allowed) {
     const result = output("unavailable", "You’ve reached this month’s conversational AI budget. Your RFQ is still available to edit, and I can help route payment or order questions to our team.", revision);
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result);
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable", "budget_exhausted", startedAt); return reply(result);
   }
 
   const { data: knowledge } = await admin.rpc("agent_rfq_retrieve_knowledge", { p_query: message, p_visibility: "buyer-safe", p_limit: 6 });
@@ -194,7 +212,7 @@ export async function handleBrokerRfqAgent(request: Request) {
     await admin.rpc("agent_rfq_settle_budget", { p_turn_id: turn.id, p_reported_cost_microusd: null, p_countable: false });
     const handoff = operational(message);
     const result = output(handoff ? "support_handoff" : "unavailable", handoff ? "I can’t verify that payment or order detail right now. Please contact info@arcanawangsa.com and our team will clarify it." : "I couldn’t complete that check right now. Your message and RFQ draft were saved safely; please try again shortly.", revision, { supportHandoff: handoff });
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable"); return reply(result, 503);
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable", "provider_unavailable", startedAt); return reply(result, 503);
   }
   const usage = completion?.usage;
   let modelResult: ReturnType<typeof parse>;
@@ -213,10 +231,12 @@ export async function handleBrokerRfqAgent(request: Request) {
   const { error: settlementError } = await admin.rpc("agent_rfq_settle_budget", { p_turn_id: turn.id, p_reported_cost_microusd: microusd(usage), p_resolved_model: text(completion?.model, 240) || PRESET, p_provider: text(completion?.provider, 240) || null, p_input_tokens: Number.isInteger(usage?.prompt_tokens) ? usage.prompt_tokens : null, p_output_tokens: Number.isInteger(usage?.completion_tokens) ? usage.completion_tokens : null, p_countable: countable });
   if (settlementError) {
     const result = output("unavailable", "I couldn’t verify the usage record safely, so I left your RFQ unchanged. Please try again later.", revision);
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "failed"); return reply(result, 503);
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "failed", "usage_settlement_failed", startedAt); return reply(result, 503);
   }
   const handoff = operational(message) && ((!compact.operation?.invoice && !compact.operation?.order) || modelResult.supportHandoff);
   let result = output(handoff ? "support_handoff" : modelResult.kind, handoff ? "I don’t have a verified payment or order record for that yet. Please contact info@arcanawangsa.com and our team will clarify it for you." : modelResult.reply, revision, { verificationStatus: modelResult.verificationStatus, supportHandoff: handoff, options: handoff ? null : modelResult.options });
+  let terminalStatus: "settled" | "unavailable" = "settled";
+  let fallbackReason = modelResult.verificationStatus === "response rejected" ? "structured_output_rejected" : null;
   if (modelResult.patch && !handoff && !readOnlyRfqQuestion(message)) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: modelResult.patch, p_turn_id: turn.id });
     result = error
@@ -225,9 +245,12 @@ export async function handleBrokerRfqAgent(request: Request) {
       // about one that's still missing, so the pending options survive the
       // kind flipping to draft_updated once the patch is applied.
       : output("draft_updated", modelResult.reply, Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || modelResult.patch, changedFields: applied?.changedFields || Object.keys(modelResult.patch), undoToken: applied?.undoToken || null, verificationStatus: modelResult.verificationStatus, options: modelResult.options });
+    if (error) {
+      terminalStatus = "unavailable";
+      fallbackReason = "revision_conflict";
+    }
   }
   await append(admin, rfqCaseId, user.id, "agent", result.reply);
-  await finish(admin, turn.id, result);
-  await admin.from("agent_rfq_turns").update({ latency_ms: Date.now() - startedAt, fallback_reason: modelResult.verificationStatus === "response rejected" ? "structured_output_rejected" : null }).eq("id", turn.id);
+  await finish(admin, turn.id, result, terminalStatus, fallbackReason, startedAt);
   return reply(result);
 }
