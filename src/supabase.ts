@@ -189,6 +189,23 @@ export type RfqOpsMessagePage = {
   messages: RfqOpsMessage[];
   next_before: RfqOpsCursor | null;
 };
+export type NotificationCenterItem = {
+  id: string;
+  source: "notification" | "rfq_message";
+  kind: string;
+  title: string;
+  body: string;
+  href: string;
+  read_at: string | null;
+  created_at: string;
+  rfq_case_id: string | null;
+  sent: boolean;
+};
+export type NotificationCenterOptions = {
+  query?: string;
+  state?: "all" | "unread" | "read";
+  sort?: "newest" | "oldest";
+};
 export type WorkspaceProduct = {
   id: string;
   sku: string;
@@ -1100,6 +1117,28 @@ export async function getWorkspaceOpsUnreadCount() {
   return data as { unread_count: number };
 }
 
+export async function getWorkspaceNotificationUnreadCount() {
+  const { data, error } = await client().rpc("workspace_notification_unread_count");
+  rpcError(error);
+  return Number(data) || 0;
+}
+export async function getWorkspaceNotificationCenter(options: NotificationCenterOptions = {}) {
+  const { data, error } = await client().rpc("workspace_notification_center", {
+    p_query: options.query?.trim() || null,
+    p_state: options.state ?? "all",
+    p_sort: options.sort ?? "newest",
+    p_limit: 80,
+  });
+  rpcError(error);
+  return (data ?? []) as NotificationCenterItem[];
+}
+export async function markNotificationsRead(ids: string[]) {
+  if (!ids.length) return 0;
+  const { data, error } = await client().rpc("mark_notifications_read", { p_ids: ids });
+  rpcError(error);
+  return Number(data) || 0;
+}
+
 export async function listWorkspaceOpsMessages(
   conversationId: string,
   options: RfqOpsListOptions = {},
@@ -1300,6 +1339,17 @@ export async function getIntoolsBuyerConversation(rfqCaseId: string) {
 }
 export async function getIntoolsBuyerUnreadCount() {
   return intoolsRpc<{ unread_count: number }>("intools_get_buyer_unread_count");
+}
+export async function getIntoolsNotificationUnreadCount() {
+  return intoolsRpc<number>("intools_notification_unread_count").then((value) => Number(value) || 0);
+}
+export async function getIntoolsNotificationCenter(options: NotificationCenterOptions = {}) {
+  return intoolsRpc<NotificationCenterItem[]>("intools_notification_center", {
+    p_query: options.query?.trim() || null,
+    p_state: options.state ?? "all",
+    p_sort: options.sort ?? "newest",
+    p_limit: 80,
+  }).then((value) => value ?? []);
 }
 export async function listIntoolsBuyerMessages(
   conversationId: string,

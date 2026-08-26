@@ -95,6 +95,7 @@ import {
 } from "./supabase";
 import { IntoolsSuppliers } from "./intools-suppliers";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
+import { NotificationBell } from "./notification-bell";
 
 const intoolsTheme = createTheme({
   typography: {
@@ -3417,6 +3418,7 @@ export function Intools() {
                 Administrator
               </Typography>
             </Box>
+            <NotificationBell mode="intools" onNavigate={navigate} />
             <Tooltip
               title={`${operatorName || "Administrator"} · Private administrator workspace`}
             >

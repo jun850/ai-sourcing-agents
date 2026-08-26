@@ -104,6 +104,7 @@ import {
   uploadRfqAttachment,
 } from "./supabase";
 import { ProfileMenu } from "./profile-menu";
+import { NotificationBell } from "./notification-bell";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { AppendSkeleton } from "./workspace-ui";
@@ -5803,6 +5804,7 @@ export function Dashboard({ path }: { path: string }) {
                 >
                   {profile.full_name}
                 </Typography>
+                <NotificationBell mode="buyer" onNavigate={navigate} />
                 <Tooltip title="Profile and account settings"><ProfileMenu profile={profile} onProfileChange={setProfile} editOpen={profileEditorOpen} onEditOpenChange={setProfileEditorOpen} /></Tooltip>
               </Box>
             </Box>

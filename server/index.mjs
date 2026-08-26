@@ -47,6 +47,7 @@ const allowedRpcs = new Set([
   "intools_list_buyer_messages", "intools_send_buyer_message",
   "rfq_ops_get_message",
   "intools_mark_buyer_conversation_read", "intools_get_buyer_unread_count",
+  "intools_notification_center", "intools_notification_unread_count",
   "intools_reserve_buyer_upload",
   "intools_list_agent_knowledge", "intools_create_agent_knowledge_version",
   "intools_publish_agent_knowledge_version", "intools_archive_agent_knowledge_document",

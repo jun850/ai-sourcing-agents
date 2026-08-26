@@ -130,6 +130,8 @@ for (const rpc of [
   "intools_send_buyer_message",
   "intools_mark_buyer_conversation_read",
   "intools_get_buyer_unread_count",
+  "intools_notification_center",
+  "intools_notification_unread_count",
 ]) {
   check(new RegExp(`\\\"${rpc}\\\"`).test(serverSource), `server local Intools allowlist must include ${rpc}`);
 }
