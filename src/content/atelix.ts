@@ -865,7 +865,7 @@ export const atelixContent = {
     wordmarkPunctuation: ".",
     wordmarkHref: "/",
     description: "Connecting global brand owners with Asia suppliers.",
-    addressLines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"],
+    addressLines: ["ARCANA KENCANA WANGSA", "240 Gordon Street, VIC, Australia", "Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"],
     addressEmail: "info@arcanawangsa.com",
     linkGroups: [
       {
