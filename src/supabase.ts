@@ -21,6 +21,20 @@ export const supabase = isSupabaseConfigured
     })
   : null;
 
+const AUTH_SESSION_TIMEBOX_MS = 24 * 60 * 60 * 1000;
+const AUTH_SESSION_STARTED_AT_KEY = "atelix.auth.session-started-at";
+const authSessionStorage = () => { try { return window.localStorage; } catch { return null; } };
+const startAuthSessionWindow = () => authSessionStorage()?.setItem(AUTH_SESSION_STARTED_AT_KEY, String(Date.now()));
+const clearAuthSessionWindow = () => authSessionStorage()?.removeItem(AUTH_SESSION_STARTED_AT_KEY);
+const authSessionWindowExpired = () => {
+  const startedAt = Number(authSessionStorage()?.getItem(AUTH_SESSION_STARTED_AT_KEY));
+  return Number.isFinite(startedAt) && startedAt > 0 && Date.now() - startedAt >= AUTH_SESSION_TIMEBOX_MS;
+};
+supabase?.auth.onAuthStateChange((event, session) => {
+  if (event === "SIGNED_IN" && session) startAuthSessionWindow();
+  if (event === "SIGNED_OUT" || !session) clearAuthSessionWindow();
+});
+
 export type WorkspaceRfq = {
   id: string;
   case_no: string;
@@ -621,6 +635,9 @@ function rpcError(error: { message: string } | null) {
 export async function getSession(): Promise<Session | null> {
   const { data, error } = await client().auth.getSession();
   rpcError(error);
+  if (!data.session) { clearAuthSessionWindow(); return null; }
+  if (authSessionWindowExpired()) { await client().auth.signOut(); clearAuthSessionWindow(); return null; }
+  if (!authSessionStorage()?.getItem(AUTH_SESSION_STARTED_AT_KEY)) startAuthSessionWindow();
   return data.session;
 }
 export async function getUserDisplayName(user: User): Promise<string> {
