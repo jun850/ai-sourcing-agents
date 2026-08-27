@@ -11,10 +11,16 @@ additional_redirect_urls = [
 enable_confirmations = false
 double_confirm_changes = false
 
+[auth.sessions]
+timebox = "24h"
+
 [functions.stripe-webhook]
 verify_jwt = false
 
 [functions.request-magic-link]
+verify_jwt = false
+
+[functions.approve-registration]
 verify_jwt = false
 
 [functions.rfq-ops-reminder-dispatch]

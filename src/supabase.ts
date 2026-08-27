@@ -1418,9 +1418,11 @@ export async function assertIntoolsAdmin() {
   rpcError(error);
 }
 export async function approveRegistrationRequest(requestId: string) {
-  return intoolsRpc<IntoolsRegistrationRequest>("approve_registration_request", {
-    p_request_id: requestId,
+  const { data, error } = await client().functions.invoke("approve-registration", {
+    body: { requestId },
   });
+  rpcError(error);
+  return data as IntoolsRegistrationRequest;
 }
 export async function listIntoolsSuppliers() {
   return intoolsRpc<IntoolsSupplier[]>("intools_list_suppliers");
