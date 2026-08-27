@@ -683,6 +683,19 @@ export async function signInWithMagicLink(email: string, redirectTo: string) {
   });
   rpcError(error);
 }
+// Accessible fallback for the same email: the magic-link message also carries a
+// six-digit code. Verifying it completes the identical Supabase session; it is
+// never a second account path and cannot create a missing user.
+export async function verifyEmailOtp(email: string, token: string) {
+  const { data, error } = await client().auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token: token.trim(),
+    type: "email",
+  });
+  rpcError(error);
+  if (!data.session) throw new Error("That code is incorrect or has expired.");
+  return data.session;
+}
 export async function signOut() {
   const { error } = await client().auth.signOut();
   rpcError(error);
