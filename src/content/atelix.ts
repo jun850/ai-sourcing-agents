@@ -279,13 +279,19 @@ export type FooterLinkGroup = {
   links: readonly NavigationLink[];
 };
 
+export type FooterAddressGroup = {
+  country: string;
+  lines: readonly string[];
+};
+
 export type FooterContent = {
   heading: string;
   wordmark: string;
   wordmarkPunctuation: string;
   wordmarkHref: string;
   description: string;
-  addressLines: readonly string[];
+  companyName: string;
+  addressGroups: readonly FooterAddressGroup[];
   addressEmail: string;
   linkGroups: readonly FooterLinkGroup[];
   newsletter: {
@@ -865,7 +871,11 @@ export const atelixContent = {
     wordmarkPunctuation: ".",
     wordmarkHref: "/",
     description: "Connecting global brand owners with Asia suppliers.",
-    addressLines: ["ARCANA KENCANA WANGSA", "240 Gordon Street, VIC, Australia", "Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"],
+    companyName: "ARCANA KENCANA WANGSA",
+    addressGroups: [
+      { country: "Australia", lines: ["240 Gordon Street, VIC, Australia"] },
+      { country: "Indonesia", lines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"] },
+    ],
     addressEmail: "info@arcanawangsa.com",
     linkGroups: [
       {
