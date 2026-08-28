@@ -161,10 +161,11 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   inside one fixed-height inbox. The composer remains pinned to the thread's
   bottom edge while browsing either list, matching the durable chat posture of
   an operations inbox.
-- Message party is encoded by consistent position, a text author label, and
-  controlled bubble color: buyer messages are warm yellow on the right; Atelix
-  Operations messages are white on the left with a compact identifying avatar.
-  The mapping is stable in both buyer and Intools workspaces.
+- Message party is encoded by consistent position and controlled bubble color:
+  buyer messages are warm yellow on the right with a tight lower-right corner;
+  Atelix Operations messages are white on the left with a soft shadow and a
+  tight upper-left corner. The thread header carries the `AO` avatar and RFQ
+  reference. The mapping is stable in both buyer and Intools workspaces.
 - Conversation updates arrive on authorized private Broadcast channels and do
   not reset, poll, or reload the visible thread. The same buyer/Operations
   mapping applies to historical and live rows; the local operations seam joins

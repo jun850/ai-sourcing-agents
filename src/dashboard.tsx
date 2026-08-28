@@ -5105,25 +5105,36 @@ export function Dashboard({ path }: { path: string }) {
                 width: "100%",
                 minWidth: 0,
                 boxSizing: "border-box",
+                ...(view === "messages"
+                  ? {
+                      overflowY: { xs: "auto", md: "hidden" },
+                      display: "flex",
+                      flexDirection: "column",
+                    }
+                  : {}),
               }}
             >
-              <Box
-                sx={{
-                  width: "100%",
-                  maxWidth: workspaceOpen
-                    ? "none"
-                    : {
-                          xs: "calc(100vw - 32px)",
-                          sm: "min(1060px, calc(100% - 48px))",
-                        },
-                  px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0,
-                  mx: "auto",
-                  py: { xs: 3, sm: 4, md: 5 },
-                  boxSizing: "border-box",
-                }}
-              >
-                {content()}
-              </Box>
+              {view === "messages" ? (
+                content()
+              ) : (
+                <Box
+                  sx={{
+                    width: "100%",
+                    maxWidth: workspaceOpen
+                      ? "none"
+                      : {
+                            xs: "calc(100vw - 32px)",
+                            sm: "min(1060px, calc(100% - 48px))",
+                          },
+                    px: workspaceOpen ? { xs: 2, sm: 3, md: 4 } : 0,
+                    mx: "auto",
+                    py: { xs: 3, sm: 4, md: 5 },
+                    boxSizing: "border-box",
+                  }}
+                >
+                  {content()}
+                </Box>
+              )}
             </Box>
             {message && (
               <Box

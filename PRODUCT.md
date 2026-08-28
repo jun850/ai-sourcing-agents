@@ -137,14 +137,15 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   thread scroll independently while the thread composer stays visible at the
   bottom of its pane. Choosing a request replaces the thread without moving the
   surrounding workspace or hiding the composer.
-- Message authorship is structural as well as textual: buyer messages are warm
-  and right-aligned; Atelix Operations messages are white and left-aligned with
-  an identifying avatar in both buyer and Intools views.
+- Message authorship is structural: buyer messages are warm and right-aligned;
+  Atelix Operations messages are white and left-aligned. The thread header
+  carries the Atelix Operations avatar and RFQ reference; the party mapping is
+  the same in the buyer and Intools views.
 - An open conversation behaves as live chat: private, RFQ-scoped Supabase
   Broadcast delivery appends new messages without a page refresh or polling.
   Existing history uses the same party mapping, and attachment enrichment never
   replaces the active thread.
-- Buyer-authored message labels use the buyer's personal profile name, not the
+- Buyer message context uses the buyer's personal profile name, not the
   company name attached to the sourcing case.
 - An unanswered buyer message reminds `info@arcanawangsa.com` after five hours;
   an unanswered Operations message reminds the buyer’s authenticated email.
