@@ -54,20 +54,24 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   Questions alone never mutate the RFQ. Submitted RFQs remain read-only to the
   agent. If authoritative payment or order context is unavailable, the agent
   directs the buyer to `info@arcanawangsa.com` rather than guessing.
-- Requests are the durable RFQ index and timeline entry point. Products are
-  buyer-owned immutable order-item snapshots, never a catalogue browse surface.
+- The buyer workspace has four surfaces: Home (the prompt), Requests, Messages,
+  and Invoices. There is no Products surface; immutable order-item snapshots and
+  order history are read inside the owning RFQ's Timeline and Quotes tabs and in
+  the linked invoice, never as a catalogue browse surface.
+- Requests are the durable RFQ index and timeline entry point.
 - Opening an RFQ from Requests keeps the request-scoped route and Requests
   navigation selection active, including on a direct/deep link.
-- The Products workspace groups those snapshots by operational stage and supports
-  search, supplier filtering, sorting, deep-linked read-only detail, linked-RFQ
-  navigation, invoice handoff, and a reorder action that only pre-fills a fresh
-  RFQ draft. It never sends a supplier request from the product surface.
-- Products use a dense desktop table that reflows into labelled structured rows
-  on narrow screens. Product detail keeps the immutable snapshot and order
-  history in the main column and the current stage, invoice/RFQ handoff, and
-  guarded reorder action in a secondary rail.
+- A reorder is only ever a fresh RFQ draft pre-filled from a prior request; the
+  workspace never sends a supplier request from a read-only record surface.
+- The workspace top bar has one command palette ("Search everything", Cmd/Ctrl+K):
+  quick navigation actions, recent requests, and free-text search over the
+  buyer's own RFQ cases and invoices through the guarded `workspace_search` RPC.
+  Results are navigational only; the palette never surfaces supplier, price, MOQ,
+  certification, capacity, availability, quote, or payment facts.
 - Invoices continue through workspace invoice RPCs and Stripe Checkout; the
   browser may request checkout but cannot set totals or settlement state.
+- Legacy `/dashboard/products` links redirect to Requests; the retired product
+  catalogue and its Algolia index are not reintroduced.
 - Sign-up submissions are stored as Supabase `registration_requests` in
   `pending_review`; Intools exposes the queue and approval action only after
   the server confirms an administrator role.
@@ -109,14 +113,19 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   records exist, and the assistant presents drafting progress only, never
   invented supplier or commercial facts.
 - Authenticated interactions are sourcing-agent interactions, not retail-commerce
-  interactions. Requests are operational cases, products are immutable order
-  snapshots, suppliers are reviewed private records, and queues expose the
-  next sourcing decision. Do not introduce browsing, storefront, seller,
-  cart, wishlist, recommendation, or shopping metaphors.
+  interactions. Requests are operational cases, order-item snapshots stay inside
+  their RFQ and invoice records, suppliers are reviewed private records, and
+  queues expose the next sourcing decision. Do not introduce browsing, storefront,
+  seller, cart, wishlist, recommendation, product-catalogue, or shopping metaphors.
 - The buyer dashboard is conversational-first, similar to a ChatGPT-style
   drafting workspace beside a live RFQ document. Agent output remains a draft
   aid and must distinguish supplied facts, missing evidence, and human review;
   it never invents supplier or commercial truth.
+- The Home prompt may show one bounded, self-hosted illustrative animation while
+  the buyer is composing a brief, and the existing drafting indicator once a
+  request is being created. Both are decorative context only, carry no status
+  meaning, must not delay task content, and are replaced by a static state under
+  reduced-motion.
 - Authenticated long lists use stable cursor pages, append loading, duplicate
   protection, retry, end-of-queue feedback, and preserved selection/scroll
   context. They are operational queues rather than catalogue grids.
@@ -149,6 +158,8 @@ Target WCAG 2.2 Level AA. Support keyboard-only use, visible and unobscured focu
 Authenticated workspace scrolling belongs to the full work area at the viewport edge; centered reading and table widths must be applied by an inner surface so the scrollbar never appears beside a constrained table.
 
 Route and data waits preserve the expected layout with content-shaped skeletons rather than visible loading sentences. Busy regions and controls expose programmatic state, and skeleton shimmer has a reduced-motion alternative.
+
+The command palette is a keyboard-complete modal dialog: it traps focus, closes on Escape and returns focus to its trigger, exposes an accessible name and a live result count, and its options are reachable with arrow keys and activated with Enter.
 
 Access-request fields preserve native required validation without relying on
 visible asterisks. The optional phone number is entered as one international-

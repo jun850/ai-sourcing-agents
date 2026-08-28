@@ -5,7 +5,7 @@ import { getSession, getWorkspaceProfile, signOut, updateWorkspaceProfile, uploa
 
 function initials(name: string) { return name.trim().split(/\s+/).filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "A"; }
 
-export function ProfileMenu({ profile, onProfileChange, triggerLabel = "Open profile menu", editOpen, onEditOpenChange }: { profile: WorkspaceProfile; onProfileChange: (profile: WorkspaceProfile) => void; triggerLabel?: string; editOpen?: boolean; onEditOpenChange?: (open: boolean) => void }) {
+export function ProfileMenu({ profile, onProfileChange, triggerLabel = "Open profile menu", editOpen, onEditOpenChange, hideTrigger = false }: { profile: WorkspaceProfile; onProfileChange: (profile: WorkspaceProfile) => void; triggerLabel?: string; editOpen?: boolean; onEditOpenChange?: (open: boolean) => void; hideTrigger?: boolean }) {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [internalEditing, setInternalEditing] = useState(false);
   const editing = editOpen ?? internalEditing;
@@ -30,6 +30,7 @@ export function ProfileMenu({ profile, onProfileChange, triggerLabel = "Open pro
     finally { setBusy(false); }
   }
   return <>
+    {!hideTrigger && <>
     <IconButton aria-label={triggerLabel} aria-controls={anchor ? "profile-menu" : undefined} aria-expanded={Boolean(anchor)} onClick={(event) => setAnchor(event.currentTarget)} sx={{ p: 0 }}>
       <Avatar src={profile.avatar_url || undefined} slotProps={{ img: { alt: "" } }} sx={{ width: 34, height: 34, bgcolor: "#e5e7eb", color: "#5d6672", fontSize: 13 }}>{initials(profile.full_name)}</Avatar>
     </IconButton>
@@ -48,6 +49,7 @@ export function ProfileMenu({ profile, onProfileChange, triggerLabel = "Open pro
         <Typography sx={{ fontSize: 13, fontWeight: 800 }}>Sign out</Typography>
       </MenuItem>
     </Menu>
+    </>}
     <Dialog open={editing} onClose={() => !busy && setEditing(false)} fullWidth maxWidth="xs" aria-labelledby="edit-profile-title">
       <DialogTitle id="edit-profile-title">Edit profile</DialogTitle>
       <DialogContent><Stack spacing={2.25} sx={{ pt: 1 }}>
