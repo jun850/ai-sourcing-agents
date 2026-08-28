@@ -1,13 +1,101 @@
 import { useState, type FormEvent } from "react";
-import { ArrowRight } from "lucide-react";
-import { Alert, Button, MenuItem, TextField } from "@mui/material";
 import { signUpForReview } from "./supabase";
 
 const revenues = ["Under $500K", "$500K – $1M", "$1M – $5M", "$5M – $10M", "$10M – $50M", "$50M+"];
 
-export function SignUp() {
-  const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [success, setSuccess] = useState(false);
-  async function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setError(""); const form = new FormData(event.currentTarget); try { await signUpForReview({ name: String(form.get("name") || ""), email: String(form.get("email") || ""), companyName: String(form.get("companyName") || ""), sourcing: String(form.get("sourcing") || ""), annualRevenue: String(form.get("annualRevenue") || ""), phone: String(form.get("phone") || ""), countryCode: "" }); setSuccess(true); } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not record your request."); } finally { setBusy(false); } }
-  if (success) return <main id="main-content" className="auth"><section className="auth-card auth-success" aria-labelledby="registration-success-title"><a href="/" className="wordmark">atelix<span>.</span></a><p className="auth-eyebrow">Request received</p><h1 id="registration-success-title">We’ll review your registration.</h1><p>If your request is approved, we’ll send an invitation to your work email so you can set up your login.</p><a className="button" href="/sign-in">Back to log in <ArrowRight size={16} aria-hidden="true" /></a></section></main>;
-  return <main id="main-content" className="auth"><form className="auth-card auth-signup" onSubmit={submit} aria-labelledby="sign-up-title"><header className="auth-header"><a href="/" className="wordmark">atelix<span>.</span></a><p className="auth-eyebrow">Request access</p><h1 id="sign-up-title">Get started with Atelix</h1><p className="auth-intro">Tell us a little about your business. We’ll review your request before inviting you into the sourcing workspace.</p></header><div className="auth-grid auth-material-grid"><TextField id="signup-name" name="name" label="Name" placeholder="John Smith" autoComplete="name" required/><TextField id="signup-email" name="email" label="Work email" type="email" placeholder="you@yourcompany.com" autoComplete="email" required/><TextField id="signup-phone" name="phone" label="Phone (optional)" type="tel" placeholder="+62 812 3456 7890" autoComplete="tel" fullWidth/><TextField id="signup-company" name="companyName" label="Company name" placeholder="Acme Corp" autoComplete="organization" required/><TextField id="signup-sourcing" name="sourcing" label="What are you sourcing?" placeholder="e.g. canvas tote bags, woven shirts" required/><TextField id="signup-revenue" name="annualRevenue" label="Annual revenue" select defaultValue="" required><MenuItem value="" disabled>Select a range</MenuItem>{revenues.map((revenue) => <MenuItem key={revenue} value={revenue}>{revenue}</MenuItem>)}</TextField></div>{error && <Alert className="auth-material-alert" severity="error" role="alert">{error}</Alert>}<Button className="auth-submit" type="submit" variant="contained" disabled={busy} aria-busy={busy} endIcon={<ArrowRight size={16} aria-hidden="true"/>}>Sign up</Button><p className="auth-footnote">Already have an account? <a href="/sign-in">Log in</a></p></form></main>;
+/* Request Access is a mode of the sign-in screen, not a separate route: it
+   records a review request and only promises an invitation after approval. */
+export function RequestAccessForm({ onBackToSignIn }: { onBackToSignIn: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [sourcing, setSourcing] = useState("");
+  const [annualRevenue, setAnnualRevenue] = useState("");
+
+  const invalid = !name.trim() || !email.trim() || !companyName.trim() || !sourcing.trim() || !annualRevenue;
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (invalid) { setError("Please fill in all required fields."); return; }
+    setBusy(true); setError("");
+    try {
+      await signUpForReview({
+        name: name.trim(), email: email.trim(), companyName: companyName.trim(),
+        sourcing: sourcing.trim(), annualRevenue, phone: phone.trim(), countryCode: "",
+      });
+      setSubmittedEmail(email.trim());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "We could not record your request.");
+    } finally { setBusy(false); }
+  }
+
+  if (submittedEmail) return (
+    <div role="status">
+      <p className="signin-eyebrow">Request received</p>
+      <h1 className="signin-heading">We’ll review your registration.</h1>
+      <p className="signin-subheading">
+        You’re on the waitlist. If your request is approved, we’ll send an invitation to{" "}
+        <strong>{submittedEmail}</strong> so you can set up your login.
+      </p>
+      <p className="signin-switch">
+        <button type="button" className="signin-link" onClick={onBackToSignIn}>Back to log in</button>
+      </p>
+    </div>
+  );
+
+  return (
+    <>
+      <p className="signin-eyebrow">Request access</p>
+      <h1 className="signin-heading">Get started with Atelix</h1>
+      <p className="signin-subheading">
+        Tell us a little about your business. We’ll review your request before inviting you into the sourcing workspace.
+      </p>
+      {error && <div className="signin-otp-error" role="alert">{error}</div>}
+      <form onSubmit={submit}>
+        <div className="signin-signup-fields">
+          <div>
+            <label className="signin-label" htmlFor="signup-name">Name</label>
+            <input id="signup-name" className="signin-input" type="text" autoComplete="name"
+              value={name} onChange={(e) => setName(e.target.value)} placeholder="John Smith" required />
+          </div>
+          <div>
+            <label className="signin-label" htmlFor="signup-email">Work email</label>
+            <input id="signup-email" className="signin-input" type="email" autoComplete="email"
+              value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@yourcompany.com" required />
+          </div>
+          <div>
+            <label className="signin-label" htmlFor="signup-phone">Phone (optional)</label>
+            <input id="signup-phone" className="signin-input" type="tel" autoComplete="tel"
+              value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+62 812 3456 7890" />
+          </div>
+          <div>
+            <label className="signin-label" htmlFor="signup-company">Company name</label>
+            <input id="signup-company" className="signin-input" type="text" autoComplete="organization"
+              value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="Acme Corp" required />
+          </div>
+          <div>
+            <label className="signin-label" htmlFor="signup-sourcing">What are you sourcing?</label>
+            <input id="signup-sourcing" className="signin-input" type="text"
+              value={sourcing} onChange={(e) => setSourcing(e.target.value)} placeholder="e.g. canvas tote bags, woven shirts" required />
+          </div>
+          <div>
+            <label className="signin-label" htmlFor="signup-revenue">Annual revenue</label>
+            <select id="signup-revenue" className="signin-select"
+              value={annualRevenue} onChange={(e) => setAnnualRevenue(e.target.value)} required>
+              <option value="" disabled>Select a range</option>
+              {revenues.map((revenue) => <option key={revenue} value={revenue}>{revenue}</option>)}
+            </select>
+          </div>
+        </div>
+        <button type="submit" className="signin-submit" disabled={busy || invalid} aria-busy={busy}>Sign up</button>
+      </form>
+      <p className="signin-switch">
+        <button type="button" className="signin-link" onClick={onBackToSignIn}>Already have an account? Log in</button>
+      </p>
+    </>
+  );
 }

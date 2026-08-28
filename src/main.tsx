@@ -7,6 +7,7 @@ import "./hero-type.css";
 import "./sticky-nav.css";
 import "./responsive-a11y.css";
 import "./supplier-intake.css";
+import "./auth-signin.css";
 import "./atelix-sourcing-section.css";
 import "./landing/primitives.css";
 import "./landing/journey.css";
