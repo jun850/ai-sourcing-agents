@@ -71,6 +71,7 @@ import {
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
   setIntoolsRfqSupplierMatchStatus,
+  setIntoolsRfqQuoteTotal,
   updateIntoolsOrderStatus,
   updateIntoolsInvoice,
   updateIntoolsOrderProductionStage,
@@ -96,6 +97,7 @@ import {
 import { IntoolsSuppliers } from "./intools-suppliers";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { NotificationBell } from "./notification-bell";
+import { IntoolsAnalytics } from "./intools-analytics";
 
 const intoolsTheme = createTheme({
   typography: {
@@ -130,6 +132,7 @@ const intoolsTheme = createTheme({
 });
 
 type Tab =
+  | "analytics"
   | "invoices"
   | "rfq"
   | "rfqs"
@@ -269,11 +272,11 @@ function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
       creatingInvoice: false,
       supplierId: null,
     };
-  const tab = pathname.match(/^\/intools\/(orders|audit|registrations|knowledge)$/)?.[1] as
+  const tab = pathname.match(/^\/intools\/(analytics|orders|audit|registrations|knowledge)$/)?.[1] as
     | Exclude<Tab, "invoices" | "rfq" | "rfqs" | "suppliers">
     | undefined;
   return {
-    tab: tab || "invoices",
+    tab: tab || "analytics",
     rfqId: null,
     requestId: null,
     invoiceId: null,
@@ -283,6 +286,7 @@ function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
 }
 
 function intoolsTabPath(tab: Tab) {
+  if (tab === "analytics") return "/intools";
   if (tab === "invoices") return "/intools/invoices";
   if (tab === "rfqs") return "/intools/requests";
   return `/intools/${tab}`;
@@ -3468,6 +3472,7 @@ export function Intools() {
             >
               {(
                 [
+                  ["analytics", "Analytics"],
                   ["invoices", "Invoices"],
                   ["rfq", "RFQ review"],
                   ["rfqs", "Requests"],
@@ -3593,6 +3598,7 @@ export function Intools() {
                 )}
               </>
             )}
+            {tab === "analytics" && <IntoolsAnalytics />}
             {tab === "rfq" && (
               <RfqReviewPanel
                 routeCaseId={route.rfqId}
@@ -3652,16 +3658,21 @@ const productionStages: Array<[string, string]> = [
   ["delivered", "Delivered"],
 ];
 
-type QuoteDraft = { unitPrice: string; moq: string; leadTimeDays: string; certifications: string; certificationNote: string; recommended: boolean; notes: string };
-const emptyQuoteDraft: QuoteDraft = { unitPrice: "", moq: "", leadTimeDays: "", certifications: "", certificationNote: "", recommended: false, notes: "" };
+type QuoteDraft = { unitPrice: string; quoteTotal: string; moq: string; leadTimeDays: string; certifications: string; certificationNote: string; recommended: boolean; notes: string };
+const emptyQuoteDraft: QuoteDraft = { unitPrice: "", quoteTotal: "", moq: "", leadTimeDays: "", certifications: "", certificationNote: "", recommended: false, notes: "" };
 
 function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { caseId: string; factoryId: string; existing: IntoolsRfqQuote | null; onSaved: () => void; onMessage: (message: string) => void }) {
-  const [draft, setDraft] = useState<QuoteDraft>(existing ? { unitPrice: (existing.unit_price_cents / 100).toFixed(2), moq: String(existing.moq), leadTimeDays: String(existing.lead_time_days), certifications: existing.certifications.join(", "), certificationNote: existing.certification_note || "", recommended: existing.recommended, notes: existing.notes || "" } : emptyQuoteDraft);
+  const [draft, setDraft] = useState<QuoteDraft>(existing ? { unitPrice: (existing.unit_price_cents / 100).toFixed(2), quoteTotal: existing.quote_total_cents ? (existing.quote_total_cents / 100).toFixed(2) : "", moq: String(existing.moq), leadTimeDays: String(existing.lead_time_days), certifications: existing.certifications.join(", "), certificationNote: existing.certification_note || "", recommended: existing.recommended, notes: existing.notes || "" } : emptyQuoteDraft);
   const [busy, setBusy] = useState(false);
   async function save() {
+    const quoteTotalCents = Math.round(parseFloat(draft.quoteTotal || "0") * 100);
+    if (!Number.isFinite(quoteTotalCents) || quoteTotalCents <= 0) {
+      onMessage("Enter a positive quote total in USD.");
+      return;
+    }
     setBusy(true);
     try {
-      await upsertIntoolsRfqQuote(existing?.id ?? null, {
+      const quote = await upsertIntoolsRfqQuote(existing?.id ?? null, {
         rfqCaseId: caseId, factoryId,
         unitPriceCents: Math.round(parseFloat(draft.unitPrice || "0") * 100),
         moq: parseInt(draft.moq || "0", 10),
@@ -3671,6 +3682,7 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
         recommended: draft.recommended,
         notes: draft.notes.trim() || null,
       });
+      await setIntoolsRfqQuoteTotal(quote.id, quoteTotalCents);
       onSaved();
     } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not save this quote."); }
     finally { setBusy(false); }
@@ -3678,6 +3690,7 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
   return <Stack spacing={1} sx={{ p: 1.5, border: "1px dashed #cfd6df", borderRadius: 2 }}>
     <Stack direction="row" spacing={1}>
       <TextField size="small" label="Unit price (USD)" value={draft.unitPrice} onChange={(event) => setDraft((current) => ({ ...current, unitPrice: event.target.value }))} sx={{ flex: 1 }} />
+      <TextField size="small" label="Quote total (USD)" value={draft.quoteTotal} onChange={(event) => setDraft((current) => ({ ...current, quoteTotal: event.target.value }))} sx={{ flex: 1 }} />
       <TextField size="small" label="MOQ" value={draft.moq} onChange={(event) => setDraft((current) => ({ ...current, moq: event.target.value }))} sx={{ flex: 1 }} />
       <TextField size="small" label="Lead time (days)" value={draft.leadTimeDays} onChange={(event) => setDraft((current) => ({ ...current, leadTimeDays: event.target.value }))} sx={{ flex: 1 }} />
     </Stack>
@@ -3685,7 +3698,7 @@ function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { cas
     <TextField size="small" label="Certification note (optional, e.g. pending renewal)" value={draft.certificationNote} onChange={(event) => setDraft((current) => ({ ...current, certificationNote: event.target.value }))} />
     <TextField size="small" label="Internal notes (optional)" value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} multiline minRows={2} />
     <FormControlLabel control={<Checkbox size="small" checked={draft.recommended} onChange={(event) => setDraft((current) => ({ ...current, recommended: event.target.checked }))} />} label="Mark as recommended" />
-    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{existing ? "Save changes" : "Save draft quote"}</Button>
+    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.quoteTotal || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{existing ? "Save changes" : "Save draft quote"}</Button>
   </Stack>;
 }
 

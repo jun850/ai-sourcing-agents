@@ -1539,6 +1539,13 @@ export async function approveRegistrationRequest(requestId: string) {
 export async function listIntoolsSuppliers() {
   return intoolsRpc<IntoolsSupplier[]>("intools_list_suppliers");
 }
+export type IntoolsAnalyticsOverview = { users: number; rfqs: number; quote_value_cents: number; invoice_total_cents: number; trend: Array<{ date: string; rfqs: number; invoices_cents: number }>; search_console_imports: Array<{ id: string; source_type: string; coverage_start: string | null; coverage_end: string | null; original_filename: string; row_count: number; imported_at: string }> };
+export async function getIntoolsAnalyticsOverview(start: string, end: string) {
+  return intoolsRpc<IntoolsAnalyticsOverview>("intools_get_analytics_overview", { p_start: start, p_end: end });
+}
+export async function importIntoolsSearchConsoleCsv(input: { sourceType: string; filename: string; headers: string[]; rows: Record<string, string>[]; coverageStart: string | null; coverageEnd: string | null }) {
+  return intoolsRpc("intools_import_search_console_csv", { p_source_type: input.sourceType, p_filename: input.filename, p_headers: input.headers, p_rows: input.rows, p_coverage_start: input.coverageStart, p_coverage_end: input.coverageEnd });
+}
 export async function getIntoolsSupplierDetail(supplierId: string) {
   return intoolsRpc<IntoolsSupplierDetail>("intools_get_supplier_detail", {
     p_supplier_id: supplierId,
@@ -1607,6 +1614,7 @@ export type IntoolsRfqQuote = {
   id: string;
   status: "draft" | "published" | "selected" | "declined" | "withdrawn";
   unit_price_cents: number;
+  quote_total_cents: number | null;
   moq: number;
   lead_time_days: number;
   certifications: string[];
@@ -1660,6 +1668,12 @@ export async function upsertIntoolsRfqQuote(quoteId: string | null, payload: Int
       recommended: payload.recommended ?? false,
       notes: payload.notes ?? null,
     },
+  });
+}
+export async function setIntoolsRfqQuoteTotal(quoteId: string, quoteTotalCents: number) {
+  return intoolsRpc<IntoolsRfqQuote>("intools_set_rfq_quote_total", {
+    p_quote_id: quoteId,
+    p_quote_total_cents: quoteTotalCents,
   });
 }
 export async function publishIntoolsRfqQuote(quoteId: string) {
