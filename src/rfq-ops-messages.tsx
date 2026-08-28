@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Alert, Avatar, Box, Button, Chip, Divider, IconButton, List, ListItemButton,
-  Skeleton, Stack, TextField, Typography,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
+import {
+  Alert, Avatar, Box, Button, Chip, IconButton,
+  Skeleton, Stack, Typography,
 } from "@mui/material";
 import { AttachFile, Close, Description, InsertDriveFile, Send } from "@mui/icons-material";
 import {
@@ -18,11 +25,21 @@ import { useInfiniteList } from "./use-infinite-list";
 const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const MAX_BYTES = 25 * 1024 * 1024;
 
-function messageTime(value: string | null | undefined) {
+function relativeShort(value: string | null | undefined) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return "";
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffMs = Date.now() - then;
+  if (diffMs < 60_000) return "now";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w`;
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(value));
 }
 
 function conversationTitle(item: RfqOpsConversation) {
@@ -191,35 +208,355 @@ export function RfqOpsMessagesWorkspace({
     finally { setSending(false); }
   }
 
-  return <Box sx={{ minHeight: 560 }} aria-busy={loadingList || loadingThread}>
-    <Stack spacing={0.75} sx={{ mb: 2.25 }}>
-      <Typography component="h1" sx={{ color: "#202936", fontSize: { xs: 30, sm: 38 }, fontWeight: 500, letterSpacing: "-.04em" }}>Messages</Typography>
-      <Typography sx={{ color: "#667384", fontSize: 14 }}>Human updates with Atelix about each sourcing request.</Typography>
-    </Stack>
-    {(error || conversationError) && <Alert severity="error" sx={{ mb: 1.5 }} action={<Button color="inherit" size="small" onClick={() => { void reloadConversations(); if (active) void loadThread(active); }}>Retry</Button>}>{error || conversationError}</Alert>}
-    <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr)", md: "minmax(280px, .72fr) minmax(0,1.55fr)" }, height: { md: "calc(100dvh - 232px)" }, minHeight: 0, border: "1px solid #dfe4eb", borderRadius: "14px", overflow: "hidden", bgcolor: "#fff" }}>
-      <Box sx={{ display: "flex", minHeight: 0, flexDirection: "column", borderRight: { md: "1px solid #e7ebf0" }, borderBottom: { xs: "1px solid #e7ebf0", md: 0 }, minWidth: 0 }}>
-        <Box sx={{ px: 2, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Typography sx={{ fontSize: 12, fontWeight: 800, color: "#526176", letterSpacing: ".04em", textTransform: "uppercase" }}>Requests {typeof unreadCount === "number" && unreadCount > 0 ? <Chip size="small" label={unreadCount} sx={{ ml: .75, height: 22, bgcolor: "#e8f2eb", color: "#326143", fontWeight: 800 }} /> : null}</Typography></Box>
-        <Box sx={{ minHeight: 0, flex: 1, maxHeight: { xs: 380, md: "none" }, overflowY: "auto", overscrollBehavior: "contain" }}>
-          {loadingList ? <Stack spacing={1.25} sx={{ p: 2 }}><Skeleton height={48}/><Skeleton height={48}/><Skeleton height={48}/></Stack> : conversations.length ? <List disablePadding aria-label="Request conversations">{conversations.map((item) => <ListItemButton key={item.id} selected={item.id === active?.id} onClick={() => { onSelectCase(item.rfq_case_id); void loadThread(item); }} sx={{ display: "block", px: 2, py: 1.5, borderRadius: 0, borderBottom: "1px solid #eef0f3", "&.Mui-selected": { bgcolor: "#f2f7f3", boxShadow: "inset 3px 0 #4b7657" } }}><Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "flex-start" }}><Typography noWrap sx={{ minWidth: 0, fontSize: 13, fontWeight: 800 }}>{conversationTitle(item)}</Typography><Typography sx={{ flexShrink: 0, color: "#778191", fontSize: 11 }}>{messageTime(item.last_message_at)}</Typography></Stack><Typography noWrap sx={{ mt: .4, color: "#667384", fontSize: 12 }}>{item.last_message_body || "No messages yet"}</Typography></ListItemButton>)}<Box ref={conversationSentinel} sx={{ minHeight: 1 }} />{conversationHasMore && <Typography role="status" sx={{ px: 2, py: 1, color: "#778191", fontSize: 11 }}>More conversations load as you reach the end.</Typography>}</List> : <Box sx={{ p: 3 }}><Typography sx={{ fontWeight: 700 }}>No request conversations yet</Typography><Typography sx={{ mt: .5, color: "#667384", fontSize: 13 }}>Messages appear here when an Atelix team member updates a request.</Typography></Box>}
+  const unreadFor = (item: RfqOpsConversation) =>
+    mode === "buyer" ? item.buyer_unread_count ?? 0 : item.ops_unread_count ?? 0;
+
+  return (
+    <Box
+      aria-busy={loadingList || loadingThread}
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        height: { md: "100%" },
+        display: "flex",
+        flexDirection: { xs: "column", md: "row" },
+        backgroundColor: "#fbfbfc",
+      }}
+    >
+      <Box
+        sx={{
+          width: { xs: "100%", md: 340 },
+          flexShrink: 0,
+          display: "flex",
+          flexDirection: "column",
+          minHeight: 0,
+          borderRight: { md: "1px solid #ececef" },
+          borderBottom: { xs: "1px solid #ececef", md: 0 },
+          backgroundColor: "#fff",
+        }}
+      >
+        <Box sx={{ flexShrink: 0, px: 2.5, pt: 2.5, pb: 1.75 }}>
+          <Typography component="h1" sx={{ fontSize: 20, fontWeight: 500, letterSpacing: "-.03em", color: "#202936" }}>
+            Messages
+          </Typography>
+          <Typography sx={{ mt: 0.5, fontSize: 12, color: "#9ba1aa" }}>
+            Your Atelix Operations conversations.
+          </Typography>
+        </Box>
+        {(error || conversationError) && (
+          <Alert
+            severity="error"
+            sx={{ mx: 1.5, mb: 1, fontSize: 12 }}
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  void reloadConversations();
+                  if (active) void loadThread(active);
+                }}
+              >
+                Retry
+              </Button>
+            }
+          >
+            {error || conversationError}
+          </Alert>
+        )}
+        <Box sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 300, md: "none" }, overflowY: "auto", overscrollBehavior: "contain" }}>
+          {loadingList ? (
+            <Stack spacing={1.25} sx={{ p: 2 }}>
+              <Skeleton height={44} />
+              <Skeleton height={44} />
+              <Skeleton height={44} />
+            </Stack>
+          ) : conversations.length ? (
+            <>
+              {conversations.map((item) => {
+                const unread = unreadFor(item);
+                const selected = item.id === active?.id;
+                return (
+                  <Box
+                    key={item.id}
+                    component="button"
+                    type="button"
+                    onClick={() => {
+                      onSelectCase(item.rfq_case_id);
+                      void loadThread(item);
+                    }}
+                    sx={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 1.375,
+                      width: "100%",
+                      textAlign: "left",
+                      px: 2.5,
+                      py: 1.625,
+                      border: 0,
+                      borderBottom: "1px solid #f0f0f2",
+                      background: selected ? "#f0f1f3" : "#fff",
+                      cursor: "pointer",
+                      "&:hover": { background: selected ? "#f0f1f3" : "#fcfdfc" },
+                      "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                    }}
+                  >
+                    <Avatar
+                      aria-hidden
+                      sx={{ width: 34, height: 34, flexShrink: 0, bgcolor: "#eef4ee", color: "#4b7657", fontSize: 11, fontWeight: 700 }}
+                    >
+                      AO
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1 }}>
+                        <Typography noWrap sx={{ minWidth: 0, fontSize: 13, fontWeight: 700, color: "#202936" }}>
+                          {conversationTitle(item)}
+                        </Typography>
+                        <Typography sx={{ flexShrink: 0, fontSize: 10.5, color: "#9ba1aa" }}>
+                          {relativeShort(item.last_message_at)}
+                        </Typography>
+                      </Box>
+                      <Typography noWrap sx={{ mt: 0.25, fontSize: 12, color: "#9ba1aa" }}>
+                        {item.last_message_body || "No messages yet"}
+                      </Typography>
+                    </Box>
+                    {unread > 0 && (
+                      <Box
+                        component="span"
+                        aria-label={`${unread} unread`}
+                        sx={{ flexShrink: 0, mt: 0.75, width: 7, height: 7, borderRadius: "999px", backgroundColor: "#4b7657" }}
+                      />
+                    )}
+                  </Box>
+                );
+              })}
+              <Box ref={conversationSentinel} aria-hidden="true" sx={{ height: conversationHasMore ? 1 : 0 }} />
+              {conversationHasMore && (
+                <Typography role="status" sx={{ px: 2.5, py: 1.25, fontSize: 11, color: "#9ba1aa" }}>
+                  More conversations load as you reach the end.
+                </Typography>
+              )}
+            </>
+          ) : (
+            <Box sx={{ p: 3 }}>
+              <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: "#202936" }}>No conversations yet</Typography>
+              <Typography sx={{ mt: 0.5, fontSize: 12, color: "#9ba1aa", lineHeight: 1.5 }}>
+                Messages appear here when Atelix Operations updates a request.
+              </Typography>
+            </Box>
+          )}
         </Box>
       </Box>
-      <Stack sx={{ height: { md: "100%" }, minWidth: 0, minHeight: 0, overflow: "hidden" }}>
-        {!active ? <Stack sx={{ flex: 1, alignItems: "center", justifyContent: "center", p: 4, textAlign: "center" }}><Typography component="h2" sx={{ fontSize: 20, fontWeight: 700 }}>Choose a request</Typography><Typography sx={{ mt: .75, maxWidth: 360, color: "#667384", fontSize: 14 }}>Select a request to view its conversation with Atelix.</Typography></Stack> : <><Box sx={{ flexShrink: 0, px: { xs: 2, sm: 2.5 }, py: 1.5, borderBottom: "1px solid #e7ebf0" }}><Stack direction="row" sx={{ alignItems: "center", justifyContent: "space-between" }}><Box><Typography sx={{ fontWeight: 800 }}>{conversationTitle(active)}</Typography><Typography sx={{ mt: .25, color: "#667384", fontSize: 12 }}>Atelix Operations</Typography></Box>{present.length > 0 && <Stack direction="row" spacing={-.5} aria-label={`${present.length} participant${present.length === 1 ? "" : "s"} active in this thread`}>{present.slice(0, 4).map((person, index) => <Avatar key={`${person.role}-${person.name}-${index}`} src={person.avatarUrl || undefined} sx={{ width: 26, height: 26, fontSize: 10, border: "2px solid #fff", bgcolor: person.role === "ops" ? "#4b7657" : "#b78a20" }}>{person.name.slice(0, 1).toUpperCase()}</Avatar>)}</Stack>}</Stack></Box><Box ref={scrollRef} sx={{ flex: 1, minHeight: 0, overflowY: "auto", overscrollBehavior: "contain", p: { xs: 2, sm: 2.5 }, bgcolor: "#fcfcfd" }}>{loadingThread ? <Stack spacing={2}><Skeleton width="58%" height={68}/><Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={62}/></Stack> : <Stack spacing={2.25}>{messages.map((item) => {
-          const isBuyer = item.sender_role === "buyer";
-          const senderName = item.sender_label || (isBuyer ? "Buyer" : "Atelix Operations");
-          return <Stack key={item.id} direction="row" spacing={1} sx={{ alignSelf: isBuyer ? "flex-end" : "flex-start", alignItems: "flex-end", maxWidth: "78%", flexDirection: isBuyer ? "row-reverse" : "row" }}>
-            {!isBuyer && <Avatar src={item.sender_avatar_url || undefined} aria-hidden sx={{ width: 28, height: 28, mb: .25, bgcolor: "#4b7657", color: "#fff", fontSize: 11, fontWeight: 800 }}>{senderName.slice(0, 1).toUpperCase()}</Avatar>}
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ mb: .45, color: "#667384", fontSize: 11, fontWeight: 800, textAlign: isBuyer ? "right" : "left" }}>{senderName} · {messageTime(item.created_at)}</Typography>
-              <Box sx={{ px: 1.5, py: 1.25, borderRadius: isBuyer ? "14px 14px 4px 14px" : "4px 14px 14px 14px", bgcolor: isBuyer ? "#fce99a" : "#fff", border: isBuyer ? "1px solid #f1d66f" : "1px solid #e5e9ee" }}>
-                <Typography sx={{ color: isBuyer ? "#332d20" : "#202936", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 14, lineHeight: 1.55 }}>{item.body}</Typography>
-                {item.attachments.map((attachment) => <Button key={attachment.id} size="small" startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />} onClick={() => void createRfqOpsAttachmentSignedUrl(attachment).then((url) => window.open(url, "_blank", "noopener,noreferrer")).catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))} sx={{ mt: .75, justifyContent: "flex-start", color: isBuyer ? "#55491f" : "#45556b" }}>{attachment.original_name}</Button>)}
+
+      <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex", flexDirection: "column", backgroundColor: "#fbfbfc" }}>
+        {!active ? (
+          <Box sx={{ flex: 1, display: "grid", placeItems: "center", p: 4, textAlign: "center" }}>
+            <Box>
+              <Typography component="h2" sx={{ fontSize: 16, fontWeight: 700, color: "#202936" }}>
+                Choose a request
+              </Typography>
+              <Typography sx={{ mt: 0.75, maxWidth: 340, fontSize: 13, color: "#9ba1aa" }}>
+                Select a request to view its conversation with Atelix Operations.
+              </Typography>
+            </Box>
+          </Box>
+        ) : (
+          <>
+            <Box
+              sx={{
+                flexShrink: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                px: 3,
+                py: 2,
+                borderBottom: "1px solid #ececef",
+                backgroundColor: "#fff",
+              }}
+            >
+              <Avatar aria-hidden sx={{ width: 30, height: 30, flexShrink: 0, bgcolor: "#eef4ee", color: "#4b7657", fontSize: 10.5, fontWeight: 700 }}>
+                AO
+              </Avatar>
+              <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography noWrap sx={{ fontSize: 13.5, fontWeight: 700, color: "#202936" }}>
+                  {conversationTitle(active)}
+                </Typography>
+                <Typography sx={{ fontSize: 11.5, color: "#9ba1aa" }}>
+                  Atelix Operations{active.case_no ? ` · ${active.case_no}` : ""}
+                </Typography>
+              </Box>
+              {present.length > 0 && (
+                <Stack direction="row" spacing={-0.5} sx={{ flexShrink: 0 }} aria-label={`${present.length} active`}>
+                  {present.slice(0, 3).map((person, index) => (
+                    <Avatar
+                      key={`${person.role}-${person.name}-${index}`}
+                      src={person.avatarUrl || undefined}
+                      sx={{ width: 24, height: 24, fontSize: 10, border: "2px solid #fff", bgcolor: person.role === "ops" ? "#4b7657" : "#b78a20" }}
+                    >
+                      {person.name.slice(0, 1).toUpperCase()}
+                    </Avatar>
+                  ))}
+                </Stack>
+              )}
+            </Box>
+
+            <Box
+              ref={scrollRef}
+              sx={{ flex: 1, minHeight: { xs: 320, md: 0 }, overflowY: "auto", overscrollBehavior: "contain", px: { xs: 2, sm: 3.5 }, py: 2.75, display: "flex", flexDirection: "column", gap: 1.75 }}
+            >
+              {loadingThread ? (
+                <Stack spacing={2}>
+                  <Skeleton width="58%" height={54} />
+                  <Skeleton sx={{ alignSelf: "flex-end" }} width="52%" height={48} />
+                </Stack>
+              ) : (
+                messages.map((item) => {
+                  const isBuyer = item.sender_role === "buyer";
+                  return (
+                    <Box key={item.id} sx={{ display: "flex", justifyContent: isBuyer ? "flex-end" : "flex-start" }}>
+                      <Box
+                        sx={{
+                          maxWidth: "76%",
+                          px: 1.875,
+                          py: 1.375,
+                          borderRadius: isBuyer ? "14px 14px 3px 14px" : "3px 14px 14px 14px",
+                          backgroundColor: isBuyer ? "#fdf3d3" : "#fff",
+                          boxShadow: isBuyer ? "none" : "0 3px 8px rgba(32,41,54,.06)",
+                        }}
+                      >
+                        <Typography sx={{ color: "#202936", whiteSpace: "pre-wrap", overflowWrap: "anywhere", fontSize: 13.5, lineHeight: 1.55 }}>
+                          {item.body}
+                        </Typography>
+                        {item.attachments.map((attachment) => (
+                          <Button
+                            key={attachment.id}
+                            size="small"
+                            startIcon={attachment.content_type === "application/pdf" ? <Description /> : <InsertDriveFile />}
+                            onClick={() =>
+                              void createRfqOpsAttachmentSignedUrl(attachment)
+                                .then((url) => window.open(url, "_blank", "noopener,noreferrer"))
+                                .catch((cause) => setError(cause instanceof Error ? cause.message : "We could not open that attachment."))
+                            }
+                            sx={{ mt: 0.75, justifyContent: "flex-start", color: "#45556b", textTransform: "none" }}
+                          >
+                            {attachment.original_name}
+                          </Button>
+                        ))}
+                      </Box>
+                    </Box>
+                  );
+                })
+              )}
+            </Box>
+
+            {newMessagesBelow && (
+              <Button
+                size="small"
+                onClick={() => {
+                  const node = scrollRef.current;
+                  if (!node) return;
+                  node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+                  setNewMessagesBelow(false);
+                }}
+                sx={{ alignSelf: "center", mb: 0.5, textTransform: "none", fontSize: 12 }}
+              >
+                New messages
+              </Button>
+            )}
+
+            <Box sx={{ flexShrink: 0, px: 3, pt: 2, pb: 2.75 }}>
+              {attachments.length > 0 && (
+                <Stack direction="row" spacing={0.75} sx={{ mb: 1, flexWrap: "wrap" }}>
+                  {attachments.map((item) => (
+                    <Chip key={item.id} label={item.file.name} onDelete={() => void removeAttachment(item)} deleteIcon={<Close />} sx={{ maxWidth: "100%" }} />
+                  ))}
+                </Stack>
+              )}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-end",
+                  gap: 0.75,
+                  p: 0.75,
+                  pl: 1,
+                  borderRadius: "13px",
+                  backgroundColor: "#fff",
+                  boxShadow: "0 3px 8px rgba(32,41,54,.06)",
+                }}
+              >
+                <IconButton
+                  aria-label="Add an attachment"
+                  onClick={() => fileInput.current?.click()}
+                  disabled={sending || attachments.length >= 10}
+                  sx={{ flexShrink: 0, width: 34, height: 34, color: "#697586" }}
+                >
+                  <AttachFile sx={{ fontSize: 18 }} />
+                </IconButton>
+                <input
+                  ref={fileInput}
+                  hidden
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={(event) => {
+                    void chooseFiles(event.target.files);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <Box
+                  component="textarea"
+                  rows={1}
+                  value={draft}
+                  onChange={(event: ChangeEvent<HTMLTextAreaElement>) => setDraft(event.target.value)}
+                  onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+                    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                      event.preventDefault();
+                      void send();
+                    }
+                  }}
+                  placeholder="Message Atelix Operations…"
+                  aria-label="Message to Atelix Operations"
+                  maxLength={12000}
+                  disabled={sending}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 34,
+                    maxHeight: 132,
+                    resize: "none",
+                    border: 0,
+                    outline: 0,
+                    background: "transparent",
+                    font: "inherit",
+                    fontSize: 13.5,
+                    lineHeight: 1.5,
+                    color: "#202936",
+                    py: 0.75,
+                    "&::placeholder": { color: "#9ba1aa" },
+                  }}
+                />
+                <IconButton
+                  aria-label={sending ? "Sending" : "Send message"}
+                  aria-busy={sending}
+                  disabled={sending || (!draft.trim() && !attachments.length)}
+                  onClick={() => void send()}
+                  sx={{
+                    flexShrink: 0,
+                    width: 34,
+                    height: 34,
+                    borderRadius: "10px",
+                    color: "#fff",
+                    backgroundColor: !sending && (draft.trim() || attachments.length) ? "#4b7657" : "#d7dbe1",
+                    "&:hover": { backgroundColor: !sending && (draft.trim() || attachments.length) ? "#3d6548" : "#d7dbe1" },
+                    "&.Mui-disabled": { color: "#fff", backgroundColor: "#d7dbe1" },
+                  }}
+                >
+                  <Send sx={{ fontSize: 16 }} />
+                </IconButton>
               </Box>
             </Box>
-          </Stack>;
-        })}</Stack>}</Box>{newMessagesBelow && <Button size="small" onClick={() => { const node = scrollRef.current; if (!node) return; node.scrollTo({ top: node.scrollHeight, behavior: "smooth" }); setNewMessagesBelow(false); }}>New messages</Button>}<Divider/><Stack spacing={1} sx={{ flexShrink: 0, p: { xs: 1.5, sm: 2 }}}>{attachments.length > 0 && <Stack direction="row" spacing={.75} sx={{ flexWrap: "wrap" }}>{attachments.map((item) => <Chip key={item.id} label={item.file.name} onDelete={() => void removeAttachment(item)} deleteIcon={<Close />} sx={{ maxWidth: "100%" }}/>)}</Stack>}<TextField multiline minRows={2} value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Write a message to Atelix…" slotProps={{ htmlInput: { maxLength: 12000, "aria-label": "Message to Atelix" } }} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); void send(); } }} disabled={sending}/><Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}><IconButton aria-label="Add an attachment" onClick={() => fileInput.current?.click()} disabled={sending || attachments.length >= 10}><AttachFile /></IconButton><input ref={fileInput} hidden type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" onChange={(event) => { void chooseFiles(event.target.files); event.currentTarget.value = ""; }}/><Button variant="contained" endIcon={<Send />} disabled={sending || (!draft.trim() && !attachments.length)} onClick={() => void send()} aria-busy={sending}>{sending ? "Sending" : "Send message"}</Button></Stack></Stack></>}
-      </Stack>
+          </>
+        )}
+      </Box>
     </Box>
-  </Box>;
+  );
 }
