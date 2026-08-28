@@ -105,9 +105,7 @@ import { WorkspaceCommandPalette } from "./workspace-command-palette";
 import { WorkspaceLottie } from "./workspace-lottie";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
-import { AppendSkeleton } from "./workspace-ui";
 import {
-  nextStepOwner,
   RfqReviewPipeline,
   StageTimeline,
 } from "./dashboard-stage-timeline";
@@ -3159,8 +3157,59 @@ function RfqWorkspace({
       actionPending={documentActionPending}
     />
   );
+  const stageMeta = DESIGN_STAGE_META[designStageFor(caseStatus)];
   return (
     <Stack spacing={2.25} sx={{ width: "100%" }}>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+        <Box
+          component="button"
+          type="button"
+          onClick={() => navigate("/dashboard/requests")}
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.75,
+            flexShrink: 0,
+            border: 0,
+            background: "transparent",
+            color: "#697586",
+            font: "inherit",
+            fontSize: 13.5,
+            fontWeight: 600,
+            cursor: "pointer",
+            "&:hover": { color: "#202936" },
+            "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: 2, borderRadius: 1 },
+          }}
+        >
+          <ArrowBack sx={{ fontSize: 16 }} />
+          Requests
+        </Box>
+        <Box sx={{ width: "1px", height: 18, flexShrink: 0, backgroundColor: "#ececef" }} />
+        <Typography
+          noWrap
+          sx={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 700, color: "#202936" }}
+        >
+          {fields.product || brief || "RFQ draft"}
+        </Typography>
+        <Box
+          component="span"
+          sx={{
+            flexShrink: 0,
+            display: "inline-flex",
+            alignItems: "center",
+            px: 1.25,
+            py: 0.5,
+            borderRadius: "999px",
+            fontSize: 11,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+            backgroundColor: stageMeta.bg,
+            color: stageMeta.ink,
+          }}
+        >
+          {stageMeta.label}
+        </Box>
+      </Box>
       <Box
         sx={{
           display: "grid",
@@ -3197,27 +3246,62 @@ function RfqWorkspace({
   );
 }
 
-const stageCopy: Record<string, string> = {
-  draft: "Approval needed",
-  needs_research: "Atelix review",
-  awaiting_supplier: "Awaiting suppliers",
-  supplier_replied: "Supplier replied",
-  buyer_review: "Quotes in — your decision",
-  quote_selected: "Confirming terms",
-  in_production: "In production",
-  closed: "Closed",
+type DesignStage = "drafting" | "review" | "quoted" | "production" | "delivered";
+const DESIGN_STAGE_META: Record<
+  DesignStage,
+  { label: string; dot: string; bg: string; ink: string }
+> = {
+  drafting: { label: "Drafting", dot: "#9aa1ab", bg: "#f0f1f3", ink: "#596779" },
+  review: { label: "In review", dot: "#c5a66c", bg: "#fbf4e7", ink: "#81622c" },
+  quoted: { label: "Quoted", dot: "#88b863", bg: "#eff6e9", ink: "#4a7a3e" },
+  production: { label: "In production", dot: "#4b7657", bg: "#eef4ee", ink: "#3d6548" },
+  delivered: { label: "Delivered", dot: "#5f8767", bg: "#edf5ef", ink: "#4e7756" },
 };
-const stageDotColor: Record<string, string> = {
-  draft: "#65a979",
-  needs_research: "#c9a86a",
-  awaiting_supplier: "#c9a86a",
-  supplier_replied: "#c9a86a",
-  buyer_review: "#65a979",
-  quote_selected: "#c9a86a",
-  in_production: "#c9a86a",
-  closed: "#b6bdc6",
-};
-type RequestFilter = "all" | "needs_you" | "in_progress" | "closed";
+function designStageFor(status: string): DesignStage {
+  switch (status) {
+    case "draft":
+      return "drafting";
+    case "needs_research":
+    case "awaiting_supplier":
+    case "supplier_replied":
+      return "review";
+    case "buyer_review":
+    case "quote_selected":
+      return "quoted";
+    case "in_production":
+      return "production";
+    case "closed":
+      return "delivered";
+    default:
+      return "drafting";
+  }
+}
+const DESIGN_STAGE_TABS = [
+  "All",
+  "Drafting",
+  "In review",
+  "Quoted",
+  "In production",
+  "Delivered",
+] as const;
+type DesignStageTab = (typeof DESIGN_STAGE_TABS)[number];
+
+function relativeShort(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return "";
+  const diffMs = Date.now() - then;
+  if (diffMs < 60_000) return "just now";
+  const mins = Math.floor(diffMs / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(iso));
+}
+
 function WorkspaceRequests({
   requests,
   onOpen,
@@ -3231,38 +3315,11 @@ function WorkspaceRequests({
   hasMore?: boolean;
   loadingMore?: boolean;
 }) {
-  const loadMoreSentinel = useRef<HTMLDivElement | null>(null);
-  const [unpaidCaseIds, setUnpaidCaseIds] = useState<Set<string>>(new Set());
   const [suppliers, setSuppliers] = useState<Map<string, WorkspaceSelectedSupplier>>(new Map());
-  const [filter, setFilter] = useState<RequestFilter>("all");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  useEffect(() => {
-    let active = true;
-    void listWorkspaceInvoices()
-      .then((rows) => {
-        if (!active) return;
-        setUnpaidCaseIds(
-          new Set(
-            rows
-              .filter((row) => row.status === "sent" && row.rfq_case_id)
-              .map((row) => row.rfq_case_id as string),
-          ),
-        );
-      })
-      .catch(() => undefined);
-    return () => {
-      active = false;
-    };
-  }, []);
-  useEffect(() => {
-    const node = loadMoreSentinel.current;
-    if (!node || !onLoadMore || !hasMore) return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0]?.isIntersecting) onLoadMore();
-    }, { rootMargin: "320px" });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+  const [query, setQuery] = useState("");
+  const [tab, setTab] = useState<DesignStageTab>("All");
+  const loadMoreSentinel = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     let active = true;
     void listWorkspaceSelectedSuppliers()
@@ -3274,355 +3331,296 @@ function WorkspaceRequests({
       active = false;
     };
   }, []);
-  function ownerFor(request: StoredRfq) {
-    return nextStepOwner(request.status, unpaidCaseIds.has(request.id));
-  }
+
+  useEffect(() => {
+    const node = loadMoreSentinel.current;
+    if (!node || !onLoadMore || !hasMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) onLoadMore();
+      },
+      { rootMargin: "320px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore]);
+
+  const term = query.trim().toLowerCase();
   const filtered = requests.filter((request) => {
-    if (filter === "closed") return request.status === "closed";
-    if (filter === "needs_you")
-      return request.status !== "closed" && ownerFor(request) === "You";
-    if (filter === "in_progress")
-      return request.status !== "closed" && ownerFor(request) !== "You";
-    return true;
+    const stage = DESIGN_STAGE_META[designStageFor(request.status)].label;
+    const matchesTab = tab === "All" || stage === tab;
+    const matchesQuery =
+      !term ||
+      request.title.toLowerCase().includes(term) ||
+      request.case_no.toLowerCase().includes(term);
+    return matchesTab && matchesQuery;
   });
-  const counts = {
-    all: requests.length,
-    needs_you: requests.filter(
-      (r) => r.status !== "closed" && ownerFor(r) === "You",
-    ).length,
-    in_progress: requests.filter(
-      (r) => r.status !== "closed" && ownerFor(r) !== "You",
-    ).length,
-    closed: requests.filter((r) => r.status === "closed").length,
-  };
-  const selected =
-    requests.find((request) => request.id === selectedId) ||
-    filtered[0] ||
-    requests[0] ||
-    null;
-  const filterPills: Array<[RequestFilter, string]> = [
-    ["all", `All ${counts.all}`],
-    ["needs_you", `Needs you ${counts.needs_you}`],
-    ["in_progress", `In progress ${counts.in_progress}`],
-    ["closed", `Closed ${counts.closed}`],
-  ];
+
+  const GRID = "minmax(200px,1.7fr) minmax(120px,1fr) 150px 84px 32px";
+  const columns = ["Request", "Supplier", "Stage", "Updated", ""];
+  const tabStyle = (active: boolean) => ({
+    height: 32,
+    px: 1.5,
+    border: 0,
+    borderRadius: "8px",
+    background: active ? "#f0f1f3" : "transparent",
+    color: active ? "#202936" : "#697586",
+    font: "inherit",
+    fontSize: 12.5,
+    fontWeight: active ? 700 : 500,
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+  });
+
   return (
-    <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 1180, mx: "auto" }}>
-      <Box>
-        <Typography
-          sx={{
-            color: "#71917a",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-          }}
-        >
-          Workspace
-        </Typography>
-        <Typography
-          variant="h1"
-          sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}
-        >
+    <Box sx={{ maxWidth: 1080, mx: "auto", pt: { xs: 1, md: 2 }, pb: 6 }}>
+      <Box sx={{ mb: 2.75 }}>
+        <Typography variant="h1" sx={{ m: 0, fontSize: { xs: 24, sm: 26 }, letterSpacing: "-.03em", color: "#202936" }}>
           Requests
         </Typography>
-        <Typography
-          sx={{
-            mt: 0.75,
-            maxWidth: 560,
-            color: "#758091",
-            fontSize: 14,
-            lineHeight: 1.55,
-          }}
-        >
-          Every RFQ you’ve started, with who holds the next step.
+        <Typography sx={{ mt: 0.75, fontSize: 13.5, color: "#596779" }}>
+          Every RFQ case, from draft to delivery.
         </Typography>
       </Box>
-      {requests.length > 0 && (
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5, flexWrap: "wrap" }}>
         <Box
           sx={{
-            display: "inline-flex",
-            gap: 0.5,
-            p: 0.4,
-            border: "1px solid #e7ebf0",
-            borderRadius: "10px",
+            display: "flex",
+            alignItems: "center",
+            gap: 1.125,
+            flex: "1 1 260px",
+            minWidth: 220,
+            height: 42,
+            px: 1.75,
+            border: "1px solid #ececef",
+            borderRadius: "11px",
             backgroundColor: "#fff",
-            alignSelf: "flex-start",
+            color: "#9ba1aa",
+            "&:focus-within": { borderColor: "#c7ccd4" },
           }}
         >
-          {filterPills.map(([key, label]) => (
+          <Search sx={{ fontSize: 16 }} />
+          <Box
+            component="input"
+            type="text"
+            value={query}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)}
+            placeholder="Search requests…"
+            aria-label="Search requests"
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              border: 0,
+              outline: 0,
+              background: "transparent",
+              font: "inherit",
+              fontSize: 13.5,
+              color: "#202936",
+              "&::placeholder": { color: "#9ba1aa" },
+            }}
+          />
+        </Box>
+        <Box
+          role="tablist"
+          aria-label="Filter by stage"
+          sx={{
+            display: "flex",
+            gap: 0.375,
+            p: 0.375,
+            border: "1px solid #ececef",
+            borderRadius: "11px",
+            backgroundColor: "#fff",
+            overflowX: "auto",
+          }}
+        >
+          {DESIGN_STAGE_TABS.map((label) => (
             <Box
-              key={key}
+              key={label}
               component="button"
               type="button"
-              onClick={() => setFilter(key)}
-              sx={{
-                px: 1.5,
-                py: 0.85,
-                border: 0,
-                borderRadius: "8px",
-                backgroundColor: filter === key ? "#eef4ee" : "transparent",
-                color: filter === key ? "#33513c" : "#758091",
-                font: "inherit",
-                fontSize: 12.5,
-                fontWeight: filter === key ? 700 : 500,
-                cursor: "pointer",
-              }}
+              role="tab"
+              aria-selected={tab === label}
+              onClick={() => setTab(label)}
+              sx={tabStyle(tab === label)}
             >
               {label}
             </Box>
           ))}
         </Box>
-      )}
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: { xs: "1fr", lg: "minmax(0,1fr) 320px" },
-          gap: 2.5,
-          alignItems: "start",
-        }}
-      >
-        {filtered.length ? (
-          <Box
-            sx={{
-              border: "1px solid #e7ebf0",
-              borderRadius: "12px",
-              backgroundColor: "#fff",
-              overflow: "hidden",
-            }}
-          >
-            <Box
-              sx={{
-                display: { xs: "none", sm: "grid" },
-                gridTemplateColumns: "minmax(0,1fr) 180px 100px 90px",
-                gap: 1.5,
-                px: 2,
-                py: 1.4,
-                borderBottom: "1px solid #eef0f3",
-                backgroundColor: "#fcfcfd",
-              }}
-            >
-              {["Request", "Stage", "Next step owner", "Updated"].map(
-                (label) => (
-                  <Typography
-                    key={label}
-                    sx={{
-                      fontSize: 10.5,
-                      fontWeight: 700,
-                      letterSpacing: ".06em",
-                      textTransform: "uppercase",
-                      color: "#9ba1aa",
-                    }}
-                  >
-                    {label}
-                  </Typography>
-                ),
-              )}
-            </Box>
-            {filtered.map((request, index) => {
-              const owner = ownerFor(request);
-              const active = selected?.id === request.id;
-              return (
-                <Box
-                  key={request.id}
-                  component={motion.div}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{
-                    duration: 0.18,
-                    delay: Math.min(index, 6) * 0.03,
-                  }}
-                  onClick={() => setSelectedId(request.id)}
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "minmax(0,1fr) auto",
-                      sm: "minmax(0,1fr) 180px 100px 90px",
-                    },
-                    gap: 1.5,
-                    alignItems: "center",
-                    px: 2,
-                    py: 1.6,
-                    borderBottom: "1px solid #f2f4f6",
-                    borderLeft: active
-                      ? "2px solid #4b7657"
-                      : "2px solid transparent",
-                    backgroundColor: active ? "#fbfdfb" : "transparent",
-                    cursor: "pointer",
-                    "&:last-of-type": { borderBottom: 0 },
-                  }}
-                >
+      </Box>
+
+      <Box sx={{ border: "1px solid #ececef", borderRadius: "14px", backgroundColor: "#fff", overflow: "hidden" }}>
+        <Box
+          sx={{
+            display: { xs: "none", sm: "grid" },
+            gridTemplateColumns: GRID,
+            gap: 1.75,
+            px: 2.25,
+            minHeight: 42,
+            alignItems: "center",
+            borderBottom: "1px solid #f0f0f2",
+            color: "#9ba1aa",
+            fontSize: 10.5,
+            fontWeight: 700,
+            letterSpacing: ".06em",
+            textTransform: "uppercase",
+          }}
+        >
+          {columns.map((label, index) => (
+            <span key={index}>{label}</span>
+          ))}
+        </Box>
+
+        <Box sx={{ maxHeight: { xs: "none", md: "min(560px, calc(100dvh - 300px))" }, overflowY: "auto" }}>
+          {filtered.length > 0 ? (
+            <>
+              {filtered.map((request) => {
+                const meta = DESIGN_STAGE_META[designStageFor(request.status)];
+                const supplier = suppliers.get(request.id)?.factory_name;
+                const qty = fieldsFromBrief(request.brief).quantity?.trim();
+                return (
                   <Box
+                    key={request.id}
                     component="button"
                     type="button"
                     onClick={() => onOpen(request)}
                     sx={{
-                      display: "block",
-                      minWidth: 0,
-                      border: 0,
-                      p: 0,
+                      display: "grid",
+                      gridTemplateColumns: { xs: "1fr auto", sm: GRID },
+                      gap: { xs: 1, sm: 1.75 },
+                      width: "100%",
                       textAlign: "left",
-                      background: "transparent",
-                      cursor: "pointer",
-                      "&:focus-visible": {
-                        outline: "3px solid #4b7657",
-                        outlineOffset: 2,
-                        borderRadius: 1,
-                      },
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        fontSize: 13.5,
-                        fontWeight: 600,
-                        color: "#202936",
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {request.title}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        mt: 0.35,
-                        color: "#9ba1aa",
-                        fontFamily: "'DM Mono', monospace",
-                        fontSize: 11,
-                      }}
-                    >
-                      {request.case_no}
-                    </Typography>
-                    {suppliers.has(request.id) && (
-                      <Typography sx={{ mt: 0.35, color: "#4b7657", fontSize: 11.5, fontWeight: 600 }}>
-                        Supplier: {suppliers.get(request.id)!.factory_name}
-                      </Typography>
-                    )}
-                  </Box>
-                  <Box
-                    sx={{
-                      display: { xs: "none", sm: "flex" },
                       alignItems: "center",
-                      gap: 0.85,
+                      px: 2.25,
+                      py: 1.875,
+                      border: 0,
+                      borderBottom: "1px solid #f0f0f2",
+                      background: "#fff",
+                      cursor: "pointer",
+                      "&:last-of-type": { borderBottom: 0 },
+                      "&:hover": { backgroundColor: "#fcfdfc" },
+                      "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
                     }}
                   >
-                    <Box
-                      component="span"
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        backgroundColor:
-                          stageDotColor[request.status] || "#b6bdc6",
-                        flexShrink: 0,
-                      }}
-                    />
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography noWrap sx={{ fontSize: 14, fontWeight: 600, color: "#202936" }}>
+                        {request.title}
+                      </Typography>
+                      <Typography
+                        noWrap
+                        sx={{ mt: 0.25, fontSize: 11.5, color: "#9ba1aa", fontFamily: "'DM Mono', monospace" }}
+                      >
+                        {request.case_no}
+                        {qty ? ` · ${qty}` : ""}
+                      </Typography>
+                    </Box>
                     <Typography
-                      sx={{
-                        fontSize: 12.5,
-                        fontWeight: 600,
-                        color:
-                          request.status === "closed" ? "#758091" : "#4b7657",
-                      }}
+                      noWrap
+                      sx={{ display: { xs: "none", sm: "block" }, fontSize: 13, color: "#596779" }}
                     >
-                      {stageCopy[request.status] || request.status}
+                      {supplier || "—"}
                     </Typography>
+                    <Box sx={{ display: { xs: "none", sm: "flex" }, alignItems: "center", gap: 1 }}>
+                      <Box
+                        component="span"
+                        sx={{ flexShrink: 0, width: 8, height: 8, borderRadius: "999px", backgroundColor: meta.dot }}
+                      />
+                      <Typography sx={{ fontSize: 13, color: "#596779" }}>{meta.label}</Typography>
+                    </Box>
+                    <Typography
+                      sx={{ display: { xs: "none", sm: "block" }, fontSize: 12, color: "#9ba1aa" }}
+                    >
+                      {relativeShort(request.updated_at)}
+                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "flex-end", color: "#c5cbd2" }}>
+                      <ChevronRight sx={{ fontSize: 16 }} />
+                    </Box>
                   </Box>
-                  <Typography
+                );
+              })}
+              {loadingMore &&
+                [0, 1, 2].map((row) => (
+                  <Box
+                    key={`s-${row}`}
+                    aria-busy="true"
                     sx={{
-                      display: { xs: "none", sm: "block" },
-                      fontSize: 12.5,
-                      color: "#4a5667",
+                      display: { xs: "none", sm: "grid" },
+                      gridTemplateColumns: GRID,
+                      gap: 1.75,
+                      px: 2.25,
+                      py: 2,
+                      alignItems: "center",
+                      borderBottom: "1px solid #f0f0f2",
                     }}
                   >
-                    {owner}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      display: { xs: "none", sm: "block" },
-                      fontSize: 12,
-                      color: "#9ba1aa",
-                    }}
-                  >
-                    {new Date(request.updated_at).toLocaleDateString(
-                      undefined,
-                      { month: "short", day: "numeric" },
-                    )}
-                  </Typography>
-                </Box>
-              );
-            })}
-            <Box ref={loadMoreSentinel} sx={{ minHeight: hasMore ? 24 : 0 }} aria-hidden="true" />
-            {loadingMore && <AppendSkeleton rows={2} />}
-          </Box>
-        ) : (
-          <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
-            <Typography sx={{ fontWeight: 700 }}>
-              {requests.length
-                ? "No requests match this filter"
-                : "No requests yet"}
-            </Typography>
-            <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>
-              {requests.length
-                ? "Try a different filter above."
-                : "Start from the dashboard prompt and your RFQ will appear here."}
-            </Typography>
-          </RoundedSurface>
-        )}
-        {selected && (
-          <Box
-            sx={{
-              p: 2.25,
-              border: "1px solid #e7ebf0",
-              borderRadius: "12px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <Typography
-              sx={{
-                color: "#8d98a5",
-                fontSize: 10.5,
-                fontWeight: 700,
-                letterSpacing: ".08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Stage timeline
-            </Typography>
-            <Typography
-              sx={{
-                mt: 1,
-                fontSize: 15,
-                fontWeight: 600,
-                color: "#202936",
-                overflowWrap: "anywhere",
-              }}
-            >
-              {selected.title}
-            </Typography>
-            <Typography
-              sx={{
-                mt: 0.3,
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 11.5,
-                color: "#9ba1aa",
-              }}
-            >
-              {selected.case_no}
-            </Typography>
-            {suppliers.has(selected.id) && (
-              <Typography sx={{ mt: 0.3, color: "#4b7657", fontSize: 12, fontWeight: 600 }}>
-                Supplier: {suppliers.get(selected.id)!.factory_name}{suppliers.get(selected.id)!.factory_region ? ` · ${suppliers.get(selected.id)!.factory_region}` : ""}
+                    <Box>
+                      <Skeleton width="78%" />
+                      <Skeleton width="40%" />
+                    </Box>
+                    <Skeleton width="60%" />
+                    <Skeleton width="70%" />
+                    <Skeleton width="50%" />
+                    <span />
+                  </Box>
+                ))}
+              <Box ref={loadMoreSentinel} aria-hidden="true" sx={{ height: hasMore ? 1 : 0 }} />
+              {!hasMore && !loadingMore && (
+                <Typography sx={{ px: 2.25, py: 2, textAlign: "center", fontSize: 11.5, color: "#9ba1aa" }}>
+                  You’ve reached the end — {requests.length} request{requests.length === 1 ? "" : "s"}
+                </Typography>
+              )}
+            </>
+          ) : (
+            <Box sx={{ display: "grid", placeItems: "center", px: 3, py: 8, textAlign: "center" }}>
+              <Box
+                sx={{
+                  display: "grid",
+                  placeItems: "center",
+                  width: 44,
+                  height: 44,
+                  mb: 1.75,
+                  borderRadius: "12px",
+                  backgroundColor: "#f0f1f3",
+                  color: "#9ba1aa",
+                }}
+              >
+                <Inbox sx={{ fontSize: 20 }} />
+              </Box>
+              <Typography sx={{ fontSize: 14.5, fontWeight: 700, color: "#202936" }}>
+                {requests.length === 0 ? "No requests yet" : "No requests match your filters"}
               </Typography>
-            )}
-            <Box sx={{ mt: 2.5 }}>
-              <StageTimeline
-                status={selected.status}
-                onReviewDraft={() => onOpen(selected)}
-              />
+              {requests.length === 0 ? (
+                <Typography sx={{ mt: 1, maxWidth: 320, fontSize: 12.5, color: "#9ba1aa", lineHeight: 1.5 }}>
+                  Start from the prompt on Home and your RFQ cases will appear here.
+                </Typography>
+              ) : (
+                <MuiButton
+                  onClick={() => {
+                    setQuery("");
+                    setTab("All");
+                  }}
+                  sx={{
+                    mt: 1.75,
+                    height: 36,
+                    px: 2,
+                    border: "1px solid #ececef",
+                    borderRadius: "10px",
+                    backgroundColor: "#fff",
+                    color: "#596779",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    "&:hover": { borderColor: "#c7ccd4", backgroundColor: "#fff" },
+                  }}
+                >
+                  Clear filters
+                </MuiButton>
+              )}
             </Box>
-          </Box>
-        )}
+          )}
+        </Box>
       </Box>
-    </Stack>
+    </Box>
   );
 }
 
@@ -3922,7 +3920,7 @@ function DashboardHome({
                       height: 8,
                       flexShrink: 0,
                       borderRadius: "50%",
-                      backgroundColor: stageDotColor[item.status] || "#b6bdc6",
+                      backgroundColor: DESIGN_STAGE_META[designStageFor(item.status)].dot,
                     }}
                   />
                   <Box sx={{ minWidth: 0, flex: 1 }}>
