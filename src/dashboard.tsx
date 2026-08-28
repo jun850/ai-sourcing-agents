@@ -45,26 +45,25 @@ import {
   Add,
   ArrowBack,
   ArrowForward,
+  ChatBubbleOutlined,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
   Description,
   EditOutlined,
+  KeyboardCommandKey,
+  Logout,
+  ReceiptLongOutlined,
   ErrorOutlined,
   FileUploadOutlined,
-  FolderOpen,
   Home,
   Image,
   Inbox,
-  Inventory2,
   KeyboardArrowDown,
-  LibraryBooks,
-  FilterList,
   LockOutlined,
   Menu as MenuIcon,
   SaveOutlined,
   Search,
-  Sort,
   Settings,
   VerifiedOutlined,
   X,
@@ -76,23 +75,21 @@ import {
   getWorkspaceProfile,
   getWorkspaceOpsUnreadCount,
   getWorkspaceInvoiceDetail,
-  getWorkspaceProduct,
   getWorkspaceRfqProduction,
   invokeRfqCopilot,
   listRfqAttachments,
   listRfqCasesPage,
   listRfqMessages,
   listWorkspaceInvoices,
-  listWorkspaceProducts,
   listWorkspaceRfqQuotes,
   listWorkspaceSelectedSuppliers,
   selectWorkspaceRfqQuote,
+  signOut,
   startWorkspaceInvoiceCheckout,
   type RfqAttachment,
   type WorkspaceChatMessage,
   type WorkspaceInvoice,
   type WorkspaceInvoiceDetail,
-  type WorkspaceProduct,
   type WorkspaceRfq,
   type WorkspaceRfqProduction,
   type WorkspaceRfqQuote,
@@ -104,6 +101,8 @@ import {
 } from "./supabase";
 import { ProfileMenu } from "./profile-menu";
 import { NotificationBell } from "./notification-bell";
+import { WorkspaceCommandPalette } from "./workspace-command-palette";
+import { WorkspaceLottie } from "./workspace-lottie";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { AppendSkeleton } from "./workspace-ui";
@@ -147,12 +146,9 @@ type DashboardView =
   | "dashboard"
   | "new"
   | "requests"
-  | "products"
-  | "favourites"
   | "messages"
   | "invoices"
-  | "settings"
-  | "library";
+  | "settings";
 type UploadState = "ready" | "invalid";
 type UploadFile = {
   id: string;
@@ -220,7 +216,7 @@ const navItems: Array<{
   icon: typeof Home;
   href: string;
 }> = [
-  { label: "Dashboard", view: "dashboard", icon: Home, href: "/dashboard" },
+  { label: "Home", view: "dashboard", icon: Home, href: "/dashboard" },
   {
     label: "Requests",
     view: "requests",
@@ -228,21 +224,15 @@ const navItems: Array<{
     href: "/dashboard/requests",
   },
   {
-    label: "Products",
-    view: "products",
-    icon: Inventory2,
-    href: "/dashboard/products",
-  },
-  {
     label: "Messages",
     view: "messages",
-    icon: Inbox,
+    icon: ChatBubbleOutlined,
     href: "/dashboard/messages",
   },
   {
     label: "Invoices",
     view: "invoices",
-    icon: Description,
+    icon: ReceiptLongOutlined,
     href: "/dashboard/invoices",
   },
 ];
@@ -365,6 +355,8 @@ function Sidebar({
   collapsed = false,
   onToggle,
   mobile = false,
+  profile,
+  onEditProfile,
 }: {
   view: DashboardView;
   onNavigate: (item: (typeof navItems)[number]) => void;
@@ -373,9 +365,21 @@ function Sidebar({
   collapsed?: boolean;
   onToggle?: () => void;
   mobile?: boolean;
+  profile: WorkspaceProfile;
+  onEditProfile: () => void;
 }) {
   const compact = collapsed && !mobile;
   const [logoHovered, setLogoHovered] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const accountName = profile.full_name?.trim() || "Workspace";
+  const accountInitials =
+    accountName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "A";
   const itemSx = {
     color: "#697586",
     "&.Mui-selected": {
@@ -501,31 +505,32 @@ function Sidebar({
         )}
       </Box>
       <MuiButton
+        variant="contained"
         onClick={() =>
           onNavigate({
             label: "New request",
             view: "new",
             icon: EditOutlined,
-            href: "/dashboard/new-product-request",
+            href: "/dashboard/new-rfq",
           })
         }
         aria-label="New request"
-        startIcon={!compact ? <EditOutlined /> : undefined}
+        startIcon={!compact ? <Add /> : undefined}
         sx={{
           justifyContent: compact ? "center" : "flex-start",
           alignSelf: compact ? "center" : "stretch",
           minWidth: 0,
-          px: compact ? 0 : 1.25,
+          px: compact ? 0 : 1.5,
           mb: 2.25,
           borderRadius: "10px",
           width: compact ? 48 : "auto",
-          height: compact ? 48 : "auto",
-          position: "sticky",
-          top: 0,
-          zIndex: 1,
-          color: "#202936",
-          backgroundColor: "#fff",
-          "&:hover": { backgroundColor: "#f7f7f8" },
+          height: compact ? 48 : 40,
+          fontSize: 13,
+          fontWeight: 700,
+          color: "#fff",
+          backgroundColor: "#4b7657",
+          boxShadow: "none",
+          "&:hover": { backgroundColor: "#3d6548", boxShadow: "none" },
           "& .MuiButton-startIcon": { margin: 0, mr: 1 },
         }}
       >
@@ -649,39 +654,6 @@ function Sidebar({
       <Box sx={{ mt: 2.5, width: compact ? 48 : "100%", flexShrink: 0 }}>
         <Divider sx={{ mb: 1.25, borderColor: "#ececef" }} />
         <ListItemButton
-          selected={view === "library"}
-          component="a"
-          href="/dashboard/library"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate("/dashboard/library");
-          }}
-          aria-label="Library"
-          sx={{
-            ...itemSx,
-            justifyContent: compact ? "center" : "flex-start",
-            alignSelf: compact ? "center" : "stretch",
-            width: compact ? 48 : "100%",
-            px: compact ? 0 : 1,
-            borderRadius: "10px",
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: compact ? 0 : 32,
-              color: "inherit",
-              justifyContent: "center",
-            }}
-          >
-            <LibraryBooks fontSize="small" />
-          </ListItemIcon>
-          {!compact && (
-            <ListItemText
-              primary={<Typography sx={{ fontSize: 13 }}>Library</Typography>}
-            />
-          )}
-        </ListItemButton>
-        <ListItemButton
           selected={view === "settings"}
           component="a"
           href="/dashboard/settings"
@@ -714,6 +686,157 @@ function Sidebar({
             />
           )}
         </ListItemButton>
+        <Box sx={{ position: "relative", mt: 0.5 }}>
+          <ListItemButton
+            onClick={() => setAccountOpen((open) => !open)}
+            aria-haspopup="menu"
+            aria-expanded={accountOpen}
+            aria-label="Account menu"
+            sx={{
+              ...itemSx,
+              gap: 1,
+              justifyContent: compact ? "center" : "flex-start",
+              alignSelf: compact ? "center" : "stretch",
+              width: compact ? 48 : "100%",
+              px: compact ? 0 : 0.75,
+              py: 0.75,
+              borderRadius: "10px",
+            }}
+          >
+            <Avatar
+              src={profile.avatar_url || undefined}
+              slotProps={{ img: { alt: "" } }}
+              sx={{
+                width: 28,
+                height: 28,
+                flexShrink: 0,
+                bgcolor: "#eef4ee",
+                color: "#4b7657",
+                fontSize: 11,
+                fontWeight: 700,
+              }}
+            >
+              {accountInitials}
+            </Avatar>
+            {!compact && (
+              <>
+                <Box sx={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+                  <Typography
+                    noWrap
+                    sx={{ fontSize: 12.5, fontWeight: 700, color: "#202936" }}
+                  >
+                    {accountName}
+                  </Typography>
+                  <Typography sx={{ fontSize: 10.5, color: "#9ba1aa" }}>
+                    Owner
+                  </Typography>
+                </Box>
+                <KeyboardArrowDown sx={{ fontSize: 16, color: "#9ba1aa" }} />
+              </>
+            )}
+          </ListItemButton>
+          {accountOpen && (
+            <>
+              <Box
+                onClick={() => setAccountOpen(false)}
+                sx={{ position: "fixed", inset: 0, zIndex: 30 }}
+                aria-hidden="true"
+              />
+              <Box
+                role="menu"
+                aria-label="Account"
+                sx={{
+                  position: "absolute",
+                  bottom: "calc(100% + 8px)",
+                  left: 0,
+                  width: 244,
+                  maxWidth: "calc(100vw - 24px)",
+                  p: 1,
+                  border: "1px solid #ececef",
+                  borderRadius: "14px",
+                  backgroundColor: "#fff",
+                  boxShadow: "0 12px 32px rgba(20,25,33,.14)",
+                  zIndex: 31,
+                }}
+              >
+                <Box sx={{ px: 1.25, py: 1, borderBottom: "1px solid #f0f0f2" }}>
+                  <Typography
+                    noWrap
+                    sx={{ fontSize: 12.5, fontWeight: 700, color: "#202936" }}
+                  >
+                    {profile.email || "Private workspace"}
+                  </Typography>
+                  <Typography sx={{ mt: 0.25, fontSize: 11, color: "#9ba1aa" }}>
+                    {accountName}
+                  </Typography>
+                </Box>
+                <MuiButton
+                  fullWidth
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountOpen(false);
+                    onEditProfile();
+                  }}
+                  sx={{
+                    justifyContent: "flex-start",
+                    mt: 0.5,
+                    px: 1.25,
+                    minHeight: 38,
+                    color: "#596779",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    "&:hover": { backgroundColor: "#f7f7f8" },
+                  }}
+                >
+                  Profile settings
+                </MuiButton>
+                <MuiButton
+                  fullWidth
+                  role="menuitem"
+                  onClick={() => {
+                    setAccountOpen(false);
+                    navigate("/dashboard/settings");
+                  }}
+                  sx={{
+                    justifyContent: "flex-start",
+                    px: 1.25,
+                    minHeight: 38,
+                    color: "#596779",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    "&:hover": { backgroundColor: "#f7f7f8" },
+                  }}
+                >
+                  Workspace settings
+                </MuiButton>
+                <Divider sx={{ my: 0.5, borderColor: "#f0f0f2" }} />
+                <MuiButton
+                  fullWidth
+                  role="menuitem"
+                  startIcon={<Logout sx={{ fontSize: 16 }} />}
+                  onClick={() => {
+                    setAccountOpen(false);
+                    void signOut()
+                      .then(() => location.assign("/sign-in"))
+                      .catch(() => location.assign("/sign-in"));
+                  }}
+                  sx={{
+                    justifyContent: "flex-start",
+                    px: 1.25,
+                    minHeight: 38,
+                    color: "#9e3b36",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    "& .MuiButton-startIcon": { mr: 1 },
+                    "&:hover": { backgroundColor: "#fff2f0" },
+                  }}
+                >
+                  Sign out
+                </MuiButton>
+              </Box>
+            </>
+          )}
+        </Box>
       </Box>
     </Box>
   );
@@ -847,9 +970,11 @@ function UploadTray({
 function CleanPromptComposer({
   onStart,
   onMessage,
+  onTypingChange,
 }: {
   onStart: (brief: string, files: UploadFile[]) => Promise<boolean>;
   onMessage: (message: string) => void;
+  onTypingChange?: (typing: boolean) => void;
 }) {
   const { register, handleSubmit, watch, reset } = useForm<BriefForm>({
     defaultValues: { brief: "" },
@@ -860,6 +985,9 @@ function CleanPromptComposer({
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const promptRegistration = register("brief");
   const brief = watch("brief");
+  useEffect(() => {
+    onTypingChange?.(Boolean(brief.trim()) && !submitting);
+  }, [brief, submitting, onTypingChange]);
   function resizePrompt(target: HTMLTextAreaElement) {
     target.style.height = "auto";
     const nextHeight = Math.min(target.scrollHeight, 248);
@@ -3498,877 +3626,323 @@ function WorkspaceRequests({
   );
 }
 
-function ProductRow({
-  product,
-  onView,
-  onReorder,
+function SettingsRow({
+  label,
+  value,
+  action,
+  danger = false,
 }: {
-  product: WorkspaceProduct;
-  onView: () => void;
-  onReorder?: () => void;
+  label: string;
+  value: string;
+  action?: ReactNode;
+  danger?: boolean;
 }) {
-  const finalized = product.order_status === "completed";
   return (
-    <RoundedSurface interactive sx={{ p: { xs: 1.5, sm: 2 } }}>
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography
-            sx={{ fontSize: 14, fontWeight: 700, overflowWrap: "anywhere" }}
-          >
-            {product.name}
-          </Typography>
-          <Typography
-            sx={{
-              mt: 0.35,
-              color: "#9ba1aa",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 11,
-            }}
-          >
-            {product.sku} · {product.supplier}
-          </Typography>
-        </Box>
-        <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 80 }}>
-          <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
-            Unit cost
-          </Typography>
-          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-            {invoiceMoney(Math.round(product.unit_price * 100))}
-          </Typography>
-        </Box>
-        <Box sx={{ display: { xs: "none", sm: "block" }, minWidth: 70 }}>
-          <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>Units</Typography>
-          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-            {product.units}
-          </Typography>
-        </Box>
-        <Chip size="small" label={product.order_status.replaceAll("_", " ")} />
-        <MuiButton
-          size="small"
-          onClick={onView}
-          aria-label={`View ${product.name}`}
-        >
-          View
-        </MuiButton>
-        {finalized && onReorder && (
-          <MuiButton
-            size="small"
-            variant="contained"
-            onClick={onReorder}
-            sx={{
-              backgroundColor: "#4b7657",
-              "&:hover": { backgroundColor: "#3d6548" },
-            }}
-          >
-            Reorder
-          </MuiButton>
-        )}
-      </Stack>
-    </RoundedSurface>
-  );
-}
-
-function LegacyWorkspaceProducts({
-  path,
-  onOpenRfq,
-  onReorder,
-}: {
-  path: string;
-  onOpenRfq: (id: string | null) => void;
-  onReorder: (product: WorkspaceProduct) => void;
-}) {
-  const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
-  const [products, setProducts] = useState<WorkspaceProduct[]>([]);
-  const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      setProducts(await listWorkspaceProducts());
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not load sourced products.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  useEffect(() => {
-    let active = true;
-    if (!detailId) {
-      setDetail(null);
-      return;
-    }
-    void getWorkspaceProduct(detailId)
-      .then((next) => {
-        if (active) setDetail(next);
-      })
-      .catch((cause) => {
-        if (active)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Could not load this product.",
-          );
-      });
-    return () => {
-      active = false;
-    };
-  }, [detailId]);
-  if (detailId && detail)
-    return (
-      <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 900, mx: "auto" }}>
-        <MuiButton
-          variant="text"
-          onClick={() => navigate("/dashboard/products")}
-          sx={{ alignSelf: "flex-start", px: 0, color: "#697586" }}
-        >
-          ← Back to products
-        </MuiButton>
-        <RoundedSurface sx={{ p: { xs: 2, sm: 3 } }}>
-          <Stack spacing={1.5}>
-            <Typography
-              sx={{
-                color: "#71917a",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: ".08em",
-                textTransform: "uppercase",
-              }}
-            >
-              Sourced product
-            </Typography>
-            <Typography
-              variant="h1"
-              sx={{
-                color: "#202936",
-                fontSize: { xs: 28, sm: 36 },
-                overflowWrap: "anywhere",
-              }}
-            >
-              {detail.name}
-            </Typography>
-            <Typography
-              sx={{
-                color: "#9ba1aa",
-                fontFamily: "'DM Mono', monospace",
-                fontSize: 11,
-              }}
-            >
-              {detail.sku} · {detail.supplier}
-            </Typography>
-            <Divider />
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "repeat(2,minmax(0,1fr))",
-                  sm: "repeat(4,minmax(0,1fr))",
-                },
-                gap: 1.5,
-              }}
-            >
-              {[
-                [
-                  "Unit cost",
-                  invoiceMoney(Math.round(detail.unit_price * 100)),
-                ],
-                ["Units", String(detail.units)],
-                ["Order", detail.order_no],
-                ["Stage", detail.order_status],
-              ].map(([label, value]) => (
-                <Box key={label}>
-                  <Typography sx={{ color: "#8a94a2", fontSize: 11 }}>
-                    {label}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      mt: 0.35,
-                      fontSize: 13,
-                      fontWeight: 700,
-                      overflowWrap: "anywhere",
-                    }}
-                  >
-                    {value}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-            {detail.rfq_case_id && (
-              <MuiButton
-                variant="contained"
-                onClick={() => onOpenRfq(detail.rfq_case_id)}
-                sx={{ alignSelf: "flex-start" }}
-              >
-                Open request
-              </MuiButton>
-            )}
-          </Stack>
-        </RoundedSurface>
-      </Stack>
-    );
-  const inProgress = products.filter(
-    (product) => product.order_status !== "completed",
-  );
-  const finalized = products.filter(
-    (product) => product.order_status === "completed",
-  );
-  function group(label: string, items: WorkspaceProduct[]) {
-    if (!items.length) return null;
-    return (
-      <Box>
-        <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: "#4a5667" }}>
-          {label}{" "}
-          <Typography
-            component="span"
-            sx={{ fontWeight: 500, color: "#9ba1aa" }}
-          >
-            · {items.length}
-          </Typography>
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 2.5,
+        py: 2,
+        borderBottom: "1px solid #f0f0f2",
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: danger ? "#b74438" : "#202936" }}>
+          {label}
         </Typography>
-        <Box
-          component="ul"
-          aria-label={label}
-          sx={{
-            mt: 1.25,
-            display: "grid",
-            gap: 1.25,
-            p: 0,
-            m: 0,
-            listStyle: "none",
-          }}
-        >
-          {items.map((product, index) => (
-            <Box component="li" key={product.id}>
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, delay: Math.min(index, 5) * 0.04 }}
-              >
-                <ProductRow
-                  product={product}
-                  onView={() =>
-                    navigate(
-                      `/dashboard/products/${encodeURIComponent(product.id)}`,
-                    )
-                  }
-                  onReorder={() => onReorder(product)}
-                />
-              </motion.div>
-            </Box>
-          ))}
-        </Box>
-      </Box>
-    );
-  }
-  return (
-    <Stack spacing={2.25} sx={{ width: "100%", maxWidth: 960, mx: "auto" }}>
-      <Box>
-        <Typography
-          sx={{
-            color: "#71917a",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: ".08em",
-            textTransform: "uppercase",
-          }}
-        >
-          Workspace
-        </Typography>
-        <Typography
-          variant="h1"
-          sx={{ mt: 0.6, color: "#202936", fontSize: { xs: 30, sm: 40 } }}
-        >
-          Products
-        </Typography>
-        <Typography
-          sx={{
-            mt: 0.75,
-            maxWidth: 600,
-            color: "#758091",
-            fontSize: 14,
-            lineHeight: 1.55,
-          }}
-        >
-          Products you’ve sourced through Atelix — not a catalogue to browse.
-          Each record stays tied to its RFQ and order history.
+        <Typography sx={{ mt: 0.4, color: "#9ba1aa", fontSize: 12.5, lineHeight: 1.5 }}>
+          {value}
         </Typography>
       </Box>
-      {error && (
-        <Alert
-          severity="error"
-          action={
-            <MuiButton color="inherit" size="small" onClick={() => void load()}>
-              Retry
-            </MuiButton>
-          }
-        >
-          {error}
-        </Alert>
-      )}
-      {loading ? (
-        <InvoiceSkeletonRows />
-      ) : products.length ? (
-        <Stack spacing={3}>
-          {group("In progress", inProgress)}
-          {group("Finalized library", finalized)}
-        </Stack>
-      ) : (
-        <RoundedSurface sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 700 }}>
-            No sourced products yet
-          </Typography>
-          <Typography sx={{ mt: 0.75, color: "#758091", fontSize: 13 }}>
-            Products appear here after an Atelix order creates an immutable line
-            snapshot.
-          </Typography>
-        </RoundedSurface>
-      )}
-    </Stack>
+      {action && <Box sx={{ flexShrink: 0 }}>{action}</Box>}
+    </Box>
   );
 }
 
-function productStageLabel(status: string) {
-  const labels: Record<string, string> = {
-    awaiting_payment: "Payment due",
-    payment_declared: "Payment review",
-    payment_verified: "Payment verified",
-    fulfilling: "In production",
-    completed: "Finalized",
-    cancelled: "Cancelled",
-    disputed: "Payment disputed",
-    refunded: "Refunded",
-  };
-  return labels[status] || status
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function productStageDescription(status: string, invoiceNo?: string | null) {
-  if (status === "awaiting_payment") {
-    return invoiceNo
-      ? `Your confirmed order is waiting for ${invoiceNo} to be paid before production begins.`
-      : "Your confirmed order is waiting for invoice payment before production begins.";
-  }
-  if (status === "fulfilling") return "Production is underway against this saved order.";
-  if (status === "completed") return "This sourced product is in your finalized library.";
-  if (status === "cancelled") return "This order is cancelled and remains available as a read-only record.";
-  return "Atelix is coordinating this order against the saved RFQ and supplier record.";
-}
-
-function productStageTone(status: string) {
-  if (status === "completed") return "success";
-  if (["cancelled", "disputed", "refunded"].includes(status)) return "error";
-  return "attention";
-}
-
-function ProductTable({
-  title,
-  products,
-  finalized,
-  onView,
-  onReorder,
-}: {
-  title: string;
-  products: WorkspaceProduct[];
-  finalized: boolean;
-  onView: (product: WorkspaceProduct) => void;
-  onReorder: (product: WorkspaceProduct) => void;
-}) {
-  if (!products.length) return null;
-  const tableId = `product-table-${title.toLowerCase().replaceAll(" ", "-")}`;
-  return (
-    <section className="product-stage-section" aria-labelledby={tableId}>
-      <h2 className="product-stage-heading" id={tableId}>
-        {title} <span>· {products.length}</span>
-      </h2>
-      <div className="product-table" role="table" aria-label={`${title} products`}>
-        <div className="product-table-header" role="row">
-          <span role="columnheader">Product</span>
-          <span role="columnheader">Supplier</span>
-          <span role="columnheader">Unit cost</span>
-          <span role="columnheader">Units to date</span>
-          <span role="columnheader">{finalized ? "Last ordered" : "Stage"}</span>
-          <span role="columnheader" aria-label="Actions" />
-        </div>
-        {products.map((product) => (
-          <div className="product-table-row" role="row" key={product.id}>
-            <div className="product-table-cell product-table-product" role="cell" data-label="Product">
-              <strong>{product.name}</strong>
-              <small>{product.sku}</small>
-            </div>
-            <div className="product-table-cell" role="cell" data-label="Supplier">{product.supplier || "Not yet assigned"}</div>
-            <div className="product-table-cell" role="cell" data-label="Unit cost">{invoiceMoney(Math.round(product.unit_price * 100))}</div>
-            <div className="product-table-cell" role="cell" data-label="Units to date">{product.units.toLocaleString()} units</div>
-            <div className="product-table-cell" role="cell" data-label={finalized ? "Last ordered" : "Stage"}>
-              {finalized ? (
-                product.placed_at ? new Date(product.placed_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—"
-              ) : (
-                <span className={`product-stage-status product-stage-status--${productStageTone(product.order_status)}`}>
-                  <i aria-hidden="true" /> {productStageLabel(product.order_status)}
-                </span>
-              )}
-            </div>
-            <div className="product-table-actions" role="cell" data-label="Actions">
-              <MuiButton className="product-outline-button" size="small" variant="outlined" onClick={() => onView(product)} aria-label={`View ${product.name}`}>
-                View
-              </MuiButton>
-              {finalized && (
-                <MuiButton className="product-primary-button" size="small" variant="contained" onClick={() => onReorder(product)}>
-                  Reorder
-                </MuiButton>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ProductDetail({
-  product,
-  onBack,
-  onOpenRfq,
-  onReorder,
-}: {
-  product: WorkspaceProduct;
-  onBack: () => void;
-  onOpenRfq: (id: string | null) => void;
-  onReorder: () => void;
-}) {
-  const finalized = product.order_status === "completed";
-  const [production, setProduction] = useState<WorkspaceRfqProduction | null>(null);
-  useEffect(() => {
-    let active = true;
-    if (!product.rfq_case_id) return () => { active = false; };
-    void getWorkspaceRfqProduction(product.rfq_case_id)
-      .then((next) => { if (active) setProduction(next); })
-      .catch(() => { if (active) setProduction(null); });
-    return () => { active = false; };
-  }, [product.rfq_case_id]);
-  const invoice = production?.invoice;
-  const invoicePending = Boolean(invoice && ["sent", "overdue"].includes(invoice.effective_status));
-  const [payBusy, setPayBusy] = useState(false);
-  const [payError, setPayError] = useState("");
-  async function payInvoice() {
-    if (!invoice?.id || payBusy) return;
-    setPayBusy(true);
-    setPayError("");
-    try {
-      const checkout = await startWorkspaceInvoiceCheckout([invoice.id]);
-      window.location.assign(checkout.url);
-    } catch (cause) {
-      setPayError(cause instanceof Error ? cause.message : "Could not start payment.");
-      setPayBusy(false);
-    }
-  }
-  return (
-    <div className="product-detail-page">
-      <div className="product-detail-toolbar">
-        <MuiButton className="product-back-button" variant="text" onClick={onBack} startIcon={<ArrowBack />}>Back to products</MuiButton>
-      </div>
-      <div className="product-detail-layout">
-        <section className="product-detail-content" aria-labelledby="product-detail-title">
-          <div className="product-detail-heading">
-            <div>
-              <Typography className="product-eyebrow">Product</Typography>
-              <Typography id="product-detail-title" component="h1" className="product-detail-title">{product.name}</Typography>
-              <Typography className="product-detail-meta">{product.sku} · {product.supplier || "Not yet assigned"}</Typography>
-            </div>
-            <span className={`product-detail-badge product-detail-badge--${productStageTone(product.order_status)}`}>{productStageLabel(product.order_status)}</span>
-          </div>
-          <section className="product-specification" aria-labelledby="product-specification-title">
-            <h2 id="product-specification-title">Specification</h2>
-            <dl>
-              {[
-                ["Supplier", product.supplier || "Not yet assigned"],
-                ["Unit cost", invoiceMoney(Math.round(product.unit_price * 100))],
-                ["Units ordered", `${product.units.toLocaleString()} units`],
-                ["Order", product.order_no],
-                ["RFQ", product.rfq_case_id || "Not linked"],
-              ].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
-            </dl>
-          </section>
-          <section className="product-history" aria-labelledby="product-history-title">
-            <h2 id="product-history-title">Order history for this product</h2>
-            <div className="product-history-table" role="table" aria-label="Order history">
-              <div className="product-history-header" role="row"><span role="columnheader">RFQ</span><span role="columnheader">Units</span><span role="columnheader">Status</span></div>
-              <div className="product-history-row" role="row"><span role="cell">{product.rfq_case_id ? `${product.rfq_case_id} · first order` : `${product.order_no} · first order`}</span><span role="cell">{product.units.toLocaleString()} units</span><span role="cell" className={`product-history-status product-history-status--${productStageTone(product.order_status)}`}>{productStageLabel(product.order_status)}</span></div>
-            </div>
-            <p className="product-history-note">No earlier orders are recorded for this saved product.</p>
-          </section>
-        </section>
-        <aside className="product-stage-rail" aria-labelledby="product-current-stage-title">
-          <Typography id="product-current-stage-title" className="product-rail-eyebrow">Current stage</Typography>
-          <div className={`product-stage-callout product-stage-callout--${productStageTone(product.order_status)}`}>
-            <strong>{product.order_status === "awaiting_payment" ? "Invoice payment due" : productStageLabel(product.order_status)}</strong>
-            <p>{productStageDescription(product.order_status, invoice?.invoice_no)}</p>
-          </div>
-          {invoicePending ? (
-            <>
-              <MuiButton
-                className="product-primary-button product-stage-action"
-                fullWidth
-                variant="contained"
-                disabled={payBusy}
-                onClick={() => void payInvoice()}
-                startIcon={payBusy ? <CircularProgress size={16} color="inherit" /> : undefined}
-              >
-                {payBusy ? "Opening payment…" : "Pay invoice"}
-              </MuiButton>
-              {payError && <Alert severity="error" sx={{ mt: 1.25 }}>{payError}</Alert>}
-            </>
-          ) : (
-            product.rfq_case_id && <MuiButton className="product-primary-button product-stage-action" fullWidth variant="contained" onClick={() => onOpenRfq(product.rfq_case_id)}>Open linked request</MuiButton>
-          )}
-          <div className="product-rail-divider" />
-          <Typography className="product-rail-eyebrow">Also from here</Typography>
-          <MuiButton className="product-outline-button product-reorder-button" fullWidth variant="outlined" onClick={onReorder} disabled={!finalized}>Reorder this spec</MuiButton>
-          <p className="product-reorder-note">Starts a fresh RFQ pre-filled from this spec — available once the first order is complete.</p>
-        </aside>
-      </div>
-    </div>
-  );
-}
-
-function WorkspaceProducts({
-  path,
-  onOpenRfq,
-  onReorder,
-}: {
-  path: string;
-  onOpenRfq: (id: string | null) => void;
-  onReorder: (product: WorkspaceProduct) => void;
-}) {
-  const detailId = path.match(/^\/dashboard\/products\/([^/]+)$/)?.[1] || "";
-  const [products, setProducts] = useState<WorkspaceProduct[]>([]);
-  const [detail, setDetail] = useState<WorkspaceProduct | null>(null);
-  const [detailLoading, setDetailLoading] = useState(Boolean(detailId));
-  const [query, setQuery] = useState("");
-  const [supplier, setSupplier] = useState("all");
-  const [status, setStatus] = useState<"all" | "in_progress" | "finalized">("all");
-  const [sort, setSort] = useState<"last_ordered" | "name">("last_ordered");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const load = useCallback(async () => {
-    setLoading(true); setError("");
-    try { setProducts(await listWorkspaceProducts()); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load sourced products."); }
-    finally { setLoading(false); }
-  }, []);
-  useEffect(() => { void load(); }, [load]);
-  useEffect(() => {
-    if (!detailId) { setDetail(null); setDetailLoading(false); return; }
-    let active = true;
-    setDetail(null);
-    setDetailLoading(true);
-    void getWorkspaceProduct(decodeURIComponent(detailId)).then((next) => {
-      if (!active) return;
-      setDetail(next);
-      setDetailLoading(false);
-      if (!next) setError("Could not load this product.");
-    }).catch((cause) => {
-      if (!active) return;
-      setDetailLoading(false);
-      setError(cause instanceof Error ? cause.message : "Could not load this product.");
-    });
-    return () => { active = false; };
-  }, [detailId]);
-  if (detailId && detail) return <ProductDetail product={detail} onBack={() => navigate("/dashboard/products")} onOpenRfq={onOpenRfq} onReorder={() => onReorder(detail)} />;
-  if (detailId && detailLoading) return <div className="product-detail-loading" aria-live="polite"><Skeleton variant="text" width={180} height={22} /><Skeleton variant="text" width="62%" height={54} /><Skeleton variant="rounded" height={320} /></div>;
-  if (detailId && error) return <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => window.location.reload()}>Retry</MuiButton>}>{error}</Alert>;
-  const suppliers = Array.from(new Set(products.map((product) => product.supplier))).sort();
-  const filtered = products.filter((product) => {
-    const haystack = `${product.name} ${product.supplier} ${product.sku} ${product.rfq_case_id || ""}`.toLowerCase();
-    const matchesStatus = status === "all" || (status === "finalized" ? product.order_status === "completed" : product.order_status !== "completed");
-    return matchesStatus && (supplier === "all" || product.supplier === supplier) && haystack.includes(query.toLowerCase());
-  }).sort((a, b) => sort === "name" ? a.name.localeCompare(b.name) : (b.placed_at || "").localeCompare(a.placed_at || ""));
-  const inProgress = filtered.filter((product) => product.order_status !== "completed");
-  const finalized = filtered.filter((product) => product.order_status === "completed");
-  return (
-    <div className="product-workspace-page">
-      <header className="product-workspace-heading">
-        <Typography className="product-eyebrow">Workspace</Typography>
-        <Typography component="h1" className="product-workspace-title">Products</Typography>
-        <Typography className="product-workspace-description">Products you’ve sourced through Atelix — not a catalogue to browse. Each one is tied to its own RFQ history.</Typography>
-      </header>
-      {error && <Alert severity="error" action={<MuiButton color="inherit" size="small" onClick={() => void load()}>Retry</MuiButton>}>{error}</Alert>}
-      <div className="product-filters" aria-label="Product filters">
-        <label className="product-search-field">
-          <Search aria-hidden="true" />
-          <span className="sr-only">Search products</span>
-          <input value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => setQuery(event.target.value)} placeholder="Search by product, supplier or RFQ" />
-        </label>
-        <div className="product-status-tabs" role="tablist" aria-label="Filter products by status">
-          {([["all", `All ${products.length}`], ["in_progress", `In progress ${products.filter((product) => product.order_status !== "completed").length}`], ["finalized", `Finalized ${products.filter((product) => product.order_status === "completed").length}`]] as const).map(([value, label]) => <MuiButton key={value} className={status === value ? "is-selected" : ""} size="small" role="tab" aria-selected={status === value} onClick={() => setStatus(value)}>{label}</MuiButton>)}
-        </div>
-        <label className="product-select-field">
-          <FilterList aria-hidden="true" />
-          <span className="sr-only">Filter by supplier</span>
-          <select value={supplier} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSupplier(event.target.value)}>
-            <option value="all">Supplier</option>
-            {suppliers.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <KeyboardArrowDown aria-hidden="true" />
-        </label>
-        <label className="product-select-field product-sort-field">
-          <Sort aria-hidden="true" />
-          <span className="sr-only">Sort products</span>
-          <select value={sort} onChange={(event: ChangeEvent<HTMLSelectElement>) => setSort(event.target.value as "last_ordered" | "name")}>
-            <option value="last_ordered">Sort: Last ordered</option>
-            <option value="name">Sort: Product name</option>
-          </select>
-          <KeyboardArrowDown aria-hidden="true" />
-        </label>
-      </div>
-      {loading ? <InvoiceSkeletonRows /> : filtered.length ? <div className="product-stage-list"><ProductTable title="In progress" products={inProgress} finalized={false} onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /><ProductTable title="Finalized library" products={finalized} finalized onView={(product) => navigate(`/dashboard/products/${encodeURIComponent(product.id)}`)} onReorder={onReorder} /></div> : <div className="product-empty-state"><Typography component="h2">{products.length ? "No products match these filters" : "No sourced products yet"}</Typography><Typography>{products.length ? "Try a different search or filter." : "Products appear here after an Atelix order creates an immutable line snapshot."}</Typography></div>}
-      {!loading && Boolean(products.length) && <p className="product-workspace-note"><LockOutlined aria-hidden="true" /> Reorder opens a new RFQ from this product’s saved spec — nothing is sent to a supplier until you approve it.</p>}
-    </div>
-  );
-}
-
-function PlaceholderView({
-  view,
+function WorkspaceSettings({
+  profile,
   onEditProfile,
 }: {
-  view: Exclude<
-    DashboardView,
-    "dashboard" | "new" | "requests" | "products" | "invoices"
-  >;
-  onEditProfile?: () => void;
+  profile: WorkspaceProfile;
+  onEditProfile: () => void;
 }) {
-  const content = {
-    products: [
-      "Products",
-      "Your sourced products will appear here once a product request is ready.",
-    ],
-    favourites: [
-      "Favourites",
-      "Save product references here when you find something worth returning to.",
-    ],
-    messages: [
-      "Messages",
-      "Messages with your sourcing team will appear here when a request is in progress.",
-    ],
-    settings: [
-      "Settings",
-      "Manage your profile and workspace preferences here. Settings are local to this demo workspace.",
-    ],
-    library: [
-      "Library",
-      "Keep reference files, supplier notes, and sourcing materials close to your RFQ history.",
-    ],
-  }[view];
-  const isLibrary = view === "library";
+  const [tab, setTab] = useState<"Profile" | "Workspace">("Profile");
+  const tabs: Array<"Profile" | "Workspace"> = ["Profile", "Workspace"];
+  const outlinedAction = {
+    height: 34,
+    px: 1.75,
+    border: "1px solid #ececef",
+    borderRadius: "9px",
+    backgroundColor: "#fff",
+    color: "#596779",
+    fontSize: 12,
+    fontWeight: 600,
+  } as const;
   return (
-    <Box sx={{ minHeight: 520, width: "100%", maxWidth: 900, mx: "auto" }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          sx={{
-            color: "#8d949e",
-            fontSize: 12,
-            fontWeight: 700,
-            letterSpacing: ".04em",
-          }}
-        >
-          {isLibrary ? "Your workspace" : "Account"}
-        </Typography>
-        <Typography
-          variant="h1"
-          sx={{
-            mt: 0.75,
-            color: "#20242b",
-            fontSize: { xs: 32, sm: 42 },
-            fontWeight: 500,
-          }}
-        >
-          {content[0]}
-        </Typography>
-        <Typography
-          sx={{
-            maxWidth: 540,
-            mt: 1,
-            color: "#747b86",
-            fontSize: 15,
-            lineHeight: 1.6,
-          }}
-        >
-          {content[1]}
-        </Typography>
+    <Box sx={{ width: "100%", maxWidth: 760, mx: "auto" }}>
+      <Typography variant="h1" sx={{ fontSize: { xs: 26, sm: 30 }, color: "#202936" }}>
+        Settings
+      </Typography>
+      <Typography sx={{ mt: 0.75, color: "#596779", fontSize: 13.5 }}>
+        Manage your profile and workspace.
+      </Typography>
+      <Box
+        role="tablist"
+        aria-label="Settings sections"
+        sx={{ display: "flex", gap: 0.5, mt: 3, mb: 1, borderBottom: "1px solid #ececef" }}
+      >
+        {tabs.map((item) => (
+          <Box
+            key={item}
+            component="button"
+            type="button"
+            role="tab"
+            aria-selected={tab === item}
+            onClick={() => setTab(item)}
+            sx={{
+              height: 38,
+              px: 0.5,
+              mb: "-1px",
+              border: 0,
+              borderBottom: tab === item ? "2px solid #4b7657" : "2px solid transparent",
+              background: "transparent",
+              color: tab === item ? "#202936" : "#697586",
+              font: "inherit",
+              fontSize: 13,
+              fontWeight: tab === item ? 700 : 600,
+              cursor: "pointer",
+            }}
+          >
+            {item}
+          </Box>
+        ))}
       </Box>
-      {isLibrary ? (
-        <Box sx={{ display: "grid", gap: 1.25 }}>
-          <RoundedSurface
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              p: 2.25,
-              border: "1px solid #ececef",
-              borderRadius: "14px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <FolderOpen sx={{ color: "#6fae86" }} />
-            <Box>
-              <Typography
-                sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}
+      {tab === "Profile" ? (
+        <Box role="tabpanel">
+          <SettingsRow
+            label="Appearance"
+            value="Light mode is active for this sourcing workspace."
+          />
+          <SettingsRow
+            label="E-mail"
+            value={profile.email || "Private workspace"}
+          />
+          <SettingsRow
+            label="Personal name"
+            value={profile.full_name?.trim() || "Not set"}
+            action={
+              <MuiButton onClick={onEditProfile} sx={outlinedAction}>
+                Edit profile
+              </MuiButton>
+            }
+          />
+          <SettingsRow
+            label="Two-factor authentication"
+            value="Managed with your Atelix sign-in method."
+          />
+          <SettingsRow
+            label="Delete account"
+            value="Contact info@arcanawangsa.com to permanently close your workspace and remove your data."
+            danger
+            action={
+              <MuiButton
+                component="a"
+                href="mailto:info@arcanawangsa.com?subject=Delete%20my%20Atelix%20account"
+                sx={{ ...outlinedAction, border: "1px solid #f0d8d4", color: "#b74438", fontWeight: 700 }}
               >
-                Reference library
-              </Typography>
-              <Typography sx={{ mt: 0.35, color: "#858c96", fontSize: 12 }}>
-                Files attached to saved RFQs will be organized here.
-              </Typography>
-            </Box>
-          </RoundedSurface>
-          <RoundedSurface
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1.5,
-              p: 2.25,
-              border: "1px solid #ececef",
-              borderRadius: "14px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <Search sx={{ color: "#8b929c" }} />
-            <Box>
-              <Typography
-                sx={{ color: "#292e36", fontSize: 14, fontWeight: 700 }}
-              >
-                Search your sourcing materials
-              </Typography>
-              <Typography sx={{ mt: 0.35, color: "#858c96", fontSize: 12 }}>
-                Search becomes available as your workspace fills with
-                references.
-              </Typography>
-            </Box>
-          </RoundedSurface>
+                Contact us
+              </MuiButton>
+            }
+          />
         </Box>
       ) : (
-        <RoundedSurface
-          sx={{
-            maxWidth: 640,
-            p: { xs: 2.5, sm: 3 },
-            border: "1px solid #ececef",
-            borderRadius: "14px",
-            backgroundColor: "#fff",
-          }}
-        >
-          <Stack spacing={1.75}>
+        <Box role="tabpanel">
+          <SettingsRow
+            label={profile.full_name?.trim() || "Your workspace"}
+            value="1 member"
+          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, py: 2 }}>
+            <Avatar
+              src={profile.avatar_url || undefined}
+              slotProps={{ img: { alt: "" } }}
+              sx={{ width: 34, height: 34, bgcolor: "#eef4ee", color: "#4b7657", fontSize: 12, fontWeight: 700 }}
+            >
+              {(profile.full_name?.trim() || "A").slice(0, 1).toUpperCase()}
+            </Avatar>
             <Box>
-              <Typography
-                sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}
-              >
-                Profile
+              <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#202936" }}>
+                {profile.full_name?.trim() || "You"} · Owner
               </Typography>
-              <Typography sx={{ mt: 0.45, color: "#818894", fontSize: 13 }}>
-                Keep the personal name and avatar shown in your messages current.
-              </Typography>
-              {view === "settings" && <MuiButton variant="outlined" size="small" startIcon={<EditOutlined />} onClick={onEditProfile} sx={{ mt: 1.25 }}>Edit profile</MuiButton>}
-            </Box>
-            <Divider sx={{ borderColor: "#f0f0f2" }} />
-            <Box>
-              <Typography
-                sx={{ color: "#2b3038", fontSize: 14, fontWeight: 700 }}
-              >
-                Workspace appearance
-              </Typography>
-              <Typography sx={{ mt: 0.45, color: "#818894", fontSize: 13 }}>
-                Light mode is active for this sourcing workspace.
+              <Typography sx={{ mt: 0.2, fontSize: 11.5, color: "#9ba1aa" }}>
+                {profile.email || "Private workspace"}
               </Typography>
             </Box>
-          </Stack>
-        </RoundedSurface>
+          </Box>
+        </Box>
       )}
     </Box>
   );
 }
 
+
 function DashboardHome({
   isNew,
   onStart,
   onMessage,
+  recent,
+  onOpenRequest,
 }: {
   isNew: boolean;
   onStart: (brief: string, files: UploadFile[]) => Promise<boolean>;
   onMessage: (message: string) => void;
+  recent: StoredRfq[];
+  onOpenRequest: (item: StoredRfq) => void;
 }) {
+  const [typing, setTyping] = useState(false);
+  const reduceMotion = useReducedMotion();
+  void isNew;
   return (
-    <Stack
-      spacing={2.5}
+    <Box
       sx={{
         minWidth: 0,
         width: "100%",
-        maxWidth: 720,
-        minHeight: { xs: "calc(100vh - 150px)", md: "calc(100vh - 120px)" },
-        rowGap: { xs: 2.5, md: 3 },
+        maxWidth: 640,
         mx: "auto",
-        justifyContent: "center",
-        backgroundColor: "transparent",
+        pt: { xs: 3, md: 6 },
+        pb: 6,
       }}
     >
-      <Box
-        sx={{
-          minWidth: 0,
-          width: "100%",
-          maxWidth: 620,
-          mx: "auto",
-          boxSizing: "border-box",
-          textAlign: "left",
-        }}
-      >
+      <Box sx={{ mb: 3 }}>
         <Typography
           variant="h1"
           sx={{
-            display: "block",
-            width: "100%",
-            maxWidth: "100%",
-            minWidth: 0,
             m: 0,
-            whiteSpace: "normal",
             overflowWrap: "anywhere",
-            textWrap: "balance",
-            fontFamily: "inherit",
-            fontSize: { xs: 32, sm: 38, md: 40 },
-            lineHeight: 1.1,
-            letterSpacing: "-.035em",
+            fontSize: { xs: 26, sm: 30 },
+            lineHeight: 1.12,
+            letterSpacing: "-.03em",
             color: "#202936",
           }}
         >
-          {isNew ? "What product can we source?" : "Ready when you are"}
+          Start sourcing with Atelix
         </Typography>
         <Typography
           sx={{
-            display: "block",
-            width: "100%",
-            minWidth: 0,
-            mt: 1.25,
+            mt: 1,
             maxWidth: "58ch",
             color: "#596779",
             fontSize: { xs: 14, sm: 15 },
-            lineHeight: 1.6,
-            textWrap: "pretty",
+            lineHeight: 1.55,
           }}
         >
-          Describe the product, quantity, material, and timing. Add a reference
-          if you have one.
+          Describe what you need, or attach a reference. We turn it into a clear
+          RFQ and route it to vetted suppliers.
         </Typography>
       </Box>
-      <Box sx={{ width: "100%", maxWidth: 620, mx: "auto" }}>
-        <CleanPromptComposer onStart={onStart} onMessage={onMessage} />
+
+      <Box
+        aria-hidden={!typing}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          overflow: "hidden",
+          transition: reduceMotion
+            ? "none"
+            : "max-height 320ms cubic-bezier(.22,1,.36,1), opacity 200ms ease",
+          maxHeight: typing ? 380 : 0,
+          opacity: typing ? 1 : 0,
+          mb: typing ? 1 : 0,
+        }}
+      >
+        {typing && <WorkspaceLottie size={360} />}
       </Box>
-    </Stack>
+
+      <CleanPromptComposer
+        onStart={onStart}
+        onMessage={onMessage}
+        onTypingChange={setTyping}
+      />
+
+      <Box
+        sx={{
+          overflow: "hidden",
+          transition: reduceMotion
+            ? "none"
+            : "max-height 320ms cubic-bezier(.22,1,.36,1), opacity 200ms ease, margin-top 320ms",
+          maxHeight: typing ? 0 : 900,
+          opacity: typing ? 0 : 1,
+          mt: typing ? 0 : 5,
+        }}
+      >
+        {recent.length > 0 && (
+          <>
+            <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
+              <Typography sx={{ fontSize: 15, fontWeight: 700, color: "#334155" }}>
+                Recent requests
+              </Typography>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => navigate("/dashboard/requests")}
+                sx={{ border: 0, background: "transparent", color: "#697586", font: "inherit", fontSize: 12.5, fontWeight: 600, cursor: "pointer", "&:hover": { color: "#4b7657" } }}
+              >
+                View all
+              </Box>
+            </Box>
+            <Box sx={{ border: "1px solid #ececef", borderRadius: "14px", backgroundColor: "#fff", overflow: "hidden" }}>
+              {recent.slice(0, 4).map((item) => (
+                <Box
+                  key={item.id}
+                  component="button"
+                  type="button"
+                  onClick={() => onOpenRequest(item)}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.75,
+                    width: "100%",
+                    textAlign: "left",
+                    px: 2,
+                    py: 1.75,
+                    border: 0,
+                    borderBottom: "1px solid #f0f0f2",
+                    background: "#fff",
+                    cursor: "pointer",
+                    "&:last-of-type": { borderBottom: 0 },
+                    "&:hover": { backgroundColor: "#fcfdfc" },
+                    "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                  }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      flexShrink: 0,
+                      borderRadius: "50%",
+                      backgroundColor: stageDotColor[item.status] || "#b6bdc6",
+                    }}
+                  />
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography noWrap sx={{ fontSize: 14, fontWeight: 600, color: "#202936" }}>
+                      {item.title}
+                    </Typography>
+                    <Typography sx={{ mt: 0.25, fontSize: 12, color: "#9ba1aa", fontFamily: "'DM Mono', monospace" }}>
+                      {item.case_no}
+                    </Typography>
+                  </Box>
+                  <Typography sx={{ flexShrink: 0, fontSize: 12, color: "#9ba1aa" }}>
+                    {new Date(item.updated_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </>
+        )}
+      </Box>
+    </Box>
   );
 }
 
@@ -5122,6 +4696,17 @@ export function Dashboard({ path }: { path: string }) {
   const [message, setMessage] = useState("");
   const [profile, setProfile] = useState<WorkspaceProfile>({ full_name: "Workspace", avatar_url: null, email: null });
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  useEffect(() => {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
   const [rfq, setRfq] = useState<{
     record: WorkspaceRfq;
     attachments: RfqAttachment[];
@@ -5179,24 +4764,51 @@ export function Dashboard({ path }: { path: string }) {
   const view: DashboardView =
     path === "/dashboard/requests" || requestDetailId
       ? "requests"
-      : path === "/dashboard/products" ||
-          /^\/dashboard\/products\/[^/]+$/.test(path)
-        ? "products"
-        : path === "/dashboard/favourites"
-          ? "favourites"
-          : path === "/dashboard/messages" || /^\/dashboard\/messages\/[^/]+$/.test(path)
-            ? "messages"
-            : path === "/dashboard/invoices" ||
-                /^\/dashboard\/invoices\/[^/]+$/.test(path)
-              ? "invoices"
-              : path === "/dashboard/settings"
-                ? "settings"
-                : path === "/dashboard/library"
-                  ? "library"
-                  : path === "/dashboard/new-product-request" ||
-                      path === "/dashboard/new-rfq"
-                    ? "new"
-                    : "dashboard";
+      : path === "/dashboard/messages" || /^\/dashboard\/messages\/[^/]+$/.test(path)
+        ? "messages"
+        : path === "/dashboard/invoices" ||
+            /^\/dashboard\/invoices\/[^/]+$/.test(path)
+          ? "invoices"
+          : path === "/dashboard/settings"
+            ? "settings"
+            : path === "/dashboard/new-product-request" ||
+                path === "/dashboard/new-rfq"
+              ? "new"
+              : "dashboard";
+  useEffect(() => {
+    if (
+      path === "/dashboard/products" ||
+      /^\/dashboard\/products(\/|$)/.test(path) ||
+      path === "/dashboard/favourites" ||
+      path === "/dashboard/library"
+    ) {
+      history.replaceState({}, "", "/dashboard/requests");
+      dispatchEvent(new PopStateEvent("popstate"));
+    }
+  }, [path]);
+  useEffect(() => {
+    // Landing on Home or a fresh "new request" clears any open RFQ so the
+    // prompt is shown (command-palette / deep-link entry points bypass go()).
+    if (
+      path === "/dashboard" ||
+      path === "/dashboard/new-rfq" ||
+      path === "/dashboard/new-product-request"
+    ) {
+      setRfq(null);
+    }
+  }, [path]);
+  const breadcrumbRoot =
+    view === "requests"
+      ? "Requests"
+      : view === "messages"
+        ? "Messages"
+        : view === "invoices"
+          ? "Invoices"
+          : view === "settings"
+            ? "Settings"
+            : "Home";
+  const breadcrumbSub =
+    view === "requests" && requestDetailId && rfq ? rfq.record.case_no : "";
   const workspaceOpen = Boolean(
     rfq && (view === "dashboard" || view === "new" || requestDetailId),
   );
@@ -5247,32 +4859,6 @@ export function Dashboard({ path }: { path: string }) {
       );
     } finally {
       setRfqLoading(false);
-    }
-  }
-  async function reorderProduct(product: WorkspaceProduct) {
-    setMessage("Starting a new RFQ from this product…");
-    try {
-      const title = `Reorder: ${product.name}`;
-      const fields = {
-        ...defaultRfqFields,
-        product: product.name,
-        quantity: `${product.units} units`,
-      };
-      const summary = `Reorder of ${product.name} (SKU ${product.sku}) previously sourced from ${product.supplier}.`;
-      const record = await createRfqCase({
-        title,
-        brief: briefFromFields(summary, fields),
-      });
-      setHistoryItems((current) => [
-        record,
-        ...current.filter((entry) => entry.id !== record.id),
-      ]);
-      setMessage("");
-      navigate("/dashboard/requests");
-    } catch (cause) {
-      setMessage(
-        cause instanceof Error ? cause.message : "Could not start a reorder.",
-      );
     }
   }
   function content() {
@@ -5341,20 +4927,6 @@ export function Dashboard({ path }: { path: string }) {
           }}
         />
       );
-    if (view === "products")
-      return (
-        <WorkspaceProducts
-          path={path}
-          onOpenRfq={(id) => {
-            const record = historyItems.find((item) => item.id === id);
-            if (record) void restoreHistory(record);
-            else navigate("/dashboard/requests");
-          }}
-          onReorder={(product) => {
-            void reorderProduct(product);
-          }}
-        />
-      );
     if (view === "invoices") return <WorkspaceInvoices path={path} />;
     if (view === "messages")
       return <RfqOpsMessagesWorkspace
@@ -5363,15 +4935,10 @@ export function Dashboard({ path }: { path: string }) {
         unreadCount={messageUnreadCount}
         onUnreadCount={refreshMessageUnreadCount}
       />;
-    if (["favourites", "settings", "library"].includes(view))
+    if (view === "settings")
       return (
-        <PlaceholderView
-          view={
-            view as Exclude<
-              DashboardView,
-              "dashboard" | "new" | "requests" | "products" | "invoices"
-            >
-          }
+        <WorkspaceSettings
+          profile={profile}
           onEditProfile={() => setProfileEditorOpen(true)}
         />
       );
@@ -5380,6 +4947,10 @@ export function Dashboard({ path }: { path: string }) {
         isNew={view === "new"}
         onStart={startRfq}
         onMessage={setMessage}
+        recent={historyItems}
+        onOpenRequest={(item) => {
+          void restoreHistory(item);
+        }}
       />
     );
   }
@@ -5426,6 +4997,8 @@ export function Dashboard({ path }: { path: string }) {
                 }}
                 collapsed={sidebarCollapsed}
                 onToggle={() => setSidebarCollapsed((current) => !current)}
+                profile={profile}
+                onEditProfile={() => setProfileEditorOpen(true)}
               />
             </Box>
           )}
@@ -5450,36 +5023,80 @@ export function Dashboard({ path }: { path: string }) {
                 <IconButton
                   onClick={() => setMobileOpen(true)}
                   aria-label="Open navigation"
+                  sx={{ flexShrink: 0 }}
                 >
                   <MenuIcon />
                 </IconButton>
               )}
               <Box
                 sx={{
-                  display: "flex",
+                  display: { xs: "none", sm: "flex" },
                   alignItems: "center",
-                  gap: 1.5,
+                  gap: 0.75,
                   minWidth: 0,
-                  ml: mobile ? 1 : "auto",
-                  position: { xs: "absolute", sm: "static" },
-                  right: { xs: 2, sm: "auto" },
+                  flexShrink: 0,
                 }}
               >
-                <Typography
+                <Typography sx={{ fontSize: 13.5, fontWeight: 600, color: "#697586" }}>
+                  {breadcrumbRoot}
+                </Typography>
+                {breadcrumbSub && (
+                  <>
+                    <ChevronRight sx={{ fontSize: 15, color: "#9ba1aa" }} />
+                    <Typography
+                      noWrap
+                      sx={{ fontSize: 13.5, fontWeight: 600, color: "#202936", fontFamily: "'DM Mono', monospace" }}
+                    >
+                      {breadcrumbSub}
+                    </Typography>
+                  </>
+                )}
+              </Box>
+              <Box sx={{ flex: 1, display: "flex", justifyContent: "center", px: { xs: 1, sm: 2 } }}>
+                <Box
+                  component="button"
+                  type="button"
+                  onClick={() => setPaletteOpen(true)}
+                  aria-label="Search everything"
+                  aria-keyshortcuts="Meta+K Control+K"
                   sx={{
-                    display: { xs: "none", sm: "block" },
-                    minWidth: 0,
-                    color: "#737b86",
-                    fontSize: 13,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.25,
+                    width: "100%",
+                    maxWidth: 420,
+                    height: 38,
+                    px: 1.5,
+                    border: "1px solid #ececef",
+                    borderRadius: "11px",
+                    backgroundColor: "#fbfbfc",
+                    color: "#9ba1aa",
+                    font: "inherit",
+                    cursor: "pointer",
+                    "&:hover": { borderColor: "#c7ccd4" },
+                    "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: 1 },
                   }}
                 >
-                  {profile.full_name}
-                </Typography>
+                  <Search sx={{ fontSize: 17 }} />
+                  <Box component="span" sx={{ flex: 1, textAlign: "left", fontSize: 13 }}>
+                    Search everything…
+                  </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: { xs: "none", sm: "flex" },
+                      alignItems: "center",
+                      gap: 0.25,
+                      color: "#9ba1aa",
+                      fontSize: 11,
+                    }}
+                  >
+                    <KeyboardCommandKey sx={{ fontSize: 12 }} />K
+                  </Box>
+                </Box>
+              </Box>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
                 <NotificationBell mode="buyer" onNavigate={navigate} />
-                <Tooltip title="Profile and account settings"><ProfileMenu profile={profile} onProfileChange={setProfile} editOpen={profileEditorOpen} onEditOpenChange={setProfileEditorOpen} /></Tooltip>
               </Box>
             </Box>
             <Box
@@ -5497,12 +5114,7 @@ export function Dashboard({ path }: { path: string }) {
                   width: "100%",
                   maxWidth: workspaceOpen
                     ? "none"
-                    : view === "products"
-                      ? {
-                          xs: "calc(100vw - 32px)",
-                          sm: "min(1450px, calc(100% - 80px))",
-                        }
-                      : {
+                    : {
                           xs: "calc(100vw - 32px)",
                           sm: "min(1060px, calc(100% - 48px))",
                         },
@@ -5567,9 +5179,28 @@ export function Dashboard({ path }: { path: string }) {
                   void restoreHistory(item);
                 }}
                 mobile
+                profile={profile}
+                onEditProfile={() => setProfileEditorOpen(true)}
               />
             </Box>
           </Drawer>
+          <WorkspaceCommandPalette
+            open={paletteOpen}
+            onClose={() => setPaletteOpen(false)}
+            recent={historyItems.slice(0, 6).map((item) => ({
+              id: item.id,
+              title: item.title,
+              case_no: item.case_no,
+            }))}
+            onNavigate={navigate}
+          />
+          <ProfileMenu
+            hideTrigger
+            profile={profile}
+            onProfileChange={setProfile}
+            editOpen={profileEditorOpen}
+            onEditOpenChange={setProfileEditorOpen}
+          />
         </Box>
       </MotionConfig>
     </ThemeProvider>

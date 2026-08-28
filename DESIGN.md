@@ -11,15 +11,21 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Use the established neutral sans stack throughout product UI.
 - Keep one clear primary action per view; color communicates state rather than decoration.
 - Use existing components and tokens before adding variants. Do not add promotional strips or new content sections unless requested.
-- The Products workspace uses one bounded operational list per stage with
-  rectangular rows, visible columns on desktop, structured rows on narrow
-  screens, and no product-card/pill stack. Product detail is a read-only split
-  surface: immutable snapshot fields and order history on the left, one
-  stage-aware next action plus a prefilled-RFQ reorder action on the right.
-- Products use a quiet 52px filter row: search, status tabs, supplier filter,
-  and sort. Stage state uses a small semantic dot and text label; the selected
-  tab and consequential actions use moss. Product detail uses a 64px back
-  toolbar, a 350px stage rail on desktop, and a stacked rail on narrow screens.
+- The signed-in workspace has one collapsible sidebar (wordmark, "New request",
+  Home / Requests / Messages / Invoices, recent requests, Settings, account pill)
+  and one top bar (breadcrumb, centered command-palette trigger, notifications).
+  There is no Products workspace; order-item snapshots and order history are read
+  inside their RFQ's Timeline/Quotes tabs and the linked invoice.
+- The command palette ("Search everything", Cmd/Ctrl+K) is one modal over a dim
+  scrim: quick-action rows, a recent-requests group, and a debounced result list
+  from `workspace_search`. Rectangular rows, moss only for the active option,
+  geometry-matched skeletons while a query is pending, and an inline empty state.
+  It is navigation only and shows no supplier or commercial facts.
+- Working lists (Requests, Invoices) use one bounded operational list: a quiet
+  filter row (search + status tabs), rectangular rows, visible columns on
+  desktop, structured rows on narrow screens, and no card/pill stack. Stage
+  state uses a small semantic dot plus text label; the selected tab and
+  consequential actions use moss.
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - The authenticated Dashboard and Intools work areas own vertical scrolling across the full available width. Keep the scrollbar at the right edge of the workspace and center only the inner content measure or table surface.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
@@ -47,17 +53,20 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Intools section tabs are route-backed, with one canonical `/intools/<section>`
   path per operational workspace and detail paths nested beneath that section.
 - The dashboard prompt remains the first screen. The RFQ workspace then uses a
-  split conversation + live RFQ review layout, followed by Requests, invoice,
-  and sourced Product records tied back to the RFQ.
+  split conversation + live RFQ review layout, followed by Requests, Messages,
+  and Invoices tied back to the RFQ.
 - The initial dashboard prompt is a flat, left-aligned editorial composition on
   the existing neutral workspace surface: one concise heading, one instruction,
   and the existing reference-aware composer. Avoid decorative glows. Submission
   keeps the entered brief visible and disables repeat actions until the guarded
-  request succeeds.
+  request succeeds. While the buyer is composing a brief the Home screen may
+  cross-fade its recent-requests block for one bounded, self-hosted illustrative
+  animation; it carries no status meaning, must not delay task content, and
+  resolves to a static state under reduced motion.
 - The main prompt and authenticated chat composer are white rounded surfaces
   with a soft shadow and no CSS border. Their focused states must not add a green
   outline or frame; only the controls inside may expose their own focus state.
-- Motion is functional: chat messages and request/product rows enter with a
+- Motion is functional: chat messages and request rows enter with a
   short 150–250 ms ease-out, send/save actions acknowledge immediately, and
   matching progress is only used for the review handoff. After RFQ submission,
   show a compact queued-for-review acknowledgement before the matching

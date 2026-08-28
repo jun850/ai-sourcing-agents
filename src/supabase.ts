@@ -913,6 +913,36 @@ export async function listWorkspaceInvoices() {
   rpcError(error);
   return (data ?? []) as WorkspaceInvoice[];
 }
+export type WorkspaceSearchHit = {
+  kind: "rfq" | "invoice";
+  id: string;
+  ref: string;
+  title: string;
+  status: string;
+  updated_at: string;
+};
+/**
+ * Command-palette search over the signed-in buyer's own RFQ cases and invoices.
+ * Returns [] (never throws) so the palette keeps working if search is briefly
+ * unavailable; quick actions and recent requests do not depend on it.
+ */
+export async function workspaceSearch(
+  query: string,
+  limit = 8,
+): Promise<WorkspaceSearchHit[]> {
+  const term = query.trim();
+  if (!term) return [];
+  try {
+    const { data, error } = await client().rpc("workspace_search", {
+      p_query: term,
+      p_limit: limit,
+    });
+    if (error) return [];
+    return (data ?? []) as WorkspaceSearchHit[];
+  } catch {
+    return [];
+  }
+}
 export async function getWorkspaceRfqDecision(caseId: string) {
   const { data, error } = await client().rpc("workspace_get_rfq_decision", {
     p_case_id: caseId,
