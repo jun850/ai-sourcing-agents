@@ -5010,13 +5010,13 @@ export function Dashboard({ path }: { path: string }) {
                 position: "relative",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "space-between",
+                gap: { xs: 1, sm: 1.75 },
                 minWidth: 0,
                 width: "100%",
-                minHeight: 68,
-                px: { xs: 2, sm: 4 },
-                borderBottom: "1px solid #f0f0f2",
-                backgroundColor: "rgba(255,255,255,.84)",
+                minHeight: 58,
+                px: { xs: 2, sm: 2.75 },
+                borderBottom: "1px solid #ececef",
+                backgroundColor: "#fff",
               }}
             >
               {mobile && (
@@ -5095,7 +5095,7 @@ export function Dashboard({ path }: { path: string }) {
                   </Box>
                 </Box>
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, flexShrink: 0 }}>
+              <Box sx={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <NotificationBell mode="buyer" onNavigate={navigate} />
               </Box>
             </Box>

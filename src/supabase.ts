@@ -1198,6 +1198,16 @@ export async function markNotificationsRead(ids: string[]) {
   rpcError(error);
   return Number(data) || 0;
 }
+/** Mark every unread notification in the buyer inbox read (standalone alerts + RFQ Ops messages). */
+export async function markAllWorkspaceNotificationsRead() {
+  const { data, error } = await client().rpc("workspace_mark_all_notifications_read");
+  rpcError(error);
+  return Number(data) || 0;
+}
+/** Intools equivalent: clears every unread RFQ Operations alert for the operations queue. */
+export async function markAllIntoolsNotificationsRead() {
+  return intoolsRpc<number>("intools_mark_all_notifications_read").then((value) => Number(value) || 0);
+}
 
 export async function listWorkspaceOpsMessages(
   conversationId: string,
