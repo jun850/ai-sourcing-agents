@@ -875,6 +875,7 @@ export const atelixContent = {
     addressGroups: [
       { country: "Australia", lines: ["240 Gordon Street, VIC, Australia"] },
       { country: "Indonesia", lines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"] },
+      { country: "China", lines: ["No. 57 Tiyu Xi Rd", "Guangzhou, China"] },
     ],
     addressEmail: "info@arcanawangsa.com",
     linkGroups: [
