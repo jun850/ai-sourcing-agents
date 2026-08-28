@@ -42,7 +42,7 @@ for (const selector of [
 }
 
 for (const [label, expected] of [
-  ["conversation panel remains viewport-bounded on desktop", 'md: "min(760px, calc(100dvh - 176px))"'],
+  ["conversation panel remains viewport-bounded on desktop", 'md: "min(720px, calc(100dvh - 220px))"'],
   ["conversation panel remains visible beside a long RFQ", 'position: { md: "sticky" }'],
   ["conversation history announces new messages", 'aria-relevant="additions text"'],
 ]) {

@@ -105,6 +105,7 @@ import { WorkspaceCommandPalette } from "./workspace-command-palette";
 import { WorkspaceLottie } from "./workspace-lottie";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
+import { classifyRfqIntake, intakeFromBrief, type RfqIntake } from "./rfq-intake";
 import {
   RfqReviewPipeline,
   StageTimeline,
@@ -1665,6 +1666,20 @@ function RfqField({
   );
 }
 
+function IntakeSpecification({ intake, editing, onChange }: { intake: RfqIntake; editing: boolean; onChange: (itemIndex: number, fieldIndex: number, value: string) => void }) {
+  if (!intake.items.length) return null;
+  return <Box sx={{ mt: 2.5 }}>
+    <Typography sx={{ color: "#4a5667", fontSize: 14, fontWeight: 700 }}>Request-specific details</Typography>
+    <Typography sx={{ mt: 0.4, color: "#758091", fontSize: 12.5, lineHeight: 1.5 }}>{intake.subtype.replaceAll("_", " ")} details are scoped to this request. Blank fields remain unconfirmed.</Typography>
+    {intake.items.map((item, itemIndex) => <Box key={item.id} sx={{ mt: 1.25, borderTop: "1px solid #edf0f3" }}>
+      {item.fields.map((detail, fieldIndex) => <Box key={detail.key} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "minmax(130px,.45fr) minmax(0,1fr)" }, gap: { xs: 0.5, sm: 2 }, py: 1.25, borderBottom: "1px solid #edf0f3" }}>
+        <Typography sx={{ color: "#667384", fontSize: 12.5 }}>{detail.label}</Typography>
+        {editing ? <Box component="input" value={detail.value} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(itemIndex, fieldIndex, event.target.value)} aria-label={detail.label} placeholder={detail.state === "not_applicable" ? "Optional" : "Not specified"} sx={{ width: "100%", minWidth: 0, border: "1px solid #ccd5df", borderRadius: 1.5, px: 1, py: 0.65, color: "#354357", backgroundColor: "#fff", font: "inherit", fontSize: 13, outline: 0, "&:focus": { borderColor: "#4b7657", boxShadow: "0 0 0 3px rgba(75,118,87,.14)" } }} /> : <Typography sx={{ color: detail.value ? "#3f4c5e" : "#758091", fontSize: 13, lineHeight: 1.45 }}>{detail.value || "—"}</Typography>}
+      </Box>)}
+    </Box>)}
+  </Box>;
+}
+
 function FilesTab({ attachments }: { attachments: RfqAttachment[] }) {
   if (!attachments.length)
     return (
@@ -2215,6 +2230,8 @@ function RfqDocumentPanel({
   caseNo,
   layout = "full",
   submittedAt = null,
+  intake,
+  intakeDraft,
   tab,
   setTab,
   caseStatus,
@@ -2222,6 +2239,7 @@ function RfqDocumentPanel({
   attachments,
   onEdit,
   onChange,
+  onIntakeChange,
   onSave,
   onCancel,
   onSubmit,
@@ -2239,6 +2257,8 @@ function RfqDocumentPanel({
   caseNo: string;
   layout?: "rail" | "full";
   submittedAt?: string | null;
+  intake: RfqIntake;
+  intakeDraft: RfqIntake;
   tab: RfqTab;
   setTab: (tab: RfqTab) => void;
   caseStatus: string;
@@ -2246,6 +2266,7 @@ function RfqDocumentPanel({
   attachments: RfqAttachment[];
   onEdit: () => void;
   onChange: (field: keyof RfqFields, value: string) => void;
+  onIntakeChange: (itemIndex: number, fieldIndex: number, value: string) => void;
   onSave: () => void;
   onCancel: () => void;
   onSubmit: () => void;
@@ -2429,6 +2450,7 @@ function RfqDocumentPanel({
                 />
               ))}
             </Box>
+            <IntakeSpecification intake={editing ? intakeDraft : intake} editing={editing} onChange={onIntakeChange} />
             </Box>
             <Box sx={{ flexShrink: 0, mt: rail ? 1.5 : 0 }}>
             {editing ? (
@@ -3171,8 +3193,9 @@ function fieldsFromBrief(brief: Record<string, unknown>): RfqFields {
 function briefFromFields(
   summary: string,
   fields: RfqFields,
+  intake?: RfqIntake | null,
 ): Record<string, unknown> {
-  return { summary, fields };
+  return { summary, fields, ...(intake ? { intake } : {}) };
 }
 
 function phaseForPersistedStatus(status: string): RfqPhase {
@@ -3191,6 +3214,7 @@ function RfqWorkspace({
   caseNo,
   brief,
   initialFields,
+  initialIntake,
   files,
   status,
   submittedAt,
@@ -3204,6 +3228,7 @@ function RfqWorkspace({
   caseNo: string;
   brief: string;
   initialFields: RfqFields;
+  initialIntake?: RfqIntake | null;
   files: RfqAttachment[];
   status: string;
   submittedAt?: string | null;
@@ -3219,6 +3244,8 @@ function RfqWorkspace({
   const [phase, setPhase] = useState<RfqPhase>(initialPhase ?? persistedPhase);
   const [fields, setFields] = useState<RfqFields>(initialFields);
   const [draft, setDraft] = useState<RfqFields>(initialFields);
+  const [intake, setIntake] = useState<RfqIntake>(() => initialIntake ?? classifyRfqIntake(brief));
+  const [intakeDraft, setIntakeDraft] = useState<RfqIntake>(() => initialIntake ?? classifyRfqIntake(brief));
   const [attachments, setAttachments] = useState<RfqAttachment[]>(files);
   const [tab, setTab] = useState<RfqTab>("RFQ");
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
@@ -3287,10 +3314,14 @@ function RfqWorkspace({
 
   function startEdit() {
     setDraft(fields);
+    setIntakeDraft(intake);
     setPhase("editing");
   }
   function changeField(field: keyof RfqFields, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+  function changeIntakeField(itemIndex: number, fieldIndex: number, value: string) {
+    setIntakeDraft((current) => ({ ...current, items: current.items.map((item, index) => index !== itemIndex ? item : { ...item, fields: item.fields.map((field, fieldOffset) => fieldOffset !== fieldIndex ? field : { ...field, value, state: value.trim() ? "provided" : field.state }) }) }));
   }
   function applyAgentResponse(response: CopilotAgentResponse) {
     const patch = response.savedPatch ?? {};
@@ -3431,11 +3462,12 @@ function RfqWorkspace({
     setDocumentActionPending(true);
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
-      brief: briefFromFields(brief, draft),
+      brief: briefFromFields(brief, draft, intakeDraft),
       status: "draft",
     })
       .then(() => {
         setFields(draft);
+        setIntake(intakeDraft);
         setPhase("review");
         setConversationMessages((current) => [
           ...current,
@@ -3458,7 +3490,7 @@ function RfqWorkspace({
     setDocumentActionPending(true);
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
-      brief: briefFromFields(brief, fields),
+      brief: briefFromFields(brief, fields, intake),
       status: "needs_research",
     })
       .then(() => {
@@ -3510,6 +3542,8 @@ function RfqWorkspace({
       caseNo={caseNo}
       layout={panelLayout}
       submittedAt={submittedAt ?? null}
+      intake={intake}
+      intakeDraft={intakeDraft}
       tab={tab}
       setTab={setTab}
       caseStatus={caseStatus}
@@ -3517,6 +3551,7 @@ function RfqWorkspace({
       attachments={attachments}
       onEdit={startEdit}
       onChange={changeField}
+      onIntakeChange={changeIntakeField}
       onSave={saveEdit}
       onCancel={() => setPhase("review")}
       onSubmit={submitRfq}
@@ -5219,7 +5254,7 @@ export function Dashboard({ path }: { path: string }) {
     try {
       const record = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
-        brief: briefFromFields(brief, defaultRfqFields),
+        brief: briefFromFields(brief, defaultRfqFields, classifyRfqIntake(brief)),
       });
       const validFiles = files.filter((file) => file.state === "ready");
       const attachments: RfqAttachment[] = [];
@@ -5276,6 +5311,7 @@ export function Dashboard({ path }: { path: string }) {
           caseNo={rfq.record.case_no}
           brief={summary}
           initialFields={fieldsFromBrief(rfq.record.brief)}
+          initialIntake={intakeFromBrief(rfq.record.brief)}
           files={rfq.attachments}
           status={rfq.record.status}
           submittedAt={rfq.record.submitted_at}
