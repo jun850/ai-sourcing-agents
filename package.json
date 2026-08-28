@@ -14,6 +14,7 @@
     "qa:workspace-scroll": "node scripts/qa-workspace-scroll.mjs",
     "qa:agent-rfq": "node scripts/qa-agent-rfq.mjs",
     "qa:rfq-ops-chat": "node scripts/qa-rfq-ops-chat.mjs",
+    "qa:notification-center": "node scripts/qa-notification-center.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
     "suppliers:queue": "node scripts/suppliers/build-research-queue.mjs",
     "suppliers:clean-regional": "node scripts/suppliers/clean-regional-research.mjs",

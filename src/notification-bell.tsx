@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, IconButton, Menu, Skeleton, Tooltip, Typography } from "@mui/material";
 import { NotificationsNone } from "@mui/icons-material";
 import {
@@ -9,7 +9,7 @@ import {
   markAllIntoolsNotificationsRead,
   markAllWorkspaceNotificationsRead,
   markNotificationsRead,
-  supabase,
+  subscribeToNotifications,
   type NotificationCenterItem,
 } from "./supabase";
 
@@ -32,6 +32,7 @@ function relativeTime(iso: string): string {
 
 export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate: (href: string) => void }) {
   const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const openRef = useRef(false);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [items, setItems] = useState<NotificationCenterItem[]>([]);
   const [count, setCount] = useState(0);
@@ -39,44 +40,49 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
   const [error, setError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
 
-  const loadCount = () =>
-    (mode === "buyer" ? getWorkspaceNotificationUnreadCount() : getIntoolsNotificationUnreadCount())
-      .then(setCount)
-      .catch(() => undefined);
-
-  const load = () => {
+  const loadCount = useCallback(async () => {
+    try {
+      const next = mode === "buyer" ? await getWorkspaceNotificationUnreadCount() : await getIntoolsNotificationUnreadCount();
+      setCount(next);
+    } catch {
+      // The list exposes an actionable failure only when the user opens it.
+    }
+  }, [mode]);
+  const loadItems = useCallback(async () => {
     setLoading(true);
     setError("");
-    const request =
-      mode === "buyer"
-        ? getWorkspaceNotificationCenter({ state: "all", sort: "newest" })
-        : getIntoolsNotificationCenter({ state: "all", sort: "newest" });
-    void request
-      .then(setItems)
-      .catch((cause) => setError(cause instanceof Error ? cause.message : "Notifications are unavailable."))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadCount();
+    try {
+      const next = mode === "buyer"
+        ? await getWorkspaceNotificationCenter({ state: "all", sort: "newest" })
+        : await getIntoolsNotificationCenter({ state: "all", sort: "newest" });
+      setItems(next);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Notifications are unavailable.");
+    } finally {
+      setLoading(false);
+    }
   }, [mode]);
 
+  useEffect(() => { void loadCount(); }, [loadCount]);
   useEffect(() => {
-    const db = supabase;
-    if (!db) return;
-    const channel = db
-      .channel(`notification-bell:${mode}:${crypto.randomUUID()}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, loadCount)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "rfq_ops_messages" }, loadCount)
-      .subscribe();
+    let active = true;
+    let subscription: { unsubscribe: () => void } | null = null;
+    void subscribeToNotifications(() => {
+      void loadCount();
+      if (openRef.current) void loadItems();
+    }).then((next) => {
+      if (active) subscription = next;
+      else next.unsubscribe();
+    }).catch(() => undefined);
     return () => {
-      void db.removeChannel(channel);
+      active = false;
+      subscription?.unsubscribe();
     };
-  }, [mode]);
-
+  }, [loadCount, loadItems]);
   useEffect(() => {
-    if (anchor) load();
-  }, [anchor, mode]);
+    openRef.current = Boolean(anchor);
+    if (anchor) void loadItems();
+  }, [anchor, loadItems]);
 
   function open(event: React.MouseEvent<HTMLElement>) {
     setAnchor(event.currentTarget);
@@ -95,23 +101,25 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
       setItems((current) => current.map((item) => ({ ...item, read_at: item.read_at ?? new Date().toISOString() })));
       setCount(0);
     } catch {
-      /* a failed bulk read leaves the authoritative unread state untouched */
+      // A failed bulk read leaves the authoritative unread state untouched.
     } finally {
       setMarkingAll(false);
     }
   }
 
   async function choose(item: NotificationCenterItem) {
-    if (item.source === "notification" && !item.read_at) {
+    if (!item.read_at) {
+      setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, read_at: new Date().toISOString() } : entry));
+      setCount((current) => Math.max(0, current - 1));
       try {
         await markNotificationsRead([item.id]);
       } catch {
-        /* navigation still reaches the authoritative destination */
+        void loadItems();
+        void loadCount();
       }
     }
     setAnchor(null);
     onNavigate(item.href);
-    loadCount();
   }
 
   const label = count ? `${count} unread notifications` : "Notifications";
@@ -175,22 +183,14 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
           },
         }}
       >
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            px: 1.875,
-            py: 1.625,
-            borderBottom: "1px solid #f0f0f2",
-          }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", px: 1.875, py: 1.625, borderBottom: "1px solid #f0f0f2" }}>
           <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: "#202936" }}>Notifications</Typography>
           <Box
             component="button"
             type="button"
             onClick={() => void markAll()}
             disabled={!count || markingAll}
+            aria-busy={markingAll}
             sx={{
               border: 0,
               background: "transparent",
@@ -211,17 +211,12 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
               {[0, 1, 2].map((row) => (
                 <Box key={row} sx={{ display: "flex", gap: 1.25 }}>
                   <Skeleton variant="circular" width={6} height={6} sx={{ mt: 0.75 }} />
-                  <Box sx={{ flex: 1 }}>
-                    <Skeleton width="85%" />
-                    <Skeleton width="30%" />
-                  </Box>
+                  <Box sx={{ flex: 1 }}><Skeleton width="85%" /><Skeleton width="30%" /></Box>
                 </Box>
               ))}
             </Box>
           ) : error ? (
-            <Typography role="alert" sx={{ p: 1.875, color: "#a33b36", fontSize: 12.5 }}>
-              {error}
-            </Typography>
+            <Typography role="alert" sx={{ p: 1.875, color: "#a33b36", fontSize: 12.5 }}>{error}</Typography>
           ) : items.length ? (
             items.map((item) => (
               <Box
@@ -245,35 +240,17 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
                   "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
                 }}
               >
-                <Box
-                  component="span"
-                  aria-hidden="true"
-                  sx={{
-                    flexShrink: 0,
-                    mt: 0.75,
-                    width: 6,
-                    height: 6,
-                    borderRadius: "999px",
-                    backgroundColor: item.read_at || item.sent ? "transparent" : "#c0564a",
-                  }}
-                />
+                <Box component="span" aria-hidden="true" sx={{ flexShrink: 0, mt: 0.75, width: 6, height: 6, borderRadius: "999px", backgroundColor: item.read_at || item.sent ? "transparent" : "#c0564a" }} />
                 <Box sx={{ minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 12.5, lineHeight: 1.5, color: "#202936" }}>
-                    {item.title}
-                    {item.body ? ` — ${item.body}` : ""}
-                  </Typography>
-                  <Typography sx={{ mt: 0.375, fontSize: 11, color: "#9ba1aa" }}>
-                    {item.sent ? "Sent" : relativeTime(item.created_at)}
-                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, lineHeight: 1.5, color: "#202936" }}>{item.title}{item.body ? ` — ${item.body}` : ""}</Typography>
+                  <Typography sx={{ mt: 0.375, fontSize: 11, color: "#9ba1aa" }}>{item.sent ? "Sent" : relativeTime(item.created_at)}</Typography>
                 </Box>
               </Box>
             ))
           ) : (
             <Box sx={{ px: 1.875, py: 4, textAlign: "center" }}>
               <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#202936" }}>You are up to date</Typography>
-              <Typography sx={{ mt: 0.5, fontSize: 12, color: "#9ba1aa" }}>
-                New sourcing updates will appear here.
-              </Typography>
+              <Typography sx={{ mt: 0.5, fontSize: 12, color: "#9ba1aa" }}>New sourcing updates will appear here.</Typography>
             </Box>
           )}
         </Box>

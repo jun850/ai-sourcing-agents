@@ -220,6 +220,9 @@ export type NotificationCenterOptions = {
   state?: "all" | "unread" | "read";
   sort?: "newest" | "oldest";
 };
+export type NotificationRealtimeSubscription = {
+  unsubscribe: () => void;
+};
 export type WorkspaceProduct = {
   id: string;
   sku: string;
@@ -1194,21 +1197,18 @@ export async function getWorkspaceNotificationCenter(options: NotificationCenter
 }
 export async function markNotificationsRead(ids: string[]) {
   if (!ids.length) return 0;
+  if (localIntoolsAdmin)
+    return intoolsRpc<number>("intools_mark_notifications_read", { p_ids: ids }).then((value) => Number(value) || 0);
   const { data, error } = await client().rpc("mark_notifications_read", { p_ids: ids });
   rpcError(error);
   return Number(data) || 0;
 }
-/** Mark every unread notification in the buyer inbox read (standalone alerts + RFQ Ops messages). */
+/** Mark every unread durable alert for the authenticated buyer. */
 export async function markAllWorkspaceNotificationsRead() {
-  const { data, error } = await client().rpc("workspace_mark_all_notifications_read");
+  const { data, error } = await client().rpc("mark_notifications_read", { p_ids: null });
   rpcError(error);
   return Number(data) || 0;
 }
-/** Intools equivalent: clears every unread RFQ Operations alert for the operations queue. */
-export async function markAllIntoolsNotificationsRead() {
-  return intoolsRpc<number>("intools_mark_all_notifications_read").then((value) => Number(value) || 0);
-}
-
 export async function listWorkspaceOpsMessages(
   conversationId: string,
   options: RfqOpsListOptions = {},
@@ -1277,6 +1277,42 @@ async function getRfqOpsRealtimeAccessToken() {
   const session = await getSession();
   if (!session?.access_token) throw new Error("Sign in to receive live messages.");
   return session.access_token;
+}
+
+function realtimeProfileId(accessToken: string) {
+  const payload = accessToken.split(".")[1];
+  if (!payload) throw new Error("Live updates are unavailable.");
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = JSON.parse(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="))) as { sub?: unknown };
+    if (typeof decoded.sub !== "string" || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(decoded.sub)) throw new Error();
+    return decoded.sub;
+  } catch {
+    throw new Error("Live updates are unavailable.");
+  }
+}
+
+/** Subscribe to the current recipient's private notification invalidation topic. */
+export async function subscribeToNotifications(
+  onChange: () => void,
+): Promise<NotificationRealtimeSubscription> {
+  const db = client();
+  const accessToken = await getRfqOpsRealtimeAccessToken();
+  const profileId = realtimeProfileId(accessToken);
+  await db.realtime.setAuth(accessToken);
+  const channel = db
+    .channel(`user:${profileId}:notifications`, { config: { private: true } })
+    .on("broadcast", { event: "notification_changed" }, onChange)
+    .subscribe((status) => { if (status === "SUBSCRIBED") onChange(); });
+  const { data: { subscription: authSubscription } } = db.auth.onAuthStateChange((_, session) => {
+    if (!localIntoolsAdmin && session?.access_token) void db.realtime.setAuth(session.access_token);
+  });
+  return {
+    unsubscribe: () => {
+      authSubscription.unsubscribe();
+      void db.removeChannel(channel);
+    },
+  };
 }
 
 /** Subscribe to a private Broadcast topic for one RFQ conversation. */
@@ -1420,6 +1456,12 @@ export async function getIntoolsNotificationCenter(options: NotificationCenterOp
     p_sort: options.sort ?? "newest",
     p_limit: 80,
   }).then((value) => value ?? []);
+}
+export async function markIntoolsNotificationsRead(ids: string[]) {
+  return intoolsRpc<number>("intools_mark_notifications_read", { p_ids: ids }).then((value) => Number(value) || 0);
+}
+export async function markAllIntoolsNotificationsRead() {
+  return intoolsRpc<number>("intools_mark_notifications_read", { p_ids: null }).then((value) => Number(value) || 0);
 }
 export async function listIntoolsBuyerMessages(
   conversationId: string,
