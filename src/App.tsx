@@ -350,7 +350,7 @@ function SignIn(){
           </div>
 
           <div className="signin-photo-pane">
-            <img src="/assets/generated/atelix-hero.jpg" alt="" />
+            <img src="/assets/generated/atelix-signin.jpg" alt="" />
           </div>
         </div>
       </main>
