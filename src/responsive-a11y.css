@@ -258,8 +258,21 @@ button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guid
 .conversation-composer textarea:focus,
 .conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
 .conversation-composer:focus-within::before { background: #526176; }
-.conversation-composer:focus-within textarea { color: #fff !important; caret-color: #fff; }
-.conversation-composer:focus-within textarea::placeholder { color: #eef3f8 !important; }
+/* Slate-blue working state: typed text must stay white. -webkit-text-fill-color
+   is required because it overrides `color` for form-control text in WebKit/Blink. */
+.conversation-composer:focus-within textarea,
+.conversation-composer:focus-within textarea:focus,
+.conversation-composer:focus-within textarea:focus-visible {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  caret-color: #fff !important;
+}
+.conversation-composer:focus-within textarea::placeholder {
+  color: #eef3f8 !important;
+  -webkit-text-fill-color: #eef3f8 !important;
+  opacity: 1;
+}
+.conversation-composer:focus-within textarea::selection { background: rgba(255, 255, 255, 0.26); }
 .conversation-composer { position: relative; isolation: isolate; background: transparent !important; box-shadow: none !important; }
 .clean-prompt-form .MuiPaper-root,
 .clean-prompt-form .MuiPaper-root:focus-within,
