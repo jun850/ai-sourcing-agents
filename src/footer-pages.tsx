@@ -945,13 +945,11 @@ function About() {
                 <h3>Jun Arcana</h3>
                 <p className="about-team-role">Co-Founder &amp; CEO</p>
                 <p>
-                  A technical product manager with six years across
-                  Southeast Asia's commerce and fintech leaders, including
-                  ByteDance Shop/Tokopedia, Blibli, and BukuWarung, plus
-                  martech at Melbourne-based IntelligenceBank. Jun founded
-                  Anakost, a local quick-commerce startup, in 2018 during his
-                  first year at university, and leads product and
-                  engineering at Atelix.
+                  Technical product manager, six years shipping commerce and
+                  fintech at ByteDance Shop/Tokopedia, Blibli, and BukuWarung,
+                  plus martech at Melbourne's IntelligenceBank. Founded Anakost,
+                  a quick-commerce startup, as a first-year university student
+                  in 2018. Leads product and engineering at Atelix.
                 </p>
               </div>
             </article>
@@ -971,16 +969,12 @@ function About() {
                   Co-Founder, COO &amp; Creative Director
                 </p>
                 <p>
-                  A finance analyst with a master's degree in Accounting
-                  &amp; Finance, reading financial models and economic
-                  conditions across Greater China and Japan, native to
-                  both markets, which anchor global manufacturing across
-                  fashion, electronics, and IoT hardware. Celina runs
-                  Atelix's financial operations
-                  and leads supplier-facing quality and creative direction
-                  across two of the industry's most important sourcing
-                  regions. She's also building a skincare brand, drawn in
-                  by an active interest in beauty and fashion.
+                  Finance analyst with a master's in Accounting &amp; Finance,
+                  native to the Greater China and Japan markets that anchor
+                  global manufacturing in fashion, electronics, and IoT
+                  hardware. Runs Atelix's financial operations and leads
+                  supplier-facing quality and creative direction. Building her
+                  own skincare brand on the side.
                 </p>
               </div>
             </article>
