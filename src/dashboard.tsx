@@ -1259,14 +1259,14 @@ function ConversationChatPanel({
         alignSelf: "stretch",
         flexDirection: "column",
         position: { md: "sticky" },
-        top: { md: 2 },
+        top: { md: 16 },
         height: {
           xs: "min(440px, calc(100dvh - 120px))",
-          md: "min(760px, calc(100dvh - 176px))",
+          md: "min(720px, calc(100dvh - 220px))",
         },
         minHeight: {
           xs: "min(340px, calc(100dvh - 120px))",
-          md: "min(480px, calc(100dvh - 176px))",
+          md: "min(460px, calc(100dvh - 220px))",
         },
         minWidth: 0,
         overflow: "hidden",
@@ -1609,10 +1609,11 @@ function RfqField({
         display: "grid",
         gridTemplateColumns: {
           xs: "1fr",
-          sm: "minmax(130px,.45fr) minmax(0,1fr)",
+          sm: "116px minmax(0,1fr)",
         },
-        gap: { xs: 0.5, sm: 2 },
+        gap: { xs: 0.5, sm: 1.75 },
         py: 1.25,
+        alignItems: "baseline",
         borderBottom: "1px solid #edf0f3",
       }}
     >
@@ -1733,10 +1734,485 @@ function FilesTab({ attachments }: { attachments: RfqAttachment[] }) {
   );
 }
 
+const RFQ_TAB_IDS: Record<RfqTab, string> = {
+  RFQ: "rfq-tab-rfq",
+  Timeline: "rfq-tab-timeline",
+  Quotes: "rfq-tab-quotes",
+  Orders: "rfq-tab-orders",
+  Files: "rfq-tab-files",
+};
+
+/** Full-width section tabs for the RFQ case workspace. Sits under the case header,
+ *  above the conversation + document split. */
+function RfqTabBar({
+  tabs,
+  tab,
+  setTab,
+  counts = {},
+}: {
+  tabs: RfqTab[];
+  tab: RfqTab;
+  setTab: (tab: RfqTab) => void;
+  counts?: Partial<Record<RfqTab, number>>;
+}) {
+  function moveTab(event: KeyboardEvent, index: number) {
+    const nextIndex =
+      event.key === "Home"
+        ? 0
+        : event.key === "End"
+          ? tabs.length - 1
+          : event.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : event.key === "ArrowLeft"
+              ? (index - 1 + tabs.length) % tabs.length
+              : -1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const nextTab = tabs[nextIndex];
+    setTab(nextTab);
+    requestAnimationFrame(() =>
+      document.getElementById(RFQ_TAB_IDS[nextTab])?.focus(),
+    );
+  }
+  return (
+    <Box
+      role="tablist"
+      aria-label="RFQ workspace sections"
+      sx={{
+        display: "flex",
+        gap: 0.5,
+        borderBottom: "1px solid #e7ebf0",
+        overflowX: "auto",
+      }}
+    >
+      {tabs.map((item, index) => (
+        <Box
+          key={item}
+          id={RFQ_TAB_IDS[item]}
+          component="button"
+          role="tab"
+          aria-selected={tab === item}
+          aria-controls="rfq-tabpanel"
+          tabIndex={tab === item ? 0 : -1}
+          onClick={() => setTab(item)}
+          onKeyDown={(event: KeyboardEvent) => moveTab(event, index)}
+          sx={{
+            flex: "0 0 auto",
+            display: "flex",
+            alignItems: "center",
+            gap: 0.6,
+            px: 0.5,
+            py: 1.35,
+            mr: 1.75,
+            border: 0,
+            borderBottom:
+              tab === item ? "2px solid #4b7657" : "2px solid transparent",
+            background: "transparent",
+            color: tab === item ? "#202936" : "#647184",
+            font: "inherit",
+            fontSize: 13,
+            fontWeight: tab === item ? 700 : 600,
+            cursor: "pointer",
+            "&:focus-visible": {
+              outline: "3px solid rgba(75,118,87,.32)",
+              outlineOffset: 2,
+            },
+          }}
+        >
+          {item}
+          {Boolean(counts[item]) && (
+            <Box
+              component="span"
+              sx={{
+                fontSize: 10.5,
+                fontWeight: 700,
+                color: "#758091",
+                backgroundColor: "#f1f2f4",
+                borderRadius: 1,
+                px: 0.75,
+                py: 0.1,
+              }}
+            >
+              {counts[item]}
+            </Box>
+          )}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+const TIMELINE_RAIL_STEPS = [
+  "RFQ submitted",
+  "Atelix Operations review",
+  "Supplier matching",
+  "Quotes received",
+  "Production",
+] as const;
+
+/** 0-based index of the step currently in progress. -1 means the RFQ is still a
+ *  draft and nothing has started. */
+function timelineRailIndex(status: string, submitted: boolean): number {
+  if (!submitted && status === "draft") return -1;
+  switch (status) {
+    case "needs_research":
+      return 1;
+    case "awaiting_supplier":
+    case "supplier_replied":
+      return 2;
+    case "buyer_review":
+    case "quote_selected":
+      return 3;
+    case "in_production":
+      return 4;
+    case "closed":
+      return 5;
+    default:
+      return 0;
+  }
+}
+
+function timelineRailMeta(
+  step: number,
+  state: "done" | "current" | "pending",
+  submittedAt: string | null,
+): string {
+  if (step === 0) {
+    if (state === "pending") return "Not submitted yet";
+    return submittedAt ? shortDateTime(submittedAt) : "Submitted";
+  }
+  if (state === "done") return "Complete";
+  if (state === "current") return step === 3 ? "In review" : "In progress";
+  return "Not started";
+}
+
+function shortDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.valueOf())) return "";
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/** Compact status rail shown in the RFQ workspace Timeline tab while the case is
+ *  a draft. Progress is derived from the server case status, never a timer. */
+function TimelineRail({
+  status,
+  submitted,
+  submittedAt,
+}: {
+  status: string;
+  submitted: boolean;
+  submittedAt: string | null;
+}) {
+  const current = timelineRailIndex(status, submitted);
+  return (
+    <Box>
+      <Typography
+        component="h3"
+        sx={{ mb: 2, color: "#46525f", fontSize: 14, fontWeight: 700 }}
+      >
+        Timeline
+      </Typography>
+      {TIMELINE_RAIL_STEPS.map((label, index) => {
+        const state =
+          current < 0
+            ? "pending"
+            : index < current
+              ? "done"
+              : index === current
+                ? "current"
+                : "pending";
+        const last = index === TIMELINE_RAIL_STEPS.length - 1;
+        const dotColor =
+          state === "done"
+            ? "#5f8767"
+            : state === "current"
+              ? "#4b7657"
+              : "#c7ccd4";
+        return (
+          <Box
+            key={label}
+            sx={{ display: "flex", gap: 1.5, position: "relative", pb: last ? 0 : 2.5 }}
+          >
+            {!last && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  left: "4px",
+                  top: 16,
+                  bottom: 4,
+                  width: "2px",
+                  backgroundColor: state === "done" ? "#dfe8e1" : "#eef0f3",
+                }}
+              />
+            )}
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                flexShrink: 0,
+                width: 10,
+                height: 10,
+                mt: "4px",
+                borderRadius: "999px",
+                backgroundColor: dotColor,
+              }}
+            />
+            <Box sx={{ minWidth: 0 }}>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: state === "pending" ? "#9aa4b0" : "#202936",
+                }}
+              >
+                {label}
+              </Typography>
+              <Typography
+                sx={{
+                  mt: 0.25,
+                  fontSize: 11.5,
+                  color:
+                    state === "current"
+                      ? "#4b7657"
+                      : state === "pending"
+                        ? "#b6bdc6"
+                        : "#758091",
+                }}
+              >
+                {timelineRailMeta(index, state, submittedAt)}
+              </Typography>
+            </Box>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+}
+
+/** Compact supplier shortlist shown in the RFQ workspace Quotes tab. Reads and
+ *  writes through the same guarded workspace RPCs as the full Quotes tab. */
+function QuotesRail({
+  caseId,
+  onMessage,
+  onSelected,
+}: {
+  caseId: string;
+  onMessage: (message: string) => void;
+  onSelected: () => void;
+}) {
+  const [quotes, setQuotes] = useState<WorkspaceRfqQuote[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try {
+      setQuotes(await listWorkspaceRfqQuotes(caseId));
+    } catch (cause) {
+      onMessage(cause instanceof Error ? cause.message : "Could not load quotes.");
+    }
+  }, [caseId, onMessage]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  async function select(quoteId: string) {
+    setBusyId(quoteId);
+    try {
+      await selectWorkspaceRfqQuote(quoteId);
+      await load();
+      onSelected();
+      onMessage(
+        "Supplier selected. Atelix will confirm terms before any commercial commitment.",
+      );
+    } catch (cause) {
+      onMessage(
+        cause instanceof Error ? cause.message : "Could not select this supplier.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+  return (
+    <Box>
+      <Typography
+        component="h3"
+        sx={{ color: "#46525f", fontSize: 14, fontWeight: 700 }}
+      >
+        Supplier shortlist
+      </Typography>
+      <Typography
+        sx={{ mt: 0.5, mb: 2, color: "#8a95a3", fontSize: 12, lineHeight: 1.5 }}
+      >
+        Every match is reviewed by Atelix Operations before it reaches you.
+      </Typography>
+      {quotes === null ? (
+        <Stack spacing={1.25}>
+          {[0, 1, 2].map((row) => (
+            <Skeleton key={row} variant="rounded" height={104} />
+          ))}
+        </Stack>
+      ) : quotes.length === 0 ? (
+        <Box
+          sx={{
+            border: "1px solid #eef0f3",
+            borderRadius: "12px",
+            p: 2.5,
+            textAlign: "center",
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 700, color: "#4a5667" }}>
+            No quotes yet
+          </Typography>
+          <Typography
+            sx={{ mt: 0.75, fontSize: 12, color: "#9aa4b0", lineHeight: 1.5 }}
+          >
+            Atelix vets suppliers against your spec before quotes appear here.
+          </Typography>
+        </Box>
+      ) : (
+        (() => {
+          const selectedQuote = quotes.find((q) => q.status === "selected");
+          const decided = Boolean(selectedQuote);
+          return (
+            <Stack spacing={1.25}>
+              {selectedQuote && (
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    p: 1.5,
+                    borderRadius: "11px",
+                    backgroundColor: "#eef4ee",
+                    color: "#33513c",
+                  }}
+                >
+                  <CheckCircle sx={{ fontSize: 16, mt: "1px", flexShrink: 0 }} />
+                  <Typography sx={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                    You selected <strong>{selectedQuote.factory_name}</strong>.
+                    Atelix Operations will confirm terms and move this RFQ to
+                    production.
+                  </Typography>
+                </Box>
+              )}
+              {quotes.map((quote) => {
+                const selected = quote.status === "selected";
+                return (
+                  <Box
+                    key={quote.id}
+                    sx={{
+                      border: selected
+                        ? "1.5px solid #4b7657"
+                        : "1px solid #e7ebf0",
+                      borderRadius: "12px",
+                      p: 1.75,
+                      backgroundColor: selected ? "#f7fbf7" : "#fff",
+                      opacity: decided && !selected ? 0.6 : 1,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        sx={{ fontSize: 13.5, fontWeight: 700, color: "#202936" }}
+                      >
+                        {quote.factory_name}
+                      </Typography>
+                      <Box
+                        component="span"
+                        sx={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 0.4,
+                          flexShrink: 0,
+                          px: 0.9,
+                          py: 0.3,
+                          borderRadius: "999px",
+                          backgroundColor: "#eef4ee",
+                          color: "#4b7657",
+                          fontSize: 10.5,
+                          fontWeight: 700,
+                        }}
+                      >
+                        <VerifiedOutlined sx={{ fontSize: 12 }} />
+                        Verified
+                      </Box>
+                    </Box>
+                    <Typography sx={{ mt: 0.5, fontSize: 12, color: "#5a6675" }}>
+                      {[
+                        quote.factory_region,
+                        quote.factory_years
+                          ? `${quote.factory_years} yrs in business`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Reviewed supplier"}
+                    </Typography>
+                    <Box
+                      sx={{
+                        mt: 1.25,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 1,
+                      }}
+                    >
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 700, color: "#202936" }}
+                      >
+                        from {invoiceMoney(quote.unit_price_cents)}/pc
+                      </Typography>
+                      {selected ? (
+                        <MuiButton
+                          size="small"
+                          disabled
+                          variant="contained"
+                          sx={{
+                            backgroundColor: "#4b7657",
+                            "&.Mui-disabled": {
+                              backgroundColor: "#4b7657",
+                              color: "#fff",
+                            },
+                          }}
+                        >
+                          Selected
+                        </MuiButton>
+                      ) : (
+                        <MuiButton
+                          size="small"
+                          disabled={decided || busyId === quote.id}
+                          onClick={() => void select(quote.id)}
+                          variant="outlined"
+                          sx={{ borderColor: "#d7dce2", color: "#3d4652" }}
+                        >
+                          {busyId === quote.id ? "Selecting…" : "Select"}
+                        </MuiButton>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Stack>
+          );
+        })()
+      )}
+    </Box>
+  );
+}
+
 function RfqDocumentPanel({
   phase,
   fields,
   draft,
+  caseNo,
+  layout = "full",
+  submittedAt = null,
   tab,
   setTab,
   caseStatus,
@@ -1758,6 +2234,9 @@ function RfqDocumentPanel({
   phase: RfqPhase;
   fields: RfqFields;
   draft: RfqFields;
+  caseNo: string;
+  layout?: "rail" | "full";
+  submittedAt?: string | null;
   tab: RfqTab;
   setTab: (tab: RfqTab) => void;
   caseStatus: string;
@@ -1777,192 +2256,47 @@ function RfqDocumentPanel({
   justSubmitted?: boolean;
 }) {
   const editing = phase === "editing";
-  const tabs: RfqTab[] = ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
-  const tabCount: Partial<Record<RfqTab, number>> = {
-    Files: attachments.length,
-  };
-  function moveTab(event: KeyboardEvent, index: number) {
-    const nextIndex =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? tabs.length - 1
-          : event.key === "ArrowRight"
-            ? (index + 1) % tabs.length
-            : event.key === "ArrowLeft"
-              ? (index - 1 + tabs.length) % tabs.length
-              : -1;
-    if (nextIndex < 0) return;
-    event.preventDefault();
-    const nextTab = tabs[nextIndex];
-    setTab(nextTab);
-    requestAnimationFrame(() =>
-      document.getElementById(`rfq-tab-${nextTab.toLowerCase()}`)?.focus(),
-    );
-  }
+  const canEditRfq = !editing && phase !== "submitted";
+  const rail = layout === "rail";
   return (
-    <RoundedSurface
+    <Box
+      id="rfq-tabpanel"
+      role="tabpanel"
+      aria-labelledby={RFQ_TAB_IDS[tab]}
       sx={{
-        minHeight: { xs: 0, md: 610 },
-        overflow: "hidden",
-        border: 0,
-        borderRadius: 0,
-        backgroundColor: "transparent",
+        minWidth: 0,
+        pt: rail ? 0 : { xs: 2.5, md: 3.5 },
+        ...(rail ? {} : { maxWidth: tab === "RFQ" ? 760 : 920 }),
       }}
     >
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 2,
-          flexWrap: "wrap",
-          px: { xs: 0, md: 0 },
-          py: 1.75,
-          borderBottom: "1px solid #e7ebf0",
-        }}
-      >
-        <Box sx={{ minWidth: 0, flex: "1 1 320px" }}>
-          <Typography
-            sx={{
-              color: "#667384",
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-            }}
-          >
-            RFQ
-          </Typography>
-          {preparing ? (
-            <Skeleton
-              sx={{
-                mt: 0.45,
-                width: "min(420px, 86%)",
-                fontSize: { xs: 20, md: 24 },
-              }}
+        {tab === "Timeline" &&
+          (rail ? (
+            <TimelineRail
+              status={caseStatus}
+              submitted={phase === "submitted"}
+              submittedAt={submittedAt}
             />
           ) : (
-            <Typography
-              variant="h2"
-              sx={{
-                minWidth: 0,
-                mt: 0.45,
-                color: "#334155",
-                fontSize: { xs: 20, md: 24 },
-                lineHeight: 1.2,
-                overflowWrap: "anywhere",
-                textWrap: "balance",
-              }}
-            >
-              {fields.product || fields.quantity
-                ? `RFQ: ${fields.quantity.replace(/\s*units?$/i, "").trim() || "—"} Units – ${fields.product || "Product not specified"}`
-                : "RFQ draft"}
-            </Typography>
-          )}
-        </Box>
-        {preparing ? (
-          <Skeleton variant="rounded" width={96} height={24} />
-        ) : (
-          <Chip
-            label={justSubmitted ? "Submitted" : editing ? "Editing" : "Ready to review"}
-            size="small"
-            aria-busy={actionPending}
-            sx={{
-              color: editing ? "#81622c" : "#58745d",
-              backgroundColor: editing ? "#fbf4e7" : "#eef4ee",
-              fontWeight: 700,
-            }}
-          />
-        )}
-      </Box>
-      <Box
-        role="tablist"
-        aria-label="RFQ workspace sections"
-        sx={{
-          display: "flex",
-          gap: 0.5,
-          px: { xs: 1.25, md: 2 },
-          borderBottom: "1px solid #e7ebf0",
-          overflowX: "auto",
-        }}
-      >
-        {tabs.map((item, index) => (
-          <Box
-            key={item}
-            id={`rfq-tab-${item.toLowerCase()}`}
-            component="button"
-            role="tab"
-            aria-selected={tab === item}
-            aria-controls="rfq-tabpanel"
-            tabIndex={tab === item ? 0 : -1}
-            onClick={() => setTab(item)}
-            onKeyDown={(event: KeyboardEvent) => moveTab(event, index)}
-            sx={{
-              flex: "0 0 auto",
-              display: "flex",
-              alignItems: "center",
-              gap: 0.6,
-              px: 1.25,
-              py: 1.35,
-              border: 0,
-              borderBottom:
-                tab === item ? "2px solid #4b7657" : "2px solid transparent",
-              background: "transparent",
-              color: tab === item ? "#4b7657" : "#647184",
-              font: "inherit",
-              fontSize: 12,
-              fontWeight: tab === item ? 700 : 500,
-              cursor: "pointer",
-              "&:focus-visible": {
-                outline: "3px solid rgba(75,118,87,.32)",
-                outlineOffset: 2,
-              },
-            }}
-          >
-            {item}
-            {Boolean(tabCount[item]) && (
-              <Box
-                component="span"
-                sx={{
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "#758091",
-                  backgroundColor: "#f1f2f4",
-                  borderRadius: 1,
-                  px: 0.75,
-                  py: 0.1,
-                }}
-              >
-                {tabCount[item]}
-              </Box>
-            )}
-          </Box>
-        ))}
-      </Box>
-      <Box
-        id="rfq-tabpanel"
-        role="tabpanel"
-        aria-labelledby={`rfq-tab-${tab.toLowerCase()}`}
-        sx={{
-          p: { xs: 0, md: 0 },
-          pt: tab === "RFQ" ? { xs: 2, md: 3 } : { xs: 2.5, md: 3 },
-        }}
-      >
-        {tab === "Timeline" && (
-          <StageTimeline
-            status={caseStatus}
-            onReviewDraft={() => setTab("RFQ")}
-          />
-        )}
+            <StageTimeline
+              status={caseStatus}
+              onReviewDraft={() => setTab("RFQ")}
+            />
+          ))}
         {tab === "Files" && <FilesTab attachments={attachments} />}
-        {tab === "Quotes" && (
-          <QuotesTab
-            caseId={caseId}
-            onMessage={onMessage}
-            onSelected={onQuoteSelected}
-          />
-        )}
+        {tab === "Quotes" &&
+          (rail ? (
+            <QuotesRail
+              caseId={caseId}
+              onMessage={onMessage}
+              onSelected={onQuoteSelected}
+            />
+          ) : (
+            <QuotesTab
+              caseId={caseId}
+              onMessage={onMessage}
+              onSelected={onQuoteSelected}
+            />
+          ))}
         {tab === "Orders" && (
           <ProductionTab caseId={caseId} onMessage={onMessage} />
         )}
@@ -2001,36 +2335,6 @@ function RfqDocumentPanel({
                   : agentStatus.text}
               </Box>
             )}
-            <Box sx={{ maxWidth: "70ch", mb: 3 }}>
-              {preparing ? (
-                <Stack spacing={0.75}>
-                  <Skeleton sx={{ width: 110, fontSize: 14 }} />
-                  <Skeleton sx={{ width: "min(620px, 92%)", fontSize: 14 }} />
-                </Stack>
-              ) : (
-                <>
-                  <Typography
-                    sx={{ color: "#4f5d6f", fontSize: 14, lineHeight: 1.65 }}
-                  >
-                    Dear Supplier,
-                  </Typography>
-                  <Typography
-                    sx={{
-                      mt: 1.25,
-                      color: "#596779",
-                      fontSize: 14,
-                      lineHeight: 1.65,
-                      textWrap: "pretty",
-                    }}
-                  >
-                    We are looking to source{" "}
-                    {fields.quantity.toLowerCase() ||
-                      "the product described in this RFQ"} and would like to
-                    request a quotation based on the following requirements:
-                  </Typography>
-                </>
-              )}
-            </Box>
             <Box
               sx={{
                 mb: 1.5,
@@ -2041,12 +2345,18 @@ function RfqDocumentPanel({
               }}
             >
               <Typography
-                sx={{ color: "#4a5667", fontSize: 14, fontWeight: 700 }}
+                component="h3"
+                sx={{ color: "#46525f", fontSize: 14, fontWeight: 700 }}
               >
-                Product Specifications
+                RFQ details
               </Typography>
-              {!editing &&
-                phase !== "submitted" && (
+              <Stack
+                direction="row"
+                spacing={0.75}
+                alignItems="center"
+                sx={{ flexShrink: 0 }}
+              >
+                {canEditRfq && (
                   <MuiButton
                     onClick={onEdit}
                     disabled={actionPending || preparing}
@@ -2054,19 +2364,30 @@ function RfqDocumentPanel({
                     size="small"
                     sx={{ color: "#708092" }}
                   >
-                    Edit RFQ
+                    Edit
                   </MuiButton>
                 )}
+                <Typography
+                  sx={{
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                    fontSize: 11,
+                    color: "#8a95a3",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {caseNo}
+                </Typography>
+              </Stack>
             </Box>
             <Box>
               {(
                 [
                   ["Product", "product"],
+                  ["Quantity", "quantity"],
                   ["Material", "material"],
                   ["Certifications", "certifications"],
                   ["Colors", "colors"],
                   ["Sizes", "sizes"],
-                  ["Quantity", "quantity"],
                   ["Target budget", "budget"],
                   ["Timeline", "timeline"],
                 ] as Array<[string, keyof RfqFields]>
@@ -2112,14 +2433,32 @@ function RfqDocumentPanel({
                 </MuiButton>
               </Stack>
             ) : (
-              <Stack
-                direction="row"
-                justifyContent="flex-end"
-                alignItems="center"
-                spacing={1.5}
-                sx={{ pt: 3, flexWrap: "wrap" }}
-              >
-                {phase !== "submitted" && (
+              phase !== "submitted" && (
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  spacing={1.5}
+                  sx={{
+                    mt: 3,
+                    pt: 2.5,
+                    borderTop: "1px solid #edf0f3",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      flex: "1 1 220px",
+                      minWidth: 0,
+                      color: "#7a8798",
+                      fontSize: 12,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Atelix reviews every RFQ before any supplier is contacted.
+                    Submitting queues that review — it never sends outreach
+                    directly.
+                  </Typography>
                   <MuiButton
                     onClick={onSubmit}
                     disabled={actionPending || preparing}
@@ -2127,19 +2466,19 @@ function RfqDocumentPanel({
                     endIcon={<ArrowForward />}
                     variant="contained"
                     sx={{
+                      flexShrink: 0,
                       backgroundColor: "#4b7657",
                       "&:hover": { backgroundColor: "#3d6548" },
                     }}
                   >
-                    Request RFQ Draft
+                    Submit RFQ
                   </MuiButton>
-                )}
-              </Stack>
+                </Stack>
+              )
             )}
           </>
         )}
-      </Box>
-    </RoundedSurface>
+    </Box>
   );
 }
 
@@ -2826,6 +3165,7 @@ function RfqWorkspace({
   initialFields,
   files,
   status,
+  submittedAt,
   initialRevision = 0,
   initialAgentPrompt,
   initialPhase,
@@ -2838,6 +3178,7 @@ function RfqWorkspace({
   initialFields: RfqFields;
   files: RfqAttachment[];
   status: string;
+  submittedAt?: string | null;
   initialRevision?: number;
   initialAgentPrompt?: string;
   initialPhase?: RfqPhase;
@@ -2851,9 +3192,7 @@ function RfqWorkspace({
   const [fields, setFields] = useState<RfqFields>(initialFields);
   const [draft, setDraft] = useState<RfqFields>(initialFields);
   const [attachments, setAttachments] = useState<RfqAttachment[]>(files);
-  const [tab, setTab] = useState<RfqTab>(() =>
-    restoredSubmitted ? "Timeline" : "RFQ",
-  );
+  const [tab, setTab] = useState<RfqTab>("RFQ");
   const [statusOverride, setStatusOverride] = useState<string | null>(null);
   const [trackClicked, setTrackClicked] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<
@@ -3131,13 +3470,18 @@ function RfqWorkspace({
         : status
       : status;
   const caseStatus = statusOverride ?? baseStatus;
-  const rightPanel = justSubmitted && !trackClicked ? (
-    <RfqReviewPipeline caseNo={caseNo} status={caseStatus} onTrack={trackRequest} />
-  ) : (
+  const showPipeline = justSubmitted && !trackClicked;
+  const visibleTabs: RfqTab[] = draftingPhase
+    ? ["RFQ", "Timeline", "Quotes", "Files"]
+    : ["RFQ", "Timeline", "Quotes", "Orders", "Files"];
+  const documentPanel = (panelLayout: "rail" | "full") => (
     <RfqDocumentPanel
       phase={phase}
       fields={fields}
       draft={draft}
+      caseNo={caseNo}
+      layout={panelLayout}
+      submittedAt={submittedAt ?? null}
       tab={tab}
       setTab={setTab}
       caseStatus={caseStatus}
@@ -3210,38 +3554,61 @@ function RfqWorkspace({
           {stageMeta.label}
         </Box>
       </Box>
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: draftingPhase
-            ? { xs: "1fr", md: "minmax(0,1fr) minmax(0,1.6fr)" }
-            : "minmax(0,1fr)",
-          gap: 3,
-          alignItems: "stretch",
-        }}
-      >
-        {draftingPhase && (
-          <ConversationChatPanel
-            messages={conversationMessages}
-            onSend={sendConversationMessage}
-            busy={agentPending}
-            loading={!messagesLoaded}
-            status={agentStatus}
-            remainingTurns={remainingTurns}
-            canUndo={Boolean(undoToken)}
-            onUndo={undoAgentChange}
+      {showPipeline ? (
+        <RfqReviewPipeline
+          caseNo={caseNo}
+          status={caseStatus}
+          onTrack={trackRequest}
+        />
+      ) : (
+        <>
+          <RfqTabBar
+            tabs={visibleTabs}
+            tab={tab}
+            setTab={setTab}
+            counts={{ Files: attachments.length }}
           />
-        )}
-        <Box
-          sx={{
-            gridColumn: draftingPhase ? "auto" : "1 / -1",
-            minWidth: 0,
-            width: "100%",
-          }}
-        >
-          {rightPanel}
-        </Box>
-      </Box>
+          {draftingPhase ? (
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  md: "minmax(0,1fr) minmax(340px, 380px)",
+                },
+                gap: 3,
+                alignItems: "start",
+              }}
+            >
+              <ConversationChatPanel
+                messages={conversationMessages}
+                onSend={sendConversationMessage}
+                busy={agentPending}
+                loading={!messagesLoaded}
+                status={agentStatus}
+                remainingTurns={remainingTurns}
+                canUndo={Boolean(undoToken)}
+                onUndo={undoAgentChange}
+              />
+              <Box
+                sx={{
+                  minWidth: 0,
+                  position: { md: "sticky" },
+                  top: { md: 16 },
+                  alignSelf: "start",
+                  maxHeight: { md: "calc(100dvh - 220px)" },
+                  overflowY: { md: "auto" },
+                  pb: 2,
+                }}
+              >
+                {documentPanel("rail")}
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ minWidth: 0, width: "100%" }}>{documentPanel("full")}</Box>
+          )}
+        </>
+      )}
     </Stack>
   );
 }
@@ -4879,6 +5246,7 @@ export function Dashboard({ path }: { path: string }) {
           initialFields={fieldsFromBrief(rfq.record.brief)}
           files={rfq.attachments}
           status={rfq.record.status}
+          submittedAt={rfq.record.submitted_at}
           initialRevision={rfq.record.agent_revision ?? 0}
           initialAgentPrompt={
             rfq.initialPhase === "drafting" ? summary : undefined
