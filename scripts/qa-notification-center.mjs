@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const migration = readFileSync(join(root, "supabase/migrations/20260830120000_unified_notifications.sql"), "utf8");
+const retiredReminder = readFileSync(join(root, "supabase/migrations/20260828170000_retire_rfq_ops_reply_reminders.sql"), "utf8");
+const config = readFileSync(join(root, "supabase/config.toml"), "utf8");
 const client = readFileSync(join(root, "src/supabase.ts"), "utf8");
 const bell = readFileSync(join(root, "src/notification-bell.tsx"), "utf8");
 const server = readFileSync(join(root, "server/index.mjs"), "utf8");
@@ -26,5 +28,9 @@ check(/realtime\.setAuth\(accessToken\)/.test(client), "Realtime channel must re
 check(!/postgres_changes/.test(bell), "notification bell must not use Postgres Changes");
 check(/Mark all as read/.test(bell) && /markAllIntoolsNotificationsRead/.test(bell), "bell must support recipient-scoped mark all read");
 check(/"intools_mark_notifications_read"/.test(server), "local Intools seam must allow the guarded read RPC");
+check(/UPDATE public\.rfq_ops_reply_reminders[\s\S]{0,500}resolved_at = COALESCE\(resolved_at, now\(\)\)/.test(retiredReminder), "outstanding reply reminders must be made inert");
+check(/REVOKE EXECUTE ON FUNCTION public\.rfq_ops_claim_due_reply_reminders/.test(retiredReminder), "reminder dispatcher must lose database access");
+check(/deployed dispatcher is deleted during release/.test(retiredReminder), "legacy reminder scheduler must be retired through dispatcher deletion");
+check(!/rfq-ops-reminder-dispatch/.test(config), "retired reminder function must not remain in local function config");
 
 console.log("ok - unified notification ledger, private Broadcast, routing, and per-recipient read contracts");

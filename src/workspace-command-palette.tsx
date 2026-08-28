@@ -194,6 +194,7 @@ export function WorkspaceCommandPalette({
             fontSize: 15,
             color: "#202936",
             "&::placeholder": { color: "#9ba1aa" },
+            "&:focus, &:focus-visible": { outline: "3px solid transparent", boxShadow: "none" },
           }}
         />
       </Box>
