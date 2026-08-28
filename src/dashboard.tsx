@@ -1119,6 +1119,7 @@ function CleanPromptComposer({
               outline: 0,
               background: "transparent",
               color: "#202936",
+              WebkitTextFillColor: "#202936",
               font: "inherit",
               fontSize: { xs: 15, sm: 16 },
               lineHeight: 1.4,
@@ -1552,6 +1553,7 @@ function ConversationChatPanel({
             background: "transparent",
             colorScheme: "light",
             color: "#202936",
+            WebkitTextFillColor: "#202936",
             font: "inherit",
             fontSize: { xs: 14, sm: 15 },
             lineHeight: 1.45,
@@ -2265,8 +2267,16 @@ function RfqDocumentPanel({
       aria-labelledby={RFQ_TAB_IDS[tab]}
       sx={{
         minWidth: 0,
-        pt: rail ? 0 : { xs: 2.5, md: 3.5 },
-        ...(rail ? {} : { maxWidth: tab === "RFQ" ? 760 : 920 }),
+        pt: rail ? { xs: 2, md: 2.5 } : { xs: 2.5, md: 3.5 },
+        ...(rail
+          ? {
+              flex: 1,
+              minHeight: 0,
+              display: "flex",
+              flexDirection: "column",
+              ...(tab === "RFQ" ? {} : { overflowY: "auto" }),
+            }
+          : { maxWidth: tab === "RFQ" ? 760 : 920 }),
       }}
     >
         {tab === "Timeline" &&
@@ -2301,7 +2311,22 @@ function RfqDocumentPanel({
           <ProductionTab caseId={caseId} onMessage={onMessage} />
         )}
         {tab === "RFQ" && (
-          <>
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              flex: rail ? 1 : "none",
+              minHeight: 0,
+            }}
+          >
+            <Box
+              sx={{
+                flex: rail ? 1 : "none",
+                minHeight: 0,
+                overflowY: rail ? "auto" : "visible",
+                pr: rail ? 0.5 : 0,
+              }}
+            >
             {agentStatus &&
               (changedFields.length > 0 ||
                 agentStatus.tone === "error" ||
@@ -2404,6 +2429,8 @@ function RfqDocumentPanel({
                 />
               ))}
             </Box>
+            </Box>
+            <Box sx={{ flexShrink: 0, mt: rail ? 1.5 : 0 }}>
             {editing ? (
               <Stack
                 direction="row"
@@ -2440,7 +2467,7 @@ function RfqDocumentPanel({
                   alignItems="center"
                   spacing={1.5}
                   sx={{
-                    mt: 3,
+                    mt: rail ? 0 : 3,
                     pt: 2.5,
                     borderTop: "1px solid #edf0f3",
                     flexWrap: "wrap",
@@ -2476,7 +2503,8 @@ function RfqDocumentPanel({
                 </Stack>
               )
             )}
-          </>
+            </Box>
+          </Box>
         )}
     </Box>
   );
@@ -3593,12 +3621,16 @@ function RfqWorkspace({
               <Box
                 sx={{
                   minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
                   position: { md: "sticky" },
                   top: { md: 16 },
                   alignSelf: "start",
-                  maxHeight: { md: "calc(100dvh - 220px)" },
-                  overflowY: { md: "auto" },
-                  pb: 2,
+                  height: {
+                    xs: "auto",
+                    md: "min(720px, calc(100dvh - 220px))",
+                  },
+                  minHeight: 0,
                 }}
               >
                 {documentPanel("rail")}
