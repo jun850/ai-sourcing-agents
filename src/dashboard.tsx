@@ -981,6 +981,7 @@ function CleanPromptComposer({
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const promptRef = useRef<HTMLTextAreaElement | null>(null);
   const promptRegistration = register("brief");
   const brief = watch("brief");
@@ -1005,7 +1006,11 @@ function CleanPromptComposer({
       );
       return;
     }
-    if (submitting) return;
+    // Enter can be observed by both the textarea and form on some browsers.
+    // Use a synchronous guard so it cannot create two RFQs before React has
+    // committed the disabled state.
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const started = await onStart(values.brief.trim(), files);
@@ -1020,6 +1025,7 @@ function CleanPromptComposer({
         }
       });
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   }
@@ -5134,10 +5140,6 @@ export function Dashboard({ path }: { path: string }) {
     attachments: RfqAttachment[];
     initialPhase?: RfqPhase;
   } | null>(null);
-  // Navigation to a just-created request can race its appearance in the
-  // history list. Keep the creation intent outside that transient record so
-  // the dashboard prompt always starts its first agent turn exactly once.
-  const dashboardStartedRfqIds = useRef(new Set<string>());
   const loadHistoryPage = useCallback(async ({ cursor }: { cursor: { updatedAt: string; id: string } | null; signal: AbortSignal }) => listRfqCasesPage({ cursor, limit: 40 }), []);
   const { items: historyItems, setItems: setHistoryItems, loading: historyLoading, loadingMore: historyLoadingMore, hasMore: historyHasMore, loadMore: loadHistory } = useInfiniteList<StoredRfq>("workspace-rfq-requests", loadHistoryPage);
   const [rfqLoading, setRfqLoading] = useState(false);
@@ -5246,7 +5248,7 @@ export function Dashboard({ path }: { path: string }) {
   async function startRfq(brief: string, files: UploadFile[]): Promise<boolean> {
     setMessage("Saving your sourcing brief…");
     try {
-      const record = await createRfqCase({
+      let record = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
         brief: briefFromFields(brief, defaultRfqFields, classifyRfqIntake(brief)),
       });
@@ -5254,7 +5256,27 @@ export function Dashboard({ path }: { path: string }) {
       const attachments: RfqAttachment[] = [];
       for (const item of validFiles)
         attachments.push(await uploadRfqAttachment(record.id, item.file));
-      dashboardStartedRfqIds.current.add(record.id);
+      // Start the first agent turn before navigation. This makes the primary
+      // Dashboard prompt authoritative and durable rather than relying on a
+      // client effect that can be replaced while the new request is loading.
+      try {
+        const response = await invokeRfqCopilot({
+          rfqCaseId: record.id,
+          message: brief,
+          clientMessageId: newClientMessageId(),
+          expectedRevision: record.agent_revision ?? 0,
+        });
+        const savedFields = response.savedPatch && typeof response.savedPatch === "object"
+          ? { ...defaultRfqFields, ...response.savedPatch }
+          : defaultRfqFields;
+        record = {
+          ...record,
+          brief: briefFromFields(brief, savedFields, classifyRfqIntake(brief)),
+          agent_revision: response.revision,
+        };
+      } catch (agentCause) {
+        setMessage(agentCause instanceof Error ? agentCause.message : "Your RFQ was saved, but Atelix AI could not start yet.");
+      }
       setHistoryItems((current) => [
         record,
         ...current.filter((entry) => entry.id !== record.id),
@@ -5311,9 +5333,7 @@ export function Dashboard({ path }: { path: string }) {
           status={rfq.record.status}
           submittedAt={rfq.record.submitted_at}
           initialRevision={rfq.record.agent_revision ?? 0}
-          initialAgentPrompt={
-            dashboardStartedRfqIds.current.has(rfq.record.id) ? summary : undefined
-          }
+          initialAgentPrompt={undefined}
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
           onAgentDraftPatched={(nextFields, revision) => {
