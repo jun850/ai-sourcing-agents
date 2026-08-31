@@ -255,6 +255,18 @@ const defaultRfqFields: RfqFields = {
   timeline: "",
 };
 
+function requiredRfqFieldLabels(fields: RfqFields, intake: RfqIntake) {
+  const rawMaterialRequest = ["fabric", "fibre_yarn", "leather", "interlining", "trims_labels", "packaging"].includes(
+    intake.items[0]?.category ?? "",
+  );
+  const required: Array<keyof RfqFields> = rawMaterialRequest
+    ? ["material", "quantity"]
+    : ["product", "quantity"];
+  return required
+    .filter((field) => !fields[field].trim())
+    .map((field) => rfqFieldLabels[field]);
+}
+
 type StackProps = {
   direction?: "row" | "column";
   spacing?: number | string;
@@ -3485,6 +3497,14 @@ function RfqWorkspace({
   }
   function submitRfq() {
     if (documentActionPending) return;
+    const missingRequired = requiredRfqFieldLabels(fields, intake);
+    if (missingRequired.length) {
+      setAgentStatus({
+        tone: "warning",
+        text: `Add ${missingRequired.join(" and ")} before submitting this RFQ.`,
+      });
+      return;
+    }
     setDocumentActionPending(true);
     void updateRfqCase(caseId, {
       title: brief.slice(0, 120) || "New sourcing request",
@@ -5141,6 +5161,7 @@ export function Dashboard({ path }: { path: string }) {
     record: WorkspaceRfq;
     attachments: RfqAttachment[];
     initialPhase?: RfqPhase;
+    initialAgentPrompt?: string;
   } | null>(null);
   const loadHistoryPage = useCallback(async ({ cursor }: { cursor: { updatedAt: string; id: string } | null; signal: AbortSignal }) => listRfqCasesPage({ cursor, limit: 40 }), []);
   const { items: historyItems, setItems: setHistoryItems, loading: historyLoading, loadingMore: historyLoadingMore, hasMore: historyHasMore, loadMore: loadHistory } = useInfiniteList<StoredRfq>("workspace-rfq-requests", loadHistoryPage);
@@ -5258,32 +5279,11 @@ export function Dashboard({ path }: { path: string }) {
       const attachments: RfqAttachment[] = [];
       for (const item of validFiles)
         attachments.push(await uploadRfqAttachment(record.id, item.file));
-      // Start the first agent turn before navigation. This makes the primary
-      // Dashboard prompt authoritative and durable rather than relying on a
-      // client effect that can be replaced while the new request is loading.
-      try {
-        const response = await invokeRfqCopilot({
-          rfqCaseId: record.id,
-          message: brief,
-          clientMessageId: newClientMessageId(),
-          expectedRevision: record.agent_revision ?? 0,
-        });
-        const savedFields = response.savedPatch && typeof response.savedPatch === "object"
-          ? { ...defaultRfqFields, ...response.savedPatch }
-          : defaultRfqFields;
-        record = {
-          ...record,
-          brief: briefFromFields(brief, savedFields, classifyRfqIntake(brief)),
-          agent_revision: response.revision,
-        };
-      } catch (agentCause) {
-        setMessage(agentCause instanceof Error ? agentCause.message : "Your RFQ was saved, but Atelix AI could not start yet.");
-      }
       setHistoryItems((current) => [
         record,
         ...current.filter((entry) => entry.id !== record.id),
       ]);
-      setRfq({ record, attachments, initialPhase: "drafting" });
+      setRfq({ record, attachments, initialPhase: "drafting", initialAgentPrompt: brief });
       setMessage("");
       navigate(`/dashboard/requests/${encodeURIComponent(record.id)}`);
       return true;
@@ -5335,7 +5335,7 @@ export function Dashboard({ path }: { path: string }) {
           status={rfq.record.status}
           submittedAt={rfq.record.submitted_at}
           initialRevision={rfq.record.agent_revision ?? 0}
-          initialAgentPrompt={undefined}
+          initialAgentPrompt={rfq.initialAgentPrompt}
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
           onAgentDraftPatched={(nextFields, revision) => {

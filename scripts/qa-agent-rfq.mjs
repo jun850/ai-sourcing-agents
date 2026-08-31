@@ -274,10 +274,10 @@ test("adjacent and raw-material categories are represented", () => {
   }
 });
 
-test("agent caps clarification questions at five", () => {
+test("agent permits ongoing draft clarifications", () => {
   const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
-  assert.match(agent, /MAX_CLARIFICATIONS = 5/);
-  assert.match(agent, /clarificationLimitReply/);
+  assert.doesNotMatch(agent, /MAX_CLARIFICATIONS/);
+  assert.match(agent, /Buyers can continue/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);
