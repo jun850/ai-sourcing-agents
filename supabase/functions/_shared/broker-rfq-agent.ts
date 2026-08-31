@@ -132,7 +132,28 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   return result;
 }
 async function append(admin: any, caseId: string, profileId: string, role: "buyer" | "agent", content: string) {
-  return await admin.rpc("agent_rfq_record_thread_message", { p_case_id: caseId, p_profile_id: profileId, p_role: role, p_content: content });
+  // New workspace RFQs already own a thread at creation time. Writing directly
+  // to that thread avoids taking an unnecessary RFQ-row lock for every turn,
+  // which was able to leave concurrent first messages waiting indefinitely.
+  const { data: rfq, error: rfqError } = await admin
+    .from("rfq_cases")
+    .select("thread_id")
+    .eq("id", caseId)
+    .eq("buyer_profile_id", profileId)
+    .maybeSingle();
+  if (rfqError || !rfq?.thread_id) {
+    return await admin.rpc("agent_rfq_record_thread_message", {
+      p_case_id: caseId,
+      p_profile_id: profileId,
+      p_role: role,
+      p_content: content,
+    });
+  }
+  return await admin.from("athelia_thread_messages").insert({
+    thread_id: rfq.thread_id,
+    role,
+    content: content.trim(),
+  });
 }
 async function finish(
   admin: any,
