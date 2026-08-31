@@ -213,6 +213,21 @@ export async function handleBrokerRfqAgent(request: Request) {
     return reply(result);
   }
 
+  // A clearly stated sourcing brief does not need to wait for an upstream
+  // model just to record facts that are already explicit. This is the fast,
+  // dependable first response from the Dashboard prompt; it never invents a
+  // supplier or commercial term. Ambiguous and follow-up requests continue
+  // through the provider path below.
+  const immediatePatch = deterministicPatch(message, intake);
+  if (Object.keys(immediatePatch).length) {
+    const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: immediatePatch, p_turn_id: turn.id });
+    if (!error) {
+      const result = output("draft_updated", "I’ve recorded the details you shared. What delivery timeline should we work toward?", Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || immediatePatch, changedFields: applied?.changedFields || Object.keys(immediatePatch), undoToken: applied?.undoToken || null, verificationStatus: "partial", intake, clarificationRemaining: remainingClarifications });
+      await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "settled", "deterministic_intake", startedAt);
+      return reply(result);
+    }
+  }
+
   const apiKey = Deno.env.get("OPENROUTER_API_KEY"); const model = Deno.env.get("OPENROUTER_MODEL");
   const agenticEnabled = Deno.env.get("AGENTIC_RFQ_ENABLED") === "true";
   if (!agenticEnabled || !apiKey || model !== PRESET) {
