@@ -234,15 +234,15 @@ export async function handleBrokerRfqAgent(request: Request) {
   // hop for a buyer to continue. A recognised request with no new structured
   // value gets the next focused question immediately. Buyers can continue
   // adding requirements for as long as their RFQ remains a draft.
-  const result = output(
+  const deterministicResult = output(
     "clarifying_question",
     immediateQuestion(intake.subtype),
     revision,
     { verificationStatus: "partial", intake },
   );
-  await append(admin, rfqCaseId, user.id, "agent", result.reply);
-  await finish(admin, turn.id, result, "settled", "deterministic_clarification", startedAt);
-  return reply(result);
+  await append(admin, rfqCaseId, user.id, "agent", deterministicResult.reply);
+  await finish(admin, turn.id, deterministicResult, "settled", "deterministic_clarification", startedAt);
+  return reply(deterministicResult);
 
   const apiKey = Deno.env.get("OPENROUTER_API_KEY"); const model = Deno.env.get("OPENROUTER_MODEL");
   const agenticEnabled = Deno.env.get("AGENTIC_RFQ_ENABLED") === "true";
