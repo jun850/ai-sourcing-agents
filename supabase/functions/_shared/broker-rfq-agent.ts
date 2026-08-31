@@ -252,11 +252,14 @@ export async function handleBrokerRfqAgent(request: Request) {
     // default thinking mode. A reasoning-disable request param is
     // deliberately not sent, since not every provider/model behind the
     // preset accepts that field.
+    // RFQ drafting is interactive. If the provider cannot start promptly,
+    // return our deterministic buyer-stated extraction instead of making the
+    // buyer wait. The complete request remains below the five-second target.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
+    const timeout = setTimeout(() => controller.abort(), 3000);
     const upstream = await Promise.race([
       fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing", "X-Session-Id": `rfq-${rfqCaseId}` }, body: JSON.stringify({ model: PRESET, session_id: `rfq-${rfqCaseId}`, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }), signal: controller.signal }),
-      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("openrouter_timeout")), 8500)),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("openrouter_timeout")), 3500)),
     ]);
     clearTimeout(timeout);
     if (!upstream.ok) {
