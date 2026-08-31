@@ -1619,15 +1619,15 @@ function RfqField({
         display: "grid",
         gridTemplateColumns: {
           xs: "1fr",
-          sm: "116px minmax(0,1fr)",
+          sm: "104px minmax(0,1fr)",
         },
-        gap: { xs: 0.5, sm: 1.75 },
-        py: 1.25,
-        alignItems: "baseline",
+        gap: { xs: 0.5, sm: 1.25 },
+        py: 1.45,
+        alignItems: "start",
         borderBottom: "1px solid #edf0f3",
       }}
     >
-      <Typography sx={{ color: "#667384", fontSize: 12.5 }}>{label}</Typography>
+      <Typography sx={{ color: "#667384", fontSize: 12.5, lineHeight: 1.45 }}>{label}</Typography>
       {editing ? (
         <Box
           component="input"
@@ -1662,6 +1662,7 @@ function RfqField({
             minWidth: 0,
             color: value ? "#3f4c5e" : "#758091",
             fontSize: 13,
+            fontWeight: value ? 600 : 400,
             lineHeight: 1.45,
             overflowWrap: "anywhere",
           }}
@@ -2390,40 +2391,24 @@ function RfqDocumentPanel({
             )}
             <Box
               sx={{
-                mb: 1.5,
+                mb: 2,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 2,
               }}
             >
-              <Typography
-                component="h3"
-                sx={{ color: "#46525f", fontSize: 14, fontWeight: 700 }}
-              >
-                RFQ details
-              </Typography>
-              <Stack
-                direction="row"
-                spacing={0.75}
-                alignItems="center"
-                sx={{ flexShrink: 0 }}
-              >
-                {canEditRfq && (
-                  <MuiButton
-                    onClick={onEdit}
-                    disabled={actionPending || preparing}
-                    startIcon={<EditOutlined />}
-                    size="small"
-                    sx={{ color: "#708092" }}
-                  >
-                    Edit
-                  </MuiButton>
-                )}
+              <Stack spacing={0.25} sx={{ minWidth: 0 }}>
+                <Typography
+                  component="h3"
+                  sx={{ color: "#3f4c5e", fontSize: 14, fontWeight: 750, letterSpacing: "-.01em" }}
+                >
+                  RFQ details
+                </Typography>
                 <Typography
                   sx={{
                     fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    fontSize: 11,
+                    fontSize: 10.5,
                     color: "#8a95a3",
                     whiteSpace: "nowrap",
                   }}
@@ -2431,6 +2416,17 @@ function RfqDocumentPanel({
                   {caseNo}
                 </Typography>
               </Stack>
+              {canEditRfq && (
+                <MuiButton
+                  onClick={onEdit}
+                  disabled={actionPending || preparing}
+                  startIcon={<EditOutlined />}
+                  size="small"
+                  sx={{ flexShrink: 0, minWidth: 0, px: 0.5, color: "#637486", fontWeight: 650 }}
+                >
+                  Edit
+                </MuiButton>
+              )}
             </Box>
             <Box>
               {(
@@ -2459,7 +2455,7 @@ function RfqDocumentPanel({
             </Box>
             <IntakeSpecification intake={editing ? intakeDraft : intake} editing={editing} onChange={onIntakeChange} />
             </Box>
-            <Box sx={{ flexShrink: 0, mt: rail ? 1.5 : 0 }}>
+            <Box sx={{ flexShrink: 0, mt: rail ? 2 : 0 }}>
             {editing ? (
               <Stack
                 direction="row"
@@ -2495,8 +2491,9 @@ function RfqDocumentPanel({
                   justifyContent="flex-end"
                   alignItems="center"
                   sx={{
+                    width: "100%",
                     mt: rail ? 0 : 3,
-                    pt: 2.5,
+                    pt: 2,
                     borderTop: "1px solid #edf0f3",
                     flexWrap: "wrap",
                   }}
@@ -2509,12 +2506,16 @@ function RfqDocumentPanel({
                     variant="contained"
                     sx={{
                       flexShrink: 0,
-                      minWidth: { xs: "100%", sm: 208 },
-                      minHeight: 56,
+                      width: rail ? "100%" : undefined,
+                      minWidth: { xs: "100%", sm: rail ? "100%" : 208 },
+                      minHeight: 60,
                       px: 3,
                       fontSize: 16,
+                      fontWeight: 700,
+                      borderRadius: "14px",
                       backgroundColor: "#4b7657",
-                      "&:hover": { backgroundColor: "#3d6548" },
+                      boxShadow: "0 8px 18px rgba(55, 93, 66, .18)",
+                      "&:hover": { backgroundColor: "#3d6548", boxShadow: "0 10px 20px rgba(55, 93, 66, .24)" },
                     }}
                   >
                     Submit RFQ
