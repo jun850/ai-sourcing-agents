@@ -112,8 +112,12 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   if (timeline) result.timeline = `${timeline[1] || ""}${timeline[2]} ${timeline[3]}`.trim();
   const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
   if (color) result.colors = color;
-  const sizes = message.match(/\b(xs|s|m|l|xl|xxl|xxxl|all sizes|size\s+\d+(?:\s*[-–]\s*\d+)?)\b/i)?.[0];
+  const sizes = message.match(/\b(?:all sizes|sizes?\s+(?:xs|s|m|l|xl|xxl|xxxl|\d+)(?:\s*(?:to|[-–])\s*(?:xs|s|m|l|xl|xxl|xxxl|\d+))?|xs|s|m|l|xl|xxl|xxxl)\b/i)?.[0];
   if (sizes) result.sizes = sizes;
+  const budget = message.match(/\b(?:budget\s*)?(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per\s*(?:piece|pc|pcs|unit)))?\b/i)?.[0];
+  if (budget) result.budget = budget;
+  const certification = message.match(/\b(?:OEKO[ -]?TEX|GOTS|GRS|RCS|BSCI|WRAP|ISO\s*9001)\b/i)?.[0];
+  if (certification) result.certifications = certification;
   const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
   const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
   if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
