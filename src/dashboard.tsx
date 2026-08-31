@@ -250,22 +250,32 @@ const defaultRfqFields: RfqFields = {
 // explicit, low-risk RFQ facts so the live document is useful immediately;
 // the server-side agent remains responsible for durable patching, retrieval,
 // and any later clarification.
+function normaliseBuyerPrompt(message: string) {
+  // Correct only high-confidence procurement shorthand before extraction. The
+  // original buyer message remains the RFQ summary and conversation record.
+  return message
+    .replace(/\bprcs?\b/gi, "pcs")
+    .replace(/\bpeices?\b/gi, "pieces")
+    .replace(/\bmetres?\b/gi, "meters");
+}
+
 function fieldsFromInitialPrompt(message: string): RfqFields {
+  const source = normaliseBuyerPrompt(message);
   const fields = { ...defaultRfqFields };
-  const quantity = message.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?|meters?|metres?|yards?|kg|kgs?)\b/i);
+  const quantity = source.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?|meters?|yards?|kg|kgs?)\b/i);
   if (quantity) fields.quantity = `${quantity[1]} ${quantity[2]}`;
-  const product = message.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?|fabrics?)\b/i)?.[0];
+  const product = source.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?|fabrics?)\b/i)?.[0];
   if (product) fields.product = product;
-  const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
-  const textileWeight = message.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
+  const material = source.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
+  const textileWeight = source.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
   if (material || textileWeight) fields.material = [material, textileWeight].filter(Boolean).join(", ");
-  const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
+  const color = source.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
   if (color) fields.colors = color;
-  const sizes = message.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
+  const sizes = source.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
   if (sizes) fields.sizes = sizes;
-  const budget = message.match(/\b(?:usd|us\$)\s*\d[\d,.]*\b|\b\d[\d,.]*\s*usd\b/i)?.[0];
+  const budget = source.match(/\b(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b|\b\d[\d,.]*\s*(?:usd|us\$|\$)(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b/i)?.[0];
   if (budget) fields.budget = budget;
-  const timeline = message.match(/\b(?:within\s+)?\d[\d,.]*\s*(?:business\s+days?|days?|weeks?|months?)\b/i)?.[0];
+  const timeline = source.match(/\b(?:within\s+)?\d[\d,.]*\s*(?:business\s+days?|days?|weeks?|months?)\b/i)?.[0];
   if (timeline) fields.timeline = timeline;
   return fields;
 }
@@ -3278,14 +3288,7 @@ function RfqWorkspace({
     ConversationMessage[]
   >(() =>
     status === "draft" && Boolean(brief.trim())
-      ? [
-          { id: "opening-brief", from: "You", text: brief },
-          {
-            id: "opening-acknowledgement",
-            from: "Atelix assistant",
-            text: "Thanks — I’m building this RFQ from the details you shared. Add any colors, sizes, certifications, target budget, delivery timing, or references whenever you have them.",
-          },
-        ]
+      ? [{ id: "opening-brief", from: "You", text: brief }]
       : [],
   );
   const [agentRevision, setAgentRevision] = useState(initialRevision);

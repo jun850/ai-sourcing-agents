@@ -191,6 +191,13 @@ test("denim ounces are preserved as buyer-stated material details", () => {
   assert.match(source, /oz\|ounces/);
 });
 
+test("common procurement typos still retain a quantity-first target budget", () => {
+  const source = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(source, /normaliseBuyerPrompt/);
+  assert.match(source, /replace\(\/\\bprcs\?\\b\/gi, "pcs"\)/);
+  assert.match(source, /\\d\[\\d,\.\]\*\\s\*\(\?:usd\|us\\\$\|\\\$\)/);
+});
+
 test("production request contract names the exact preset", () => {
   const request = { model: PRESET, messages: [] };
   assert.equal(request.model, "@preset/marketplace-copilot");

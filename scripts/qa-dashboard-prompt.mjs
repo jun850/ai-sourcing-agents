@@ -31,6 +31,11 @@ for (const [label, pattern, source] of forbidden) {
   }
 }
 
+if (dashboard.includes("Thanks — I’m building this RFQ from the details you shared.")) {
+  console.error("fail - opening RFQ uses a canned assistant acknowledgement");
+  process.exit(1);
+}
+
 for (const selector of [
   ".clean-prompt-form .MuiPaper-root",
   ".conversation-composer",
@@ -48,6 +53,8 @@ for (const [label, expected] of [
   ["informational agent status stays out of the composer area", 'status && status.tone !== "info"'],
   ["first dashboard prompt is hydrated before route change", "const record: WorkspaceRfq = { ...createdRecord, brief: initialBrief };"],
   ["initial extraction retains ounce-based textile weights", "oz|ounces"],
+  ["initial extraction normalizes common buyer shorthand", "normaliseBuyerPrompt"],
+  ["initial extraction accepts a quantity-first target budget", "per)\\s*(?:pieces?|pcs?|units?)"],
 ]) {
   if (!dashboard.includes(expected) && !conversationPanel.includes(expected)) {
     console.error(`fail - missing ${label}`);

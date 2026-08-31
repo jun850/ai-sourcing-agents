@@ -101,30 +101,37 @@ function compactFields(value: unknown) {
   }
   return result;
 }
+function normaliseBuyerPrompt(message: string) {
+  return message
+    .replace(/\bprcs?\b/gi, "pcs")
+    .replace(/\bpeices?\b/gi, "pieces")
+    .replace(/\bmetres?\b/gi, "meters");
+}
 function deterministicPatch(message: string, intake: ReturnType<typeof classifyIntake>): Partial<Record<Field, string>> {
   // Keep the RFQ useful when the optional model provider is slow or
   // unavailable. These are deliberately conservative, buyer-stated values
   // only; they never create supplier or commercial facts.
   const result: Partial<Record<Field, string>> = {};
-  const quantity = message.match(/\b(\d[\d,.]*)\s*(meters?|metres?|m\b|yards?|yd\b|pieces?|pcs?|units?|kg|kgs|kilograms?)\b/i);
+  const source = normaliseBuyerPrompt(message);
+  const quantity = source.match(/\b(\d[\d,.]*)\s*(meters?|m\b|yards?|yd\b|pieces?|pcs?|units?|kg|kgs|kilograms?)\b/i);
   if (quantity) result.quantity = `${quantity[1]} ${quantity[2]}`;
-  const timeline = message.match(/\b(within\s+)?(\d[\d,.]*)\s*(business\s+days?|days?|weeks?|months?)\b/i);
+  const timeline = source.match(/\b(within\s+)?(\d[\d,.]*)\s*(business\s+days?|days?|weeks?|months?)\b/i);
   if (timeline) result.timeline = `${timeline[1] || ""}${timeline[2]} ${timeline[3]}`.trim();
-  const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
+  const color = source.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
   if (color) result.colors = color;
-  const sizes = message.match(/\b(?:all sizes|sizes?\s+(?:xs|s|m|l|xl|xxl|xxxl|\d+)(?:\s*(?:to|[-–])\s*(?:xs|s|m|l|xl|xxl|xxxl|\d+))?|xs|s|m|l|xl|xxl|xxxl)\b/i)?.[0];
+  const sizes = source.match(/\b(?:all sizes|sizes?\s+(?:xs|s|m|l|xl|xxl|xxxl|\d+)(?:\s*(?:to|[-–])\s*(?:xs|s|m|l|xl|xxl|xxxl|\d+))?|xs|s|m|l|xl|xxl|xxxl)\b/i)?.[0];
   if (sizes) result.sizes = sizes;
-  const budget = message.match(/\b(?:budget\s*)?(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per\s*(?:piece|pc|pcs|unit)))?\b/i)?.[0];
+  const budget = source.match(/\b(?:budget\s*)?(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b|\b\d[\d,.]*\s*(?:usd|us\$|\$)(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b/i)?.[0];
   if (budget) result.budget = budget;
-  const certification = message.match(/\b(?:OEKO[ -]?TEX|GOTS|GRS|RCS|BSCI|WRAP|ISO\s*9001)\b/i)?.[0];
+  const certification = source.match(/\b(?:OEKO[ -]?TEX|GOTS|GRS|RCS|BSCI|WRAP|ISO\s*9001)\b/i)?.[0];
   if (certification) result.certifications = certification;
-  const textileWeight = message.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
-  const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
+  const textileWeight = source.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
+  const material = source.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
   if (material || textileWeight) result.material = [material, textileWeight].filter(Boolean).join(", ");
-  const garment = message.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
+  const garment = source.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
   if (garment) result.product = garment;
   if (intake.category === "fabric") {
-    if (/\bfabrics?\b/i.test(message)) result.product = material ? `${material} fabric` : "Fabric";
+    if (/\bfabrics?\b/i.test(source)) result.product = material ? `${material} fabric` : "Fabric";
   }
   if (intake.category === "apparel") {
     if (garment) result.product = garment;
