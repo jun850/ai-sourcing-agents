@@ -255,6 +255,30 @@ const defaultRfqFields: RfqFields = {
   timeline: "",
 };
 
+// The initial prompt is the buyer's supplied source of truth. Extract only
+// explicit, low-risk RFQ facts so the live document is useful immediately;
+// the server-side agent remains responsible for durable patching, retrieval,
+// and any later clarification.
+function fieldsFromInitialPrompt(message: string): RfqFields {
+  const fields = { ...defaultRfqFields };
+  const quantity = message.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?|meters?|metres?|yards?|kg|kgs?)\b/i);
+  if (quantity) fields.quantity = `${quantity[1]} ${quantity[2]}`;
+  const product = message.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?|fabrics?)\b/i)?.[0];
+  if (product) fields.product = product;
+  const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
+  const gsm = message.match(/\b\d{2,4}\s*gsm\b/i)?.[0];
+  if (material || gsm) fields.material = [material, gsm].filter(Boolean).join(", ");
+  const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
+  if (color) fields.colors = color;
+  const sizes = message.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
+  if (sizes) fields.sizes = sizes;
+  const budget = message.match(/\b(?:usd|us\$)\s*\d[\d,.]*\b|\b\d[\d,.]*\s*usd\b/i)?.[0];
+  if (budget) fields.budget = budget;
+  const timeline = message.match(/\b(?:within\s+)?\d[\d,.]*\s*(?:business\s+days?|days?|weeks?|months?)\b/i)?.[0];
+  if (timeline) fields.timeline = timeline;
+  return fields;
+}
+
 function requiredRfqFieldLabels(fields: RfqFields, intake: RfqIntake) {
   const rawMaterialRequest = ["fabric", "fibre_yarn", "leather", "interlining", "trims_labels", "packaging"].includes(
     intake.items[0]?.category ?? "",
@@ -357,6 +381,14 @@ function RoundedSurface({
 function navigate(path: string) {
   history.pushState({}, "", path);
   dispatchEvent(new PopStateEvent("popstate"));
+}
+
+function navigateToDraft(path: string) {
+  if (typeof document.startViewTransition === "function") {
+    document.startViewTransition(() => navigate(path));
+    return;
+  }
+  navigate(path);
 }
 
 function Sidebar({
@@ -5350,9 +5382,11 @@ export function Dashboard({ path }: { path: string }) {
   async function startRfq(brief: string, files: UploadFile[]): Promise<boolean> {
     setMessage("");
     try {
+      const intake = classifyRfqIntake(brief);
+      const initialFields = fieldsFromInitialPrompt(brief);
       let record = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
-        brief: briefFromFields(brief, defaultRfqFields, classifyRfqIntake(brief)),
+        brief: briefFromFields(brief, initialFields, intake),
       });
       const validFiles = files.filter((file) => file.state === "ready");
       const attachments: RfqAttachment[] = [];
@@ -5364,7 +5398,7 @@ export function Dashboard({ path }: { path: string }) {
       ]);
       setRfq({ record, attachments, initialPhase: "drafting" });
       setMessage("");
-      navigate(`/dashboard/requests/${encodeURIComponent(record.id)}`);
+      navigateToDraft(`/dashboard/requests/${encodeURIComponent(record.id)}`);
       return true;
     } catch (cause) {
       setMessage(
