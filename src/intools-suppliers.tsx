@@ -271,6 +271,7 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState<{ status: "approved" | "rejected"; ids: string[]; label: string } | null>(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState("");
   async function load() { setLoading(true); setError(""); try { setSuppliers(await listIntoolsSuppliers()); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load suppliers."); } finally { setLoading(false); } }
   useEffect(() => { void load(); }, []);
   const filtered = useMemo(() => suppliers.filter((supplier) => {
@@ -288,8 +289,11 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
     if (!bulkAction) return;
     setBulkBusy(true); setError("");
     try {
-      await setIntoolsSupplierBrokerStatusBulk(bulkAction.ids, bulkAction.status);
+      const result = await setIntoolsSupplierBrokerStatusBulk(bulkAction.ids, bulkAction.status);
       setSelectedIds((current) => current.filter((id) => !bulkAction.ids.includes(id)));
+      setBulkResult(result.skipped_region_count
+        ? `${result.updated_count} supplier(s) approved. ${result.skipped_region_count} left pending because their region needs broker review.`
+        : `${result.updated_count} supplier(s) ${bulkAction.status === "approved" ? "approved" : "rejected"}.`);
       setBulkAction(null);
       await load();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update supplier review status."); }
@@ -299,6 +303,7 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
   return <Stack spacing={2}>
     <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}><Box><Typography variant="h2" sx={{ fontSize: { xs: 25, sm: 30 } }}>Suppliers</Typography><Typography sx={{ mt: .4, color: "text.secondary", fontSize: 13 }}>Private reviewed records. Nothing here is exposed publicly.</Typography></Box><Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}><Button variant="outlined" startIcon={<FileUpload />} onClick={() => setImporting((value) => !value)}>{importing ? "Close import" : "Review import"}</Button><Button variant="contained" startIcon={<Check />} onClick={() => setCreating((value) => !value)}>{creating ? "Close new supplier" : "New supplier"}</Button></Stack></Stack>
     {error && <Alert severity="error" action={<Button onClick={() => void load()} startIcon={<Refresh />}>Retry</Button>} role="alert">{error}</Alert>}
+    {bulkResult && <Alert severity="success" onClose={() => setBulkResult("")}>{bulkResult}</Alert>}
     {importing && <ImportPanel onComplete={() => { void load(); }} />}
     {creating && <SupplierEditor supplier={null} onCancel={() => setCreating(false)} onSaved={() => { setCreating(false); void load(); }} />}
     <Stack direction={{ xs: "column", sm: "row" }} sx={{ gap: 1 }}><TextField label="Search suppliers" value={query} onChange={(event) => setQuery(event.target.value)} fullWidth slotProps={{ htmlInput: { "aria-label": "Search suppliers" } }} /><FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 170 } }}><InputLabel id="supplier-filter-label">Filter</InputLabel><Select labelId="supplier-filter-label" label="Filter" value={filter} onChange={(event) => setFilter(event.target.value as SupplierFilter)}><MenuItem value="all">Active suppliers</MenuItem><MenuItem value="verified">Verified</MenuItem><MenuItem value="pending">Pending review</MenuItem><MenuItem value="unverified">Unverified</MenuItem><MenuItem value="archived">Archived</MenuItem></Select></FormControl></Stack>

@@ -1592,7 +1592,7 @@ export async function setIntoolsSupplierBrokerStatusBulk(
   supplierIds: string[],
   status: "approved" | "rejected",
 ) {
-  return intoolsRpc<{ updated_count: number }>("intools_set_supplier_broker_status_bulk", {
+  return intoolsRpc<{ updated_count: number; skipped_region_count: number }>("intools_set_supplier_broker_status_bulk", {
     p_supplier_ids: supplierIds,
     p_status: status,
   });

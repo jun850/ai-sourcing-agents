@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 const [ui, client, migration] = await Promise.all([
   readFile(new URL("../src/intools-suppliers.tsx", import.meta.url), "utf8"),
   readFile(new URL("../src/supabase.ts", import.meta.url), "utf8"),
-  readFile(new URL("../supabase/migrations/20260831120000_intools_supplier_bulk_review.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260831130000_skip_invalid_regions_in_bulk_supplier_review.sql", import.meta.url), "utf8"),
 ]);
 
 for (const label of ["Approve all visible", "Reject all visible", "Approve selected", "Reject selected"]) {
@@ -17,4 +17,6 @@ assert.match(migration, /PERFORM public\.intools_require_admin\(\)/);
 assert.match(migration, /p_status NOT IN \('approved','rejected'\)/);
 assert.match(migration, /admin_audit_log/);
 assert.match(migration, /archived_at IS NULL/);
+assert.match(migration, /skipped_region_count/);
+assert.match(ui, /left pending because their region needs broker review/);
 console.log("intools supplier bulk QA passed");
