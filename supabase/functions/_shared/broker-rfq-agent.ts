@@ -235,6 +235,21 @@ export async function handleBrokerRfqAgent(request: Request) {
     }
   }
 
+  // OpenRouter enriches the RFQ assistant, but it must never be a required
+  // hop for a buyer to continue. A recognised request with no new structured
+  // value gets the next focused question immediately; this also keeps the
+  // conversation inside the five-question limit.
+  const atLimit = remainingClarifications === 0;
+  const result = output(
+    atLimit ? "answer" : "clarifying_question",
+    atLimit ? clarificationLimitReply() : immediateQuestion(intake.subtype),
+    revision,
+    { verificationStatus: "partial", intake, clarificationRemaining: remainingClarifications },
+  );
+  await append(admin, rfqCaseId, user.id, "agent", result.reply);
+  await finish(admin, turn.id, result, "settled", "deterministic_clarification", startedAt);
+  return reply(result);
+
   const apiKey = Deno.env.get("OPENROUTER_API_KEY"); const model = Deno.env.get("OPENROUTER_MODEL");
   const agenticEnabled = Deno.env.get("AGENTIC_RFQ_ENABLED") === "true";
   if (!agenticEnabled || !apiKey || model !== PRESET) {

@@ -47,6 +47,7 @@ import {
   ArrowForward,
   ChatBubbleOutlined,
   CheckCircle,
+  Close,
   ChevronLeft,
   ChevronRight,
   Description,
@@ -3406,18 +3407,18 @@ function RfqWorkspace({
         expectedRevision: agentRevision,
       });
       applyAgentResponse(response);
-    } catch (cause) {
+    } catch {
       const fallback =
-        "I’m sorry, I can’t check that just now. You can keep editing this RFQ, or contact info@arcanawangsa.com for payment or order clarification.";
+        "That message was not delivered to your RFQ. Please send it again; your existing draft remains unchanged.";
       setAgentStatus({
         tone: "warning",
-        text: "Atelix AI is temporarily unavailable. Your RFQ was not changed.",
+        text: "Your latest message was not delivered. Please send it again.",
       });
       setConversationMessages((current) => [
         ...current,
         { id: newClientMessageId(), from: "Atelix assistant", text: fallback },
       ]);
-      onMessage(cause instanceof Error ? cause.message : "Could not reach Atelix AI.");
+      onMessage("");
     } finally {
       setAgentPending(false);
     }
@@ -5246,7 +5247,7 @@ export function Dashboard({ path }: { path: string }) {
     navigate(item.href);
   }
   async function startRfq(brief: string, files: UploadFile[]): Promise<boolean> {
-    setMessage("Saving your sourcing brief…");
+    setMessage("");
     try {
       let record = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
@@ -5595,31 +5596,32 @@ export function Dashboard({ path }: { path: string }) {
                   position: "fixed",
                   right: { xs: 16, sm: 24 },
                   bottom: 20,
-                  zIndex: 10,
-                  maxWidth: 420,
-                  px: 2,
-                  py: 1.5,
-                  borderRadius: "12px",
-                  backgroundColor: "#344255",
+                  zIndex: 1200,
+                  maxWidth: { xs: "calc(100vw - 32px)", sm: 420 },
+                  px: 1.25,
+                  py: 1,
+                  borderRadius: "14px",
+                  backgroundColor: "#4F795B",
                   color: "#fff",
-                  boxShadow: "0 12px 28px rgba(44,56,73,.22)",
+                  boxShadow: "0 12px 28px rgba(52, 93, 65, .24)",
                 }}
               >
                 <Stack
                   direction="row"
-                  spacing={1}
+                  spacing={1.1}
                   sx={{ alignItems: "center" }}
                 >
-                  <Typography sx={{ fontSize: 13, color: "inherit" }}>
+                  <CheckCircle sx={{ fontSize: 19, flex: "0 0 auto" }} />
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 650, lineHeight: 1.35, color: "inherit" }}>
                     {message}
                   </Typography>
                   <IconButton
                     size="small"
-                    aria-label="Dismiss message"
+                    aria-label="Dismiss notification"
                     onClick={() => setMessage("")}
-                    sx={{ color: "#fff" }}
+                    sx={{ ml: "auto", width: 36, height: 36, color: "#fff", "&:hover": { backgroundColor: "rgba(255,255,255,.14)" }, "&:focus-visible": { outline: "2px solid #fff", outlineOffset: 2 } }}
                   >
-                    <X fontSize="small" />
+                    <Close fontSize="small" />
                   </IconButton>
                 </Stack>
               </Box>
