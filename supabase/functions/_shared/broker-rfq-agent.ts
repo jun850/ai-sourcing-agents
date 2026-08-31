@@ -149,7 +149,13 @@ export async function handleBrokerRfqAgent(request: Request) {
   const { data: context, error: contextError } = await admin.rpc("agent_rfq_get_context", { p_case_id: rfqCaseId, p_profile_id: user.id });
   if (contextError || !context?.rfq) return reply({ ok: false, reason: "rfq_not_found" }, 404);
   const revision = Number(context.rfq.revision || 0);
-  const intake = classifyIntake(message);
+  // Follow-up messages often contain only newly supplied requirements. Keep
+  // the RFQ's established route so they can update its existing draft.
+  const intake = classifyIntake([
+    text(context.rfq.title, 240),
+    JSON.stringify(context.rfq.brief ?? {}),
+    message,
+  ].join("\n"));
   const { data: existing } = await admin.from("agent_rfq_turns").select("response,status,rfq_case_id").eq("profile_id", user.id).eq("client_message_id", clientMessageId).maybeSingle();
   if (existing && existing.rfq_case_id !== rfqCaseId) return reply({ ok: false, reason: "client_message_id_conflict" }, 409);
   if (existing?.response && typeof existing.response === "object") return reply(existing.response);
