@@ -1539,7 +1539,7 @@ export async function approveRegistrationRequest(requestId: string) {
 export async function listIntoolsSuppliers() {
   return intoolsRpc<IntoolsSupplier[]>("intools_list_suppliers");
 }
-export type IntoolsAnalyticsOverview = { users: number; rfqs: number; quote_value_cents: number; invoice_total_cents: number; trend: Array<{ date: string; rfqs: number; invoices_cents: number }>; search_console_imports: Array<{ id: string; source_type: string; coverage_start: string | null; coverage_end: string | null; original_filename: string; row_count: number; imported_at: string }> };
+export type IntoolsAnalyticsOverview = { users: number; rfqs: number; quote_value_cents: number; invoice_total_cents: number; verified_suppliers: number; supplier_countries: number; trend: Array<{ date: string; rfqs: number; invoices_cents: number }>; search_console_imports: Array<{ id: string; source_type: string; coverage_start: string | null; coverage_end: string | null; original_filename: string; row_count: number; imported_at: string }> };
 export async function getIntoolsAnalyticsOverview(start: string, end: string) {
   return intoolsRpc<IntoolsAnalyticsOverview>("intools_get_analytics_overview", { p_start: start, p_end: end });
 }

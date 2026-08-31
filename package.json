@@ -16,6 +16,7 @@
     "qa:rfq-ops-chat": "node scripts/qa-rfq-ops-chat.mjs",
     "qa:notification-center": "node scripts/qa-notification-center.mjs",
     "qa:intools-supplier-bulk": "node scripts/qa-intools-supplier-bulk.mjs",
+    "qa:intools-analytics": "node scripts/qa-intools-analytics.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
     "suppliers:crawl-apparelx-makerlist": "node scripts/suppliers/crawl-apparelx-makerlist.mjs",
     "qa:apparelx-makerlist": "node scripts/qa-apparelx-makerlist.mjs",

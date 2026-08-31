@@ -286,7 +286,7 @@ function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
 }
 
 function intoolsTabPath(tab: Tab) {
-  if (tab === "analytics") return "/intools";
+  if (tab === "analytics") return "/intools/analytics";
   if (tab === "invoices") return "/intools/invoices";
   if (tab === "rfqs") return "/intools/requests";
   return `/intools/${tab}`;
