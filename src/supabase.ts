@@ -1918,16 +1918,21 @@ export async function uploadIntoolsAgentKnowledge(
     }).catch(() => undefined);
     rpcError(uploadError);
   }
-  // Extraction is server-side so private source content never enters another
-  // browser contract. A failed invocation leaves the immutable upload visible
-  // as `uploaded` for an operator retry instead of falsely marking it ready.
-  const { error: ingestError } = await client().functions.invoke(
-    "agent-knowledge-ingest",
-    { body: { versionId: created.versionId } },
-  );
-  if (ingestError && import.meta.env.DEV)
-    console.warn("Knowledge upload is waiting for ingestion.");
+  await ingestIntoolsAgentKnowledge(created.versionId);
   return created;
+}
+
+export async function ingestIntoolsAgentKnowledge(versionId: string) {
+  // Extraction is server-side so private source content never enters another
+  // browser contract. Surface an extraction failure immediately instead of
+  // making the operator discover it only from the list status.
+  const { data, error } = await client().functions.invoke<{
+    ok?: boolean;
+    message?: string;
+  }>("agent-knowledge-ingest", { body: { versionId } });
+  if (error) rpcError(error);
+  if (!data?.ok) throw new Error(data?.message || "Knowledge extraction could not be completed.");
+  return data;
 }
 
 export async function publishIntoolsAgentKnowledge(versionId: string) {

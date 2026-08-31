@@ -96,14 +96,12 @@ Deno.serve(async (request) => {
     return json({ ok: false, reason: "no_text" }, 422);
   }
   try {
-    const Session = (globalThis as any).Supabase?.ai?.Session;
-    if (!Session) throw new Error("Supabase AI gte-small runtime is unavailable");
-    const model = new Session("gte-small");
-    const vectors = await model.run(parts, { mean_pool: true, normalize: true });
-    if (!Array.isArray(vectors) || vectors.length !== parts.length || vectors.some((vector) => !Array.isArray(vector) || vector.length !== 384)) throw new Error("gte-small returned an invalid embedding shape");
+    // Retrieval is intentionally lexical (Postgres full-text search). It is
+    // deterministic, works in every Edge runtime, and avoids making a document
+    // upload depend on an optional embedding runtime.
     const { error: clearError } = await admin.from("agent_knowledge_chunks").delete().eq("version_id", version.id);
     if (clearError) throw clearError;
-    const { error: insertError } = await admin.from("agent_knowledge_chunks").insert(parts.map((content, chunk_no) => ({ version_id: version.id, chunk_no, content, embedding: vectors[chunk_no] })));
+    const { error: insertError } = await admin.from("agent_knowledge_chunks").insert(parts.map((content, chunk_no) => ({ version_id: version.id, chunk_no, content })));
     if (insertError) throw insertError;
     const { error: readyError } = await admin.from("agent_knowledge_versions").update({ status: "ready", extraction_error: null, updated_at: new Date().toISOString() }).eq("id", version.id);
     if (readyError) throw readyError;

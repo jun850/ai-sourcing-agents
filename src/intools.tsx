@@ -67,6 +67,7 @@ import {
   uploadIntoolsAgentKnowledge,
   publishIntoolsAgentKnowledge,
   archiveIntoolsAgentKnowledge,
+  ingestIntoolsAgentKnowledge,
   publishIntoolsRfqQuote,
   recordIntoolsManualPayment,
   sendIntoolsInvoice,
@@ -2188,6 +2189,7 @@ function KnowledgePanel() {
   const [visibilityFilter, setVisibilityFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ complete: 0, total: 0 });
   const [busyAction, setBusyAction] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -2260,11 +2262,25 @@ function KnowledgePanel() {
       return;
     }
     setUploading(true);
+    setUploadProgress({ complete: 0, total: form.files.length });
     try {
-      for (const file of form.files) {
-        const title = form.files.length === 1 ? form.title.trim() : file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim().slice(0, 240);
-        await uploadIntoolsAgentKnowledge(file, { title, domain: form.domain, visibility: form.visibility, appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] } });
+      const queue = [...form.files]; const failures: string[] = [];
+      async function worker() {
+        for (;;) {
+          const file = queue.shift();
+          if (!file) return;
+          const title = form.files.length === 1 ? form.title.trim() : file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim().slice(0, 240);
+          try {
+            await uploadIntoolsAgentKnowledge(file, { title, domain: form.domain, visibility: form.visibility, appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] } });
+          } catch (cause) {
+            failures.push(`${file.name}: ${cause instanceof Error ? cause.message : "upload failed"}`);
+          } finally {
+            setUploadProgress((current) => ({ ...current, complete: current.complete + 1 }));
+          }
+        }
       }
+      await Promise.all(Array.from({ length: Math.min(3, form.files.length) }, () => worker()));
+      if (failures.length) throw new Error(`${failures.length} file${failures.length === 1 ? "" : "s"} could not be queued. ${failures.slice(0, 2).join(" ")}`);
       setForm({ title: "", domain: "rfq", visibility: "buyer-safe", category: "all", procurementMode: "all", files: [] });
       setMessage(`${form.files.length} knowledge ${form.files.length === 1 ? "file" : "files"} uploaded and queued for processing.`);
       await loadDocuments();
@@ -2274,6 +2290,7 @@ function KnowledgePanel() {
       );
     } finally {
       setUploading(false);
+      setUploadProgress({ complete: 0, total: 0 });
     }
   }
 
@@ -2288,6 +2305,23 @@ function KnowledgePanel() {
       await loadDocuments();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not publish this document.");
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function retry(document: IntoolsAgentKnowledgeDocument) {
+    if (document.status !== "failed" || !document.current_version_id) return;
+    setBusyAction(`${document.id}:retry`);
+    setError("");
+    setMessage("");
+    try {
+      await ingestIntoolsAgentKnowledge(document.current_version_id);
+      setMessage(`${document.title} is ready to publish.`);
+      await loadDocuments();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not retry this document.");
+      await loadDocuments();
     } finally {
       setBusyAction("");
     }
@@ -2373,9 +2407,12 @@ function KnowledgePanel() {
               {form.files.length ? `${form.files.length} selected · ${form.files.slice(0, 2).map((file) => file.name).join(" · ")}${form.files.length > 2 ? " …" : ""}` : "TXT, MD, CSV, PDF, DOC, DOCX, XLS or XLSX · max 25 MB each"}
             </Typography>
             <Button type="submit" variant="contained" disabled={uploading} startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <Add />}>
-              Upload document
+              {uploading ? `Uploading ${uploadProgress.complete} of ${uploadProgress.total}…` : "Upload documents"}
             </Button>
           </Stack>
+          {uploading && <Typography role="status" aria-live="polite" sx={{ color: "text.secondary", fontSize: 12 }}>
+            Processing up to three files at a time. You can keep this page open while the batch completes.
+          </Typography>}
           {(error || message) && (
             <Alert severity={error ? "error" : "success"} role={error ? "alert" : "status"}>
               {error || message}
@@ -2431,6 +2468,7 @@ function KnowledgePanel() {
           <Box component="ul" aria-label="Knowledge documents" sx={{ listStyle: "none", p: 0, m: 0 }}>
             {documents.map((document) => {
               const publishing = busyAction === `${document.id}:publish`;
+              const retrying = busyAction === `${document.id}:retry`;
               const archiving = busyAction === `${document.id}:archive`;
               return (
                 <Box component="li" key={document.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
@@ -2448,6 +2486,9 @@ function KnowledgePanel() {
                     <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.visibility)}</Typography>
                     <StatusChip status={document.status} />
                     <Stack direction={{ xs: "column", sm: "row" }} spacing={0.75} sx={{ alignItems: { sm: "center" } }}>
+                      <Button size="small" variant="text" disabled={document.status !== "failed" || !document.current_version_id || Boolean(busyAction)} onClick={() => void retry(document)}>
+                        {retrying ? "Retrying…" : "Retry"}
+                      </Button>
                       <Button size="small" variant="text" disabled={document.status !== "ready" || !document.current_version_id || Boolean(busyAction)} onClick={() => void publish(document)}>
                         {publishing ? "Publishing…" : "Publish"}
                       </Button>
