@@ -808,10 +808,35 @@ export async function invokeRfqCopilot(input: {
   action?: "undo";
   undoToken?: string;
 }) {
-  const { data, error } = await client().functions.invoke("copilot-agent", {
-    body: input,
+  if (!url || !publishableKey) {
+    throw new Error("Atelix AI is not configured for this environment.");
+  }
+  const session = await getSession();
+  if (!session?.access_token) {
+    throw new Error("Please sign in again before continuing your RFQ.");
+  }
+  // Do not route this interactive request through supabase-js's function
+  // wrapper. In production it could keep a completed 200 response pending in
+  // the browser, leaving the composer permanently disabled. This is the same
+  // authenticated TypeScript fetch path, with the model credential still held
+  // exclusively by the Edge Function.
+  const edgeResponse = await fetch(`${url}/functions/v1/copilot-agent`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: publishableKey,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
   });
-  rpcError(error);
+  const data = await edgeResponse.json().catch(() => null);
+  if (!edgeResponse.ok) {
+    const reason =
+      data && typeof data === "object" && "reason" in data
+        ? String((data as { reason?: unknown }).reason)
+        : "Atelix AI could not process that message.";
+    throw new Error(reason);
+  }
   if (!data || typeof data !== "object") {
     throw new Error("Atelix AI could not return a response. Please try again shortly.");
   }
