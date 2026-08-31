@@ -103,6 +103,21 @@ function compactFields(value: unknown) {
   }
   return result;
 }
+function deterministicPatch(message: string, intake: ReturnType<typeof classifyIntake>): Partial<Record<Field, string>> {
+  // Keep the RFQ useful when the optional model provider is slow or
+  // unavailable. These are deliberately conservative, buyer-stated values
+  // only; they never create supplier or commercial facts.
+  const result: Partial<Record<Field, string>> = {};
+  const quantity = message.match(/\b(\d[\d,.]*)\s*(meters?|metres?|m\b|yards?|yd\b|pieces?|pcs?|units?|kg|kgs|kilograms?)\b/i);
+  if (quantity) result.quantity = `${quantity[1]} ${quantity[2]}`;
+  if (intake.category === "fabric") {
+    const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
+    const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
+    if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
+    if (/\bfabrics?\b/i.test(message)) result.product = material ? `${material} fabric` : "Fabric";
+  }
+  return result;
+}
 async function append(admin: any, caseId: string, profileId: string, role: "buyer" | "agent", content: string) {
   return await admin.rpc("agent_rfq_record_thread_message", { p_case_id: caseId, p_profile_id: profileId, p_role: role, p_content: content });
 }
@@ -226,7 +241,7 @@ export async function handleBrokerRfqAgent(request: Request) {
     // default thinking mode. A reasoning-disable request param is
     // deliberately not sent, since not every provider/model behind the
     // preset accepts that field.
-    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing", "X-Session-Id": `rfq-${rfqCaseId}` }, body: JSON.stringify({ model: PRESET, session_id: `rfq-${rfqCaseId}`, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }) });
+    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing", "X-Session-Id": `rfq-${rfqCaseId}` }, body: JSON.stringify({ model: PRESET, session_id: `rfq-${rfqCaseId}`, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }), signal: AbortSignal.timeout(12000) });
     if (!upstream.ok) {
       console.error("agent_rfq_upstream_failed", JSON.stringify({ turnId: turn.id, status: upstream.status, body: (await upstream.text()).slice(0, 2000) }));
       throw new Error("openrouter_unavailable");
@@ -235,8 +250,13 @@ export async function handleBrokerRfqAgent(request: Request) {
   } catch {
     await admin.rpc("agent_rfq_settle_budget", { p_turn_id: turn.id, p_reported_cost_microusd: null, p_countable: false });
     const handoff = operational(message);
-    const result = output(handoff ? "support_handoff" : "unavailable", handoff ? "I can’t verify that payment or order detail right now. Please contact info@arcanawangsa.com and our team will clarify it." : "I couldn’t complete that check right now. Your message and RFQ draft were saved safely; please try again shortly.", revision, { supportHandoff: handoff });
-    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable", "provider_unavailable", startedAt); return reply(result, 503);
+    const fallbackPatch = handoff ? null : deterministicPatch(message, intake);
+    let result = output(handoff ? "support_handoff" : "unavailable", handoff ? "I can’t verify that payment or order detail right now. Please contact info@arcanawangsa.com and our team will clarify it." : "I saved the buyer-stated details I could read. What construction and intended use should we record next?", revision, { supportHandoff: handoff });
+    if (fallbackPatch && Object.keys(fallbackPatch).length) {
+      const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: fallbackPatch, p_turn_id: turn.id });
+      if (!error) result = output("draft_updated", "I saved the buyer-stated details I could read. What construction and intended use should we record next?", Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || fallbackPatch, changedFields: applied?.changedFields || Object.keys(fallbackPatch), undoToken: applied?.undoToken || null, verificationStatus: "partial" });
+    }
+    await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "unavailable", "provider_unavailable", startedAt); return reply(result);
   }
   const usage = completion?.usage;
   let modelResult: ReturnType<typeof parse>;
