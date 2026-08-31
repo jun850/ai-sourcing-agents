@@ -36,8 +36,11 @@ export default async function handler(request, response) {
       },
       body: JSON.stringify(request.body ?? {}),
     });
-    const body = await upstream.text();
-    response.status(upstream.status).send(body);
+    const body = await upstream.json();
+    // JSON serialisation here is intentional: Vercel's Node response closes
+    // deterministically after `json()`, whereas passing an upstream response
+    // body through as text left some browser calls waiting after a 200.
+    response.status(upstream.status).json(body);
   } catch (_) {
     response.status(502).json({ ok: false, reason: 'assistant_transport_failed' });
   }
