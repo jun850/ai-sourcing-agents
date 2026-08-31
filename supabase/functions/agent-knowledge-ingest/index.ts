@@ -15,6 +15,7 @@ const textTypes = new Set(["text/plain", "text/markdown", "text/csv"]);
 const spreadsheetTypes = new Set(["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
 const docxType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const pdfType = "application/pdf";
+const EMBEDDING_MODEL = "openai/text-embedding-3-small";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -38,6 +39,20 @@ function chunks(source: string) {
 function decodeXml(value: string) {
   return value.replace(/<w:tab\/>/g, "\t").replace(/<w:br\s*\/?>/g, "\n").replace(/<\/w:p>/g, "\n").replace(/<[^>]+>/g, " ")
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
+}
+async function embeddings(parts: string[]) {
+  const key = Deno.env.get("OPENROUTER_API_KEY");
+  if (!key) throw new Error("Knowledge embeddings are not configured.");
+  const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: EMBEDDING_MODEL, dimensions: 384, input: parts }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(payload?.data)) throw new Error("Knowledge embeddings could not be created.");
+  const result = payload.data.sort((a: any, b: any) => a.index - b.index).map((item: any) => item.embedding);
+  if (result.length !== parts.length || result.some((item: unknown) => !Array.isArray(item) || item.length !== 384)) throw new Error("Knowledge embeddings were incomplete.");
+  return result;
 }
 async function extract(blob: Blob, contentType: string) {
   if (textTypes.has(contentType)) return await blob.text();
@@ -96,12 +111,12 @@ Deno.serve(async (request) => {
     return json({ ok: false, reason: "no_text" }, 422);
   }
   try {
-    // Retrieval is intentionally lexical (Postgres full-text search). It is
-    // deterministic, works in every Edge runtime, and avoids making a document
-    // upload depend on an optional embedding runtime.
+    // Store deterministic chunks plus embeddings. Hybrid retrieval still falls
+    // back to full-text ranking when a legacy chunk has no vector.
     const { error: clearError } = await admin.from("agent_knowledge_chunks").delete().eq("version_id", version.id);
     if (clearError) throw clearError;
-    const { error: insertError } = await admin.from("agent_knowledge_chunks").insert(parts.map((content, chunk_no) => ({ version_id: version.id, chunk_no, content })));
+    const vectors = await embeddings(parts);
+    const { error: insertError } = await admin.from("agent_knowledge_chunks").insert(parts.map((content, chunk_no) => ({ version_id: version.id, chunk_no, content, embedding: vectors[chunk_no] })));
     if (insertError) throw insertError;
     const { error: readyError } = await admin.from("agent_knowledge_versions").update({ status: "ready", extraction_error: null, updated_at: new Date().toISOString() }).eq("id", version.id);
     if (readyError) throw readyError;

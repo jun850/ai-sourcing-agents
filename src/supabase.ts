@@ -4,6 +4,7 @@ import {
   type Session,
   type User,
 } from "@supabase/supabase-js";
+import type { RfqIntake } from "./rfq-intake";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
@@ -72,6 +73,7 @@ export type CopilotAgentResponse = {
   verificationStatus: string | null;
   supportHandoff: boolean | { email?: string; reason?: string } | null;
   options: string[] | null;
+  intake?: RfqIntake | null;
 };
 export type LegacyWorkspaceRfqQuote = {
   id: string;
@@ -808,7 +810,7 @@ export async function invokeRfqCopilot(input: {
   message?: string;
   clientMessageId: string;
   expectedRevision: number;
-  action?: "undo";
+  action?: "undo" | "reconcile_references";
   undoToken?: string;
 }) {
   if (!url || !publishableKey) {
@@ -890,6 +892,10 @@ export async function invokeRfqCopilot(input: {
             typeof option === "string" && option.trim().length > 0,
         ).slice(0, 3)
       : null,
+    intake:
+      response.intake && typeof response.intake === "object" && !Array.isArray(response.intake)
+        ? (response.intake as RfqIntake)
+        : null,
   } as CopilotAgentResponse;
 }
 export async function listWorkspaceProducts() {

@@ -2,121 +2,48 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import pdf from "npm:pdf-parse@1.1.1";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+const CORS_HEADERS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const MAX_EXTRACTED_TEXT = 12_000;
+const EMBEDDING_MODEL = "openai/text-embedding-3-small";
+const FACT_FIELDS = new Set(["product", "quantity", "material", "certifications", "colors", "sizes", "budget", "timeline", "construction", "weight", "width", "dimensions", "finish", "branding", "packaging", "care", "stage", "tech_pack"]);
+type Fact = { field: string; value: string; confidence: "high" | "medium" | "low"; excerpt: string; page?: number };
+type BomLine = { component: string; specification?: string; colorFinish?: string; placement?: string; quantityUnit?: string; excerpt: string; page?: number };
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" },
-  });
-}
-function uuid(value: unknown): value is string {
-  return typeof value === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value);
-}
-function clean(value: string) {
-  return value.replace(/\u0000/g, "").replace(/\r\n?/g, "\n").replace(/[^\S\n]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, MAX_EXTRACTED_TEXT);
-}
-function modelText(value: unknown) {
-  const content = (value as { choices?: Array<{ message?: { content?: unknown } }> })?.choices?.[0]?.message?.content;
-  if (typeof content === "string") return content;
-  if (Array.isArray(content)) return content.map((part) => typeof part?.text === "string" ? part.text : "").join("\n");
-  return "";
-}
+function json(body: unknown, status = 200) { return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } }); }
+function uuid(value: unknown): value is string { return typeof value === "string" && /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value); }
+function clean(value: unknown, max = 12000) { return typeof value === "string" ? value.replace(/\u0000/g, "").replace(/\r\n?/g, "\n").replace(/[^\S\n]+/g, " ").replace(/\n{3,}/g, "\n\n").trim().slice(0, max) : ""; }
+function modelText(value: any) { const content = value?.choices?.[0]?.message?.content; return typeof content === "string" ? content : Array.isArray(content) ? content.map((part) => typeof part?.text === "string" ? part.text : "").join("\n") : ""; }
+function modelJson(value: any) { try { const raw = modelText(value); const candidate = raw.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] || raw; return JSON.parse(candidate.slice(candidate.indexOf("{"), candidate.lastIndexOf("}") + 1)); } catch { return null; } }
+function chunks(source: string) { const result: string[] = []; let rest = clean(source); while (rest) { if (rest.length <= 3200) { result.push(rest); break; } const window = rest.slice(0, 3201); const cut = Math.max(window.lastIndexOf("\n\n"), window.lastIndexOf(". "), window.lastIndexOf(" ")); const at = cut > 1800 ? cut + 1 : 3200; result.push(rest.slice(0, at).trim()); rest = rest.slice(Math.max(at - 220, 1)).trim(); } return result.filter(Boolean); }
+async function nativePdfText(blob: Blob) { const result = await (pdf as unknown as (bytes: Uint8Array) => Promise<{ text?: string }>)(new Uint8Array(await blob.arrayBuffer())); return clean(result?.text || ""); }
+async function signedUrl(admin: any, path: string) { const { data, error } = await admin.storage.from("rfq-attachments").createSignedUrl(path, 120); if (error || !data?.signedUrl) throw new Error("The reference file could not be opened."); return data.signedUrl; }
+async function embed(texts: string[]) { const key = Deno.env.get("OPENROUTER_API_KEY"); if (!key) throw new Error("Reference embeddings are not configured."); const response = await fetch("https://openrouter.ai/api/v1/embeddings", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: EMBEDDING_MODEL, dimensions: 384, input: texts }) }); const payload = await response.json().catch(() => null); if (!response.ok || !Array.isArray(payload?.data)) throw new Error("Reference embeddings could not be created."); return payload.data.sort((a: any, b: any) => a.index - b.index).map((item: any) => Array.isArray(item.embedding) && item.embedding.length === 384 ? item.embedding : null); }
 
-async function readPdf(blob: Blob) {
-  const result = await (pdf as unknown as (bytes: Uint8Array) => Promise<{ text?: string }>)(new Uint8Array(await blob.arrayBuffer()));
-  return clean(result?.text || "");
-}
-
-async function readImageWithOpenRouter(admin: ReturnType<typeof createClient>, storagePath: string, contentType: string) {
-  const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-  if (!apiKey) throw new Error("Reference OCR is not configured.");
-  const { data: signed, error: signedError } = await admin.storage.from("rfq-attachments").createSignedUrl(storagePath, 120);
-  if (signedError || !signed?.signedUrl) throw new Error("The reference image could not be opened.");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
-  try {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: Deno.env.get("OPENROUTER_VISION_MODEL") || "@preset/marketplace-copilot",
-        temperature: 0,
-        max_tokens: 700,
-        messages: [
-          {
-            role: "system",
-            content: "You extract reference evidence for a sourcing RFQ. Describe only text, labels, tables, and visual attributes plainly visible in the supplied image. Preserve wording and units. Do not infer material, composition, weight, dimensions, certification, supplier, price, MOQ, capacity, availability, or payment terms unless they are explicitly shown. For a tech-pack page, transcribe BOM or bill-of-material lines and their stated quantities/units. Return concise plain text, not advice.",
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: `Read this ${contentType} reference for the buyer's RFQ.` },
-              { type: "image_url", image_url: { url: signed.signedUrl } },
-            ],
-          },
-        ],
-      }),
-    });
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) throw new Error("Reference OCR could not read this image.");
-    const extracted = clean(modelText(payload));
-    if (!extracted) throw new Error("No readable reference details were returned.");
-    return extracted;
-  } finally {
-    clearTimeout(timeout);
-  }
+async function extractWithAgent(admin: any, attachment: any, nativeText: string) {
+  const key = Deno.env.get("OPENROUTER_API_KEY"); if (!key) throw new Error("Reference extraction is not configured."); const sourceUrl = await signedUrl(admin, attachment.storage_path); const isPdf = attachment.content_type === "application/pdf";
+  const content: any[] = [{ type: "text", text: `${nativeText ? `Native text:\n${nativeText}` : "No reliable native text was found; read the supplied reference directly."}\n\nExtract RFQ evidence as JSON.` }];
+  if (isPdf) content.push({ type: "file", file: { filename: attachment.original_name, file_data: sourceUrl } }); else content.push({ type: "image_url", image_url: { url: sourceUrl } });
+  const request = (engine: "cloudflare-ai" | "mistral-ocr") => fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: Deno.env.get("OPENROUTER_VISION_MODEL") || "@preset/marketplace-copilot", temperature: 0, max_tokens: 1300, response_format: { type: "json_object" }, plugins: isPdf ? [{ id: "file-parser", pdf: { engine } }] : undefined, messages: [{ role: "system", content: "You are Atelix's reference-extraction agent. Return JSON only: {summary:string,facts:[{field,value,confidence,excerpt,page?}],bom:[{component,specification?,colorFinish?,placement?,quantityUnit?,excerpt,page?}]}. Facts may use only product, quantity, material, certifications, colors, sizes, budget, timeline, construction, weight, width, dimensions, finish, branding, packaging, care, stage, tech_pack. Extract only plainly visible or explicitly written information. Never infer supplier identity, price, MOQ, capacity, availability, payment, certification, or composition. A BOM is evidence, not a commercial offer." }, { role: "user", content }] }) });
+  let response = await request("cloudflare-ai"); let payload = await response.json().catch(() => null); if (isPdf && (!response.ok || !nativeText)) { response = await request("mistral-ocr"); payload = await response.json().catch(() => null); } if (!response.ok) throw new Error("Reference OCR could not read this file.");
+  const structured = modelJson(payload); if (!structured) throw new Error("Reference extraction returned invalid structured data.");
+  const facts: Fact[] = Array.isArray(structured.facts) ? structured.facts.map((item: any) => ({ field: clean(item?.field, 60).toLowerCase().replace(/[ -]+/g, "_"), value: clean(item?.value, 500), confidence: ["high", "medium", "low"].includes(item?.confidence) ? item.confidence : "low", excerpt: clean(item?.excerpt, 1000), page: Number.isInteger(item?.page) && item.page > 0 ? item.page : undefined })).filter((item: Fact) => FACT_FIELDS.has(item.field) && item.value && item.excerpt) : [];
+  const bom: BomLine[] = Array.isArray(structured.bom) ? structured.bom.map((item: any) => ({ component: clean(item?.component, 300), specification: clean(item?.specification, 500) || undefined, colorFinish: clean(item?.colorFinish, 300) || undefined, placement: clean(item?.placement, 300) || undefined, quantityUnit: clean(item?.quantityUnit, 300) || undefined, excerpt: clean(item?.excerpt, 1000), page: Number.isInteger(item?.page) && item.page > 0 ? item.page : undefined })).filter((item: BomLine) => item.component && item.excerpt) : [];
+  const evidence = clean([nativeText, clean(structured.summary, 4000), ...facts.map((fact) => `${fact.field}: ${fact.value}`), ...bom.map((line) => `BOM ${line.component}: ${[line.specification, line.colorFinish, line.quantityUnit].filter(Boolean).join(", ")}`)].filter(Boolean).join("\n")); if (!evidence) throw new Error("No readable reference details were found."); return { facts, bom, evidence };
 }
 
 Deno.serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
-  if (request.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
-  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!token || !supabaseUrl || !serviceKey) return json({ ok: false, reason: "unauthorized" }, 401);
-  const admin = createClient(supabaseUrl, serviceKey);
-  const { data: { user } } = await admin.auth.getUser(token);
-  if (!user) return json({ ok: false, reason: "unauthorized" }, 401);
-  let body: { caseId?: unknown; attachmentId?: unknown };
-  try { body = await request.json(); } catch { return json({ ok: false, reason: "invalid_json" }, 400); }
-  if (!uuid(body.caseId) || !uuid(body.attachmentId)) return json({ ok: false, reason: "invalid_request" }, 400);
-  const { data: attachment } = await admin
-    .from("rfq_attachments")
-    .select("id,rfq_case_id,owner_profile_id,storage_path,content_type,extraction_status,extracted_text")
-    .eq("id", body.attachmentId)
-    .eq("rfq_case_id", body.caseId)
-    .eq("owner_profile_id", user.id)
-    .maybeSingle();
-  if (!attachment) return json({ ok: false, reason: "attachment_not_found" }, 404);
-  if (attachment.extraction_status === "ready") return json(attachment);
-  if (!["application/pdf", ...IMAGE_TYPES].includes(attachment.content_type)) return json({ ok: false, reason: "unsupported_reference" }, 422);
-  await admin.from("rfq_attachments").update({ extraction_status: "processing", extraction_error: null }).eq("id", attachment.id);
+  if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS }); if (request.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
+  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, ""); const url = Deno.env.get("SUPABASE_URL"); const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); if (!token || !url || !serviceKey) return json({ ok: false, reason: "unauthorized" }, 401);
+  const admin = createClient(url, serviceKey); const { data: { user } } = await admin.auth.getUser(token); if (!user) return json({ ok: false, reason: "unauthorized" }, 401);
+  let body: { caseId?: unknown; attachmentId?: unknown }; try { body = await request.json(); } catch { return json({ ok: false, reason: "invalid_json" }, 400); } if (!uuid(body.caseId) || !uuid(body.attachmentId)) return json({ ok: false, reason: "invalid_request" }, 400);
+  const { data: attachment } = await admin.from("rfq_attachments").select("id,rfq_case_id,owner_profile_id,storage_path,original_name,content_type").eq("id", body.attachmentId).eq("rfq_case_id", body.caseId).eq("owner_profile_id", user.id).maybeSingle(); if (!attachment) return json({ ok: false, reason: "attachment_not_found" }, 404); if (!["application/pdf", ...IMAGE_TYPES].includes(attachment.content_type)) return json({ ok: false, reason: "unsupported_reference" }, 422);
+  const { data: prior } = await admin.from("rfq_reference_extraction_runs").select("id").eq("rfq_attachment_id", attachment.id).eq("status", "ready").maybeSingle(); if (prior) return json({ ...attachment, extraction_status: "ready" });
+  await admin.from("rfq_attachments").update({ extraction_status: "processing", extraction_error: null }).eq("id", attachment.id); const { data: run, error: runError } = await admin.from("rfq_reference_extraction_runs").insert({ rfq_attachment_id: attachment.id, rfq_case_id: attachment.rfq_case_id, owner_profile_id: user.id, status: "processing", extractor_model: Deno.env.get("OPENROUTER_VISION_MODEL") || "@preset/marketplace-copilot", embedding_model: EMBEDDING_MODEL }).select("id").single(); if (runError || !run) return json({ ok: false, reason: "extraction_unavailable" }, 503);
   try {
-    const { data: blob, error: downloadError } = await admin.storage.from("rfq-attachments").download(attachment.storage_path);
-    if (downloadError || !blob) throw new Error("The reference file could not be opened.");
-    const extractedText = attachment.content_type === "application/pdf"
-      ? await readPdf(blob)
-      : await readImageWithOpenRouter(admin, attachment.storage_path, attachment.content_type);
-    if (!extractedText) throw new Error("No readable text was found in this reference.");
-    const { data: saved, error: saveError } = await admin
-      .from("rfq_attachments")
-      .update({ extraction_status: "ready", extracted_text: extractedText, extraction_error: null, extracted_at: new Date().toISOString() })
-      .eq("id", attachment.id)
-      .select()
-      .single();
-    if (saveError || !saved) throw saveError || new Error("The extracted reference could not be saved.");
-    return json(saved);
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message.slice(0, 1000) : "Reference extraction failed.";
-    await admin.from("rfq_attachments").update({ extraction_status: "failed", extraction_error: message }).eq("id", attachment.id);
-    return json({ ok: false, reason: "extraction_failed" }, 422);
-  }
+    const { data: blob, error } = await admin.storage.from("rfq-attachments").download(attachment.storage_path); if (error || !blob) throw new Error("The reference file could not be opened."); const nativeText = attachment.content_type === "application/pdf" ? await nativePdfText(blob) : ""; const extracted = await extractWithAgent(admin, attachment, nativeText); const parts = chunks(extracted.evidence); const vectors = await embed(parts);
+    const { data: inserted, error: chunkError } = await admin.from("rfq_reference_chunks").insert(parts.map((content, chunk_no) => ({ extraction_run_id: run.id, rfq_case_id: attachment.rfq_case_id, owner_profile_id: user.id, attachment_id: attachment.id, chunk_no, content, embedding: vectors[chunk_no] }))).select("id"); if (chunkError || !inserted) throw chunkError || new Error("Reference chunks could not be stored."); const primaryChunk = inserted[0]?.id ?? null;
+    if (extracted.facts.length) { const { error: factError } = await admin.from("rfq_reference_facts").insert(extracted.facts.map((fact) => ({ extraction_run_id: run.id, rfq_case_id: attachment.rfq_case_id, owner_profile_id: user.id, field_key: fact.field, value: fact.value, confidence: fact.confidence, source_chunk_id: primaryChunk, source_page: fact.page ?? null, source_excerpt: fact.excerpt }))); if (factError) throw factError; }
+    if (extracted.bom.length) { const { error: bomError } = await admin.from("rfq_reference_bom_lines").insert(extracted.bom.map((line) => ({ extraction_run_id: run.id, rfq_case_id: attachment.rfq_case_id, owner_profile_id: user.id, component: line.component, specification: line.specification ?? null, color_finish: line.colorFinish ?? null, placement: line.placement ?? null, quantity_unit: line.quantityUnit ?? null, source_page: line.page ?? null, source_excerpt: line.excerpt }))); if (bomError) throw bomError; }
+    await admin.from("rfq_reference_extraction_runs").update({ status: "ready", completed_at: new Date().toISOString() }).eq("id", run.id); const { data: saved } = await admin.from("rfq_attachments").update({ extraction_status: "ready", extracted_text: extracted.evidence, extraction_error: null, extracted_at: new Date().toISOString() }).eq("id", attachment.id).select().single(); return json(saved || { ...attachment, extraction_status: "ready" });
+  } catch (cause) { const message = cause instanceof Error ? cause.message.slice(0, 1000) : "Reference extraction failed."; await admin.from("rfq_reference_extraction_runs").update({ status: "failed", error: message, completed_at: new Date().toISOString() }).eq("id", run.id); await admin.from("rfq_attachments").update({ extraction_status: "failed", extraction_error: message }).eq("id", attachment.id); return json({ ok: false, reason: "extraction_failed" }, 422); }
 });

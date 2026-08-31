@@ -3287,7 +3287,7 @@ function RfqWorkspace({
   initialRevision?: number;
   initialPhase?: RfqPhase;
   onMessage: (message: string) => void;
-  onAgentDraftPatched: (fields: RfqFields, revision: number) => void;
+  onAgentDraftPatched: (fields: RfqFields, revision: number, intake?: RfqIntake | null) => void;
 }) {
   const persistedPhase = phaseForPersistedStatus(status);
   const restoredSubmitted =
@@ -3412,15 +3412,21 @@ function RfqWorkspace({
     const nextChangedFields = responseChangedFields.length
       ? responseChangedFields
       : (Object.keys(safePatch) as Array<keyof RfqFields>);
+    if (response.intake) {
+      setIntake(response.intake);
+      setIntakeDraft(response.intake);
+    }
     if (Object.keys(safePatch).length > 0) {
       setFields((current) => {
         const next = response.undoToken === null && response.kind === "draft_updated"
           ? { ...defaultRfqFields, ...safePatch }
           : { ...current, ...safePatch };
-        onAgentDraftPatched(next, response.revision);
+        onAgentDraftPatched(next, response.revision, response.intake);
         return next;
       });
       setDraft((current) => ({ ...current, ...safePatch }));
+    } else if (response.intake) {
+      onAgentDraftPatched(fields, response.revision, response.intake);
     }
     setChangedFields(nextChangedFields);
     setAgentRevision(response.revision);
@@ -3464,8 +3470,8 @@ function RfqWorkspace({
       },
     ]);
   }
-  async function sendConversationMessage(message: string, optimistic = true) {
-    if (agentPending) return;
+  async function sendConversationMessage(message: string, optimistic = true, action?: "reconcile_references", expectedRevisionOverride?: number) {
+    if (agentPending) return null;
     const clientMessageId = newClientMessageId();
     setAgentPending(true);
     setChangedFields([]);
@@ -3482,9 +3488,11 @@ function RfqWorkspace({
         rfqCaseId: caseId,
         message,
         clientMessageId,
-        expectedRevision: agentRevision,
+        expectedRevision: expectedRevisionOverride ?? agentRevision,
+        action,
       });
       applyAgentResponse(response);
+      return response;
     } catch (cause) {
       const fallback =
         "That message was not delivered to your RFQ. Please send it again; your existing draft remains unchanged.";
@@ -3497,6 +3505,7 @@ function RfqWorkspace({
         { id: newClientMessageId(), from: "Atelix assistant", text: fallback },
       ]);
       onMessage("");
+      return null;
     } finally {
       setAgentPending(false);
     }
@@ -3536,12 +3545,15 @@ function RfqWorkspace({
         attachment.extraction_status !== "ready" &&
         attachment.extraction_status !== "failed",
     );
-    void Promise.allSettled(
+    const extraction = Promise.allSettled(
       unreadReferences.map((attachment) =>
         extractRfqAttachment(caseId, attachment.id),
       ),
-    )
-      .then((results) => {
+    );
+    void (async () => {
+      const firstResponse = await sendConversationMessage(brief, false);
+      setPhase("review");
+      const results = await extraction;
         const updates = results
           .filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled")
           .map((result) => result.value);
@@ -3551,9 +3563,11 @@ function RfqWorkspace({
               updates.find((update) => update.id === attachment.id) ?? attachment,
             ),
           );
+          // Reference OCR runs independently from the buyer's first response;
+          // once it is ready, reconcile it without adding synthetic buyer text.
+          await sendConversationMessage("", false, "reconcile_references", firstResponse?.revision);
         }
-      })
-      .finally(() => void sendConversationMessage(brief, false).finally(() => setPhase("review")));
+    })();
   }, [attachments, brief, caseId, phase]);
   function saveEdit() {
     if (documentActionPending) return;
@@ -3751,7 +3765,7 @@ function RfqWorkspace({
             >
               <ConversationChatPanel
                 messages={conversationMessages}
-                onSend={sendConversationMessage}
+                onSend={async (message) => { await sendConversationMessage(message); }}
                 busy={agentPending}
                 loading={!messagesLoaded}
                 status={agentStatus}
@@ -5436,14 +5450,14 @@ export function Dashboard({ path }: { path: string }) {
           initialRevision={rfq.record.agent_revision ?? 0}
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
-          onAgentDraftPatched={(nextFields, revision) => {
+          onAgentDraftPatched={(nextFields, revision, nextIntake) => {
             setRfq((current) =>
               current
                 ? {
                     ...current,
                     record: {
                       ...current.record,
-                      brief: briefFromFields(summary, nextFields),
+                      brief: briefFromFields(summary, nextFields, nextIntake ?? intakeFromBrief(current.record.brief)),
                       agent_revision: revision,
                     },
                   }
@@ -5454,7 +5468,7 @@ export function Dashboard({ path }: { path: string }) {
                 item.id === rfq.record.id
                   ? {
                       ...item,
-                      brief: briefFromFields(summary, nextFields),
+                      brief: briefFromFields(summary, nextFields, nextIntake ?? intakeFromBrief(item.brief)),
                       agent_revision: revision,
                     }
                   : item,
