@@ -2167,6 +2167,12 @@ const knowledgeVisibility: Array<[string, string]> = [
   ["buyer-safe", "Buyer-safe"],
   ["operator-only", "Operator-only"],
 ];
+const knowledgeCategories: Array<[string, string]> = [
+  ["all", "All categories"], ["apparel", "Apparel"], ["footwear", "Footwear"], ["bags_accessories", "Bags & accessories"], ["jewelry", "Jewelry"], ["beauty_personal_care", "Beauty & personal care"], ["home_textiles", "Home textiles"], ["fibre_yarn", "Fibre & yarn"], ["fabric", "Fabric"], ["leather", "Leather"], ["interlining", "Interlining"], ["trims_labels", "Trims & labels"], ["packaging", "Packaging"], ["other", "Other"],
+];
+const knowledgeProcurementModes: Array<[string, string]> = [
+  ["all", "All procurement modes"], ["wholesale", "Wholesale"], ["blank", "Blank"], ["private_label", "Private label"], ["white_label", "White label"], ["oem", "OEM"], ["odm", "ODM"], ["cmt", "CMT"],
+];
 const knowledgeMaxBytes = 25 * 1024 * 1024;
 const knowledgeMimeTypes = new Set([
   "text/markdown",
@@ -2193,6 +2199,8 @@ function KnowledgePanel() {
     title: "",
     domain: "rfq",
     visibility: "buyer-safe",
+    category: "all",
+    procurementMode: "all",
     file: null as File | null,
   });
 
@@ -2259,8 +2267,9 @@ function KnowledgePanel() {
         title: form.title.trim(),
         domain: form.domain,
         visibility: form.visibility,
+        appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] },
       });
-      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", file: null });
+      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", category: "all", procurementMode: "all", file: null });
       setMessage("Knowledge document uploaded and queued for processing.");
       await loadDocuments();
     } catch (cause) {
@@ -2346,6 +2355,12 @@ function KnowledgePanel() {
                 <MenuItem key={value} value={value}>{label}</MenuItem>
               ))}
             </TextField>
+            <TextField select label="Applies to" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} sx={{ minWidth: { md: 180 } }}>
+              {knowledgeCategories.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+            </TextField>
+            <TextField select label="Procurement mode" value={form.procurementMode} onChange={(event) => setForm((current) => ({ ...current, procurementMode: event.target.value }))} sx={{ minWidth: { md: 190 } }}>
+              {knowledgeProcurementModes.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+            </TextField>
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ alignItems: { sm: "center" } }}>
             <Button component="label" variant="outlined" disabled={uploading}>
@@ -2428,6 +2443,9 @@ function KnowledgePanel() {
                       <Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
                         {document.original_name || "Original filename unavailable"} · {formatBytes(document.byte_size)} · updated {shortDate(document.updated_at)}
                       </Typography>
+                      {(document.applies_to.categories?.length || document.applies_to.procurementModes?.length) ? <Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
+                        {[...(document.applies_to.categories ?? []), ...(document.applies_to.procurementModes ?? [])].map(displayStatus).join(" · ")}
+                      </Typography> : null}
                     </Box>
                     <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.domain)}</Typography>
                     <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.visibility)}</Typography>

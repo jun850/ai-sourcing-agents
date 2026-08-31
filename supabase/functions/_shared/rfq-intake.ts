@@ -1,25 +1,6 @@
-export type IntakeSubtype = "wholesale" | "blank" | "private_label" | "white_label" | "cmt" | "fabric" | "leather" | "buttons_trims_labels" | "unclassified";
-
-export function classifyIntake(message: string) {
-  const text = message.toLowerCase();
-  const subtype: IntakeSubtype = /\b(private label|private-label|oem)\b/.test(text) ? "private_label"
-    : /\b(white label|white-label)\b/.test(text) ? "white_label"
-    : /\b(cmt|cut[ -]?make[ -]?trim)\b/.test(text) ? "cmt"
-    : /\b(leather|suede|nubuck)\b/.test(text) ? "leather"
-    : /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/.test(text) ? "buttons_trims_labels"
-    : /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/.test(text) ? "fabric"
-    : /\b(blank|unbranded)\b/.test(text) ? "blank"
-    : /\b(wholesale|stock product|ready made|ready-made)\b/.test(text) ? "wholesale" : "unclassified";
-  const route = ["wholesale", "blank", "private_label", "white_label"].includes(subtype) ? "finished_goods" : subtype === "unclassified" ? "unclassified" : "production_or_materials";
-  return { route, subtype, confidence: subtype === "unclassified" ? "low" : "high" };
-}
-
-export function immediateQuestion(subtype: IntakeSubtype) {
-  if (subtype === "unclassified") return "Are you sourcing finished goods, CMT production, fabric, leather, or trims such as buttons and labels?";
-  if (subtype === "cmt") return "Do you have a tech pack or pattern, and will you supply the materials?";
-  if (subtype === "fabric") return "What fibre, construction, weight, width, and quantity do you need?";
-  if (subtype === "leather") return "What leather type, thickness, finish, dimensions, and quantity do you need?";
-  if (subtype === "buttons_trims_labels") return "What component, material, dimensions, finish, and quantity do you need?";
-  if (subtype === "private_label" || subtype === "white_label") return "What item, reference, quantity, branding, and delivery timeline should we record?";
-  return "What item, quantity, delivery destination, and timeline should we record?";
-}
+export type IntakeSubtype = "wholesale" | "blank" | "private_label" | "white_label" | "oem" | "odm" | "cmt" | "apparel" | "footwear" | "bags_accessories" | "jewelry" | "beauty_personal_care" | "home_textiles" | "fibre_yarn" | "fabric" | "leather" | "interlining" | "trims_labels" | "packaging" | "other" | "unclassified";
+export type ProcurementMode = "wholesale" | "blank" | "private_label" | "white_label" | "oem" | "odm" | "cmt" | "unspecified";
+export type IntakeCategory = "apparel" | "footwear" | "bags_accessories" | "jewelry" | "beauty_personal_care" | "home_textiles" | "fibre_yarn" | "fabric" | "leather" | "interlining" | "trims_labels" | "packaging" | "other" | "unclassified";
+const finished = new Set(["apparel", "footwear", "bags_accessories", "jewelry", "beauty_personal_care", "home_textiles"]);
+export function classifyIntake(message: string) { const text = message.toLowerCase(); const procurementMode: ProcurementMode = /\b(private label|private-label)\b/.test(text) ? "private_label" : /\b(white label|white-label)\b/.test(text) ? "white_label" : /\b(oem|original equipment manufacturer)\b/.test(text) ? "oem" : /\b(odm|original design manufacturer)\b/.test(text) ? "odm" : /\b(cmt|cut[ -]?make[ -]?trim)\b/.test(text) ? "cmt" : /\b(blank|unbranded)\b/.test(text) ? "blank" : /\b(wholesale|stock product|ready made|ready-made)\b/.test(text) ? "wholesale" : "unspecified"; const category: IntakeCategory = /\b(leather|suede|nubuck)\b/.test(text) ? "leather" : /\b(interlining|fusible|fusing)\b/.test(text) ? "interlining" : /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/.test(text) ? "trims_labels" : /\b(packaging|polybag|carton|box|tissue paper|mailer)\b/.test(text) ? "packaging" : /\b(fibre|fiber|yarn|spun|filament)\b/.test(text) ? "fibre_yarn" : /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/.test(text) ? "fabric" : /\b(shoe|shoes|footwear|sneaker|boot|sandal)\b/.test(text) ? "footwear" : /\b(bag|bags|handbag|backpack|wallet|belt|hat|cap|scarf|accessor)\b/.test(text) ? "bags_accessories" : /\b(jewell?ry|ring|bracelet|necklace|earring)\b/.test(text) ? "jewelry" : /\b(cosmetic|skincare|beauty|personal care|fragrance)\b/.test(text) ? "beauty_personal_care" : /\b(home textile|bedding|curtain|cushion|towel|table linen)\b/.test(text) ? "home_textiles" : /\b(shirt|t-?shirt|tee|trouser|pants|dress|jacket|coat|hoodie|garment|apparel|uniform|polo)\b/.test(text) ? "apparel" : "unclassified"; const subtype: IntakeSubtype = procurementMode === "unspecified" ? category : procurementMode; const route = procurementMode !== "unspecified" ? (["wholesale", "blank", "private_label", "white_label", "oem", "odm"].includes(procurementMode) ? "finished_goods" : "production_or_materials") : category === "unclassified" ? "unclassified" : finished.has(category) ? "finished_goods" : "production_or_materials"; return { route, subtype, category, procurementMode, confidence: subtype === "unclassified" ? "low" : procurementMode === "unspecified" ? "medium" : "high" }; }
+export function immediateQuestion(subtype: IntakeSubtype) { if (subtype === "unclassified") return "What are you sourcing: a finished product, raw material, component, packaging, or production service?"; if (["oem", "odm", "cmt"].includes(subtype)) return "What item are you making, do you have a reference or tech pack, and is this for samples or bulk production?"; if (["fabric", "fibre_yarn", "interlining", "leather"].includes(subtype)) return "What material or construction, quantity and unit, and intended use should we record?"; if (["trims_labels", "packaging"].includes(subtype)) return "What component, material, quantity and unit, dimensions or finish should we record?"; return "What item, quantity, and delivery timeline should we record?"; }

@@ -1829,6 +1829,7 @@ export type IntoolsAgentKnowledgeDocument = {
   byte_size: number | null;
   updated_at: string;
   extraction_error?: string | null;
+  applies_to: { categories?: string[]; procurementModes?: string[] };
 };
 
 type IntoolsAgentKnowledgeRow = {
@@ -1844,6 +1845,7 @@ type IntoolsAgentKnowledgeRow = {
   status: IntoolsAgentKnowledgeDocument["status"] | null;
   extractionError: string | null;
   createdAt: string;
+  appliesTo?: { categories?: string[]; procurementModes?: string[] } | null;
 };
 
 function mapIntoolsAgentKnowledge(row: IntoolsAgentKnowledgeRow): IntoolsAgentKnowledgeDocument {
@@ -1859,6 +1861,7 @@ function mapIntoolsAgentKnowledge(row: IntoolsAgentKnowledgeRow): IntoolsAgentKn
     byte_size: row.byteSize,
     updated_at: row.createdAt,
     extraction_error: row.extractionError,
+    applies_to: row.appliesTo && typeof row.appliesTo === "object" ? row.appliesTo : {},
   };
 }
 
@@ -1875,7 +1878,7 @@ export async function listIntoolsAgentKnowledge(
 
 export async function uploadIntoolsAgentKnowledge(
   file: File,
-  input: { title: string; domain: string; visibility: string },
+  input: { title: string; domain: string; visibility: string; appliesTo?: { categories: string[]; procurementModes: string[] } },
 ) {
   if (localIntoolsAdmin)
     throw new Error("Knowledge uploads require a signed-in Supabase administrator session.");
@@ -1902,6 +1905,7 @@ export async function uploadIntoolsAgentKnowledge(
       originalName: file.name,
       contentType,
       byteSize: file.size,
+      appliesTo: input.appliesTo ?? { categories: [], procurementModes: [] },
     },
   });
   const storage = client().storage.from("agent-knowledge");

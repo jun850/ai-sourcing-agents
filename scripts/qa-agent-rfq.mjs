@@ -262,4 +262,22 @@ test("fibre-and-meter fabric request reaches the fabric route", () => {
   assert.match(INTAKE_SOURCE, /meters\?\|metres\?/);
 });
 
+test("all requested procurement modes have deterministic routes", () => {
+  for (const mode of ["wholesale", "private_label", "white_label", "oem", "odm", "cmt"]) {
+    assert.match(INTAKE_SOURCE, new RegExp(`\"${mode}\"`));
+  }
+});
+
+test("adjacent and raw-material categories are represented", () => {
+  for (const category of ["footwear", "jewelry", "beauty_personal_care", "home_textiles", "fibre_yarn", "interlining", "packaging"]) {
+    assert.match(INTAKE_SOURCE, new RegExp(`\"${category}\"`));
+  }
+});
+
+test("agent caps clarification questions at five", () => {
+  const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(agent, /MAX_CLARIFICATIONS = 5/);
+  assert.match(agent, /clarificationLimitReply/);
+});
+
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);
