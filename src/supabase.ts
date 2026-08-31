@@ -815,16 +815,13 @@ export async function invokeRfqCopilot(input: {
   if (!session?.access_token) {
     throw new Error("Please sign in again before continuing your RFQ.");
   }
-  // Do not route this interactive request through supabase-js's function
-  // wrapper. In production it could keep a completed 200 response pending in
-  // the browser, leaving the composer permanently disabled. This is the same
-  // authenticated TypeScript fetch path, with the model credential still held
-  // exclusively by the Edge Function.
-  const edgeResponse = await fetch(`${url}/functions/v1/copilot-agent`, {
+  // Use our same-origin relay for the typing path. It forwards the buyer's
+  // authenticated token to the fixed Edge Function, without exposing the
+  // model credential or paying a browser CORS preflight on every turn.
+  const edgeResponse = await fetch("/api/rfq-copilot", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${session.access_token}`,
-      apikey: publishableKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(input),

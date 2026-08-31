@@ -3293,16 +3293,26 @@ function RfqWorkspace({
     let active = true;
     void listRfqMessages(caseId)
       .then((next) => {
-        if (active)
-          setConversationMessages(
-            next.map((message) => ({
-              id: message.id,
-              from: (message.role === "buyer"
-                ? "You"
-                : "Atelix assistant") as ConversationMessage["from"],
-              text: message.content,
-            })),
-          );
+        if (active) {
+          const persisted = next.map((message) => ({
+            id: message.id,
+            from: (message.role === "buyer"
+              ? "You"
+              : "Atelix assistant") as ConversationMessage["from"],
+            text: message.content,
+          }));
+          // Do not let the initial thread fetch erase a message that the
+          // buyer just sent while the new RFQ was opening. Persisted turns
+          // replace matching optimistic entries; only local entries that are
+          // not yet visible in the RPC result remain appended.
+          setConversationMessages((current) => {
+            const persistedIds = new Set(persisted.map((message) => message.id));
+            return [
+              ...persisted,
+              ...current.filter((message) => !persistedIds.has(message.id)),
+            ];
+          });
+        }
         if (active) setMessagesLoaded(true);
       })
       .catch((cause) => {
