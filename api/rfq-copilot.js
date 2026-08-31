@@ -6,7 +6,7 @@
  * the cross-origin preflight from the typing path while keeping every model
  * credential exclusively on the server.
  */
-module.exports = async (request, response) => {
+export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'private, no-store, max-age=0');
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   if (request.method !== 'POST') {
@@ -41,4 +41,4 @@ module.exports = async (request, response) => {
   } catch (_) {
     response.status(502).json({ ok: false, reason: 'assistant_transport_failed' });
   }
-};
+}
