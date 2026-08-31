@@ -3267,7 +3267,10 @@ function RfqWorkspace({
   const [changedFields, setChangedFields] = useState<Array<keyof RfqFields>>([]);
   const [undoToken, setUndoToken] = useState<string | null>(null);
   const [remainingTurns, setRemainingTurns] = useState<number | null>(null);
-  const [messagesLoaded, setMessagesLoaded] = useState(false);
+  // Conversation reads may arrive after the first drafted turn. Keep the
+  // composer usable and render optimistic turns immediately; a slow history
+  // RPC must never cover the buyer's live conversation with a skeleton.
+  const [messagesLoaded, setMessagesLoaded] = useState(true);
   const [documentActionPending, setDocumentActionPending] = useState(false);
   const initialTurnStarted = useRef(false);
 
