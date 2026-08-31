@@ -3260,7 +3260,18 @@ function RfqWorkspace({
   const [trackClicked, setTrackClicked] = useState(false);
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
-  >([]);
+  >(() =>
+    initialPhase === "drafting"
+      ? [
+          { id: "opening-brief", from: "You", text: brief },
+          {
+            id: "opening-acknowledgement",
+            from: "Atelix assistant",
+            text: "Thanks — I’m building this RFQ from the details you shared. Add any colors, sizes, certifications, target budget, delivery timing, or references whenever you have them.",
+          },
+        ]
+      : [],
+  );
   const [agentRevision, setAgentRevision] = useState(initialRevision);
   const [agentPending, setAgentPending] = useState(false);
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
@@ -3310,9 +3321,16 @@ function RfqWorkspace({
           // not yet visible in the RPC result remain appended.
           setConversationMessages((current) => {
             const persistedIds = new Set(persisted.map((message) => message.id));
+            const persistedTurns = new Set(
+              persisted.map((message) => `${message.from}:${message.text}`),
+            );
             return [
               ...persisted,
-              ...current.filter((message) => !persistedIds.has(message.id)),
+              ...current.filter(
+                (message) =>
+                  !persistedIds.has(message.id) &&
+                  !persistedTurns.has(`${message.from}:${message.text}`),
+              ),
             ];
           });
         }
@@ -3412,17 +3430,19 @@ function RfqWorkspace({
       },
     ]);
   }
-  async function sendConversationMessage(message: string) {
+  async function sendConversationMessage(message: string, optimistic = true) {
     if (agentPending) return;
     const clientMessageId = newClientMessageId();
     setAgentPending(true);
     setChangedFields([]);
     setUndoToken(null);
     setAgentStatus({ tone: "info", text: "Atelix is checking your request…" });
-    setConversationMessages((current) => [
-      ...current,
-      { id: clientMessageId, from: "You", text: message },
-    ]);
+    if (optimistic) {
+      setConversationMessages((current) => [
+        ...current,
+        { id: clientMessageId, from: "You", text: message },
+      ]);
+    }
     try {
       const response = await invokeRfqCopilot({
         rfqCaseId: caseId,
@@ -3476,7 +3496,7 @@ function RfqWorkspace({
     // the buyer's first message is the entry point to that thread.
     if (phase !== "drafting" || initialTurnStarted.current) return;
     initialTurnStarted.current = true;
-    void sendConversationMessage(brief).finally(() =>
+    void sendConversationMessage(brief, false).finally(() =>
       setPhase("review"),
     );
   }, [brief, phase]);
