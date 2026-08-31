@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { contactRows, extractApparelxProfileContacts, extractContacts, isCanonicalApparelx, normalizeBusiness, normalizeMaker, officialPageMatchesMaker, sourceUrlForMaker, supplierTypeForOutline, toCsv } from './suppliers/apparelx-makerlist-core.mjs';
+
+assert.equal(isCanonicalApparelx('https://www.apparel-x.com/makerlist.php'), true);
+assert.equal(isCanonicalApparelx('https://apparel-x.com.evil.test/makerlist.php'), false);
+assert.equal(sourceUrlForMaker('713'), 'https://www.apparel-x.com/search.php?maker=713');
+assert.equal(supplierTypeForOutline('Buttons and zippers'), 'trim_supplier');
+const row = normalizeMaker({ MakerCode: '713', MakerName: 'Iwasaki', Company: 'OKURA', BusinessOutline: 'Shoulder pad manufacturer' }, '2026-08-31T00:00:00.000Z');
+assert.equal(row.supplier.verify_state, 'pending');
+assert.equal(row.supplier.type, 'trim_supplier');
+const business = normalizeBusiness({ Company: 'OEM1', CompanyAbbreviation: 'oem-one', CompanyFormalName: 'OEM One', BusinessType: 'Garment manufacturer', BusinessOutline: 'Cut and sew factory' }, '2026-08-31T00:00:00.000Z');
+assert.equal(business.source_url, 'https://www.apparel-x.com/business/oem-one');
+assert.equal(business.supplier.type, 'garment_manufacturer');
+const contacts = extractContacts('<title>Iwasaki official site</title><p>sales@iwasaki.example +81 3 1234 5678</p>');
+assert.deepEqual(contacts.emails, ['sales@iwasaki.example']);
+assert.equal(contactRows(contacts, 'https://iwasaki.example/contact', '2026-08-31T00:00:00.000Z').length, 2);
+assert.equal(officialPageMatchesMaker('<title>Iwasaki | Contact</title>', 'Iwasaki'), true);
+assert.equal(officialPageMatchesMaker('<title>Unrelated</title>', 'Iwasaki'), false);
+assert.equal(extractApparelxProfileContacts('<div class="axsite_bodyarea_itemtitle">Eメールアドレス</div><div class="axsite_bodyarea_itemcontent">sales@example.jp</div>', 'https://www.apparel-x.com/business/example', '2026-08-31T00:00:00.000Z').contacts[0].contact_type, 'email');
+assert.equal(toCsv(['name'], [['A, B']]), 'name\n"A, B"\n');
+console.log('apparelx maker-list QA passed');

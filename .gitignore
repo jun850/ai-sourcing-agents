@@ -14,6 +14,7 @@ supabase/.temp/
 .phase6-rehearsal/
 *.tsbuildinfo
 *.log
+artifacts/
 .vercel
 .env*
 !.env.local.example

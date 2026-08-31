@@ -47,6 +47,15 @@ const ImportRow = z.object({
   source_record_id: z.string().trim().min(1).max(240),
   source_url: z.string().url().nullable().optional(),
   supplier: SupplierPayload,
+  private_contacts: z.array(z.object({
+    contact_type: z.enum(["email", "phone"]),
+    original_value: z.string().trim().min(1).max(500),
+    normalized_value: z.string().trim().min(1).max(500),
+    source_url: z.string().url(),
+    source_location: z.string().trim().max(240).optional(),
+    crawled_at: z.string().datetime().optional(),
+    validation_status: z.enum(["unverified", "syntax_valid", "invalid"]).optional(),
+  })).max(20).default([]),
   provenance: z.array(z.record(z.unknown())).optional(),
 });
 
@@ -156,12 +165,14 @@ function normalizeRow(raw: unknown, rowNumber: number) {
     source_record_id: value.source_record_id,
     source_url: optionalString(value.source_url),
     supplier,
+    private_contacts: Array.isArray(value.private_contacts) ? value.private_contacts : [],
     provenance: Array.isArray(value.provenance) ? value.provenance : undefined,
   };
   const parsed = ImportRow.parse(candidate);
   if (parsed.source_system === "manual" && parsed.source_url) throw new Error("manual rows must not include a source URL");
   if (parsed.source_system === "apparelx" && !/^https:\/\/(www\.)?apparel-x\.com\//.test(parsed.source_url || "")) throw new Error("apparelx rows require an approved https://apparel-x.com/ source URL");
   if (parsed.source_system === "regional_web" && !/^https:\/\//.test(parsed.source_url || "")) throw new Error("regional_web rows require an https source URL");
+  if (parsed.private_contacts.some((contact) => !/^https:\/\//.test(contact.source_url))) throw new Error("private contacts require an https source URL");
   const input_sha256 = createHash("sha256").update(JSON.stringify(parsed)).digest("hex");
   return { ...parsed, row_number: rowNumber, input_sha256 } satisfies NormalizedRow;
 }
@@ -225,6 +236,8 @@ async function main() {
     if (!rowNumbers.length) throw new Error("No accepted rows selected for promotion.");
     const promoted = await rpc<DryRunResult>(rpcClient, "intools_promote_supplier_import_rows", { p_run_id: dryRun.run_id, p_row_numbers: rowNumbers, p_overwrite: overwrite });
     await writeArtifact(resolve(output, "promotion.json"), promoted);
+    const contacts = await rpc<Record<string, unknown>>(rpcClient, "intools_import_supplier_source_contacts", { p_run_id: dryRun.run_id, p_row_numbers: rowNumbers });
+    await writeArtifact(resolve(output, "contacts.json"), contacts);
   }
   console.log(JSON.stringify({ output, run_id: dryRun.run_id, status: dryRun.status, accepted: dryRun.rows.filter((row) => row.status === "accepted").length, rejected: rejected.length + dryRun.rows.filter((row) => row.status === "rejected").length, ambiguous: dryRun.rows.filter((row) => row.status === "ambiguous").length, promoted: apply }), null, 2);
 }

@@ -1588,6 +1588,15 @@ export async function setIntoolsSupplierBrokerStatus(
     p_curation_locked: curationLocked,
   });
 }
+export async function setIntoolsSupplierBrokerStatusBulk(
+  supplierIds: string[],
+  status: "approved" | "rejected",
+) {
+  return intoolsRpc<{ updated_count: number }>("intools_set_supplier_broker_status_bulk", {
+    p_supplier_ids: supplierIds,
+    p_status: status,
+  });
+}
 export type IntoolsRfqCase = {
   id: string;
   case_no: string;
@@ -1719,6 +1728,15 @@ export async function promoteIntoolsSupplierImportRows(
   return intoolsRpc<IntoolsSupplierImportResult>(
     "intools_promote_supplier_import_rows",
     { p_run_id: runId, p_row_numbers: rowNumbers, p_overwrite: overwrite },
+  );
+}
+export async function documentIntoolsSupplierImportContacts(
+  runId: string,
+  rowNumbers: number[],
+) {
+  return intoolsRpc<{ contacts_documented: number }>(
+    "intools_import_supplier_source_contacts",
+    { p_run_id: runId, p_row_numbers: rowNumbers },
   );
 }
 export async function promoteIntoolsSupplierIntake(intakeId: string) {

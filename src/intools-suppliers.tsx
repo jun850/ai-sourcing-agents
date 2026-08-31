@@ -19,6 +19,8 @@ import {
   Archive,
   ArrowBack,
   Check,
+  Clear,
+  DoneAll,
   Edit,
   FileUpload,
   Refresh,
@@ -27,6 +29,7 @@ import {
 } from "@mui/icons-material";
 import {
   archiveIntoolsSupplier,
+  documentIntoolsSupplierImportContacts,
   getIntoolsSupplierDetail,
   listIntoolsSuppliers,
   promoteIntoolsSupplierImportRows,
@@ -34,6 +37,7 @@ import {
   runIntoolsSupplierImportDryRun,
   saveIntoolsSupplier,
   setIntoolsSupplierBrokerStatus,
+  setIntoolsSupplierBrokerStatusBulk,
   type IntoolsSupplier,
   type IntoolsSupplierDetail,
   type IntoolsSupplierImportRow,
@@ -161,7 +165,12 @@ function ImportPanel({ onComplete }: { onComplete: () => void }) {
   async function promote() {
     if (!run || !selected.length) return;
     setBusy(true); setError("");
-    try { setRun(await promoteIntoolsSupplierImportRows(run.run_id, selected, overwrite)); setSelected([]); onComplete(); }
+    try {
+      const rowNumbers = selected;
+      const promoted = await promoteIntoolsSupplierImportRows(run.run_id, rowNumbers, overwrite);
+      await documentIntoolsSupplierImportContacts(run.run_id, rowNumbers);
+      setRun(promoted); setSelected([]); onComplete();
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Could not promote reviewed rows."); }
     finally { setBusy(false); }
   }
@@ -259,6 +268,9 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkAction, setBulkAction] = useState<{ status: "approved" | "rejected"; ids: string[]; label: string } | null>(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
   async function load() { setLoading(true); setError(""); try { setSuppliers(await listIntoolsSuppliers()); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load suppliers."); } finally { setLoading(false); } }
   useEffect(() => { void load(); }, []);
   const filtered = useMemo(() => suppliers.filter((supplier) => {
@@ -267,6 +279,22 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
     const matchesFilter = filter === "all" ? !supplier.archived_at : filter === "archived" ? Boolean(supplier.archived_at) : supplier.verify_state === filter && !supplier.archived_at;
     return matchesQuery && matchesFilter;
   }), [filter, query, suppliers]);
+  const actionable = useMemo(() => filtered.filter((supplier) => !supplier.archived_at), [filtered]);
+  const selectedActionable = useMemo(() => actionable.filter((supplier) => selectedIds.includes(supplier.id)), [actionable, selectedIds]);
+  const allVisibleSelected = actionable.length > 0 && actionable.every((supplier) => selectedIds.includes(supplier.id));
+  function toggleSupplier(supplierId: string) { setSelectedIds((current) => current.includes(supplierId) ? current.filter((id) => id !== supplierId) : [...current, supplierId]); }
+  function toggleVisible() { setSelectedIds((current) => allVisibleSelected ? current.filter((id) => !actionable.some((supplier) => supplier.id === id)) : [...new Set([...current, ...actionable.map((supplier) => supplier.id)])]); }
+  async function applyBulkAction() {
+    if (!bulkAction) return;
+    setBulkBusy(true); setError("");
+    try {
+      await setIntoolsSupplierBrokerStatusBulk(bulkAction.ids, bulkAction.status);
+      setSelectedIds((current) => current.filter((id) => !bulkAction.ids.includes(id)));
+      setBulkAction(null);
+      await load();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update supplier review status."); }
+    finally { setBulkBusy(false); }
+  }
   if (loading) return <Stack spacing={1}><Skeleton variant="rounded" height={56} /><Skeleton variant="rounded" height={78} /><Skeleton variant="rounded" height={78} /><Skeleton variant="rounded" height={78} /></Stack>;
   return <Stack spacing={2}>
     <Stack direction={{ xs: "column", sm: "row" }} sx={{ justifyContent: "space-between", gap: 1 }}><Box><Typography variant="h2" sx={{ fontSize: { xs: 25, sm: 30 } }}>Suppliers</Typography><Typography sx={{ mt: .4, color: "text.secondary", fontSize: 13 }}>Private reviewed records. Nothing here is exposed publicly.</Typography></Box><Stack direction="row" sx={{ gap: 1, flexWrap: "wrap" }}><Button variant="outlined" startIcon={<FileUpload />} onClick={() => setImporting((value) => !value)}>{importing ? "Close import" : "Review import"}</Button><Button variant="contained" startIcon={<Check />} onClick={() => setCreating((value) => !value)}>{creating ? "Close new supplier" : "New supplier"}</Button></Stack></Stack>
@@ -274,7 +302,8 @@ function SupplierList({ onOpen }: { onOpen: (supplierId: string) => void }) {
     {importing && <ImportPanel onComplete={() => { void load(); }} />}
     {creating && <SupplierEditor supplier={null} onCancel={() => setCreating(false)} onSaved={() => { setCreating(false); void load(); }} />}
     <Stack direction={{ xs: "column", sm: "row" }} sx={{ gap: 1 }}><TextField label="Search suppliers" value={query} onChange={(event) => setQuery(event.target.value)} fullWidth slotProps={{ htmlInput: { "aria-label": "Search suppliers" } }} /><FormControl size="small" sx={{ minWidth: { xs: "100%", sm: 170 } }}><InputLabel id="supplier-filter-label">Filter</InputLabel><Select labelId="supplier-filter-label" label="Filter" value={filter} onChange={(event) => setFilter(event.target.value as SupplierFilter)}><MenuItem value="all">Active suppliers</MenuItem><MenuItem value="verified">Verified</MenuItem><MenuItem value="pending">Pending review</MenuItem><MenuItem value="unverified">Unverified</MenuItem><MenuItem value="archived">Archived</MenuItem></Select></FormControl></Stack>
-    {filtered.length ? <Stack component="ul" spacing={1} sx={{ listStyle: "none", p: 0, m: 0 }}>{filtered.map((supplier) => <Box component="li" key={supplier.id}>{supplierSurface(<Box component="button" onClick={() => onOpen(supplier.id)} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.5fr 1fr .8fr .8fr" }, alignItems: "center", gap: 1.5, width: "100%", p: { xs: 1.5, sm: 2 }, border: 0, textAlign: "left", color: "inherit", background: "transparent", cursor: "pointer", "&:focus-visible": { outline: "3px solid #88b863", outlineOffset: -2 } }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{supplier.name}</Typography><Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>{supplier.slug} · {supplier.region || "Region not recorded"}</Typography></Box><Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 12 }}>{statusLabel(supplier.type)}</Typography><Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 12 }}>{supplier.product_count ?? 0} products</Typography><Chip size="small" label={supplier.archived_at ? "Archived" : statusLabel(supplier.verify_state)} color={supplier.archived_at ? "default" : statusColor(supplier.verify_state)} /></Box>)} </Box>)}</Stack> : <>{!error && supplierSurface(<Box sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{suppliers.length ? "No matching suppliers" : "No suppliers returned"}</Typography><Typography sx={{ mt: .7, color: "text.secondary", fontSize: 13 }}>{suppliers.length ? "Try another search or filter." : "Reviewed supplier records will appear here."}</Typography></Box>)}</>}
+    {actionable.length > 0 && <Stack spacing={1} aria-live="polite" aria-busy={bulkBusy}>{bulkAction ? <Alert severity={bulkAction.status === "approved" ? "warning" : "error"} action={<Stack direction="row" spacing={.5}><Button color="inherit" onClick={() => setBulkAction(null)} disabled={bulkBusy}>Cancel</Button><Button color="inherit" onClick={() => void applyBulkAction()} disabled={bulkBusy}>{bulkBusy ? "Applying…" : "Confirm"}</Button></Stack>}>{bulkAction.status === "approved" ? `Approve ${bulkAction.ids.length} ${bulkAction.label}? This marks them verified for broker use.` : `Reject ${bulkAction.ids.length} ${bulkAction.label}? They remain private and pending.`}</Alert> : <Stack direction={{ xs: "column", md: "row" }} sx={{ alignItems: { md: "center" }, justifyContent: "space-between", gap: 1 }}><Box component="label" sx={{ display: "flex", alignItems: "center", minHeight: 36 }}><Checkbox checked={allVisibleSelected} indeterminate={selectedActionable.length > 0 && !allVisibleSelected} onChange={toggleVisible} slotProps={{ input: { "aria-label": `Select ${actionable.length} visible suppliers` } }} /><Typography sx={{ fontSize: 13 }}>{selectedActionable.length ? `${selectedActionable.length} selected` : `${actionable.length} visible`}</Typography></Box><Stack direction="row" sx={{ gap: .75, flexWrap: "wrap" }}><Button size="small" variant="outlined" startIcon={<DoneAll />} onClick={() => setBulkAction({ status: "approved", ids: actionable.map((supplier) => supplier.id), label: "visible suppliers" })}>Approve all visible</Button><Button size="small" variant="outlined" color="error" startIcon={<Clear />} onClick={() => setBulkAction({ status: "rejected", ids: actionable.map((supplier) => supplier.id), label: "visible suppliers" })}>Reject all visible</Button><Button size="small" variant="contained" startIcon={<Check />} disabled={!selectedActionable.length} onClick={() => setBulkAction({ status: "approved", ids: selectedActionable.map((supplier) => supplier.id), label: "selected suppliers" })}>Approve selected</Button><Button size="small" variant="outlined" color="error" startIcon={<Clear />} disabled={!selectedActionable.length} onClick={() => setBulkAction({ status: "rejected", ids: selectedActionable.map((supplier) => supplier.id), label: "selected suppliers" })}>Reject selected</Button></Stack></Stack>}</Stack>}
+    {filtered.length ? <Stack component="ul" spacing={1} sx={{ listStyle: "none", p: 0, m: 0 }}>{filtered.map((supplier) => <Box component="li" key={supplier.id}>{supplierSurface(<Box sx={{ display: "grid", gridTemplateColumns: supplier.archived_at ? { xs: "minmax(0,1fr)", sm: "1.5fr 1fr .8fr .8fr" } : { xs: "auto minmax(0,1fr) auto", sm: "auto 1.5fr 1fr .8fr .8fr" }, alignItems: "center", gap: 1.5, p: { xs: 1.5, sm: 2 } }}>{!supplier.archived_at && <Checkbox checked={selectedIds.includes(supplier.id)} onChange={() => toggleSupplier(supplier.id)} slotProps={{ input: { "aria-label": `Select ${supplier.name}` } }} sx={{ p: .25 }} />}<Box component="button" onClick={() => onOpen(supplier.id)} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "minmax(0,1fr)" }, alignItems: "center", gap: 1.5, width: "100%", p: 0, border: 0, textAlign: "left", color: "inherit", background: "transparent", cursor: "pointer", "&:focus-visible": { outline: "3px solid #88b863", outlineOffset: 3 } }}><Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{supplier.name}</Typography><Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>{supplier.slug} · {supplier.region || "Region not recorded"}</Typography></Box><Box sx={{ display: { xs: "block", sm: "none" } }}><Chip size="small" label={supplier.archived_at ? "Archived" : statusLabel(supplier.verify_state)} color={supplier.archived_at ? "default" : statusColor(supplier.verify_state)} /></Box></Box><Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 12 }}>{statusLabel(supplier.type)}</Typography><Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 12 }}>{supplier.product_count ?? 0} products</Typography><Chip sx={{ display: { xs: "none", sm: "inline-flex" } }} size="small" label={supplier.archived_at ? "Archived" : statusLabel(supplier.verify_state)} color={supplier.archived_at ? "default" : statusColor(supplier.verify_state)} /></Box>)}</Box>)}</Stack> : <>{!error && supplierSurface(<Box sx={{ p: { xs: 2.5, sm: 4 }, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{suppliers.length ? "No matching suppliers" : "No suppliers returned"}</Typography><Typography sx={{ mt: .7, color: "text.secondary", fontSize: 13 }}>{suppliers.length ? "Try another search or filter." : "Reviewed supplier records will appear here."}</Typography></Box>)}</>}
   </Stack>;
 }
 
