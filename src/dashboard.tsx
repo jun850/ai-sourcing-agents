@@ -3460,13 +3460,12 @@ function RfqWorkspace({
     }
   }
   useEffect(() => {
-    if (!initialAgentPrompt || !messagesLoaded || initialTurnStarted.current)
-      return;
+    if (!initialAgentPrompt || initialTurnStarted.current) return;
     initialTurnStarted.current = true;
     void sendConversationMessage(initialAgentPrompt).finally(() =>
       setPhase("review"),
     );
-  }, [initialAgentPrompt, messagesLoaded]);
+  }, [initialAgentPrompt]);
   function saveEdit() {
     if (documentActionPending) return;
     setDocumentActionPending(true);
