@@ -5334,7 +5334,7 @@ export function Dashboard({ path }: { path: string }) {
           status={rfq.record.status}
           submittedAt={rfq.record.submitted_at}
           initialRevision={rfq.record.agent_revision ?? 0}
-          initialAgentPrompt={rfq.initialAgentPrompt}
+          initialAgentPrompt={rfq.initialPhase === "drafting" ? summary : undefined}
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
           onAgentDraftPatched={(nextFields, revision) => {
