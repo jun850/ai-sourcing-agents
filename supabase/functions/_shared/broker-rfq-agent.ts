@@ -110,11 +110,15 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   const result: Partial<Record<Field, string>> = {};
   const quantity = message.match(/\b(\d[\d,.]*)\s*(meters?|metres?|m\b|yards?|yd\b|pieces?|pcs?|units?|kg|kgs|kilograms?)\b/i);
   if (quantity) result.quantity = `${quantity[1]} ${quantity[2]}`;
+  const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
+  const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
+  if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
   if (intake.category === "fabric") {
-    const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
-    const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
-    if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
     if (/\bfabrics?\b/i.test(message)) result.product = material ? `${material} fabric` : "Fabric";
+  }
+  if (intake.category === "apparel") {
+    const garment = message.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
+    if (garment) result.product = garment;
   }
   return result;
 }
@@ -248,7 +252,13 @@ export async function handleBrokerRfqAgent(request: Request) {
     // default thinking mode. A reasoning-disable request param is
     // deliberately not sent, since not every provider/model behind the
     // preset accepts that field.
-    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing", "X-Session-Id": `rfq-${rfqCaseId}` }, body: JSON.stringify({ model: PRESET, session_id: `rfq-${rfqCaseId}`, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }), signal: AbortSignal.timeout(12000) });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const upstream = await Promise.race([
+      fetch("https://openrouter.ai/api/v1/chat/completions", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}`, "HTTP-Referer": "https://atelix.app", "X-Title": "Atelix AI Sourcing", "X-Session-Id": `rfq-${rfqCaseId}` }, body: JSON.stringify({ model: PRESET, session_id: `rfq-${rfqCaseId}`, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ AUTHORITATIVE_CONTEXT: compact, message }) }], response_format: { type: "json_object" }, max_tokens: 3000 }), signal: controller.signal }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("openrouter_timeout")), 8500)),
+    ]);
+    clearTimeout(timeout);
     if (!upstream.ok) {
       console.error("agent_rfq_upstream_failed", JSON.stringify({ turnId: turn.id, status: upstream.status, body: (await upstream.text()).slice(0, 2000) }));
       throw new Error("openrouter_unavailable");
