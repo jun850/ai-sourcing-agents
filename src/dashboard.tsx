@@ -201,15 +201,6 @@ function newClientMessageId() {
   return crypto.randomUUID();
 }
 
-function remainingTurnsFromBudget(
-  budgetState: CopilotAgentResponse["budgetState"],
-) {
-  if (typeof budgetState === "number") return budgetState;
-  return typeof budgetState?.remainingTurns === "number"
-    ? budgetState.remainingTurns
-    : null;
-}
-
 const navItems: Array<{
   label: string;
   view: DashboardView;
@@ -266,8 +257,8 @@ function fieldsFromInitialPrompt(message: string): RfqFields {
   const product = message.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?|fabrics?)\b/i)?.[0];
   if (product) fields.product = product;
   const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
-  const gsm = message.match(/\b\d{2,4}\s*gsm\b/i)?.[0];
-  if (material || gsm) fields.material = [material, gsm].filter(Boolean).join(", ");
+  const textileWeight = message.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
+  if (material || textileWeight) fields.material = [material, textileWeight].filter(Boolean).join(", ");
   const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
   if (color) fields.colors = color;
   const sizes = message.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
@@ -1239,7 +1230,6 @@ function ConversationChatPanel({
   busy,
   loading,
   status,
-  remainingTurns,
   onUndo,
   canUndo,
 }: {
@@ -1248,7 +1238,6 @@ function ConversationChatPanel({
   busy: boolean;
   loading: boolean;
   status: AgentStatus | null;
-  remainingTurns: number | null;
   onUndo: () => Promise<void>;
   canUndo: boolean;
 }) {
@@ -1538,11 +1527,6 @@ function ConversationChatPanel({
             <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
               {status.text}
             </Typography>
-            {remainingTurns !== null && remainingTurns <= 2 && (
-              <Typography component="span" sx={{ ml: 0.75, color: "inherit", opacity: 0.78, fontSize: 11.5 }}>
-                {remainingTurns} {remainingTurns === 1 ? "turn" : "turns"} left
-              </Typography>
-            )}
           </Box>
           {canUndo && (
             <MuiButton
@@ -3309,7 +3293,6 @@ function RfqWorkspace({
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [changedFields, setChangedFields] = useState<Array<keyof RfqFields>>([]);
   const [undoToken, setUndoToken] = useState<string | null>(null);
-  const [remainingTurns, setRemainingTurns] = useState<number | null>(null);
   // Conversation reads may arrive after the first drafted turn. Keep the
   // composer usable and render optimistic turns immediately; a slow history
   // RPC must never cover the buyer's live conversation with a skeleton.
@@ -3422,7 +3405,6 @@ function RfqWorkspace({
     setChangedFields(nextChangedFields);
     setAgentRevision(response.revision);
     setUndoToken(response.undoToken);
-    setRemainingTurns(remainingTurnsFromBudget(response.budgetState));
     const supportRequested =
       Boolean(response.supportHandoff) || response.kind === "support_handoff";
     const unavailable = response.kind === "unavailable";
@@ -3462,49 +3444,6 @@ function RfqWorkspace({
       },
     ]);
   }
-  function immediateBuyerPatch(message: string): Partial<RfqFields> {
-    const patch: Partial<RfqFields> = {};
-    const quantity = message.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?)\b/i);
-    if (quantity) patch.quantity = `${quantity[1]} ${quantity[2]}`;
-    const product = message.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?)\b/i)?.[0];
-    if (product) patch.product = product;
-    const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
-    const gsm = message.match(/\b\d{2,4}\s*gsm\b/i)?.[0];
-    if (material || gsm) patch.material = [material, gsm].filter(Boolean).join(", ");
-    const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
-    if (color) patch.colors = color;
-    const sizes = message.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
-    if (sizes) patch.sizes = sizes;
-    const budget = message.match(/\b(?:usd|us\$)\s*\d[\d,.]*\b|\b\d[\d,.]*\s*usd\b/i)?.[0];
-    if (budget) patch.budget = budget;
-    return patch;
-  }
-  function applyImmediateBuyerPatch(message: string) {
-    const patch = immediateBuyerPatch(message);
-    if (Object.keys(patch).length) {
-      setFields((current) => {
-        const next = { ...current, ...patch };
-        onAgentDraftPatched(next, agentRevision);
-        return next;
-      });
-      setDraft((current) => ({ ...current, ...patch }));
-      setChangedFields(Object.keys(patch) as Array<keyof RfqFields>);
-    }
-    setAgentStatus({
-      tone: "success",
-      text: Object.keys(patch).length
-        ? "Details added to this draft."
-        : "Message received. Add any further requirements whenever you’re ready.",
-    });
-    setConversationMessages((current) => [
-      ...current,
-      {
-        id: newClientMessageId(),
-        from: "Atelix assistant",
-        text: "Got it — I’ve added the details I can confirm from your message. Keep adding requirements whenever you’re ready.",
-      },
-    ]);
-  }
   async function sendConversationMessage(message: string, optimistic = true) {
     if (agentPending) return;
     const clientMessageId = newClientMessageId();
@@ -3527,10 +3466,6 @@ function RfqWorkspace({
       });
       applyAgentResponse(response);
     } catch (cause) {
-      if (cause instanceof Error && cause.message === "assistant_response_timeout") {
-        applyImmediateBuyerPatch(message);
-        return;
-      }
       const fallback =
         "That message was not delivered to your RFQ. Please send it again; your existing draft remains unchanged.";
       setAgentStatus({
@@ -3779,7 +3714,6 @@ function RfqWorkspace({
                 busy={agentPending}
                 loading={!messagesLoaded}
                 status={agentStatus}
-                remainingTurns={remainingTurns}
                 canUndo={Boolean(undoToken)}
                 onUndo={undoAgentChange}
               />
@@ -5388,10 +5322,17 @@ export function Dashboard({ path }: { path: string }) {
     try {
       const intake = classifyRfqIntake(brief);
       const initialFields = fieldsFromInitialPrompt(brief);
-      let record = await createRfqCase({
+      const initialBrief = briefFromFields(brief, initialFields, intake);
+      const createdRecord = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,
-        brief: briefFromFields(brief, initialFields, intake),
+        brief: initialBrief,
       });
+      // The create RPC is authoritative for the RFQ row. Keep the exact
+      // buyer-state payload used for that create operation while the route
+      // changes so the live document never waits for a subsequent list read
+      // or agent turn before showing explicit facts from the first prompt.
+      // A later workspace reload still reads the persisted server record.
+      const record: WorkspaceRfq = { ...createdRecord, brief: initialBrief };
       const validFiles = files.filter((file) => file.state === "ready");
       const attachments: RfqAttachment[] = [];
       for (const item of validFiles)

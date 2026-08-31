@@ -118,9 +118,9 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   if (budget) result.budget = budget;
   const certification = message.match(/\b(?:OEKO[ -]?TEX|GOTS|GRS|RCS|BSCI|WRAP|ISO\s*9001)\b/i)?.[0];
   if (certification) result.certifications = certification;
-  const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
+  const textileWeight = message.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
   const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
-  if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
+  if (material || textileWeight) result.material = [material, textileWeight].filter(Boolean).join(", ");
   const garment = message.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
   if (garment) result.product = garment;
   if (intake.category === "fabric") {

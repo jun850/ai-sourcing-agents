@@ -111,31 +111,6 @@ function applyPatch(rfq, patch, { status = "draft", expectedRevision = rfq.revis
   return { saved: true, rfq: next, before: rfq, after: next };
 }
 
-function createLedger(activeUsers) {
-  return { activeUsers, capCents: activeUsers * 5, users: new Map(), reservationsCents: 0, settledCents: 0 };
-}
-
-function reserve(ledger, userId, clientMessageId, costCents = 1) {
-  const user = ledger.users.get(userId) || { turns: 0, reservedCents: 0, turnIds: new Set() };
-  if (user.turnIds.has(clientMessageId)) return { allowed: true, replay: true, costCents: 0 };
-  if (user.turns >= 5 || user.reservedCents + costCents > 5) return { allowed: false, reason: "user_limit" };
-  if (ledger.reservationsCents + ledger.settledCents + costCents > ledger.capCents) return { allowed: false, reason: "fleet_limit" };
-  user.turns += 1;
-  user.reservedCents += costCents;
-  user.turnIds.add(clientMessageId);
-  ledger.users.set(userId, user);
-  ledger.reservationsCents += costCents;
-  return { allowed: true, replay: false, costCents };
-}
-
-function settle(ledger, userId, costCents = 1) {
-  const user = ledger.users.get(userId);
-  assert.ok(user);
-  user.reservedCents -= costCents;
-  ledger.reservationsCents -= costCents;
-  ledger.settledCents += costCents;
-}
-
 let passed = 0;
 function test(name, fn) {
   fn();
@@ -206,49 +181,14 @@ test("schema allowlist rejects unknown fields", () => {
   assert.throws(() => assertPatchAllowlist({ product: "shirt", supplierName: "invented" }), /unexpected RFQ patch key/);
 });
 
-test("replayed client message is idempotent", () => {
-  const ledger = createLedger(1);
-  const first = reserve(ledger, "user-1", "turn-1");
-  const replay = reserve(ledger, "user-1", "turn-1");
-  assert.equal(first.allowed, true);
-  assert.equal(replay.replay, true);
-  assert.equal(ledger.reservationsCents, 1);
-  assert.equal(ledger.users.get("user-1").turns, 1);
+test("agent source has no per-user turn or spend gate", () => {
+  const source = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.doesNotMatch(source, /agent_rfq_reserve_budget|agent_rfq_settle_budget|paid_calls|remainingTurns/);
 });
 
-test("five turns and five cents per user are enforced", () => {
-  const ledger = createLedger(1);
-  for (let i = 0; i < 5; i++) assert.equal(reserve(ledger, "user-1", `turn-${i}`).allowed, true);
-  assert.equal(reserve(ledger, "user-1", "turn-5").allowed, false);
-  assert.equal(ledger.reservationsCents, 5);
-});
-
-test("1,000 active users at five reservations each stay at exactly $50", () => {
-  const ledger = createLedger(1000);
-  for (let user = 0; user < 1000; user++) {
-    for (let turn = 0; turn < 5; turn++) assert.equal(reserve(ledger, `user-${user}`, `turn-${user}-${turn}`).allowed, true);
-  }
-  assert.equal(ledger.capCents, 5000);
-  assert.equal(ledger.reservationsCents, 5000);
-  assert.equal(ledger.reservationsCents / 100, 50);
-  assert.equal(reserve(ledger, "overflow", "overflow-turn").allowed, false);
-});
-
-test("settlement releases reservation without exceeding cap", () => {
-  const ledger = createLedger(1000);
-  assert.equal(reserve(ledger, "user-1", "turn-1").allowed, true);
-  settle(ledger, "user-1", 1);
-  assert.equal(ledger.reservationsCents, 0);
-  assert.equal(ledger.settledCents, 1);
-  assert.ok(ledger.settledCents + ledger.reservationsCents <= ledger.capCents);
-});
-
-test("deterministic fallback does not consume a paid turn", () => {
-  const ledger = createLedger(1);
-  const fallback = { kind: "unavailable", paidCall: false, reply: "I can still help edit the RFQ from the form." };
-  assert.equal(fallback.paidCall, false);
-  assert.equal(ledger.reservationsCents, 0);
-  assert.equal(ledger.users.size, 0);
+test("denim ounces are preserved as buyer-stated material details", () => {
+  const source = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(source, /oz\|ounces/);
 });
 
 test("production request contract names the exact preset", () => {

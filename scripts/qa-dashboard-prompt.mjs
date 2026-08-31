@@ -46,8 +46,10 @@ for (const [label, expected] of [
   ["conversation panel remains visible beside a long RFQ", 'position: { md: "sticky" }'],
   ["conversation history announces new messages", 'aria-relevant="additions text"'],
   ["informational agent status stays out of the composer area", 'status && status.tone !== "info"'],
+  ["first dashboard prompt is hydrated before route change", "const record: WorkspaceRfq = { ...createdRecord, brief: initialBrief };"],
+  ["initial extraction retains ounce-based textile weights", "oz|ounces"],
 ]) {
-  if (!conversationPanel.includes(expected)) {
+  if (!dashboard.includes(expected) && !conversationPanel.includes(expected)) {
     console.error(`fail - missing ${label}`);
     process.exit(1);
   }
