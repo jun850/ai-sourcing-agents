@@ -3229,7 +3229,6 @@ function RfqWorkspace({
   status,
   submittedAt,
   initialRevision = 0,
-  initialAgentPrompt,
   initialPhase,
   onMessage,
   onAgentDraftPatched,
@@ -3243,7 +3242,6 @@ function RfqWorkspace({
   status: string;
   submittedAt?: string | null;
   initialRevision?: number;
-  initialAgentPrompt?: string;
   initialPhase?: RfqPhase;
   onMessage: (message: string) => void;
   onAgentDraftPatched: (fields: RfqFields, revision: number) => void;
@@ -3460,12 +3458,15 @@ function RfqWorkspace({
     }
   }
   useEffect(() => {
-    if (!initialAgentPrompt || initialTurnStarted.current) return;
+    // A newly-created RFQ is the only state that should automatically send
+    // its opening brief. It must not wait for the persisted thread read:
+    // the buyer's first message is the entry point to that thread.
+    if (phase !== "drafting" || initialTurnStarted.current) return;
     initialTurnStarted.current = true;
-    void sendConversationMessage(initialAgentPrompt).finally(() =>
+    void sendConversationMessage(brief).finally(() =>
       setPhase("review"),
     );
-  }, [initialAgentPrompt]);
+  }, [brief, phase]);
   function saveEdit() {
     if (documentActionPending) return;
     setDocumentActionPending(true);
@@ -5160,7 +5161,6 @@ export function Dashboard({ path }: { path: string }) {
     record: WorkspaceRfq;
     attachments: RfqAttachment[];
     initialPhase?: RfqPhase;
-    initialAgentPrompt?: string;
   } | null>(null);
   const loadHistoryPage = useCallback(async ({ cursor }: { cursor: { updatedAt: string; id: string } | null; signal: AbortSignal }) => listRfqCasesPage({ cursor, limit: 40 }), []);
   const { items: historyItems, setItems: setHistoryItems, loading: historyLoading, loadingMore: historyLoadingMore, hasMore: historyHasMore, loadMore: loadHistory } = useInfiniteList<StoredRfq>("workspace-rfq-requests", loadHistoryPage);
@@ -5282,7 +5282,7 @@ export function Dashboard({ path }: { path: string }) {
         record,
         ...current.filter((entry) => entry.id !== record.id),
       ]);
-      setRfq({ record, attachments, initialPhase: "drafting", initialAgentPrompt: brief });
+      setRfq({ record, attachments, initialPhase: "drafting" });
       setMessage("");
       navigate(`/dashboard/requests/${encodeURIComponent(record.id)}`);
       return true;
@@ -5334,7 +5334,6 @@ export function Dashboard({ path }: { path: string }) {
           status={rfq.record.status}
           submittedAt={rfq.record.submitted_at}
           initialRevision={rfq.record.agent_revision ?? 0}
-          initialAgentPrompt={rfq.initialPhase === "drafting" ? summary : undefined}
           initialPhase={rfq.initialPhase}
           onMessage={setMessage}
           onAgentDraftPatched={(nextFields, revision) => {
