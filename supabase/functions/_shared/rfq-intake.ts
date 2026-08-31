@@ -7,7 +7,7 @@ export function classifyIntake(message: string) {
     : /\b(cmt|cut[ -]?make[ -]?trim)\b/.test(text) ? "cmt"
     : /\b(leather|suede|nubuck)\b/.test(text) ? "leather"
     : /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/.test(text) ? "buttons_trims_labels"
-    : /\b(fabric|textile|yardage|gsm|oz\b|woven|knit)\b/.test(text) ? "fabric"
+    : /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/.test(text) ? "fabric"
     : /\b(blank|unbranded)\b/.test(text) ? "blank"
     : /\b(wholesale|stock product|ready made|ready-made)\b/.test(text) ? "wholesale" : "unclassified";
   const route = ["wholesale", "blank", "private_label", "white_label"].includes(subtype) ? "finished_goods" : subtype === "unclassified" ? "unclassified" : "production_or_materials";

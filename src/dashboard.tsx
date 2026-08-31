@@ -1460,7 +1460,7 @@ function ConversationChatPanel({
           </Box>
         )}
       </Box>
-      {status && (
+      {status && status.tone !== "info" && (
         <Box
           aria-live="polite"
           role="status"
@@ -2485,9 +2485,8 @@ function RfqDocumentPanel({
               phase !== "submitted" && (
                 <Stack
                   direction="row"
-                  justifyContent="space-between"
+                  justifyContent="flex-end"
                   alignItems="center"
-                  spacing={1.5}
                   sx={{
                     mt: rail ? 0 : 3,
                     pt: 2.5,
@@ -2495,19 +2494,6 @@ function RfqDocumentPanel({
                     flexWrap: "wrap",
                   }}
                 >
-                  <Typography
-                    sx={{
-                      flex: "1 1 220px",
-                      minWidth: 0,
-                      color: "#7a8798",
-                      fontSize: 12,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Atelix reviews every RFQ before any supplier is contacted.
-                    Submitting queues that review — it never sends outreach
-                    directly.
-                  </Typography>
                   <MuiButton
                     onClick={onSubmit}
                     disabled={actionPending || preparing}
@@ -2516,6 +2502,10 @@ function RfqDocumentPanel({
                     variant="contained"
                     sx={{
                       flexShrink: 0,
+                      minWidth: { xs: "100%", sm: 208 },
+                      minHeight: 56,
+                      px: 3,
+                      fontSize: 16,
                       backgroundColor: "#4b7657",
                       "&:hover": { backgroundColor: "#3d6548" },
                     }}

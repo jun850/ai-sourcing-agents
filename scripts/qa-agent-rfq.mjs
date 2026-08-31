@@ -14,7 +14,9 @@ import { fileURLToPath } from "node:url";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = join(HERE, "fixtures", "agent-rfq", "golden-cases.json");
+const INTAKE_SOURCE_PATH = join(HERE, "..", "supabase", "functions", "_shared", "rfq-intake.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
+const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
 const PRESET = "@preset/marketplace-copilot";
 const SUPPORT_EMAIL = "info@arcanawangsa.com";
 const FIELDS = [
@@ -253,6 +255,11 @@ test("production request contract names the exact preset", () => {
   const request = { model: PRESET, messages: [] };
   assert.equal(request.model, "@preset/marketplace-copilot");
   assert.notEqual(request.model, "openrouter/auto");
+});
+
+test("fibre-and-meter fabric request reaches the fabric route", () => {
+  assert.match(INTAKE_SOURCE, /cotton\|silk/);
+  assert.match(INTAKE_SOURCE, /meters\?\|metres\?/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);

@@ -26,7 +26,7 @@ export function classifyRfqIntake(prompt: string): RfqIntake {
     : includes(text, /\b(cmt|cut[ -]?make[ -]?trim)\b/) ? "cmt"
     : includes(text, /\b(leather|suede|nubuck)\b/) ? "leather"
     : includes(text, /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/) ? "buttons_trims_labels"
-    : includes(text, /\b(fabric|textile|yardage|gsm|oz\b|woven|knit)\b/) ? "fabric"
+    : includes(text, /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/) ? "fabric"
     : includes(text, /\b(blank|unbranded)\b/) ? "blank"
     : includes(text, /\b(wholesale|stock product|ready made|ready-made)\b/) ? "wholesale"
     : "unclassified";
