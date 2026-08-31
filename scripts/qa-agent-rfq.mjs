@@ -201,6 +201,8 @@ test("common procurement typos still retain a quantity-first target budget", () 
 test("first saved follow-up gives a concise submission cue without making optional fields required", () => {
   const source = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
   assert.match(source, /isFirstFollowUp/);
+  assert.match(source, /capturedDetails\(savedPatch\)/);
+  assert.match(source, /Noted — \$\{capturedDetails\(savedPatch\)/);
   assert.match(source, /Is there anything else we need to know\? When you’re ready, you can click Submit RFQ\./);
   assert.doesNotMatch(source, /required.*Submit RFQ/i);
 });

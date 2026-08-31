@@ -11,6 +11,16 @@ const PRESET = "@preset/marketplace-copilot";
 const FIELDS = ["product", "quantity", "material", "certifications", "colors", "sizes", "budget", "timeline"] as const;
 type Field = typeof FIELDS[number];
 type AgentKind = "answer" | "clarifying_question" | "draft_updated" | "support_handoff" | "unavailable";
+const FIELD_LABELS: Record<Field, string> = {
+  product: "product",
+  quantity: "quantity",
+  material: "material",
+  certifications: "certifications",
+  colors: "colors",
+  sizes: "sizes",
+  budget: "target budget",
+  timeline: "timeline",
+};
 
 function reply(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -100,6 +110,15 @@ function compactFields(value: unknown) {
     if (content) result[field] = content;
   }
   return result;
+}
+function capturedDetails(value: unknown) {
+  const source = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return FIELDS.flatMap((field) => {
+    const captured = text(source[field], 500);
+    return captured ? [`${FIELD_LABELS[field]}: ${captured}`] : [];
+  }).join("; ");
 }
 function normaliseBuyerPrompt(message: string) {
   return message
@@ -211,9 +230,6 @@ export async function handleBrokerRfqAgent(request: Request) {
   // requirement, make the next action explicit without turning optional RFQ
   // fields into a submission gate or repeating the prompt on every turn.
   const isFirstFollowUp = Array.isArray(context.recentTurns) && context.recentTurns.length === 1;
-  const savedDetailsReply = isFirstFollowUp
-    ? "I’ve recorded the details you shared. Is there anything else we need to know? When you’re ready, you can click Submit RFQ."
-    : "I’ve recorded the details you shared. Add any other requirements whenever you’re ready.";
   // Follow-up messages often carry only the newly supplied requirements
   // (for example, "black and under two months"). Classify against the
   // established RFQ as well so that an already-known fabric/apparel route is
@@ -263,7 +279,11 @@ export async function handleBrokerRfqAgent(request: Request) {
   if (Object.keys(immediatePatch).length) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: immediatePatch, p_turn_id: turn.id });
     if (!error) {
-      const result = output("draft_updated", savedDetailsReply, Number(applied?.revision || revision), { savedPatch: applied?.savedPatch || immediatePatch, changedFields: applied?.changedFields || Object.keys(immediatePatch), undoToken: applied?.undoToken || null, verificationStatus: "partial", intake });
+      const savedPatch = applied?.savedPatch || immediatePatch;
+      const savedDetailsReply = isFirstFollowUp
+        ? `Noted — ${capturedDetails(savedPatch) || "the details you shared"}. Is there anything else we need to know? When you’re ready, you can click Submit RFQ.`
+        : "I’ve recorded the details you shared. Add any other requirements whenever you’re ready.";
+      const result = output("draft_updated", savedDetailsReply, Number(applied?.revision || revision), { savedPatch, changedFields: applied?.changedFields || Object.keys(immediatePatch), undoToken: applied?.undoToken || null, verificationStatus: "partial", intake });
       await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "settled", "deterministic_intake", startedAt);
       return reply(result);
     }
