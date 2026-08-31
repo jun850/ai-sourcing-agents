@@ -276,6 +276,10 @@ export type RfqAttachment = {
   original_name: string;
   content_type: string;
   byte_size: number;
+  extraction_status?: "pending" | "processing" | "ready" | "failed";
+  extracted_text?: string | null;
+  extraction_error?: string | null;
+  extracted_at?: string | null;
   created_at: string;
 };
 export type WorkspaceRfqQuote = {
@@ -928,6 +932,34 @@ export async function uploadRfqAttachment(caseId: string, file: File) {
   if (error) {
     await storage.remove([path]);
     rpcError(error);
+  }
+  return data as RfqAttachment;
+}
+
+/**
+ * Starts a private, server-side reference read. The extractor may describe
+ * visible content but it never creates supplier, price, capacity, or payment
+ * facts. A failed read leaves the uploaded reference available to the team.
+ */
+export async function extractRfqAttachment(caseId: string, attachmentId: string) {
+  if (!url || !publishableKey)
+    throw new Error("Reference extraction is not configured for this environment.");
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in again before reading this reference.");
+  const response = await fetch(`${url}/functions/v1/rfq-attachment-extract`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ caseId, attachmentId }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const reason = data && typeof data === "object" && "reason" in data
+      ? String((data as { reason?: unknown }).reason)
+      : "The reference could not be read.";
+    throw new Error(reason);
   }
   return data as RfqAttachment;
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Activity, ArrowRight, BarChart3, Check, CirclePlus, Instagram, Linkedin, Mail, Paperclip, Send, ShieldCheck, Sparkles, X as XLogo } from "lucide-react";
+import { Activity, ArrowRight, BarChart3, Check, CirclePlus, Instagram, Linkedin, Mail, Menu, Paperclip, Send, ShieldCheck, Sparkles, X, X as XLogo } from "lucide-react";
 import { motion, useReducedMotion, useScroll, useSpring, useTransform, type MotionValue } from "framer-motion";
 import { SupplierIntakeModal } from "../supplier-intake";
 import { atelixContent, type FeatureCardContent, type JourneyPreviewKind, type SupplierContent } from "../content/atelix";
@@ -61,7 +61,7 @@ export function SiteHeader() {
         {nav.primary.map((item) => <a key={item.href} href={item.href} onClick={() => setMenuOpen(false)}>{item.label}</a>)}
         <div className="nav-actions"><button className="supplier-link" type="button" onClick={openSupplier}>{nav.join}</button><a className="button header-cta" href="/sign-in">Login</a></div>
       </nav>
-      <div className="header-actions"><button className="supplier-link" type="button" onClick={openSupplier}>{nav.join}</button><a className="button header-cta" href="/sign-in">{nav.login}</a><button ref={menuButtonRef} className="menu-toggle" type="button" aria-controls="site-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen((open) => !open)}><span aria-hidden="true">{menuOpen ? "×" : "☰"}</span></button></div>
+      <div className="header-actions"><button className="supplier-link" type="button" onClick={openSupplier}>{nav.join}</button><a className="button header-cta" href="/sign-in">{nav.login}</a><button ref={menuButtonRef} className="menu-toggle" type="button" aria-controls="site-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X size={21} strokeWidth={1.9} aria-hidden="true" /> : <Menu size={21} strokeWidth={1.9} aria-hidden="true" />}</button></div>
     </header>
     <SupplierIntakeModal open={supplierOpen} onClose={closeSupplier} returnFocusRef={supplierTriggerRef} />
   </>;

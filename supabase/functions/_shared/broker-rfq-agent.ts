@@ -120,6 +120,19 @@ function capturedDetails(value: unknown) {
     return captured ? [`${FIELD_LABELS[field]}: ${captured}`] : [];
   }).join("; ");
 }
+function referenceEvidencePrompt(value: unknown) {
+  if (!Array.isArray(value)) return "";
+  const evidence = value
+    .filter((entry): entry is { original_name?: unknown; extracted_text?: unknown } => Boolean(entry) && typeof entry === "object")
+    .map((entry) => {
+      const name = text(entry.original_name, 255) || "Reference";
+      const extracted = text(entry.extracted_text, 12_000);
+      return extracted ? `[Reference: ${name}]\n${extracted}` : "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  return evidence ? `\n\nThe following is unconfirmed text or visible-detail extraction from buyer-provided references. Use only explicitly stated values to structure the draft; do not infer missing facts.\n${evidence}` : "";
+}
 function normaliseBuyerPrompt(message: string) {
   return message
     .replace(/\bprcs?\b/gi, "pcs")
@@ -225,6 +238,19 @@ export async function handleBrokerRfqAgent(request: Request) {
 
   const { data: context, error: contextError } = await admin.rpc("agent_rfq_get_context", { p_case_id: rfqCaseId, p_profile_id: user.id });
   if (contextError || !context?.rfq) return reply({ ok: false, reason: "rfq_not_found" }, 404);
+  // References are buyer uploads, but their OCR/vision output remains
+  // separately marked as unconfirmed evidence. A failed extraction is never
+  // a reason to block the buyer's text-only RFQ.
+  const { data: referenceRows } = await admin
+    .from("rfq_attachments")
+    .select("original_name,extracted_text")
+    .eq("rfq_case_id", rfqCaseId)
+    .eq("owner_profile_id", user.id)
+    .eq("extraction_status", "ready")
+    .not("extracted_text", "is", null)
+    .order("created_at")
+    .limit(8);
+  const referenceEvidence = referenceEvidencePrompt(referenceRows);
   const revision = Number(context.rfq.revision || 0);
   // The first message opens the draft. Once the buyer adds their first new
   // requirement, make the next action explicit without turning optional RFQ
@@ -238,6 +264,7 @@ export async function handleBrokerRfqAgent(request: Request) {
     text(context.rfq.title, 240),
     JSON.stringify(context.rfq.brief ?? {}),
     message,
+    referenceEvidence,
   ].join("\n"));
   const { data: existing } = await admin.from("agent_rfq_turns").select("response,status,rfq_case_id").eq("profile_id", user.id).eq("client_message_id", clientMessageId).maybeSingle();
   if (existing && existing.rfq_case_id !== rfqCaseId) return reply({ ok: false, reason: "client_message_id_conflict" }, 409);
@@ -275,14 +302,17 @@ export async function handleBrokerRfqAgent(request: Request) {
   // dependable first response from the Dashboard prompt; it never invents a
   // supplier or commercial term. Ambiguous and follow-up requests continue
   // through the provider path below.
-  const immediatePatch = deterministicPatch(message, intake);
+  const immediatePatch = deterministicPatch(`${message}${referenceEvidence}`, intake);
   if (Object.keys(immediatePatch).length) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: immediatePatch, p_turn_id: turn.id });
     if (!error) {
       const savedPatch = applied?.savedPatch || immediatePatch;
+      const referencePrefix = referenceEvidence
+        ? "I also captured the clearly stated details from your attached reference. Please review them before submitting. "
+        : "";
       const savedDetailsReply = isFirstFollowUp
         ? `Noted — ${capturedDetails(savedPatch) || "the details you shared"}. Is there anything else we need to know? When you’re ready, you can click Submit RFQ.`
-        : "I’ve recorded the details you shared. Add any other requirements whenever you’re ready.";
+        : `${referencePrefix}I’ve recorded the details you shared. Add any other requirements whenever you’re ready.`;
       const result = output("draft_updated", savedDetailsReply, Number(applied?.revision || revision), { savedPatch, changedFields: applied?.changedFields || Object.keys(immediatePatch), undoToken: applied?.undoToken || null, verificationStatus: "partial", intake });
       await append(admin, rfqCaseId, user.id, "agent", result.reply); await finish(admin, turn.id, result, "settled", "deterministic_intake", startedAt);
       return reply(result);

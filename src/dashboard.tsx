@@ -48,6 +48,7 @@ import {
   ChatBubbleOutlined,
   CheckCircle,
   Close,
+  CloseRounded,
   ChevronLeft,
   ChevronRight,
   Description,
@@ -67,11 +68,11 @@ import {
   Search,
   Settings,
   VerifiedOutlined,
-  X,
 } from "@mui/icons-material";
 import { ArrowUp as PromptArrowUp, Plus as PromptPlus } from "lucide-react";
 import {
   createRfqCase,
+  extractRfqAttachment,
   getSession,
   getWorkspaceProfile,
   getWorkspaceOpsUnreadCount,
@@ -1000,9 +1001,25 @@ function UploadTray({
                 aria-label={`Remove ${file.name}`}
                 onClick={() => onRemove(id)}
                 size="small"
-                sx={{ color: "inherit" }}
+                sx={{
+                  width: 32,
+                  height: 32,
+                  color: "#586575",
+                  borderRadius: "10px",
+                  backgroundColor: "rgba(255,255,255,.72)",
+                  transition: "background-color 150ms ease, color 150ms ease, transform 150ms ease",
+                  "&:hover": {
+                    backgroundColor: "#ffffff",
+                    color: "#202936",
+                    transform: "scale(1.04)",
+                  },
+                  "&:focus-visible": {
+                    outline: "2px solid #4b7657",
+                    outlineOffset: 2,
+                  },
+                }}
               >
-                <X fontSize="small" />
+                <CloseRounded sx={{ fontSize: 18 }} />
               </IconButton>
             </Box>
           </motion.div>
@@ -3509,14 +3526,35 @@ function RfqWorkspace({
   }
   useEffect(() => {
     // A newly-created RFQ is the only state that should automatically send
-    // its opening brief. It must not wait for the persisted thread read:
-    // the buyer's first message is the entry point to that thread.
+    // its opening brief. When there are reference files, give their private
+    // extraction a short head start so the first draft can include plainly
+    // visible labels and BOM text. A reference failure never blocks the RFQ.
     if (phase !== "drafting" || initialTurnStarted.current) return;
     initialTurnStarted.current = true;
-    void sendConversationMessage(brief, false).finally(() =>
-      setPhase("review"),
+    const unreadReferences = attachments.filter(
+      (attachment) =>
+        attachment.extraction_status !== "ready" &&
+        attachment.extraction_status !== "failed",
     );
-  }, [brief, phase]);
+    void Promise.allSettled(
+      unreadReferences.map((attachment) =>
+        extractRfqAttachment(caseId, attachment.id),
+      ),
+    )
+      .then((results) => {
+        const updates = results
+          .filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled")
+          .map((result) => result.value);
+        if (updates.length) {
+          setAttachments((current) =>
+            current.map((attachment) =>
+              updates.find((update) => update.id === attachment.id) ?? attachment,
+            ),
+          );
+        }
+      })
+      .finally(() => void sendConversationMessage(brief, false).finally(() => setPhase("review")));
+  }, [attachments, brief, caseId, phase]);
   function saveEdit() {
     if (documentActionPending) return;
     setDocumentActionPending(true);

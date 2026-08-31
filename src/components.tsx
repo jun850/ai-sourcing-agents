@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { Mail } from "lucide-react";
+import { Mail, Menu, X } from "lucide-react";
 import { SupplierIntakeModal } from "./supplier-intake";
 import { atelixContent } from "./content/atelix";
 import "./skip-link.css";
@@ -100,7 +100,7 @@ export function Header() {
         <a href="/#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
         <div className="nav-actions"><button className="supplier-link" type="button" onClick={openSupplierIntake}>Join Us</button><a className="button header-cta" href="/sign-in">Log in</a></div>
       </nav>
-      <div className="header-actions"><button className="supplier-link" type="button" onClick={openSupplierIntake}>Join Us</button><a className="button header-cta" href="/sign-in">Log in</a><button ref={menuButtonRef} className="menu-toggle" type="button" aria-controls="site-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen((open) => !open)}><span aria-hidden="true">{menuOpen ? "×" : "☰"}</span></button></div>
+      <div className="header-actions"><button className="supplier-link" type="button" onClick={openSupplierIntake}>Join Us</button><a className="button header-cta" href="/sign-in">Log in</a><button ref={menuButtonRef} className="menu-toggle" type="button" aria-controls="site-navigation" aria-expanded={menuOpen} aria-label={menuOpen ? "Close navigation" : "Open navigation"} onClick={() => setMenuOpen((open) => !open)}>{menuOpen ? <X size={21} strokeWidth={1.9} aria-hidden="true" /> : <Menu size={21} strokeWidth={1.9} aria-hidden="true" />}</button></div>
     </header>
     <SupplierIntakeModal open={supplierOpen} onClose={closeSupplierIntake} returnFocusRef={supplierTriggerRef} />
   </>;
