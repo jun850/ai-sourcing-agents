@@ -3608,12 +3608,13 @@ export function Intools() {
               />
             )}
             {tab === "rfqs" && (
-              <RfqOpsPanel
+              <RfqReviewPanel
                 routeCaseId={route.requestId}
                 onSelectCase={(id) =>
-                  navigate(`/intools/requests/${encodeURIComponent(id)}`)
+                  navigate(`/intools/rfq/${encodeURIComponent(id)}`)
                 }
                 onBack={() => navigate("/intools/requests")}
+                onCreateInvoice={startInvoiceFromRfq}
               />
             )}
             {tab === "orders" && (
