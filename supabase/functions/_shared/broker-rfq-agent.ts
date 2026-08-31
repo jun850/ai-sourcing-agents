@@ -168,7 +168,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   try { body = await request.json(); } catch { return reply({ ok: false, reason: "invalid_json" }, 400); }
   const rfqCaseId = text(body.rfqCaseId, 36); const clientMessageId = text(body.clientMessageId, 36);
   const action = body.action === "undo" ? "undo" : "message";
-  const message = action === "undo" ? "Undo the last agent change" : text(body.message, 4000);
+  const message = action === "undo" ? "Undo the last agent change" : (typeof body.message === "string" ? body.message.trim() : "");
   const expectedRevision = typeof body.expectedRevision === "number" && Number.isInteger(body.expectedRevision) && body.expectedRevision >= 0 ? body.expectedRevision : null;
   if (!uuid(rfqCaseId) || !uuid(clientMessageId) || expectedRevision === null || !message) return reply({ ok: false, reason: "invalid_request" }, 400);
 
