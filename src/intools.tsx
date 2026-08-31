@@ -2174,10 +2174,6 @@ const knowledgeProcurementModes: Array<[string, string]> = [
   ["all", "All procurement modes"], ["wholesale", "Wholesale"], ["blank", "Blank"], ["private_label", "Private label"], ["white_label", "White label"], ["oem", "OEM"], ["odm", "ODM"], ["cmt", "CMT"],
 ];
 const knowledgeMaxBytes = 25 * 1024 * 1024;
-const knowledgeMimeTypes = new Set([
-  "text/markdown",
-  "text/plain",
-]);
 
 function formatBytes(value: number | null | undefined) {
   const bytes = Number(value) || 0;
@@ -2201,7 +2197,7 @@ function KnowledgePanel() {
     visibility: "buyer-safe",
     category: "all",
     procurementMode: "all",
-    file: null as File | null,
+    files: [] as File[],
   });
 
   async function loadDocuments(nextStatus = statusFilter, nextVisibility = visibilityFilter) {
@@ -2227,50 +2223,50 @@ function KnowledgePanel() {
     void loadDocuments();
   }, [statusFilter, visibilityFilter]);
 
-  function chooseFile(file: File | undefined) {
+  function chooseFiles(files: FileList | null) {
     setError("");
     setMessage("");
-    if (!file) {
-      setForm((current) => ({ ...current, file: null }));
+    const selected = Array.from(files ?? []);
+    if (!selected.length) {
+      setForm((current) => ({ ...current, files: [] }));
       return;
     }
-    const extension = file.name.toLowerCase().split(".").pop() || "";
-    const acceptedExtension = ["md", "txt"].includes(extension);
-    if (!acceptedExtension || (file.type && !knowledgeMimeTypes.has(file.type))) {
-      setForm((current) => ({ ...current, file: null }));
-      setError("Choose a Markdown or plain-text file. PDF and DOCX extraction is not enabled yet.");
+    const acceptedExtensions = new Set(["txt", "md", "csv", "pdf", "doc", "docx", "xls", "xlsx"]);
+    const invalid = selected.find((file) => !acceptedExtensions.has(file.name.toLowerCase().split(".").pop() || ""));
+    if (invalid) {
+      setForm((current) => ({ ...current, files: [] }));
+      setError(`${invalid.name} is not a supported knowledge format.`);
       return;
     }
-    if (file.size > knowledgeMaxBytes) {
-      setForm((current) => ({ ...current, file: null }));
-      setError("Knowledge files must be 25 MB or smaller.");
+    const oversized = selected.find((file) => file.size > knowledgeMaxBytes);
+    if (oversized) {
+      setForm((current) => ({ ...current, files: [] }));
+      setError(`${oversized.name} exceeds the 25 MB knowledge-file limit.`);
       return;
     }
-    setForm((current) => ({ ...current, file }));
+    setForm((current) => ({ ...current, files: selected }));
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
     setMessage("");
-    if (!form.title.trim()) {
+    if (form.files.length <= 1 && !form.title.trim()) {
       setError("Add a title for this knowledge document.");
       return;
     }
-    if (!form.file) {
-      setError("Choose a Markdown or plain-text file to upload.");
+    if (!form.files.length) {
+      setError("Choose one or more knowledge files to upload.");
       return;
     }
     setUploading(true);
     try {
-      await uploadIntoolsAgentKnowledge(form.file, {
-        title: form.title.trim(),
-        domain: form.domain,
-        visibility: form.visibility,
-        appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] },
-      });
-      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", category: "all", procurementMode: "all", file: null });
-      setMessage("Knowledge document uploaded and queued for processing.");
+      for (const file of form.files) {
+        const title = form.files.length === 1 ? form.title.trim() : file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim().slice(0, 240);
+        await uploadIntoolsAgentKnowledge(file, { title, domain: form.domain, visibility: form.visibility, appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] } });
+      }
+      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", category: "all", procurementMode: "all", files: [] });
+      setMessage(`${form.files.length} knowledge ${form.files.length === 1 ? "file" : "files"} uploaded and queued for processing.`);
       await loadDocuments();
     } catch (cause) {
       setError(
@@ -2330,7 +2326,7 @@ function KnowledgePanel() {
               label="Document title"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              required
+              required={form.files.length <= 1}
               fullWidth
             />
             <TextField
@@ -2364,16 +2360,17 @@ function KnowledgePanel() {
           </Stack>
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ alignItems: { sm: "center" } }}>
             <Button component="label" variant="outlined" disabled={uploading}>
-              Choose file
+              Choose files
               <input
                 hidden
                 type="file"
-                accept=".md,.txt,text/markdown,text/plain"
-                onChange={(event) => chooseFile(event.target.files?.[0])}
+                accept=".txt,.md,.csv,.pdf,.doc,.docx,.xls,.xlsx,text/plain,text/markdown,text/csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                multiple
+                onChange={(event) => chooseFiles(event.target.files)}
               />
             </Button>
-            <Typography sx={{ color: form.file ? "text.primary" : "text.secondary", fontSize: 13 }}>
-              {form.file ? `${form.file.name} · ${formatBytes(form.file.size)}` : "Markdown or TXT · max 25 MB"}
+            <Typography sx={{ color: form.files.length ? "text.primary" : "text.secondary", fontSize: 13 }}>
+              {form.files.length ? `${form.files.length} selected · ${form.files.slice(0, 2).map((file) => file.name).join(" · ")}${form.files.length > 2 ? " …" : ""}` : "TXT, MD, CSV, PDF, DOC, DOCX, XLS or XLSX · max 25 MB each"}
             </Typography>
             <Button type="submit" variant="contained" disabled={uploading} startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <Add />}>
               Upload document

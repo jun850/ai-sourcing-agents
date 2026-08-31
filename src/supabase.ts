@@ -1883,14 +1883,13 @@ export async function uploadIntoolsAgentKnowledge(
   if (localIntoolsAdmin)
     throw new Error("Knowledge uploads require a signed-in Supabase administrator session.");
   const extension = file.name.toLowerCase().split(".").pop();
-  const inferredContentType =
-    extension === "pdf"
-      ? "application/pdf"
-      : extension === "docx"
-        ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        : extension === "md"
-          ? "text/markdown"
-          : "text/plain";
+  const inferredContentType = extension === "pdf" ? "application/pdf"
+    : extension === "docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    : extension === "doc" ? "application/msword"
+    : extension === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    : extension === "xls" ? "application/vnd.ms-excel"
+    : extension === "csv" ? "text/csv"
+    : extension === "md" ? "text/markdown" : "text/plain";
   const contentType = file.type || inferredContentType;
   const created = await intoolsRpc<{
     documentId: string;

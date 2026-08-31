@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import JSZip from "npm:jszip@3.10.1";
+import * as XLSX from "npm:xlsx@0.18.5";
+import pdf from "npm:pdf-parse@1.1.1";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +11,10 @@ const CORS_HEADERS = {
 };
 
 const MAX_CHUNK = 3800;
-const textTypes = new Set(["text/plain", "text/markdown"]);
+const textTypes = new Set(["text/plain", "text/markdown", "text/csv"]);
+const spreadsheetTypes = new Set(["application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"]);
+const docxType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const pdfType = "application/pdf";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
@@ -29,6 +35,30 @@ function chunks(source: string) {
   }
   return result.filter(Boolean);
 }
+function decodeXml(value: string) {
+  return value.replace(/<w:tab\/>/g, "\t").replace(/<w:br\s*\/?>/g, "\n").replace(/<\/w:p>/g, "\n").replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, "\"").replace(/&#39;/g, "'");
+}
+async function extract(blob: Blob, contentType: string) {
+  if (textTypes.has(contentType)) return await blob.text();
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  if (spreadsheetTypes.has(contentType)) {
+    const workbook = XLSX.read(bytes, { type: "array" });
+    return workbook.SheetNames.map((name) => `# ${name}\n${XLSX.utils.sheet_to_csv(workbook.Sheets[name])}`).join("\n\n");
+  }
+  if (contentType === docxType) {
+    const archive = await JSZip.loadAsync(bytes);
+    const xml = await archive.file("word/document.xml")?.async("text");
+    if (!xml) throw new Error("The DOCX file has no readable document text.");
+    return decodeXml(xml);
+  }
+  if (contentType === pdfType) {
+    const result = await (pdf as any)(bytes);
+    return typeof result?.text === "string" ? result.text : "";
+  }
+  if (contentType === "application/msword") throw new Error("Legacy .doc extraction is not supported safely. Export this document as DOCX, PDF, or TXT and retry.");
+  throw new Error("This file format cannot be extracted.");
+}
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
@@ -48,17 +78,19 @@ Deno.serve(async (request) => {
   const { data: version } = await admin.from("agent_knowledge_versions").select("id,storage_path,content_type,status").eq("id", body.versionId).maybeSingle();
   if (!version || !["uploaded", "failed"].includes(version.status)) return json({ ok: false, reason: "version_not_ingestable" }, 409);
   await admin.from("agent_knowledge_versions").update({ status: "processing", extraction_error: null, updated_at: new Date().toISOString() }).eq("id", version.id);
-  if (!textTypes.has(version.content_type)) {
-    const message = "Automatic extraction is currently available for plain text and Markdown only. Upload extracted text for this PDF or DOCX, then retry.";
-    await admin.from("agent_knowledge_versions").update({ status: "failed", extraction_error: message, updated_at: new Date().toISOString() }).eq("id", version.id);
-    return json({ ok: false, reason: "unsupported_extraction", message }, 422);
-  }
   const { data: blob, error: downloadError } = await admin.storage.from("agent-knowledge").download(version.storage_path);
   if (downloadError || !blob) {
     await admin.from("agent_knowledge_versions").update({ status: "failed", extraction_error: "The registered storage object could not be downloaded.", updated_at: new Date().toISOString() }).eq("id", version.id);
     return json({ ok: false, reason: "object_unavailable" }, 422);
   }
-  const parts = chunks(await blob.text());
+  let source = "";
+  try { source = await extract(blob, version.content_type); }
+  catch (error) {
+    const message = error instanceof Error ? error.message.slice(0, 1000) : "Knowledge extraction failed.";
+    await admin.from("agent_knowledge_versions").update({ status: "failed", extraction_error: message, updated_at: new Date().toISOString() }).eq("id", version.id);
+    return json({ ok: false, reason: "unsupported_extraction", message }, 422);
+  }
+  const parts = chunks(source);
   if (!parts.length) {
     await admin.from("agent_knowledge_versions").update({ status: "failed", extraction_error: "No searchable text was found in this document.", updated_at: new Date().toISOString() }).eq("id", version.id);
     return json({ ok: false, reason: "no_text" }, 422);
