@@ -110,14 +110,21 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   const result: Partial<Record<Field, string>> = {};
   const quantity = message.match(/\b(\d[\d,.]*)\s*(meters?|metres?|m\b|yards?|yd\b|pieces?|pcs?|units?|kg|kgs|kilograms?)\b/i);
   if (quantity) result.quantity = `${quantity[1]} ${quantity[2]}`;
+  const timeline = message.match(/\b(within\s+)?(\d[\d,.]*)\s*(business\s+days?|days?|weeks?|months?)\b/i);
+  if (timeline) result.timeline = `${timeline[1] || ""}${timeline[2]} ${timeline[3]}`.trim();
+  const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
+  if (color) result.colors = color;
+  const sizes = message.match(/\b(xs|s|m|l|xl|xxl|xxxl|all sizes|size\s+\d+(?:\s*[-–]\s*\d+)?)\b/i)?.[0];
+  if (sizes) result.sizes = sizes;
   const gsm = message.match(/\b(\d{2,4})\s*gsm\b/i)?.[0];
   const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?(?:\s*[-/]?\s*(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim))*)\b/i)?.[0];
   if (material || gsm) result.material = [material, gsm].filter(Boolean).join(", ");
+  const garment = message.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
+  if (garment) result.product = garment;
   if (intake.category === "fabric") {
     if (/\bfabrics?\b/i.test(message)) result.product = material ? `${material} fabric` : "Fabric";
   }
   if (intake.category === "apparel") {
-    const garment = message.match(/\b(t-?shirts?|tees?|polo shirts?|hoodies?|sweatshirts?|shirts?|trousers?|pants|dresses?|jackets?|coats?|uniforms?)\b/i)?.[0];
     if (garment) result.product = garment;
   }
   return result;
