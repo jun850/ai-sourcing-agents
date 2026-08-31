@@ -818,14 +818,27 @@ export async function invokeRfqCopilot(input: {
   // Use our same-origin relay for the typing path. It forwards the buyer's
   // authenticated token to the fixed Edge Function, without exposing the
   // model credential or paying a browser CORS preflight on every turn.
-  const edgeResponse = await fetch("/api/rfq-copilot", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(input),
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 4_000);
+  let edgeResponse: Response;
+  try {
+    edgeResponse = await fetch("/api/rfq-copilot", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+  } catch (cause) {
+    if (cause instanceof DOMException && cause.name === "AbortError") {
+      throw new Error("assistant_response_timeout");
+    }
+    throw cause;
+  } finally {
+    window.clearTimeout(timeout);
+  }
   const data = await edgeResponse.json().catch(() => null);
   if (!edgeResponse.ok) {
     const reason =

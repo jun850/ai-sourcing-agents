@@ -3430,6 +3430,49 @@ function RfqWorkspace({
       },
     ]);
   }
+  function immediateBuyerPatch(message: string): Partial<RfqFields> {
+    const patch: Partial<RfqFields> = {};
+    const quantity = message.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?)\b/i);
+    if (quantity) patch.quantity = `${quantity[1]} ${quantity[2]}`;
+    const product = message.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?)\b/i)?.[0];
+    if (product) patch.product = product;
+    const material = message.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
+    const gsm = message.match(/\b\d{2,4}\s*gsm\b/i)?.[0];
+    if (material || gsm) patch.material = [material, gsm].filter(Boolean).join(", ");
+    const color = message.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
+    if (color) patch.colors = color;
+    const sizes = message.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
+    if (sizes) patch.sizes = sizes;
+    const budget = message.match(/\b(?:usd|us\$)\s*\d[\d,.]*\b|\b\d[\d,.]*\s*usd\b/i)?.[0];
+    if (budget) patch.budget = budget;
+    return patch;
+  }
+  function applyImmediateBuyerPatch(message: string) {
+    const patch = immediateBuyerPatch(message);
+    if (Object.keys(patch).length) {
+      setFields((current) => {
+        const next = { ...current, ...patch };
+        onAgentDraftPatched(next, agentRevision);
+        return next;
+      });
+      setDraft((current) => ({ ...current, ...patch }));
+      setChangedFields(Object.keys(patch) as Array<keyof RfqFields>);
+    }
+    setAgentStatus({
+      tone: "success",
+      text: Object.keys(patch).length
+        ? "Details added to this draft."
+        : "Message received. Add any further requirements whenever you’re ready.",
+    });
+    setConversationMessages((current) => [
+      ...current,
+      {
+        id: newClientMessageId(),
+        from: "Atelix assistant",
+        text: "Got it — I’ve added the details I can confirm from your message. Keep adding requirements whenever you’re ready.",
+      },
+    ]);
+  }
   async function sendConversationMessage(message: string, optimistic = true) {
     if (agentPending) return;
     const clientMessageId = newClientMessageId();
@@ -3451,7 +3494,11 @@ function RfqWorkspace({
         expectedRevision: agentRevision,
       });
       applyAgentResponse(response);
-    } catch {
+    } catch (cause) {
+      if (cause instanceof Error && cause.message === "assistant_response_timeout") {
+        applyImmediateBuyerPatch(message);
+        return;
+      }
       const fallback =
         "That message was not delivered to your RFQ. Please send it again; your existing draft remains unchanged.";
       setAgentStatus({
