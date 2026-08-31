@@ -3982,6 +3982,10 @@ function WorkspaceRequests({
               fontSize: 13.5,
               color: "#202936",
               "&::placeholder": { color: "#9ba1aa" },
+              // The Requests filter has its own neutral focus treatment on
+              // the containing field. Avoid the global green browser ring
+              // leaking onto the text input itself.
+              "&:focus, &:focus-visible": { outline: "none", boxShadow: "none" },
             }}
           />
         </Box>
