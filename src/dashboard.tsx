@@ -3261,7 +3261,7 @@ function RfqWorkspace({
   const [conversationMessages, setConversationMessages] = useState<
     ConversationMessage[]
   >(() =>
-    initialPhase === "drafting"
+    status === "draft" && Boolean(brief.trim())
       ? [
           { id: "opening-brief", from: "You", text: brief },
           {
