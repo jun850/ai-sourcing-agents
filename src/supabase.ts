@@ -872,20 +872,21 @@ export async function getWorkspaceProduct(itemId: string) {
   return data as WorkspaceProduct | null;
 }
 export async function uploadRfqAttachment(caseId: string, file: File) {
+  const supportedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/plain", "application/json", "text/markdown"];
+  const extensionType = file.name.endsWith(".md") ? "text/markdown" : file.name.endsWith(".json") ? "application/json" : file.name.endsWith(".txt") ? "text/plain" : file.name.endsWith(".docx") ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : file.name.endsWith(".pdf") ? "application/pdf" : file.name.match(/\.jpe?g$/i) ? "image/jpeg" : file.name.endsWith(".png") ? "image/png" : file.name.endsWith(".webp") ? "image/webp" : "";
+  const inferredType = supportedTypes.includes(file.type) ? file.type : extensionType || file.type;
   if (
-    !["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
-      file.type,
-    ) ||
+    !supportedTypes.includes(inferredType) ||
     file.size > 25 * 1024 * 1024
   )
-    throw new Error("Use a JPG, PNG, WebP, or PDF up to 25 MB.");
+    throw new Error("Use an image, PDF, DOCX, TXT, JSON, or Markdown file up to 25 MB.");
   const session = await getSession();
   if (!session) throw new Error("Sign in to attach files to an RFQ.");
   const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
   const path = `${session.user.id}/${caseId}/${crypto.randomUUID()}/${safeName}`;
   const storage = client().storage.from("rfq-attachments");
   const { error: uploadError } = await storage.upload(path, file, {
-    contentType: file.type,
+    contentType: inferredType,
     upsert: false,
   });
   rpcError(uploadError);
@@ -893,7 +894,7 @@ export async function uploadRfqAttachment(caseId: string, file: File) {
     p_case_id: caseId,
     p_storage_path: path,
     p_original_name: file.name,
-    p_content_type: file.type,
+    p_content_type: inferredType,
     p_byte_size: file.size,
   });
   if (error) {

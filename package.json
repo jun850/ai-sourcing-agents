@@ -12,6 +12,7 @@
     "supabase:local:functions": "supabase functions serve --env-file supabase/functions/.env.local --no-verify-jwt",
     "lint": "tsc --noEmit",
     "qa:dashboard-prompt": "node scripts/qa-dashboard-prompt.mjs",
+    "qa:rfq-attachments": "node scripts/qa-rfq-attachments.mjs",
     "qa:workspace-scroll": "node scripts/qa-workspace-scroll.mjs",
     "qa:agent-rfq": "node scripts/qa-agent-rfq.mjs",
     "qa:rfq-ops-chat": "node scripts/qa-rfq-ops-chat.mjs",

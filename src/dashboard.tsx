@@ -152,12 +152,13 @@ type DashboardView =
   | "messages"
   | "invoices"
   | "settings";
-type UploadState = "ready" | "invalid";
+type UploadState = "previewing" | "ready" | "invalid";
 type UploadFile = {
   id: string;
   file: File;
   state: UploadState;
   message?: string;
+  previewUrl?: string;
 };
 type BriefForm = { brief: string };
 type RfqPhase =
@@ -280,9 +281,27 @@ const acceptedTypes = new Set([
   "image/png",
   "image/webp",
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "application/json",
+  "text/markdown",
 ]);
-const acceptedExtensions = /\.(jpe?g|png|webp|pdf)$/i;
+const acceptedExtensions = /\.(jpe?g|png|webp|pdf|docx|txt|json|md)$/i;
 const maxFileSize = 25 * 1024 * 1024;
+const imageExtensions = /\.(jpe?g|png|webp)$/i;
+
+function attachmentTypeLabel(file: File) {
+  if (file.type === "application/pdf" || /\.pdf$/i.test(file.name)) return "PDF";
+  if (file.type.includes("wordprocessingml") || /\.docx$/i.test(file.name)) return "DOCX";
+  if (file.type === "application/json" || /\.json$/i.test(file.name)) return "JSON";
+  if (file.type === "text/markdown" || /\.md$/i.test(file.name)) return "MD";
+  if (file.type === "text/plain" || /\.txt$/i.test(file.name)) return "TXT";
+  return "FILE";
+}
+
+function isImageUpload(file: File) {
+  return file.type.startsWith("image/") || imageExtensions.test(file.name);
+}
 const defaultRfqFields: RfqFields = {
   product: "",
   quantity: "",
@@ -970,13 +989,23 @@ function UploadTray({
       return {
         id: `${file.name}-${file.lastModified}-${uniqueId}`,
         file,
-        state: validType && validSize ? "ready" : "invalid",
+        state: validType && validSize ? "previewing" : "invalid",
         message: !validType
-          ? "Use JPG, PNG, WebP, or PDF."
+          ? "Use an image, PDF, DOCX, TXT, JSON, or Markdown file."
           : "Files must be 25 MB or smaller.",
       } satisfies UploadFile;
     });
     onFiles([...files, ...next]);
+    void Promise.all(next.map(async (item) => {
+      if (item.state !== "previewing" || !isImageUpload(item.file)) return { ...item, state: item.state === "previewing" ? "ready" as const : item.state };
+      const previewUrl = await new Promise<string | undefined>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined);
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(item.file);
+      });
+      return { ...item, state: "ready" as const, previewUrl };
+    })).then((completed) => onFiles([...files, ...completed]));
     event.target.value = "";
   }
   return (
@@ -998,7 +1027,7 @@ function UploadTray({
           id={inputId}
           type="file"
           multiple
-          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+          accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,.txt,.json,.md,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,application/json,text/markdown"
           onChange={validate}
           style={{ display: "none" }}
         />
@@ -1009,7 +1038,7 @@ function UploadTray({
         </Typography>
       </Box>
       <AnimatePresence initial={false}>
-        {files.map(({ id, file, state, message }) => (
+        {files.map(({ id, file, state, message, previewUrl }) => (
           <motion.div
             key={id}
             initial={{ opacity: 0, height: 0, y: -8 }}
@@ -1020,39 +1049,23 @@ function UploadTray({
             <Box
               sx={{
                 display: "flex",
-                alignItems: "center",
-                gap: 1,
-                px: 1.25,
-                py: 0.75,
-                borderRadius: 2,
-                backgroundColor: state === "ready" ? "#f0f2f4" : "#fff0ee",
-                color: state === "ready" ? "#46515f" : "#9a4f47",
+                alignItems: "stretch",
+                width: { xs: "100%", sm: 176 },
+                minHeight: 116,
+                overflow: "hidden",
+                borderRadius: "14px",
+                backgroundColor: state === "invalid" ? "#fff0ee" : "#f1f2f3",
+                color: state === "invalid" ? "#9a4f47" : "#46515f",
               }}
             >
-              <Image
-                sx={{
-                  display: file.type === "application/pdf" ? "none" : "block",
-                  fontSize: 18,
-                }}
-              />
-              <Description
-                sx={{
-                  display: file.type === "application/pdf" ? "block" : "none",
-                  fontSize: 18,
-                }}
-              />
-              <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography noWrap sx={{ fontSize: 12 }}>
-                  {file.name}
-                </Typography>
-                <Typography
-                  sx={{ color: "inherit", opacity: 0.68, fontSize: 10 }}
-                >
-                  {state === "ready"
-                    ? `${(file.size / 1024 / 1024).toFixed(1)} MB${file.type === "application/pdf" ? " · Tech pack" : ""}`
-                    : message}
-                </Typography>
+              <Box sx={{ display: "grid", flex: "0 0 92px", placeItems: "center", overflow: "hidden", backgroundColor: isImageUpload(file) ? "#e9ecef" : "#e5e5e5" }}>
+                {state === "previewing" ? <Skeleton animation="wave" variant="rounded" width="100%" height="100%" aria-label={`Preparing ${file.name}`} /> : isImageUpload(file) && previewUrl ? <Box component="img" src={previewUrl} alt="" sx={{ width: "100%", height: "100%", objectFit: "cover" }} /> : isImageUpload(file) ? <Image sx={{ fontSize: 28, color: "#697481" }} /> : <Box sx={{ display: "grid", gap: 0.5, p: 1.25, width: "100%" }}><Typography sx={{ fontSize: 12, fontWeight: 700, color: "#58616d" }}>{attachmentTypeLabel(file)}</Typography><Typography noWrap sx={{ fontSize: 10.5, lineHeight: 1.25, color: "#59616b" }}>{file.name}</Typography></Box>}
               </Box>
+              <Box sx={{ display: "flex", minWidth: 0, flex: 1, flexDirection: "column", justifyContent: "space-between", gap: 0.75, p: 1 }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography noWrap sx={{ fontSize: 11.5, fontWeight: 600 }}>{file.name}</Typography>
+                  <Typography sx={{ color: "inherit", opacity: 0.7, fontSize: 10 }}>{state === "previewing" ? "Preparing preview…" : state === "ready" ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : message}</Typography>
+                </Box>
               <IconButton
                 aria-label={`Remove ${file.name}`}
                 onClick={() => onRemove(id)}
@@ -1077,6 +1090,7 @@ function UploadTray({
               >
                 <CloseRounded sx={{ fontSize: 18 }} />
               </IconButton>
+              </Box>
             </Box>
           </motion.div>
         ))}
@@ -3354,6 +3368,11 @@ function RfqWorkspace({
   const [messagesLoaded, setMessagesLoaded] = useState(true);
   const [documentActionPending, setDocumentActionPending] = useState(false);
   const initialTurnStarted = useRef(false);
+  const extractionStarted = useRef(new Set<string>());
+
+  useEffect(() => {
+    setAttachments((current) => files.map((file) => ({ ...file, ...(current.find((item) => item.id === file.id) || {}) })));
+  }, [files]);
 
   useEffect(() => {
     let active = true;
@@ -3570,40 +3589,26 @@ function RfqWorkspace({
   }
   useEffect(() => {
     // A newly-created RFQ is the only state that should automatically send
-    // its opening brief. When there are reference files, give their private
-    // extraction a short head start so the first draft can include plainly
-    // visible labels and BOM text. A reference failure never blocks the RFQ.
+    // its opening brief. Attachment extraction runs separately below so a
+    // slow upload never delays the buyer's first draft.
     if (phase !== "drafting" || initialTurnStarted.current) return;
     initialTurnStarted.current = true;
-    const unreadReferences = attachments.filter(
-      (attachment) =>
-        attachment.extraction_status !== "ready" &&
-        attachment.extraction_status !== "failed",
-    );
-    const extraction = Promise.allSettled(
-      unreadReferences.map((attachment) =>
-        extractRfqAttachment(caseId, attachment.id),
-      ),
-    );
     void (async () => {
-      const firstResponse = await sendConversationMessage(brief, false);
+      await sendConversationMessage(brief, false);
       setPhase("review");
-      const results = await extraction;
-        const updates = results
-          .filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled")
-          .map((result) => result.value);
-        if (updates.length) {
-          setAttachments((current) =>
-            current.map((attachment) =>
-              updates.find((update) => update.id === attachment.id) ?? attachment,
-            ),
-          );
-          // Reference OCR runs independently from the buyer's first response;
-          // once it is ready, reconcile it without adding synthetic buyer text.
-          await sendConversationMessage("", false, "reconcile_references", firstResponse?.revision);
-        }
     })();
-  }, [attachments, brief, caseId, phase]);
+  }, [brief, caseId, phase]);
+  useEffect(() => {
+    const pending = attachments.filter((attachment) => attachment.extraction_status !== "ready" && attachment.extraction_status !== "failed" && !extractionStarted.current.has(attachment.id));
+    if (!pending.length) return;
+    pending.forEach((attachment) => extractionStarted.current.add(attachment.id));
+    void Promise.allSettled(pending.map((attachment) => extractRfqAttachment(caseId, attachment.id))).then(async (results) => {
+      const updates = results.filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled").map((result) => result.value);
+      if (!updates.length) return;
+      setAttachments((current) => current.map((attachment) => updates.find((update) => update.id === attachment.id) ?? attachment));
+      await sendConversationMessage("", false, "reconcile_references");
+    });
+  }, [attachments, caseId]);
   function saveEdit() {
     if (documentActionPending) return;
     setDocumentActionPending(true);
@@ -5421,16 +5426,18 @@ export function Dashboard({ path }: { path: string }) {
       // A later workspace reload still reads the persisted server record.
       const record: WorkspaceRfq = { ...createdRecord, brief: initialBrief };
       const validFiles = files.filter((file) => file.state === "ready");
-      const attachments: RfqAttachment[] = [];
-      for (const item of validFiles)
-        attachments.push(await uploadRfqAttachment(record.id, item.file));
       setHistoryItems((current) => [
         record,
         ...current.filter((entry) => entry.id !== record.id),
       ]);
-      setRfq({ record, attachments, initialPhase: "drafting" });
+      setRfq({ record, attachments: [], initialPhase: "drafting" });
       setMessage("");
       navigateToDraft(`/dashboard/requests/${encodeURIComponent(record.id)}`);
+      void Promise.allSettled(validFiles.map((item) => uploadRfqAttachment(record.id, item.file))).then((results) => {
+        const uploaded = results.filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled").map((result) => result.value);
+        if (uploaded.length) setRfq((current) => current?.record.id === record.id ? { ...current, attachments: [...current.attachments, ...uploaded] } : current);
+        if (results.some((result) => result.status === "rejected")) setMessage("One or more attachments could not be uploaded. Your RFQ draft is still available.");
+      });
       return true;
     } catch (cause) {
       setMessage(
