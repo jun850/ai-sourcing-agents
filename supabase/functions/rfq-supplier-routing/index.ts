@@ -21,6 +21,27 @@ const ROUTING_ENGINE_VERSION = 1;
 const ENSURE_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const MAX_RETURNED = 12;
 
+function defaultApiKey(variable: "SUPABASE_SECRET_KEYS" | "SUPABASE_PUBLISHABLE_KEYS", legacyVariable: string) {
+  try {
+    const keys = JSON.parse(Deno.env.get(variable) || "{}");
+    if (typeof keys?.default === "string" && keys.default) return keys.default;
+  } catch {
+    // Older local stacks expose only the legacy variables below.
+  }
+  return Deno.env.get(legacyVariable) || null;
+}
+
+// Hosted Supabase validates the legacy service_role JWT before this handler.
+// This preserves scheduled calls while the admin client uses the current secret key.
+function isVerifiedLegacyServiceRole(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1] || ""));
+    return payload?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -411,8 +432,8 @@ Deno.serve(async (request) => {
 
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const url = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const serviceKey = defaultApiKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
+  const anonKey = defaultApiKey("SUPABASE_PUBLISHABLE_KEYS", "SUPABASE_ANON_KEY");
   if (!token || !url || !serviceKey || !anonKey) return json({ ok: false, reason: "unauthorized" }, 401);
 
   let body: { rfqCaseId?: unknown; mode?: unknown; limit?: unknown };
@@ -425,7 +446,7 @@ Deno.serve(async (request) => {
 
   // Scheduler path: drain the RFQ-submission pre-warm queue (service role only).
   if (mode === "drain_jobs") {
-    if (token !== serviceKey) return json({ ok: false, reason: "unauthorized" }, 401);
+    if (token !== serviceKey && !isVerifiedLegacyServiceRole(token)) return json({ ok: false, reason: "unauthorized" }, 401);
     const svc = createClient(url, serviceKey);
     const limit = clampNum(body.limit, 1, 100, 20);
     const { data: jobs, error } = await svc.rpc("intools_claim_rfq_routing_jobs", { p_limit: limit });

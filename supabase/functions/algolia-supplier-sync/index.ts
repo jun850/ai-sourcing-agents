@@ -34,6 +34,27 @@ const INDEX_SETTINGS = {
   customRanking: ["desc(rating)"],
 };
 
+function defaultApiKey(variable: "SUPABASE_SECRET_KEYS" | "SUPABASE_PUBLISHABLE_KEYS", legacyVariable: string) {
+  try {
+    const keys = JSON.parse(Deno.env.get(variable) || "{}");
+    if (typeof keys?.default === "string" && keys.default) return keys.default;
+  } catch {
+    // Older local stacks expose only the legacy variables below.
+  }
+  return Deno.env.get(legacyVariable) || null;
+}
+
+// Hosted Supabase validates the legacy service_role JWT before this handler.
+// This preserves scheduled calls while the admin client uses the current secret key.
+function isVerifiedLegacyServiceRole(token: string) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1] || ""));
+    return payload?.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -68,7 +89,7 @@ Deno.serve(async (request) => {
 
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const url = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const serviceKey = defaultApiKey("SUPABASE_SECRET_KEYS", "SUPABASE_SERVICE_ROLE_KEY");
   if (!token || !url || !serviceKey) return json({ ok: false, reason: "unauthorized" }, 401);
   if (!APP_ID || !API_KEY) return json({ ok: false, reason: "algolia_not_configured" }, 503);
 
@@ -81,7 +102,7 @@ Deno.serve(async (request) => {
   const mode = body.mode === "full" ? "full" : "drain";
 
   const admin = createClient(url, serviceKey);
-  if (token !== serviceKey) {
+  if (token !== serviceKey && !isVerifiedLegacyServiceRole(token)) {
     const { data: { user } } = await admin.auth.getUser(token);
     if (!user) return json({ ok: false, reason: "unauthorized" }, 401);
   }
