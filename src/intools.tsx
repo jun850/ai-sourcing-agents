@@ -2054,12 +2054,13 @@ function RequestDrawerBody({
       ]);
       setCaseRecord(cases.find((entry) => entry.id === rfq.id) || null);
       const supplierById = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+      const matchPriority: Record<string, number> = { selected: 0, approved: 1, suggested: 2, rejected: 3 };
       setMatches(
         generated.map((match) => ({
           match,
           supplier: supplierById.get(match.factory_id),
           quote: quotes.find((quote) => quote.factory_id === match.factory_id),
-        })),
+        })).sort((a, b) => (matchPriority[a.match.status] ?? 9) - (matchPriority[b.match.status] ?? 9)),
       );
     } catch (cause) {
       setError(errorMessage(cause, "Could not load supplier matches for this request."));
