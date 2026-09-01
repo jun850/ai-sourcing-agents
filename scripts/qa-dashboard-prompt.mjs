@@ -50,7 +50,7 @@ for (const [label, expected] of [
   ["conversation panel remains viewport-bounded on desktop", 'md: "min(720px, calc(100dvh - 220px))"'],
   ["conversation panel remains visible beside a long RFQ", 'position: { md: "sticky" }'],
   ["conversation history announces new messages", 'aria-relevant="additions text"'],
-  ["informational agent status stays out of the composer area", 'status && status.tone !== "info"'],
+  ["conversation has no transient status strip", 'className="conversation-composer"'],
   ["first dashboard prompt is hydrated before route change", "const record: WorkspaceRfq = { ...createdRecord, brief: initialBrief };"],
   ["initial extraction retains ounce-based textile weights", "oz|ounces"],
   ["initial extraction normalizes common buyer shorthand", "normaliseBuyerPrompt"],
@@ -60,6 +60,11 @@ for (const [label, expected] of [
     console.error(`fail - missing ${label}`);
     process.exit(1);
   }
+}
+
+if (conversationPanel.includes('status && status.tone') || conversationPanel.includes('>Undo<')) {
+  console.error("fail - transient RFQ status or undo copy remains near the conversation composer");
+  process.exit(1);
 }
 
 console.log("ok - dashboard prompt, conversation visibility, and authenticated composer remain hardened");

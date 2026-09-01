@@ -1303,17 +1303,11 @@ function ConversationChatPanel({
   onSend,
   busy,
   loading,
-  status,
-  onUndo,
-  canUndo,
 }: {
   messages: ConversationMessage[];
   onSend: (message: string) => Promise<void>;
   busy: boolean;
   loading: boolean;
-  status: AgentStatus | null;
-  onUndo: () => Promise<void>;
-  canUndo: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -1574,46 +1568,6 @@ function ConversationChatPanel({
           </Box>
         )}
       </Box>
-      {status && status.tone !== "info" && (
-        <Box
-          aria-live="polite"
-          role="status"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 1.25,
-            mt: 0.75,
-            px: 0.5,
-            color:
-              status.tone === "error"
-                ? "#a4413e"
-                : status.tone === "warning"
-                  ? "#81622c"
-                  : status.tone === "success"
-                    ? "#426c4e"
-                    : "#566476",
-            fontSize: 12.5,
-            lineHeight: 1.45,
-          }}
-        >
-          <Box sx={{ minWidth: 0 }}>
-            <Typography component="span" sx={{ color: "inherit", fontSize: "inherit" }}>
-              {status.text}
-            </Typography>
-          </Box>
-          {canUndo && (
-            <MuiButton
-              size="small"
-              onClick={() => void onUndo()}
-              disabled={busy}
-              sx={{ flex: "0 0 auto", minHeight: 32, px: 1.25, color: "inherit" }}
-            >
-              Undo
-            </MuiButton>
-          )}
-        </Box>
-      )}
       <Box
         component="form"
         className="conversation-composer"
@@ -3840,9 +3794,6 @@ function RfqWorkspace({
                 onSend={async (message) => { await sendConversationMessage(message); }}
                 busy={agentPending}
                 loading={!messagesLoaded}
-                status={agentStatus}
-                canUndo={Boolean(undoToken)}
-                onUndo={undoAgentChange}
               />
               <Box
                 sx={{
