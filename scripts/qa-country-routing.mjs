@@ -16,9 +16,9 @@ const [
   serverSeam,
 ] = await Promise.all([
   read("../supabase/migrations/20260901130000_country_routing_recommendations.sql"),
-  read("../supabase/migrations/20260902090000_supplier_routing_country_profiles.sql"),
-  read("../supabase/migrations/20260902093000_rfq_supplier_routing_engine.sql"),
-  read("../supabase/migrations/20260902094000_rfq_routing_rpcs.sql"),
+  read("../supabase/migrations/20260901151939_supplier_routing_country_profiles.sql"),
+  read("../supabase/migrations/20260901152630_rfq_supplier_routing_engine.sql"),
+  read("../supabase/migrations/20260901152804_rfq_routing_rpcs.sql"),
   read("../src/supabase.ts"),
   read("../src/intools.tsx"),
   read("../supabase/functions/_shared/supplier-routing.ts"),
