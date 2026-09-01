@@ -35,15 +35,25 @@ body { overflow-x: clip; }
 .route-skeleton-rows { display: grid; gap: 12px; margin-top: 24px; }
 .route-skeleton-rows i { width: 100%; height: 88px; border-radius: 12px; }
 
-.route-skeleton--intools { max-width: 1240px; }
-.route-skeleton--intools .route-skeleton-bar { height: 68px; }
+/* Redesigned Intools shell: dark collapsible sidebar + single operational list. */
+.route-skeleton--intools { max-width: 100%; }
+.route-skeleton-intools { display: flex; gap: 0; min-height: calc(100vh - 72px); }
+.route-skeleton-intools-sidebar { display: grid; align-content: start; gap: 6px; width: 248px; flex-shrink: 0; padding: 18px 12px; border-radius: 14px; background: #1c2430; }
+.route-skeleton-intools-sidebar i { width: 100%; height: 38px; border-radius: 8px; background: rgba(255,255,255,.08); }
+.route-skeleton-intools-main { flex: 1; min-width: 0; padding: 0 20px; }
 .route-skeleton-intools-panel { margin-top: 20px; padding: 8px; }
-.route-skeleton-intools-panel .route-skeleton-title { width: min(220px, 45%); height: 34px; border-radius: 8px; }
+.route-skeleton-intools-panel .route-skeleton-title { width: min(220px, 45%); height: 30px; border-radius: 8px; }
 .route-skeleton-intools-panel .route-skeleton-copy { width: min(480px, 75%); height: 14px; border-radius: 6px; margin-top: 10px; }
-.route-skeleton-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 22px; }
-.route-skeleton-tabs i { width: 96px; height: 34px; border-radius: 999px; }
 .route-skeleton-intools-panel .route-skeleton-rows { margin-top: 22px; }
 .route-skeleton-intools-panel .route-skeleton-rows i { height: 56px; border-radius: 10px; }
+@media (max-width: 720px) { .route-skeleton-intools-sidebar { width: 72px; } .route-skeleton-intools-sidebar i { height: 42px; } }
+
+/* The redesigned Intools workspace owns its full-height flex layout inline; keep
+   a hard floor here so a slow first paint never collapses the shell. */
+.intools-root { min-height: 100dvh; }
+/* On narrow screens the operational list keeps title + status; the middle text
+   columns fold away rather than forcing horizontal task scrolling. */
+@media (max-width: 640px) { .intools-root .intools-list-col { display: none; } }
 
 .route-loading:has(.route-skeleton--auth) { display: grid; place-items: center; background: linear-gradient(130deg, #f7faf5, #e9f2e8); }
 .route-skeleton--auth { width: min(520px, 100%); }

@@ -1,90 +1,58 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import {
-  Alert,
-  Avatar,
-  Box,
-  Button,
-  Checkbox,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  FormControlLabel,
-  IconButton,
-  MenuItem,
-  Paper,
-  Select,
-  Skeleton,
-  Stack,
-  TextField,
-  ThemeProvider,
-  Tooltip,
-  Typography,
-  createTheme,
-} from "@mui/material";
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import { ThemeProvider, createTheme } from "@mui/material";
 import {
-  Add,
-  ArrowBack,
-  ArrowForward,
-  Close,
-  Description,
-  ErrorOutlined,
-  LockOutlined,
-  MoreHoriz,
-  Refresh,
-  Send,
-} from "@mui/icons-material";
-import {
-  cancelIntoolsInvoice,
+  approveRegistrationRequest,
+  archiveIntoolsAgentKnowledge,
+  archiveIntoolsSupplier,
   assertIntoolsAdmin,
-  confirmIntoolsRfqOrder,
+  cancelIntoolsInvoice,
   createIntoolsInvoice,
-  declineIntoolsRfqQuote,
+  declineRegistrationRequest,
   generateIntoolsRfqSupplierMatches,
-  getIntoolsInvoiceDetail,
   getIntoolsBuyerUnreadCount,
+  getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
-  getIntoolsRfqOrder,
+  getIntoolsSupplierDetail,
   getLocalIntoolsSession,
   getSession,
   getUserDisplayName,
-  loginLocalIntools,
-  listIntoolsAudit,
   listIntoolsAgentKnowledge,
+  listIntoolsAudit,
   listIntoolsInvoices,
-  listIntoolsRfqs,
-  getIntoolsRfqDetail,
-  saveIntoolsRfqQuote,
-  updateIntoolsRfqStatus,
-  listIntoolsRegistrationRequests,
   listIntoolsOrders,
+  listIntoolsRegistrationRequests,
   listIntoolsRfqCases,
   listIntoolsRfqQuotes,
   listIntoolsSuppliers,
-  uploadIntoolsAgentKnowledge,
+  loginLocalIntools,
+  promoteIntoolsSupplierImportRows,
   publishIntoolsAgentKnowledge,
-  archiveIntoolsAgentKnowledge,
-  ingestIntoolsAgentKnowledge,
   publishIntoolsRfqQuote,
   recordIntoolsManualPayment,
+  runIntoolsSupplierImportDryRun,
+  saveIntoolsSupplier,
   sendIntoolsInvoice,
-  setIntoolsRfqSupplierMatchStatus,
   setIntoolsRfqQuoteTotal,
-  updateIntoolsOrderStatus,
+  setIntoolsRfqSupplierMatchStatus,
+  setIntoolsSupplierBrokerStatus,
+  setIntoolsSupplierBrokerStatusBulk,
   updateIntoolsInvoice,
-  updateIntoolsOrderProductionStage,
+  updateIntoolsOrderStatus,
+  updateIntoolsRfqStatus,
+  uploadIntoolsAgentKnowledge,
   upsertIntoolsRfqQuote,
-  type IntoolsCreateInvoicePayload,
+  type IntoolsAgentKnowledgeDocument,
   type IntoolsInvoice,
-  type IntoolsInvoiceAudit,
   type IntoolsInvoiceDetail,
-  type IntoolsRfq,
-  type IntoolsRfqDetail,
-  type LegacyIntoolsRfqQuotePayload,
-  type IntoolsManualPaymentPayload,
   type IntoolsOrder,
   type IntoolsOrderDetail,
   type IntoolsRegistrationRequest,
@@ -92,273 +60,2940 @@ import {
   type IntoolsRfqQuote,
   type IntoolsRfqSupplierMatch,
   type IntoolsSupplier,
-  type IntoolsAgentKnowledgeDocument,
-  approveRegistrationRequest,
+  type IntoolsSupplierDetail,
+  type IntoolsSupplierImportRow,
+  type IntoolsSupplierPayload,
 } from "./supabase";
-import { IntoolsSuppliers } from "./intools-suppliers";
-import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { NotificationBell } from "./notification-bell";
+import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
 import { IntoolsAnalytics } from "./intools-analytics";
 
+/* ------------------------------------------------------------------ tokens */
+
 const intoolsTheme = createTheme({
-  typography: {
-    fontFamily: "'DM Sans', Arial, sans-serif",
-    h1: { fontWeight: 500, letterSpacing: "-.04em" },
-    h2: { fontWeight: 600, letterSpacing: "-.03em" },
-    button: { fontWeight: 700, textTransform: "none" },
-  },
+  typography: { fontFamily: "'DM Sans', Arial, sans-serif" },
   palette: {
     background: { default: "#f4f6f9", paper: "#fff" },
     text: { primary: "#202936", secondary: "#758091" },
-    primary: { main: "#45556b", dark: "#334256", contrastText: "#fff" },
-    success: { main: "#28704b" },
-    warning: { main: "#9a6a14" },
-    error: { main: "#a33b36" },
-  },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiButton: {
-      defaultProps: { disableElevation: true },
-      styleOverrides: {
-        root: { borderRadius: 10, minHeight: 42, paddingInline: 16 },
-      },
-    },
-    MuiTextField: { defaultProps: { size: "small" } },
-    MuiPaper: { styleOverrides: { root: { backgroundImage: "none" } } },
-    MuiDialog: {
-      styleOverrides: { paper: { borderRadius: 14, maxWidth: 560 } },
-    },
-    MuiChip: { styleOverrides: { root: { borderRadius: 6 } } },
+    primary: { main: "#28704b" },
   },
 });
 
-type Tab =
-  | "analytics"
-  | "invoices"
-  | "rfq"
-  | "rfqs"
-  | "orders"
-  | "audit"
-  | "registrations"
-  | "knowledge"
-  | "messages"
-  | "suppliers";
-type ActionDialog = "cancel" | "payment" | null;
-type DraftLine = {
-  description: string;
-  quantity: string;
-  unitAmount: string;
-  taxAmount: string;
+const C = {
+  page: "#f4f6f9",
+  surface: "#fff",
+  border: "#dfe4eb",
+  line: "#edf0f3",
+  text: "#202936",
+  dim: "#758091",
+  faint: "#9aa4b2",
+  head: "#526176",
+  moss: "#28704b",
+  mossSoft: "#6fae86",
+  ink: "#334256",
+  sidebar: "#1c2430",
+  danger: "#a33b36",
 };
 
-function initials(name: string) {
+const TONES: Record<string, { bg: string; color: string }> = {
+  success: { bg: "#e3f1e8", color: "#1f6b43" },
+  warning: { bg: "#fbeed2", color: "#8a5a10" },
+  danger: { bg: "#fbe6e4", color: "#a33b36" },
+  info: { bg: "#e2edf5", color: "#2c5f7a" },
+  neutral: { bg: "#eef1f4", color: "#55606e" },
+  primary: { bg: "#e7f0ea", color: "#28704b" },
+};
+
+const STATUS_TONE: Record<string, keyof typeof TONES> = {
+  draft: "neutral",
+  sent: "info",
+  paid: "success",
+  overdue: "warning",
+  cancelled: "neutral",
+  awaiting_payment: "warning",
+  payment_declared: "info",
+  payment_verified: "primary",
+  fulfilling: "info",
+  completed: "success",
+  disputed: "danger",
+  refunded: "neutral",
+  buyer_review: "info",
+  awaiting_supplier: "warning",
+  needs_research: "neutral",
+  quote_selected: "success",
+  supplier_replied: "info",
+  in_production: "info",
+  closed: "neutral",
+  reviewed: "primary",
+  archived: "neutral",
+  pending_review: "warning",
+  approved: "success",
+  declined: "danger",
+  invited: "info",
+  verified: "success",
+  pending: "warning",
+  unverified: "neutral",
+  review: "warning",
+  rejected: "danger",
+  published: "success",
+  ready: "info",
+  processing: "warning",
+  failed: "danger",
+  uploaded: "neutral",
+  suggested: "neutral",
+  selected: "primary",
+};
+
+const SECTION_ACCENT: Record<string, string> = {
+  invoices: "#3d6b96",
+  orders: "#2f8a86",
+  requests: "#3f7d52",
+  registrations: "#a3771c",
+  suppliers: "#2f7d5c",
+  knowledge: "#6a5a96",
+  audit: "#6b7482",
+  messages: "#45556b",
+};
+
+/* ------------------------------------------------------------------ helpers */
+
+function label(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function initialsOf(name: string) {
   return (
     name
       .split(/\s+/)
       .filter(Boolean)
       .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
+      .map((w) => w[0]?.toUpperCase())
       .join("") || "A"
   );
 }
-type InvoiceFormState = {
-  buyerProfileId: string;
-  rfqCaseId: string;
-  orderId: string;
-  dueDate: string;
-  notes: string;
-  line: DraftLine;
-};
-const emptyForm: InvoiceFormState = {
-  buyerProfileId: "",
-  rfqCaseId: "",
-  orderId: "",
-  dueDate: "",
-  notes: "",
-  line: { description: "", quantity: "1", unitAmount: "", taxAmount: "0" },
-};
-function invoiceDraftFromSearch(search: string): Partial<InvoiceFormState> {
-  const params = new URLSearchParams(search);
-  const unitAmount = params.get("unitAmount");
-  const description = params.get("description");
-  return {
-    rfqCaseId: params.get("rfqCaseId") || "",
-    buyerProfileId: params.get("buyerProfileId") || "",
-    orderId: params.get("orderId") || "",
-    ...((unitAmount || description) && {
-      line: {
-        description: description || "",
-        quantity: "1",
-        unitAmount: unitAmount || "",
-        taxAmount: "0",
-      },
-    }),
-  };
+function usd(cents: number | null | undefined) {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+    (Number(cents) || 0) / 100,
+  );
 }
-
-function money(cents: number | null | undefined) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format((Number(cents) || 0) / 100);
+function usdFromNumber(value: number | null | undefined) {
+  return usd(Math.round((Number(value) || 0) * 100));
 }
 function shortDate(value: string | null | undefined) {
   if (!value) return "—";
   const parsed = new Date(value);
   return Number.isNaN(parsed.valueOf())
-    ? value
-    : parsed.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
+    ? String(value)
+    : parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+function relativeTime(value: string | null | undefined) {
+  if (!value) return "—";
+  const then = new Date(value).getTime();
+  if (Number.isNaN(then)) return "—";
+  const diff = Date.now() - then;
+  if (diff < 60_000) return "just now";
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return shortDate(value);
+}
+function formatBytes(value: number | null | undefined) {
+  const bytes = Number(value) || 0;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
+}
+function errorMessage(cause: unknown, fallback: string) {
+  return cause instanceof Error && cause.message ? cause.message : fallback;
 }
 function navigate(path: string) {
   history.replaceState({}, "", path);
   dispatchEvent(new PopStateEvent("popstate"));
 }
 
-type IntoolsRoute = {
-  tab: Tab;
-  rfqId: string | null;
-  requestId: string | null;
-  invoiceId: string | null;
-  creatingInvoice: boolean;
-  supplierId: string | null;
-};
+function btnStyle(
+  tone: "primary" | "success" | "danger" | "neutral",
+  size: "sm" | "md" = "md",
+): CSSProperties {
+  const height = size === "sm" ? 32 : 36;
+  const base: CSSProperties = {
+    height,
+    padding: "0 13px",
+    borderRadius: 8,
+    fontSize: 12.5,
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  };
+  if (tone === "danger")
+    return { ...base, border: `1px solid ${C.danger}`, background: "#fff", color: C.danger };
+  if (tone === "success" || tone === "primary")
+    return { ...base, border: `1px solid ${C.moss}`, background: C.moss, color: "#fff" };
+  return { ...base, border: `1px solid ${C.border}`, background: "#fff", color: "#45556b" };
+}
 
-function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
-  const messages = /^\/intools\/messages(?:\/([^/]+))?$/.exec(pathname);
-  if (messages)
-    return { tab: "messages", rfqId: null, requestId: messages[1] ? decodeURIComponent(messages[1]) : null, invoiceId: null, creatingInvoice: false, supplierId: null };
-  const supplier = /^\/intools\/suppliers(?:\/([^/]+))?$/.exec(pathname);
-  if (supplier)
-    return {
-      tab: "suppliers",
-      rfqId: null,
-      requestId: null,
-      invoiceId: null,
-      creatingInvoice: false,
-      supplierId: supplier[1] ? decodeURIComponent(supplier[1]) : null,
-    };
-  const rfq = /^\/intools\/rfq(?:\/([^/]+))?$/.exec(pathname);
-  if (rfq)
-    return {
-      tab: "rfq",
-      rfqId: rfq[1] ? decodeURIComponent(rfq[1]) : null,
-      requestId: null,
-      invoiceId: null,
-      creatingInvoice: false,
-      supplierId: null,
-    };
-  const invoice = /^\/intools\/invoices(?:\/([^/]+))?$/.exec(pathname);
-  if (invoice) {
-    const id = invoice[1] ? decodeURIComponent(invoice[1]) : null;
-    return {
-      tab: "invoices",
-      rfqId: null,
-      requestId: null,
-      invoiceId: id === "new" ? null : id,
-      creatingInvoice: id === "new",
-      supplierId: null,
-    };
-  }
-  const requests = /^\/intools\/requests(?:\/([^/]+))?$/.exec(pathname);
-  if (requests)
-    return {
-      tab: "rfqs",
-      rfqId: null,
-      requestId: requests[1] ? decodeURIComponent(requests[1]) : null,
-      invoiceId: null,
-      creatingInvoice: false,
-      supplierId: null,
-    };
-  const tab = pathname.match(/^\/intools\/(analytics|orders|audit|registrations|knowledge)$/)?.[1] as
-    | Exclude<Tab, "invoices" | "rfq" | "rfqs" | "suppliers">
-    | undefined;
+function statusPill(status: string): CSSProperties {
+  const tone = TONES[STATUS_TONE[status] || "neutral"];
   return {
-    tab: tab || "analytics",
-    rfqId: null,
-    requestId: null,
-    invoiceId: null,
-    creatingInvoice: false,
-    supplierId: null,
+    display: "inline-block",
+    fontSize: 11,
+    fontWeight: 800,
+    padding: "3px 9px",
+    borderRadius: 999,
+    background: tone.bg,
+    color: tone.color,
+    whiteSpace: "nowrap",
   };
 }
 
-function intoolsTabPath(tab: Tab) {
-  if (tab === "analytics") return "/intools/analytics";
-  if (tab === "invoices") return "/intools/invoices";
-  if (tab === "rfqs") return "/intools/requests";
-  return `/intools/${tab}`;
-}
-function displayStatus(status: string) {
-  return status
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+function downloadCsv(filename: string, rows: string[][]) {
+  const escape = (cell: string) => `"${String(cell ?? "").replace(/"/g, '""')}"`;
+  const body = rows.map((row) => row.map(escape).join(",")).join("\r\n");
+  const blob = new Blob([body], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function StatusChip({ status }: { status: string }) {
-  const color =
-    status === "paid"
-      ? "success"
-      : status === "overdue"
-        ? "warning"
-        : status === "cancelled"
-          ? "default"
-          : status === "sent"
-            ? "info"
-            : "default";
+/* ------------------------------------------------------------------ model */
+
+type Section =
+  | "analytics"
+  | "invoices"
+  | "orders"
+  | "requests"
+  | "registrations"
+  | "suppliers"
+  | "knowledge"
+  | "messages"
+  | "audit";
+
+type GenericSection = Exclude<Section, "analytics" | "messages">;
+
+const NAV_ORDER: Section[] = [
+  "analytics",
+  "invoices",
+  "orders",
+  "requests",
+  "registrations",
+  "suppliers",
+  "knowledge",
+  "messages",
+  "audit",
+];
+
+type BulkAction = {
+  key: string;
+  label: string;
+  status: string;
+  tone: "primary" | "success" | "danger" | "neutral";
+  confirm?: boolean;
+  archives?: boolean;
+};
+
+type SectionMeta = {
+  label: string;
+  description: string;
+  searchPlaceholder: string;
+  emptyText: string;
+  selectable: boolean;
+  columnLabels: string[];
+  filters: string[];
+  primaryActions: { key: string; label: string }[];
+  bulkActions: BulkAction[];
+  uploadAccept?: string;
+  uploadAcceptAttr?: string;
+};
+
+const SECTIONS: Record<GenericSection, SectionMeta> = {
+  invoices: {
+    label: "Invoices",
+    description:
+      "Draft, send, and track commercial invoices. Totals and settlement are server-authoritative.",
+    searchPlaceholder: "Search invoices",
+    emptyText: "Create a draft invoice when a commercial handoff is ready.",
+    selectable: true,
+    columnLabels: ["Case", "Total", "Due"],
+    filters: ["all", "draft", "sent", "paid", "overdue", "cancelled"],
+    primaryActions: [{ key: "new", label: "New invoice" }],
+    bulkActions: [
+      { key: "send", label: "Send selected", status: "sent", tone: "primary" },
+      { key: "markPaid", label: "Mark paid", status: "paid", tone: "success" },
+      { key: "cancel", label: "Cancel selected", status: "cancelled", tone: "danger", confirm: true },
+    ],
+  },
+  orders: {
+    label: "Orders",
+    description:
+      "Immutable order items and fulfillment status. Payment settlement is never changed here.",
+    searchPlaceholder: "Search orders",
+    emptyText: "Orders appear once an invoice is paid.",
+    selectable: true,
+    columnLabels: ["Items", "Total", "Placed"],
+    filters: [
+      "all",
+      "awaiting_payment",
+      "payment_declared",
+      "payment_verified",
+      "fulfilling",
+      "completed",
+      "cancelled",
+    ],
+    primaryActions: [{ key: "export", label: "Export CSV" }],
+    bulkActions: [
+      { key: "fulfilling", label: "Mark fulfilling", status: "fulfilling", tone: "primary" },
+      { key: "completed", label: "Mark completed", status: "completed", tone: "success" },
+      { key: "cancel", label: "Cancel selected", status: "cancelled", tone: "danger", confirm: true },
+    ],
+  },
+  requests: {
+    label: "Requests / RFQ queue",
+    description: "Human review of sourcing cases before supplier outreach or matching.",
+    searchPlaceholder: "Search requests",
+    emptyText: "New RFQ cases will appear here for review.",
+    selectable: true,
+    columnLabels: ["Buyer", "Updated"],
+    filters: [
+      "all",
+      "needs_research",
+      "awaiting_supplier",
+      "supplier_replied",
+      "buyer_review",
+      "quote_selected",
+      "in_production",
+      "reviewed",
+    ],
+    primaryActions: [],
+    bulkActions: [
+      { key: "review", label: "Mark reviewed", status: "reviewed", tone: "primary" },
+      { key: "archive", label: "Archive selected", status: "archived", tone: "neutral", confirm: true, archives: true },
+    ],
+  },
+  registrations: {
+    label: "Sign-up requests",
+    description: "Manual approval gate for new accounts. Nothing here is visible to non-admins.",
+    searchPlaceholder: "Search sign-up requests",
+    emptyText: "Access requests will appear here for review.",
+    selectable: true,
+    columnLabels: ["Company", "Sourcing", "Requested"],
+    filters: ["all", "pending_review", "approved", "invited", "declined"],
+    primaryActions: [],
+    bulkActions: [
+      { key: "approve", label: "Approve selected", status: "approved", tone: "success" },
+      { key: "decline", label: "Decline selected", status: "declined", tone: "danger", confirm: true },
+    ],
+  },
+  suppliers: {
+    label: "Suppliers",
+    description: "Private reviewed supplier records. Nothing here is exposed publicly.",
+    searchPlaceholder: "Search suppliers",
+    emptyText: "Reviewed supplier records will appear here.",
+    selectable: true,
+    columnLabels: ["Region", "Type", "Products"],
+    filters: ["all", "approved", "review", "rejected", "archived"],
+    primaryActions: [
+      { key: "new", label: "New supplier" },
+      { key: "upload", label: "Bulk upload" },
+    ],
+    bulkActions: [
+      { key: "approve", label: "Approve selected", status: "approved", tone: "success" },
+      { key: "reject", label: "Reject selected", status: "rejected", tone: "danger" },
+      { key: "archive", label: "Archive selected", status: "archived", tone: "neutral", confirm: true, archives: true },
+    ],
+    uploadAccept: "CSV or JSON · up to 50 rows",
+    uploadAcceptAttr: ".csv,.json",
+  },
+  knowledge: {
+    label: "Knowledge documents",
+    description: "Approved context for the agent. Files stay private until published.",
+    searchPlaceholder: "Search knowledge documents",
+    emptyText: "Upload an approved context file to begin processing.",
+    selectable: true,
+    columnLabels: ["Domain", "Visibility", "Size"],
+    filters: ["all", "uploaded", "processing", "ready", "published", "failed", "archived"],
+    primaryActions: [{ key: "upload", label: "Upload documents" }],
+    bulkActions: [
+      { key: "publish", label: "Publish selected", status: "published", tone: "success" },
+      { key: "archive", label: "Archive selected", status: "archived", tone: "neutral", confirm: true, archives: true },
+    ],
+    uploadAccept: "TXT, MD, CSV, PDF, DOC, DOCX, XLS or XLSX · max 25 MB each",
+    uploadAcceptAttr: ".txt,.md,.csv,.pdf,.doc,.docx,.xls,.xlsx",
+  },
+  audit: {
+    label: "Audit history",
+    description: "Every consequential change, attributable and read-only.",
+    searchPlaceholder: "Search audit history",
+    emptyText: "Actions taken across Intools will appear here.",
+    selectable: false,
+    columnLabels: ["Summary", "When"],
+    filters: ["all"],
+    primaryActions: [{ key: "export", label: "Export CSV" }],
+    bulkActions: [],
+  },
+};
+
+const SECTION_LABEL: Record<Section, string> = {
+  analytics: "Analytics",
+  invoices: "Invoices",
+  orders: "Orders",
+  requests: "Requests",
+  registrations: "Sign-up requests",
+  suppliers: "Suppliers",
+  knowledge: "Knowledge",
+  messages: "Messages",
+  audit: "Audit history",
+};
+
+type Row = {
+  id: string;
+  title: string;
+  subtitle: string;
+  status: string | null;
+  cols: string[];
+  archived?: boolean;
+};
+
+/* ------------------------------------------------------------------ data adapters */
+
+async function loadRows(section: GenericSection): Promise<Row[]> {
+  if (section === "invoices") {
+    const data = await listIntoolsInvoices(null);
+    return data.map((invoice: IntoolsInvoice) => ({
+      id: invoice.id,
+      title: invoice.invoice_no,
+      subtitle: invoice.buyer_name || invoice.buyer_email || "Buyer not named",
+      status: invoice.effective_status || invoice.status,
+      cols: [
+        invoice.rfq_case_no || invoice.order_no || "No linked case",
+        usd(invoice.total_cents),
+        shortDate(invoice.due_date),
+      ],
+    }));
+  }
+  if (section === "orders") {
+    const data = await listIntoolsOrders();
+    return data.map((order: IntoolsOrder) => ({
+      id: order.order_no,
+      title: order.order_no,
+      subtitle: order.buyer_name || order.buyer_email || "Buyer not named",
+      status: order.status,
+      cols: [
+        `${order.item_count} item${order.item_count === 1 ? "" : "s"}`,
+        usdFromNumber(order.total),
+        shortDate(order.placed_at),
+      ],
+    }));
+  }
+  if (section === "requests") {
+    const data = await listIntoolsRfqCases(null);
+    return data.map((rfq: IntoolsRfqCase) => ({
+      id: rfq.id,
+      title: rfq.case_no,
+      subtitle: rfq.title || "Untitled request",
+      status: rfq.status,
+      cols: [rfq.buyer_name || rfq.buyer_email || "—", relativeTime(rfq.updated_at)],
+      archived: rfq.status === "archived",
+    }));
+  }
+  if (section === "registrations") {
+    const data = await listIntoolsRegistrationRequests(null);
+    return data.map((request: IntoolsRegistrationRequest) => ({
+      id: request.id,
+      title: request.name,
+      subtitle: request.email,
+      status: request.status,
+      cols: [request.company_name, (request.sourcing || "—").slice(0, 48), shortDate(request.created_at)],
+    }));
+  }
+  if (section === "suppliers") {
+    const data = await listIntoolsSuppliers();
+    return data.map((supplier: IntoolsSupplier) => {
+      const brokerStatus =
+        supplier.archived_at != null
+          ? "archived"
+          : supplier.broker_status ||
+            (supplier.verify_state === "verified"
+              ? "approved"
+              : supplier.verify_state === "pending"
+                ? "review"
+                : "rejected");
+      return {
+        id: supplier.id,
+        title: supplier.name,
+        subtitle: `${supplier.slug} · ${supplier.region || supplier.loc || "Region not recorded"}`,
+        status: brokerStatus,
+        cols: [
+          supplier.region || supplier.loc || "—",
+          label(supplier.type || "—"),
+          `${supplier.product_count ?? 0} products`,
+        ],
+        archived: supplier.archived_at != null,
+      };
+    });
+  }
+  if (section === "knowledge") {
+    const data = await listIntoolsAgentKnowledge(null, null);
+    return data.map((doc: IntoolsAgentKnowledgeDocument) => ({
+      id: doc.id,
+      title: doc.title,
+      subtitle: doc.original_name || "Knowledge document",
+      status: doc.status,
+      cols: [label(doc.domain || "—"), label(doc.visibility || "—"), formatBytes(doc.byte_size)],
+      archived: doc.status === "archived",
+    }));
+  }
+  const data = await listIntoolsAudit(null, null, 200);
+  return data.map((entry) => ({
+    id: entry.id,
+    title: label(entry.action),
+    subtitle: entry.admin_name || "Admin",
+    status: null,
+    cols: [entry.summary || "—", shortDate(entry.created_at)],
+  }));
+}
+
+async function applyRowAction(
+  section: GenericSection,
+  id: string,
+  action: BulkAction,
+): Promise<unknown> {
+  if (section === "invoices") {
+    if (action.key === "send") return sendIntoolsInvoice(id);
+    if (action.key === "markPaid") {
+      const detail = await getIntoolsInvoiceDetail(id);
+      if (detail.balance_cents <= 0) return detail;
+      return recordIntoolsManualPayment(id, { amountCents: detail.balance_cents, reference: "Bulk mark paid" });
+    }
+    if (action.key === "cancel") return cancelIntoolsInvoice(id, "Bulk cancellation");
+  }
+  if (section === "orders") return updateIntoolsOrderStatus(id, action.status, "Bulk status change");
+  if (section === "requests") return updateIntoolsRfqStatus(id, action.status, `Bulk ${action.key}`);
+  if (section === "registrations")
+    return action.key === "approve" ? approveRegistrationRequest(id) : declineRegistrationRequest(id);
+  if (section === "suppliers") {
+    if (action.key === "archive") {
+      const detail = await getIntoolsSupplierDetail(id);
+      return archiveIntoolsSupplier(id, detail.updated_at, false);
+    }
+    return setIntoolsSupplierBrokerStatusBulk([id], action.key === "approve" ? "approved" : "rejected");
+  }
+  if (section === "knowledge") {
+    if (action.key === "archive") return archiveIntoolsAgentKnowledge(id);
+    const doc = (await listIntoolsAgentKnowledge(null, null)).find((entry) => entry.id === id);
+    if (!doc?.current_version_id) throw new Error("This document has no ready version to publish.");
+    return publishIntoolsAgentKnowledge(doc.current_version_id);
+  }
+  throw new Error("Unsupported action");
+}
+
+/* ------------------------------------------------------------------ generic UI atoms */
+
+function SurfacePanel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
   return (
-    <Chip
-      size="small"
-      label={displayStatus(status)}
-      color={color as "success" | "warning" | "default" | "info"}
-      sx={{ textTransform: "capitalize", fontWeight: 700 }}
-    />
+    <div style={{ border: `1px solid ${C.border}`, borderRadius: 14, background: C.surface, overflow: "hidden", ...style }}>
+      {children}
+    </div>
   );
 }
 
-function Surface({
-  children,
-  sx = {},
-  interactive: _interactive,
-  ...props
-}: {
-  children: ReactNode;
-  sx?: Record<string, unknown>;
-  interactive?: boolean;
-  [key: string]: unknown;
-}) {
+function SkeletonRows() {
   return (
-    <Paper
-      elevation={0}
-      {...props}
-      sx={{
-        border: "1px solid #dfe4eb",
-        borderRadius: "14px",
-        backgroundColor: "#fff",
-        ...sx,
+    <div role="status" aria-label="Loading" style={{ display: "grid", gap: 10 }}>
+      {[0, 1, 2, 3, 4].map((key) => (
+        <div
+          key={key}
+          style={{
+            height: 62,
+            borderRadius: 12,
+            border: `1px solid ${C.border}`,
+            background: "linear-gradient(90deg,#f4f6f9,#eef1f5,#f4f6f9)",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function Notice({ tone, children }: { tone: "danger" | "success"; children: ReactNode }) {
+  return (
+    <div
+      role={tone === "danger" ? "alert" : "status"}
+      style={{
+        marginTop: 12,
+        padding: "9px 12px",
+        borderRadius: 8,
+        fontSize: 12.5,
+        background: TONES[tone].bg,
+        color: TONES[tone].color,
       }}
     >
       {children}
-    </Paper>
+    </div>
   );
 }
 
-function LoadingRows() {
+const inputStyle: CSSProperties = {
+  height: 36,
+  padding: "0 10px",
+  borderRadius: 8,
+  border: `1px solid ${C.border}`,
+  fontSize: 13,
+  color: C.text,
+  fontWeight: 400,
+  fontFamily: "inherit",
+  boxSizing: "border-box",
+};
+
+function Field({ label: fieldLabel, children }: { label: string; children: ReactNode }) {
   return (
-    <Stack spacing={1} aria-label="Loading invoices" role="status">
-      {[1, 2, 3, 4].map((key) => (
-        <Surface key={key} sx={{ p: 2 }}>
-          <Skeleton width="35%" />
-          <Skeleton width="65%" />
-          <Skeleton width="22%" />
-        </Surface>
-      ))}
-    </Stack>
+    <label style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 12, fontWeight: 700, color: C.head }}>
+      {fieldLabel}
+      {children}
+    </label>
   );
 }
+
+/* ------------------------------------------------------------------ Sidebar */
+
+function NavGlyph({ section }: { section: Section }) {
+  const paths: Record<string, ReactNode> = {
+    analytics: (
+      <>
+        <path d="M4 20V10" />
+        <path d="M12 20V4" />
+        <path d="M20 20v-7" />
+      </>
+    ),
+    invoices: (
+      <>
+        <path d="M7 3h7l4 4v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+        <path d="M9 12h6" />
+        <path d="M9 16h6" />
+      </>
+    ),
+    orders: (
+      <>
+        <path d="M3.5 8 12 4l8.5 4-8.5 4-8.5-4Z" />
+        <path d="M3.5 8v8l8.5 4 8.5-4V8" />
+        <path d="M12 12v8" />
+      </>
+    ),
+    requests: <path d="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-4 3v-3H5a1 1 0 0 1-1-1Z" />,
+    registrations: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <path d="M3 20c0-3 2.5-5 6-5s6 2 6 5" />
+        <path d="M18 8v4" />
+        <path d="M16 10h4" />
+      </>
+    ),
+    suppliers: (
+      <>
+        <path d="M4 21V7l8-4 8 4v14" />
+        <path d="M10 21v-5h4v5" />
+      </>
+    ),
+    knowledge: (
+      <>
+        <path d="M4 5c2-1 5-1 7 0v14c-2-1-5-1-7 0Z" />
+        <path d="M20 5c-2-1-5-1-7 0v14c2-1 5-1 7 0Z" />
+      </>
+    ),
+    messages: <path d="M4 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 3v-3H5a1 1 0 0 1-1-1Z" />,
+    audit: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 8v4l3 2" />
+      </>
+    ),
+  };
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {paths[section]}
+    </svg>
+  );
+}
+
+function Sidebar({
+  active,
+  collapsed,
+  onToggle,
+  onSelect,
+  operatorName,
+  badges,
+}: {
+  active: Section;
+  collapsed: boolean;
+  onToggle: () => void;
+  onSelect: (section: Section) => void;
+  operatorName: string;
+  badges: Partial<Record<Section, number>>;
+}) {
+  return (
+    <aside
+      style={{
+        width: collapsed ? 72 : 248,
+        flexShrink: 0,
+        background: C.sidebar,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        transition: "width 160ms ease",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "20px 14px 16px",
+          borderBottom: "1px solid rgba(255,255,255,.08)",
+        }}
+      >
+        {!collapsed && (
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 15, color: "#fff", letterSpacing: "-0.02em" }}>
+              atelix<span style={{ color: C.mossSoft }}>.</span>
+            </div>
+            <div style={{ fontSize: 11, color: "#8b96a8", marginTop: 1 }}>Intools</div>
+          </div>
+        )}
+        <button
+          type="button"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={onToggle}
+          style={{
+            width: 26,
+            height: 26,
+            borderRadius: 7,
+            border: "1px solid rgba(255,255,255,.14)",
+            background: "transparent",
+            color: "#8b96a8",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width="13"
+            height="13"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{ transform: collapsed ? "rotate(180deg)" : undefined }}
+          >
+            <polyline points="15 6 9 12 15 18" />
+          </svg>
+        </button>
+      </div>
+      <nav aria-label="Intools sections" style={{ flex: 1, overflowY: "auto", padding: "14px 10px" }}>
+        {NAV_ORDER.map((section) => {
+          const isActive = section === active;
+          const badge = badges[section] || 0;
+          return (
+            <button
+              key={section}
+              type="button"
+              onClick={() => onSelect(section)}
+              aria-current={isActive ? "page" : undefined}
+              title={SECTION_LABEL[section]}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                width: "100%",
+                height: collapsed ? 46 : 38,
+                padding: collapsed ? 0 : "0 10px 0 8px",
+                marginBottom: 2,
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 13.5,
+                fontWeight: isActive ? 700 : 500,
+                background: collapsed
+                  ? "transparent"
+                  : isActive
+                    ? "rgba(111,174,134,.16)"
+                    : "transparent",
+                color: isActive ? "#fff" : "#aab4c2",
+                justifyContent: collapsed ? "center" : "flex-start",
+              }}
+            >
+              {!collapsed && (
+                <span
+                  style={{
+                    width: 3,
+                    height: 16,
+                    borderRadius: 2,
+                    background: isActive ? C.mossSoft : "transparent",
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              {collapsed ? (
+                <span
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    background: isActive ? C.mossSoft : "rgba(255,255,255,.08)",
+                    color: isActive ? "#13291d" : "#c7cedb",
+                  }}
+                >
+                  <NavGlyph section={section} />
+                </span>
+              ) : (
+                <span
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    textAlign: "left",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {SECTION_LABEL[section]}
+                </span>
+              )}
+              {!collapsed && badge > 0 && (
+                <span
+                  style={{
+                    background: "#c94f39",
+                    color: "#fff",
+                    fontSize: 10.5,
+                    fontWeight: 800,
+                    borderRadius: 999,
+                    padding: "1px 7px",
+                    flexShrink: 0,
+                  }}
+                >
+                  {badge}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </nav>
+      <div
+        style={{
+          padding: collapsed ? "14px 0 18px" : "14px 16px 18px",
+          borderTop: "1px solid rgba(255,255,255,.08)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "flex-start",
+          gap: 10,
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            background: "#3a4655",
+            color: "#e7ebf0",
+            fontSize: 12,
+            fontWeight: 800,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {initialsOf(operatorName || "Administrator")}
+        </div>
+        {!collapsed && (
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: "#eef1f5",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {operatorName || "Administrator"}
+            </div>
+            <div style={{ fontSize: 11, color: "#8b96a8" }}>Administrator</div>
+          </div>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+/* ------------------------------------------------------------------ SectionList */
+
+function SectionListView({
+  section,
+  refreshKey,
+  onOpenRow,
+  onToast,
+  onCreateInvoice,
+  onPrimaryModal,
+  registerReload,
+}: {
+  section: GenericSection;
+  refreshKey: number;
+  onOpenRow: (row: Row) => void;
+  onToast: (message: string) => void;
+  onCreateInvoice: () => void;
+  onPrimaryModal: (key: string) => void;
+  registerReload: (reload: () => void) => void;
+}) {
+  const meta = SECTIONS[section];
+  const [rows, setRows] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [busyBulk, setBusyBulk] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null);
+
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setRows(await loadRows(section));
+    } catch (cause) {
+      setError(errorMessage(cause, `Could not load ${meta.label.toLowerCase()}.`));
+    } finally {
+      setLoading(false);
+    }
+  }, [section, meta.label]);
+
+  useEffect(() => {
+    setQuery("");
+    setFilter("all");
+    setSelected([]);
+  }, [section]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload, refreshKey]);
+
+  useEffect(() => {
+    registerReload(() => void reload());
+  }, [registerReload, reload]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return rows.filter((row) => {
+      const matchesFilter = filter === "all" ? true : row.status === filter;
+      const text = `${row.title} ${row.subtitle} ${row.cols.join(" ")}`.toLowerCase();
+      return matchesFilter && (!q || text.includes(q));
+    });
+  }, [rows, query, filter]);
+
+  const selectableVisible = visible.filter((row) => !row.archived);
+  const allSelected =
+    meta.selectable && selectableVisible.length > 0 && selectableVisible.every((row) => selected.includes(row.id));
+
+  async function runBulk(action: BulkAction) {
+    const ids = selected.filter((id) => rows.some((row) => row.id === id));
+    if (!ids.length) return;
+    setBusyBulk(true);
+    try {
+      const results = await Promise.allSettled(ids.map((id) => applyRowAction(section, id, action)));
+      const ok = results.filter((r) => r.status === "fulfilled").length;
+      const failed = results.length - ok;
+      onToast(
+        `${ok} record${ok === 1 ? "" : "s"} ${action.label.replace(" selected", "").toLowerCase()}${
+          failed ? ` · ${failed} failed` : ""
+        }.`,
+      );
+      setSelected([]);
+      await reload();
+    } finally {
+      setBusyBulk(false);
+      setConfirmAction(null);
+    }
+  }
+
+  function onPrimary(key: string) {
+    if (key === "new" && section === "invoices") return onCreateInvoice();
+    if (key === "export") {
+      const header = ["Title", "Subtitle", "Status", ...meta.columnLabels];
+      downloadCsv(`${section}-${new Date().toISOString().slice(0, 10)}.csv`, [
+        header,
+        ...visible.map((row) => [row.title, row.subtitle, row.status || "", ...row.cols]),
+      ]);
+      onToast(`${visible.length} row${visible.length === 1 ? "" : "s"} exported.`);
+      return;
+    }
+    onPrimaryModal(key);
+  }
+
+  return (
+    <>
+      <PrimaryActionBridge section={section} onPrimary={onPrimary} />
+
+      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+        <input
+          type="text"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={meta.searchPlaceholder}
+          aria-label={meta.searchPlaceholder}
+          style={{
+            flex: 1,
+            minWidth: 200,
+            height: 38,
+            padding: "0 14px",
+            borderRadius: 9,
+            border: `1px solid ${C.border}`,
+            background: "#fff",
+            fontSize: 13.5,
+            color: C.text,
+          }}
+        />
+        {meta.filters.length > 1 && (
+          <div role="tablist" aria-label="Filter" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {meta.filters.map((value) => {
+              const isActive = value === filter;
+              return (
+                <button
+                  key={value}
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => {
+                    setFilter(value);
+                    setSelected([]);
+                  }}
+                  style={{
+                    height: 32,
+                    padding: "0 13px",
+                    borderRadius: 999,
+                    border: `1px solid ${isActive ? C.moss : C.border}`,
+                    background: isActive ? C.moss : "#fff",
+                    color: isActive ? "#fff" : C.head,
+                    fontSize: 12.5,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {value === "all" ? "All" : label(value)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {selected.length > 0 && meta.selectable && (
+        <div
+          aria-live="polite"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            flexWrap: "wrap",
+            background: "#eef4f0",
+            border: "1px solid #cfe3d5",
+            borderRadius: 10,
+            padding: "10px 14px",
+            marginBottom: 10,
+          }}
+        >
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: "#1c4a30" }}>
+            {selected.length} selected
+            <button
+              onClick={() => setSelected([])}
+              style={{
+                marginLeft: 10,
+                fontSize: 12.5,
+                color: C.moss,
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                textDecoration: "underline",
+              }}
+            >
+              Clear
+            </button>
+          </span>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {meta.bulkActions.map((action) => (
+              <button
+                key={action.key}
+                disabled={busyBulk}
+                onClick={() => (action.confirm ? setConfirmAction(action) : void runBulk(action))}
+                style={btnStyle(action.tone, "sm")}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 12,
+            padding: "10px 14px",
+            borderRadius: 10,
+            background: TONES.danger.bg,
+            color: TONES.danger.color,
+            fontSize: 13,
+          }}
+        >
+          {error}{" "}
+          <button
+            onClick={() => void reload()}
+            style={{ marginLeft: 8, background: "none", border: "none", color: "inherit", fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <SkeletonRows />
+      ) : (
+        <SurfacePanel>
+          {meta.selectable && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "10px 16px",
+                background: "#f6f8fa",
+                borderBottom: `1px solid ${C.border}`,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => setSelected(allSelected ? [] : selectableVisible.map((row) => row.id))}
+                aria-label="Select all visible rows"
+                style={{ width: 16, height: 16, accentColor: C.moss, cursor: "pointer", flexShrink: 0 }}
+              />
+              <span aria-hidden="true" style={{ width: 30, flexShrink: 0 }} />
+              <span aria-hidden="true" style={{ flex: "1.4 1 110px", minWidth: 64 }} />
+              {meta.columnLabels.map((columnLabel) => (
+                <span
+                  key={columnLabel}
+                  className="intools-list-col"
+                  style={{
+                    flex: "1 1 84px",
+                    minWidth: 56,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    fontSize: 11,
+                    fontWeight: 800,
+                    letterSpacing: ".04em",
+                    textTransform: "uppercase",
+                    color: C.head,
+                  }}
+                >
+                  {columnLabel}
+                </span>
+              ))}
+              <span style={{ flex: "0 0 auto", minWidth: 74 }} />
+            </div>
+          )}
+          <ul style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={meta.label}>
+            {visible.map((row) => {
+              const isSelected = selected.includes(row.id);
+              return (
+                <li key={row.id} style={{ borderBottom: `1px solid ${C.line}` }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "12px 16px",
+                      background: isSelected ? "#f4f9f5" : "#fff",
+                    }}
+                  >
+                    {meta.selectable && (
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        disabled={row.archived}
+                        onChange={() =>
+                          setSelected(
+                            isSelected ? selected.filter((id) => id !== row.id) : [...selected, row.id],
+                          )
+                        }
+                        aria-label={`Select ${row.title}`}
+                        style={{ width: 16, height: 16, accentColor: C.moss, cursor: "pointer", flexShrink: 0 }}
+                      />
+                    )}
+                    <div
+                      aria-hidden="true"
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        background: SECTION_ACCENT[section] || C.head,
+                        color: "#fff",
+                        fontSize: 11.5,
+                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {initialsOf(row.title)}
+                    </div>
+                    <button
+                      onClick={() => onOpenRow(row)}
+                      style={{
+                        flex: "1.4 1 110px",
+                        minWidth: 64,
+                        textAlign: "left",
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        padding: "2px 0",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 700,
+                          color: C.text,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {row.title}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: C.dim,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          marginTop: 1,
+                        }}
+                      >
+                        {row.subtitle}
+                      </div>
+                    </button>
+                    {row.cols.map((value, index) => (
+                      <span
+                        key={index}
+                        className="intools-list-col"
+                        style={{
+                          flex: "1 1 84px",
+                          minWidth: 56,
+                          fontSize: 12.5,
+                          color: "#5a6472",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {value}
+                      </span>
+                    ))}
+                    <span style={{ flex: "0 0 auto", minWidth: 74, display: "flex", justifyContent: "flex-end" }}>
+                      {row.status && <span style={statusPill(row.status)}>{label(row.status)}</span>}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          {visible.length === 0 && (
+            <div style={{ padding: "56px 24px", textAlign: "center" }}>
+              <div style={{ fontWeight: 700, fontSize: 14.5, color: C.text }}>No matching records</div>
+              <div style={{ marginTop: 6, color: C.dim, fontSize: 13 }}>{meta.emptyText}</div>
+            </div>
+          )}
+        </SurfacePanel>
+      )}
+
+      {confirmAction && (
+        <ModalShell
+          title={label(confirmAction.key)}
+          hint="Bulk action"
+          onClose={() => setConfirmAction(null)}
+          footer={
+            <>
+              <button onClick={() => setConfirmAction(null)} style={btnStyle("neutral")}>
+                Cancel
+              </button>
+              <button
+                disabled={busyBulk}
+                onClick={() => void runBulk(confirmAction)}
+                style={btnStyle(confirmAction.tone === "danger" ? "danger" : "success")}
+              >
+                {confirmAction.label.replace(" selected", "")}
+              </button>
+            </>
+          }
+        >
+          <p style={{ margin: 0, fontSize: 13.5, color: "#3b4453", lineHeight: 1.55 }}>
+            {confirmAction.label.replace(" selected", "")} {selected.length} record
+            {selected.length === 1 ? "" : "s"}? This is recorded server-side.
+          </p>
+        </ModalShell>
+      )}
+    </>
+  );
+}
+
+function PrimaryActionBridge({
+  section,
+  onPrimary,
+}: {
+  section: Section;
+  onPrimary: (key: string) => void;
+}) {
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ section: Section; key: string }>).detail;
+      if (detail.section === section) onPrimary(detail.key);
+    };
+    addEventListener("intools:primary", handler as EventListener);
+    return () => removeEventListener("intools:primary", handler as EventListener);
+  }, [section, onPrimary]);
+  return null;
+}
+
+/* ------------------------------------------------------------------ Modal shell */
+
+function ModalShell({
+  title,
+  hint,
+  onClose,
+  children,
+  footer,
+  width = 480,
+}: {
+  title: string;
+  hint?: string;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+  width?: number;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(20,26,34,.4)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 50,
+        padding: 20,
+      }}
+    >
+      <div
+        role="dialog"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          width: `min(${width}px, 100%)`,
+          background: "#fff",
+          borderRadius: 14,
+          boxShadow: "0 20px 60px rgba(20,26,34,.22)",
+          overflow: "hidden",
+          maxHeight: "90vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div style={{ padding: "20px 22px 4px", flexShrink: 0 }}>
+          <div style={{ fontSize: 17, fontWeight: 800 }}>{title}</div>
+          {hint && <div style={{ fontSize: 13, color: C.dim, marginTop: 4 }}>{hint}</div>}
+        </div>
+        <div style={{ padding: "16px 22px 20px", overflowY: "auto", flex: 1, minHeight: 0 }}>{children}</div>
+        {footer && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 8,
+              padding: "14px 22px",
+              background: "#f9fafb",
+              borderTop: "1px solid #eef0f3",
+              flexShrink: 0,
+            }}
+          >
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Detail drawer */
+
+function DrawerShell({
+  title,
+  subtitle,
+  status,
+  onClose,
+  children,
+  footer,
+}: {
+  title: string;
+  subtitle: string;
+  status?: string | null;
+  onClose: () => void;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(20,26,34,.36)",
+        display: "flex",
+        justifyContent: "flex-end",
+        zIndex: 40,
+      }}
+    >
+      <div
+        role="dialog"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+        style={{
+          width: "min(440px, 94vw)",
+          height: "100%",
+          background: "#fff",
+          boxShadow: "-8px 0 32px rgba(20,26,34,.14)",
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "space-between",
+            gap: 12,
+            padding: "20px 22px",
+            borderBottom: "1px solid #e6e9ee",
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 17, fontWeight: 800, overflowWrap: "anywhere" }}>{title}</div>
+            <div style={{ fontSize: 12.5, color: C.dim, marginTop: 3, overflowWrap: "anywhere" }}>{subtitle}</div>
+          </div>
+          <button
+            aria-label="Close detail"
+            onClick={onClose}
+            style={{
+              width: 28,
+              height: 28,
+              flexShrink: 0,
+              borderRadius: 8,
+              border: "1px solid #e6e9ee",
+              background: "#fff",
+              cursor: "pointer",
+              color: "#526176",
+            }}
+          >
+            ✕
+          </button>
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 22px" }}>
+          {status && <span style={{ ...statusPill(status), marginBottom: 16 }}>{label(status)}</span>}
+          {children}
+        </div>
+        {footer && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "16px 22px", borderTop: "1px solid #e6e9ee" }}>
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FieldRows({ rows }: { rows: [string, ReactNode][] }) {
+  return (
+    <>
+      {rows.map(([fieldLabel, value]) => (
+        <div key={fieldLabel} style={{ padding: "10px 0", borderBottom: "1px solid #f0f2f5" }}>
+          <div
+            style={{
+              fontSize: 11,
+              color: C.faint,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: ".03em",
+            }}
+          >
+            {fieldLabel}
+          </div>
+          <div style={{ fontSize: 13.5, color: C.text, marginTop: 3, overflowWrap: "anywhere" }}>{value}</div>
+        </div>
+      ))}
+    </>
+  );
+}
+
+function GroupLabel({ children }: { children: ReactNode }) {
+  return (
+    <div
+      style={{
+        marginTop: 14,
+        fontSize: 11,
+        fontWeight: 700,
+        textTransform: "uppercase",
+        letterSpacing: ".03em",
+        color: C.faint,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/* -- Invoice drawer -- */
+function InvoiceDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [detail, setDetail] = useState<IntoolsInvoiceDetail | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [payOpen, setPayOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payRef, setPayRef] = useState("");
+  const [cancelReason, setCancelReason] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const next = await getIntoolsInvoiceDetail(id);
+      setDetail(next);
+      setNotes(next.notes || "");
+      setPayAmount(String(next.balance_cents));
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load this invoice."));
+    }
+  }, [id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function run(fn: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setNotice(message);
+      await load();
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause, "The action could not be completed."));
+    } finally {
+      setBusy(false);
+      setPayOpen(false);
+      setCancelOpen(false);
+    }
+  }
+
+  if (error && !detail)
+    return (
+      <DrawerShell title="Invoice" subtitle={id} onClose={onClose}>
+        <Notice tone="danger">{error}</Notice>
+      </DrawerShell>
+    );
+  if (!detail)
+    return (
+      <DrawerShell title="Invoice" subtitle={id} onClose={onClose}>
+        <SkeletonRows />
+      </DrawerShell>
+    );
+
+  const canSend = detail.status === "draft";
+  const canCancel = detail.status === "draft" || detail.status === "sent";
+  const canPay = detail.status === "sent" && detail.balance_cents > 0;
+
+  return (
+    <DrawerShell
+      title={detail.invoice_no}
+      subtitle={`${detail.buyer_name || detail.buyer_email || "Buyer not named"} · ${shortDate(detail.created_at)}`}
+      status={detail.effective_status || detail.status}
+      onClose={onClose}
+      footer={
+        <>
+          <button disabled={!canSend || busy} onClick={() => void run(() => sendIntoolsInvoice(detail.id), "Invoice sent.")} style={btnStyle("primary")}>
+            Send invoice
+          </button>
+          <button disabled={!canPay || busy} onClick={() => setPayOpen(true)} style={btnStyle("neutral")}>
+            Record payment
+          </button>
+          <button disabled={!canCancel || busy} onClick={() => setCancelOpen(true)} style={btnStyle("danger")}>
+            Cancel invoice
+          </button>
+        </>
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Buyer", detail.buyer_email || detail.buyer_name || "—"],
+          ["Due date", shortDate(detail.due_date)],
+          ["RFQ", detail.rfq_case_no || "—"],
+          ["Order", detail.order_no || "—"],
+          ["Subtotal", usd(detail.subtotal_cents)],
+          ["Tax", usd(detail.tax_cents)],
+          ["Total", usd(detail.total_cents)],
+          ["Balance", usd(detail.balance_cents)],
+        ]}
+      />
+      <div style={{ marginTop: 14 }}>
+        <label
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            fontSize: 11,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: ".03em",
+            color: C.faint,
+          }}
+        >
+          Notes (visible to buyer)
+          <textarea
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Add a note the buyer will see on this invoice…"
+            style={{ ...inputStyle, height: "auto", padding: "9px 10px", resize: "vertical", textTransform: "none", letterSpacing: "normal" }}
+          />
+        </label>
+        {detail.status === "draft" && (
+          <button
+            disabled={busy || notes === (detail.notes || "")}
+            onClick={() =>
+              void run(
+                () =>
+                  updateIntoolsInvoice(detail.id, {
+                    notes,
+                    items: detail.items.map((item) => ({
+                      description: item.description,
+                      quantity: item.quantity,
+                      unitAmountCents: item.unit_amount_cents,
+                      taxAmountCents: item.tax_amount_cents,
+                    })),
+                  }),
+                "Draft notes saved.",
+              )
+            }
+            style={{ ...btnStyle("neutral", "sm"), marginTop: 8 }}
+          >
+            Save notes
+          </button>
+        )}
+      </div>
+
+      <GroupLabel>Line items</GroupLabel>
+      {detail.items.map((item) => (
+        <div key={item.id} style={{ padding: "9px 0", borderBottom: "1px solid #f0f2f5" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{item.description}</div>
+          <div style={{ fontSize: 12, color: C.dim }}>
+            {item.quantity} × {usd(item.unit_amount_cents)} · tax {usd(item.tax_amount_cents)} ·{" "}
+            <strong>{usd(item.line_total_cents)}</strong>
+          </div>
+        </div>
+      ))}
+
+      <GroupLabel>Payments</GroupLabel>
+      {detail.payments.length ? (
+        detail.payments.map((payment) => (
+          <div key={payment.id} style={{ padding: "8px 0", borderBottom: "1px solid #f0f2f5", fontSize: 12.5 }}>
+            {label(payment.provider)}
+            {payment.reference ? ` · ${payment.reference}` : ""} — <strong>{usd(payment.amount_cents)}</strong> ·{" "}
+            {shortDate(payment.recorded_at)}
+          </div>
+        ))
+      ) : (
+        <div style={{ fontSize: 12.5, color: C.faint, padding: "8px 0" }}>No payments recorded.</div>
+      )}
+
+      <GroupLabel>Audit history</GroupLabel>
+      {detail.audit.map((entry) => (
+        <div key={entry.id} style={{ padding: "8px 0", borderBottom: "1px solid #f0f2f5" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700 }}>{label(entry.action)}</div>
+          <div style={{ fontSize: 11.5, color: C.dim }}>
+            {entry.summary || "No summary"} · {entry.admin_name || "Admin"} · {shortDate(entry.created_at)}
+          </div>
+        </div>
+      ))}
+
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+
+      {payOpen && (
+        <ModalShell
+          title="Record manual payment"
+          hint="The server validates the balance and allocation. Enter USD cents."
+          onClose={() => setPayOpen(false)}
+          footer={
+            <>
+              <button onClick={() => setPayOpen(false)} style={btnStyle("neutral")}>
+                Cancel
+              </button>
+              <button
+                disabled={busy || !Number.isInteger(Number(payAmount)) || Number(payAmount) <= 0}
+                onClick={() =>
+                  void run(
+                    () =>
+                      recordIntoolsManualPayment(detail.id, {
+                        amountCents: Number(payAmount),
+                        reference: payRef.trim() || null,
+                      }),
+                    "Payment recorded.",
+                  )
+                }
+                style={btnStyle("success")}
+              >
+                Record payment
+              </button>
+            </>
+          }
+        >
+          <div style={{ display: "grid", gap: 12 }}>
+            <Field label="Amount (USD cents)">
+              <input value={payAmount} inputMode="numeric" onChange={(event) => setPayAmount(event.target.value)} style={inputStyle} />
+            </Field>
+            <Field label="Reference">
+              <input value={payRef} onChange={(event) => setPayRef(event.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+        </ModalShell>
+      )}
+      {cancelOpen && (
+        <ModalShell
+          title={`Cancel ${detail.invoice_no}?`}
+          hint="This records a server-side cancellation. Paid invoices cannot be cancelled."
+          onClose={() => setCancelOpen(false)}
+          footer={
+            <>
+              <button onClick={() => setCancelOpen(false)} style={btnStyle("neutral")}>
+                Keep invoice
+              </button>
+              <button
+                disabled={busy || cancelReason.trim().length < 3}
+                onClick={() => void run(() => cancelIntoolsInvoice(detail.id, cancelReason.trim()), "Invoice cancelled.")}
+                style={btnStyle("danger")}
+              >
+                Cancel invoice
+              </button>
+            </>
+          }
+        >
+          <Field label="Reason">
+            <textarea
+              rows={3}
+              value={cancelReason}
+              onChange={(event) => setCancelReason(event.target.value)}
+              style={{ ...inputStyle, height: "auto", padding: "9px 10px", resize: "vertical" }}
+            />
+          </Field>
+        </ModalShell>
+      )}
+    </DrawerShell>
+  );
+}
+
+/* -- Order drawer -- */
+const ORDER_STATUSES = [
+  "awaiting_payment",
+  "payment_declared",
+  "payment_verified",
+  "fulfilling",
+  "completed",
+  "cancelled",
+  "disputed",
+  "refunded",
+];
+
+function OrderDrawerBody({
+  orderNo,
+  onClose,
+  onChanged,
+  onCreateInvoice,
+}: {
+  orderNo: string;
+  onClose: () => void;
+  onChanged: () => void;
+  onCreateInvoice: (input: { buyerProfileId: string; orderId: string; rfqCaseId: string | null; amount: string; description: string }) => void;
+}) {
+  const [detail, setDetail] = useState<IntoolsOrderDetail | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [nextStatus, setNextStatus] = useState("");
+  const [note, setNote] = useState("");
+
+  const load = useCallback(async () => {
+    try {
+      const next = await getIntoolsOrderDetail(orderNo);
+      setDetail(next);
+      setNextStatus(next.status);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load this order."));
+    }
+  }, [orderNo]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (error && !detail)
+    return (
+      <DrawerShell title="Order" subtitle={orderNo} onClose={onClose}>
+        <Notice tone="danger">{error}</Notice>
+      </DrawerShell>
+    );
+  if (!detail)
+    return (
+      <DrawerShell title="Order" subtitle={orderNo} onClose={onClose}>
+        <SkeletonRows />
+      </DrawerShell>
+    );
+
+  const buyer = detail.buyer;
+  return (
+    <DrawerShell
+      title={detail.order_no}
+      subtitle={`Placed ${shortDate(detail.placed_at)} · ${buyer.company_name || buyer.full_name || "Buyer not named"}`}
+      status={detail.status}
+      onClose={onClose}
+      footer={
+        <button
+          onClick={() =>
+            onCreateInvoice({
+              buyerProfileId: detail.buyer_profile_id,
+              orderId: detail.id,
+              rfqCaseId: detail.rfq_case_id,
+              amount: String(detail.total ?? 0),
+              description: `Order ${detail.order_no}`,
+            })
+          }
+          style={btnStyle("neutral")}
+        >
+          Create invoice
+        </button>
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Buyer", buyer.email || buyer.full_name || "—"],
+          ["Country", buyer.country || "—"],
+          ["Total", usdFromNumber(detail.total)],
+          ["Shipping", detail.shipping_service || "—"],
+          ["Destination", detail.ship_address || detail.ship_country || "—"],
+          ["Incoterms", detail.incoterms || "—"],
+        ]}
+      />
+
+      <GroupLabel>Order items</GroupLabel>
+      {detail.items.map((item, index) => (
+        <div key={index} style={{ padding: "9px 0", borderBottom: "1px solid #f0f2f5" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{item.name || "Unnamed item"}</div>
+          <div style={{ fontSize: 12, color: C.dim }}>
+            {[item.seller, item.sku && `SKU ${item.sku}`, item.qty && `${item.qty} × ${usdFromNumber(item.unit_price)}`]
+              .filter(Boolean)
+              .join(" · ") || "No item metadata"}{" "}
+            · <strong>{usdFromNumber(item.line_total)}</strong>
+          </div>
+        </div>
+      ))}
+
+      {detail.fulfillments.length > 0 && (
+        <>
+          <GroupLabel>Fulfillment</GroupLabel>
+          {detail.fulfillments.map((fulfillment, index) => (
+            <div key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f0f2f5", fontSize: 12.5 }}>
+              {fulfillment.factory_name || "Supplier not identified"} · {label(fulfillment.fulfillment_status || "pending")}
+              {fulfillment.tracking ? ` · ${fulfillment.tracking}` : ""}
+            </div>
+          ))}
+        </>
+      )}
+
+      <GroupLabel>Activity</GroupLabel>
+      {detail.events.map((event, index) => (
+        <div key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f0f2f5" }}>
+          <div style={{ fontSize: 12.5, fontWeight: 700 }}>{label(event.status)}</div>
+          <div style={{ fontSize: 11.5, color: C.dim }}>
+            {event.note || "No note"} · {event.created_by_name || "System"} · {shortDate(event.created_at)}
+          </div>
+        </div>
+      ))}
+
+      <div style={{ marginTop: 16 }}>
+        <Field label="Update status">
+          <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+            {ORDER_STATUSES.map((status) => (
+              <option key={status} value={status}>
+                {label(status)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <div style={{ marginTop: 8 }}>
+          <Field label="Update note (optional)">
+            <textarea rows={2} value={note} onChange={(event) => setNote(event.target.value)} style={{ ...inputStyle, height: "auto", padding: "8px 10px", resize: "vertical" }} />
+          </Field>
+        </div>
+        <button
+          disabled={busy || nextStatus === detail.status}
+          onClick={async () => {
+            setBusy(true);
+            setError("");
+            setNotice("");
+            try {
+              await updateIntoolsOrderStatus(detail.order_no, nextStatus, note.trim() || null);
+              setNotice("Order status updated and recorded in the activity history.");
+              setNote("");
+              await load();
+              onChanged();
+            } catch (cause) {
+              setError(errorMessage(cause, "Could not update the order status."));
+            } finally {
+              setBusy(false);
+            }
+          }}
+          style={{ ...btnStyle("primary", "sm"), marginTop: 10 }}
+        >
+          Update order
+        </button>
+      </div>
+
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+    </DrawerShell>
+  );
+}
+
+/* -- Request drawer -- */
+type MatchRow = {
+  match: IntoolsRfqSupplierMatch;
+  supplier: IntoolsSupplier | undefined;
+  quote: IntoolsRfqQuote | undefined;
+};
+type QuoteDraft = { unitPrice: string; moq: string; leadTime: string; total: string; recommended: boolean };
+
+function RequestDrawerBody({
+  rfq,
+  onClose,
+  onChanged,
+  onGenerateInvoice,
+}: {
+  rfq: Row;
+  onClose: () => void;
+  onChanged: () => void;
+  onGenerateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; description: string; amount: string }) => void;
+}) {
+  const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [caseRecord, setCaseRecord] = useState<IntoolsRfqCase | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busyId, setBusyId] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
+  const [supplierQuery, setSupplierQuery] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [cases, generated, quotes, suppliers] = await Promise.all([
+        listIntoolsRfqCases(null),
+        generateIntoolsRfqSupplierMatches(rfq.id),
+        listIntoolsRfqQuotes(rfq.id),
+        listIntoolsSuppliers(),
+      ]);
+      setCaseRecord(cases.find((entry) => entry.id === rfq.id) || null);
+      const supplierById = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
+      setMatches(
+        generated.map((match) => ({
+          match,
+          supplier: supplierById.get(match.factory_id),
+          quote: quotes.find((quote) => quote.factory_id === match.factory_id),
+        })),
+      );
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load supplier matches for this request."));
+    } finally {
+      setLoading(false);
+    }
+  }, [rfq.id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function baseDraft(row: MatchRow): QuoteDraft {
+    return {
+      unitPrice: row.quote ? (row.quote.unit_price_cents / 100).toFixed(2) : "",
+      moq: row.quote ? String(row.quote.moq) : "",
+      leadTime: row.quote ? String(row.quote.lead_time_days) : "",
+      total: row.quote?.quote_total_cents ? (row.quote.quote_total_cents / 100).toFixed(2) : "",
+      recommended: row.quote?.recommended || false,
+    };
+  }
+  function draftFor(row: MatchRow): QuoteDraft {
+    return { ...baseDraft(row), ...drafts[row.match.factory_id] };
+  }
+  function setDraft(row: MatchRow, patch: Partial<QuoteDraft>) {
+    setDrafts((current) => ({
+      ...current,
+      [row.match.factory_id]: { ...baseDraft(row), ...current[row.match.factory_id], ...patch },
+    }));
+  }
+
+  async function act(matchId: string, fn: () => Promise<unknown>, message: string) {
+    setBusyId(matchId);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setNotice(message);
+      await load();
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause, "The action could not be completed."));
+    } finally {
+      setBusyId("");
+    }
+  }
+
+  async function saveQuote(row: MatchRow) {
+    const draft = draftFor(row);
+    const unitPriceCents = Math.round((parseFloat(draft.unitPrice) || 0) * 100);
+    const totalCents = Math.round((parseFloat(draft.total) || 0) * 100);
+    await act(
+      row.match.id,
+      async () => {
+        const quote = await upsertIntoolsRfqQuote(row.quote?.id ?? null, {
+          rfqCaseId: rfq.id,
+          factoryId: row.match.factory_id,
+          unitPriceCents,
+          moq: Math.round(Number(draft.moq) || 0),
+          leadTimeDays: Math.round(Number(draft.leadTime) || 0),
+          certifications: [],
+          recommended: draft.recommended,
+        });
+        if (totalCents > 0) await setIntoolsRfqQuoteTotal(quote.id, totalCents);
+      },
+      "Quote saved.",
+    );
+  }
+
+  const selectedRow = matches.find((row) => row.match.status === "selected");
+  const canGenerate = Boolean(selectedRow?.quote?.quote_total_cents);
+  const filtered = matches.filter((row) => {
+    const q = supplierQuery.trim().toLowerCase();
+    if (!q) return true;
+    const supplier = row.supplier;
+    return `${supplier?.name || ""} ${supplier?.region || ""} ${supplier?.type || ""}`.toLowerCase().includes(q);
+  });
+
+  return (
+    <DrawerShell
+      title={rfq.title}
+      subtitle={rfq.subtitle}
+      status={rfq.status}
+      onClose={onClose}
+      footer={
+        <button
+          disabled={!canGenerate}
+          onClick={() =>
+            onGenerateInvoice({
+              rfqCaseId: rfq.id,
+              buyerProfileId: caseRecord?.buyer_profile_id || "",
+              description: `${rfq.title} — ${rfq.subtitle}`,
+              amount: selectedRow?.quote?.quote_total_cents ? (selectedRow.quote.quote_total_cents / 100).toFixed(2) : "",
+            })
+          }
+          style={{
+            ...btnStyle(canGenerate ? "success" : "neutral"),
+            opacity: canGenerate ? 1 : 0.55,
+            cursor: canGenerate ? "pointer" : "not-allowed",
+          }}
+        >
+          {canGenerate ? "Generate invoice" : "Select a supplier + quote total first"}
+        </button>
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Buyer", caseRecord?.buyer_name || rfq.cols[0] || "—"],
+          ["Buyer email", caseRecord?.buyer_email || "—"],
+          ["Matches", String(caseRecord?.match_count ?? matches.length)],
+          ["Quotes", String(caseRecord?.quote_count ?? 0)],
+          ["Updated", rfq.cols[1] || "—"],
+        ]}
+      />
+
+      <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint, marginBottom: 6 }}>
+        Supplier matches
+      </div>
+      <input
+        type="text"
+        value={supplierQuery}
+        onChange={(event) => setSupplierQuery(event.target.value)}
+        placeholder="Search matches by name, region or type"
+        aria-label="Search supplier matches"
+        style={{ ...inputStyle, width: "100%", height: 32, fontSize: 12.5, marginBottom: 8 }}
+      />
+      {loading && <SkeletonRows />}
+      {!loading && filtered.length === 0 && (
+        <p style={{ margin: "6px 0 10px", fontSize: 12.5, color: C.faint }}>No supplier matches for this request yet.</p>
+      )}
+      {!loading &&
+        filtered.map((row) => {
+          const status = row.match.status;
+          const draft = draftFor(row);
+          const busy = busyId === row.match.id;
+          return (
+            <div key={row.match.id} style={{ padding: "9px 0", borderBottom: "1px solid #f0f2f5" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>
+                    {row.supplier?.name || "Unknown supplier"}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: C.dim }}>
+                    {row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")}
+                  </div>
+                </div>
+                <span style={statusPill(status)}>{label(status)}</span>
+              </div>
+
+              {status === "suggested" && (
+                <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
+                  <button
+                    disabled={busy}
+                    onClick={() => void act(row.match.id, () => setIntoolsRfqSupplierMatchStatus(row.match.id, "approved"), "Supplier approved for this request.")}
+                    style={btnStyle("success", "sm")}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() => void act(row.match.id, () => setIntoolsRfqSupplierMatchStatus(row.match.id, "rejected"), "Supplier rejected.")}
+                    style={btnStyle("danger", "sm")}
+                  >
+                    Reject
+                  </button>
+                </div>
+              )}
+
+              {(status === "approved" || status === "selected") && (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: 10,
+                    borderRadius: 8,
+                    background: status === "selected" ? "#eef4f0" : "#f9fafb",
+                    border: status === "selected" ? "1px solid #cfe3d5" : "none",
+                  }}
+                >
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                    <Field label="Unit price (USD)">
+                      <input value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                    </Field>
+                    <Field label="MOQ">
+                      <input value={draft.moq} onChange={(event) => setDraft(row, { moq: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                    </Field>
+                    <Field label="Lead time (days)">
+                      <input value={draft.leadTime} onChange={(event) => setDraft(row, { leadTime: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                    </Field>
+                    <Field label="Total price (USD)">
+                      <input value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                    </Field>
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9, fontSize: 12, color: "#3b4453", cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={draft.recommended}
+                      onChange={(event) => setDraft(row, { recommended: event.target.checked })}
+                      style={{ width: 15, height: 15, accentColor: C.moss, cursor: "pointer" }}
+                    />
+                    Mark as recommended
+                  </label>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                    <button disabled={busy} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
+                      Save quote
+                    </button>
+                    {status === "approved" && row.quote && (
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          void act(
+                            row.match.id,
+                            async () => {
+                              await setIntoolsRfqSupplierMatchStatus(row.match.id, "selected");
+                              await publishIntoolsRfqQuote(row.quote!.id);
+                            },
+                            "Supplier selected — generate the invoice when ready.",
+                          )
+                        }
+                        style={btnStyle("primary", "sm")}
+                      >
+                        Select for invoice
+                      </button>
+                    )}
+                  </div>
+                  {status === "selected" && (
+                    <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected for invoice</div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      <p style={{ margin: "10px 0 0", fontSize: 12, color: C.faint }}>
+        Approve a supplier, add a quote total, and select it — then generate the invoice with every field carried over.
+      </p>
+
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+    </DrawerShell>
+  );
+}
+
+/* -- Supplier drawer -- */
+function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [detail, setDetail] = useState<IntoolsSupplierDetail | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      setDetail(await getIntoolsSupplierDetail(id));
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load this supplier."));
+    }
+  }, [id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function run(fn: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setNotice(message);
+      await load();
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause, "The action could not be completed."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (error && !detail)
+    return (
+      <DrawerShell title="Supplier" subtitle={id} onClose={onClose}>
+        <Notice tone="danger">{error}</Notice>
+      </DrawerShell>
+    );
+  if (!detail)
+    return (
+      <DrawerShell title="Supplier" subtitle={id} onClose={onClose}>
+        <SkeletonRows />
+      </DrawerShell>
+    );
+
+  const brokerStatus = detail.archived_at ? "archived" : detail.broker_status || detail.verify_state;
+  return (
+    <DrawerShell
+      title={detail.name}
+      subtitle={`${detail.slug} · ${detail.region || detail.loc || "Region not recorded"}`}
+      status={brokerStatus}
+      onClose={onClose}
+      footer={
+        <>
+          <button disabled={busy || detail.broker_status === "approved"} onClick={() => void run(() => setIntoolsSupplierBrokerStatus(detail.id, "approved"), "Supplier approved.")} style={btnStyle("success")}>
+            Approve
+          </button>
+          <button disabled={busy || detail.broker_status === "rejected"} onClick={() => void run(() => setIntoolsSupplierBrokerStatus(detail.id, "rejected"), "Supplier rejected.")} style={btnStyle("danger")}>
+            Reject
+          </button>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void run(
+                () => archiveIntoolsSupplier(detail.id, detail.updated_at, detail.archived_at != null),
+                detail.archived_at ? "Supplier restored." : "Supplier archived.",
+              )
+            }
+            style={btnStyle("neutral")}
+          >
+            {detail.archived_at ? "Restore" : "Archive"}
+          </button>
+        </>
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Type", label(detail.type || "—")],
+          ["Region", detail.region || detail.loc || "—"],
+          ["Contact", detail.phone || "—"],
+          ["Website", detail.web || "—"],
+          ["Years in business", detail.years != null ? String(detail.years) : "—"],
+          ["MOQ", detail.moq || "—"],
+          ["Lead time", detail.lead || "—"],
+          ["Monthly capacity", detail.capacity || "—"],
+          ["Certifications", (detail.certs || []).join(", ") || "—"],
+          ["Products", `${detail.product_count ?? detail.products.length}`],
+          ["Company overview", detail.bio || "—"],
+        ]}
+      />
+      {detail.source_contacts.length > 0 && (
+        <>
+          <GroupLabel>Source contacts</GroupLabel>
+          {detail.source_contacts.map((contact, index) => (
+            <div key={index} style={{ padding: "8px 0", borderBottom: "1px solid #f0f2f5", fontSize: 12.5 }}>
+              {label(contact.contact_type)}: {contact.normalized_value} · {contact.validation_status}
+            </div>
+          ))}
+        </>
+      )}
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+    </DrawerShell>
+  );
+}
+
+/* -- Registration drawer -- */
+function RegistrationDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [request, setRequest] = useState<IntoolsRegistrationRequest | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const all = await listIntoolsRegistrationRequests(null);
+      setRequest(all.find((entry) => entry.id === id) || null);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load this request."));
+    }
+  }, [id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function run(fn: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setNotice(message);
+      await load();
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause, "The action could not be completed."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!request)
+    return (
+      <DrawerShell title="Sign-up request" subtitle={id} onClose={onClose}>
+        {error ? <Notice tone="danger">{error}</Notice> : <SkeletonRows />}
+      </DrawerShell>
+    );
+
+  const pending = request.status === "pending_review";
+  return (
+    <DrawerShell
+      title={request.name}
+      subtitle={request.email}
+      status={request.status}
+      onClose={onClose}
+      footer={
+        pending ? (
+          <>
+            <button disabled={busy} onClick={() => void run(() => approveRegistrationRequest(request.id), "Request approved.")} style={btnStyle("success")}>
+              Approve
+            </button>
+            <button disabled={busy} onClick={() => void run(() => declineRegistrationRequest(request.id), "Request declined.")} style={btnStyle("danger")}>
+              Decline
+            </button>
+          </>
+        ) : undefined
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Company", request.company_name],
+          ["Phone", request.phone ? `${request.country_code || ""} ${request.phone}`.trim() : "—"],
+          ["Annual revenue", request.annual_revenue],
+          ["Sourcing need", request.sourcing],
+          ["Submitted", shortDate(request.created_at)],
+          ["Reviewed", request.reviewed_at ? shortDate(request.reviewed_at) : "—"],
+        ]}
+      />
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+    </DrawerShell>
+  );
+}
+
+/* -- Knowledge drawer -- */
+function KnowledgeDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [doc, setDoc] = useState<IntoolsAgentKnowledgeDocument | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const all = await listIntoolsAgentKnowledge(null, null);
+      setDoc(all.find((entry) => entry.id === id) || null);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load this document."));
+    }
+  }, [id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function run(fn: () => Promise<unknown>, message: string) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await fn();
+      setNotice(message);
+      await load();
+      onChanged();
+    } catch (cause) {
+      setError(errorMessage(cause, "The action could not be completed."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!doc)
+    return (
+      <DrawerShell title="Knowledge document" subtitle={id} onClose={onClose}>
+        {error ? <Notice tone="danger">{error}</Notice> : <SkeletonRows />}
+      </DrawerShell>
+    );
+
+  return (
+    <DrawerShell
+      title={doc.title}
+      subtitle={doc.original_name || "Knowledge document"}
+      status={doc.status}
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            disabled={busy || !doc.current_version_id || doc.status === "published"}
+            onClick={() => void run(() => publishIntoolsAgentKnowledge(doc.current_version_id!), "Document published.")}
+            style={btnStyle("success")}
+          >
+            Publish
+          </button>
+          <button disabled={busy || doc.status === "archived"} onClick={() => void run(() => archiveIntoolsAgentKnowledge(doc.id), "Document archived.")} style={btnStyle("neutral")}>
+            Archive
+          </button>
+        </>
+      }
+    >
+      <FieldRows
+        rows={[
+          ["Domain", label(doc.domain || "—")],
+          ["Visibility", label(doc.visibility || "—")],
+          ["Size", formatBytes(doc.byte_size)],
+          ["Type", doc.mime_type || "—"],
+          ["Categories", (doc.applies_to.categories || []).join(", ") || "—"],
+          ["Procurement modes", (doc.applies_to.procurementModes || []).join(", ") || "—"],
+          ["Updated", shortDate(doc.updated_at)],
+          ["Extraction error", doc.extraction_error || "—"],
+        ]}
+      />
+      {error && <Notice tone="danger">{error}</Notice>}
+      {notice && <Notice tone="success">{notice}</Notice>}
+    </DrawerShell>
+  );
+}
+
+/* -- Audit drawer -- */
+function AuditDrawerBody({ row, onClose }: { row: Row; onClose: () => void }) {
+  return (
+    <DrawerShell title={row.title} subtitle={row.subtitle} onClose={onClose}>
+      <FieldRows
+        rows={[
+          ["Action", row.title],
+          ["Actor", row.subtitle],
+          ["Summary", row.cols[0] || "—"],
+          ["When", row.cols[1] || "—"],
+        ]}
+      />
+    </DrawerShell>
+  );
+}
+
+/* ------------------------------------------------------------------ Modals owned by shell */
+
+const SUPPLIER_TYPES = ["fabric_mill", "garment_manufacturer", "trim_supplier"];
+const KNOWLEDGE_DOMAINS = ["rfq", "sourcing", "operations", "payments-orders", "policies", "support"];
+
+function SupplierFormModal({ onClose, onDone }: { onClose: () => void; onDone: (message: string) => void }) {
+  const [values, setValues] = useState({
+    name: "",
+    contactName: "",
+    web: "",
+    region: "",
+    type: "garment_manufacturer",
+    years: "",
+    moq: "",
+    lead: "",
+    capacity: "",
+    certs: "",
+    bio: "",
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const ready = values.name.trim().length > 0;
+
+  function set<K extends keyof typeof values>(key: K, value: string) {
+    setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submit() {
+    setBusy(true);
+    setError("");
+    try {
+      const slug = values.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const payload: IntoolsSupplierPayload = {
+        slug,
+        name: values.name.trim(),
+        type: values.type,
+        region: values.region.trim() || null,
+        verify_state: "unverified",
+        years: values.years ? Number(values.years) : null,
+        moq: values.moq.trim() || null,
+        lead: values.lead.trim() || null,
+        capacity: values.capacity.trim() || null,
+        certs: values.certs ? values.certs.split(",").map((entry) => entry.trim()).filter(Boolean) : null,
+        web: values.web.trim() || null,
+        bio: values.bio.trim() || null,
+      };
+      await saveIntoolsSupplier(null, payload);
+      onDone(`${values.name.trim()} added as a new supplier record — pending review.`);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not create this supplier."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <ModalShell
+      title="New supplier"
+      hint="Fields mirror the public supplier intake form, plus internal MOQ and lead time for review."
+      width={600}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} style={btnStyle("neutral")}>
+            Cancel
+          </button>
+          <button disabled={busy || !ready} onClick={() => void submit()} style={btnStyle(ready ? "success" : "neutral")}>
+            Add supplier
+          </button>
+        </>
+      }
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }}>
+        <Field label="Company name">
+          <input value={values.name} onChange={(event) => set("name", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Contact name">
+          <input value={values.contactName} onChange={(event) => set("contactName", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Website">
+          <input value={values.web} onChange={(event) => set("web", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Region">
+          <input value={values.region} onChange={(event) => set("region", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Supplier type">
+          <select value={values.type} onChange={(event) => set("type", event.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+            {SUPPLIER_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {label(type)}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Years in business">
+          <input value={values.years} inputMode="numeric" onChange={(event) => set("years", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Lead time">
+          <input value={values.lead} onChange={(event) => set("lead", event.target.value)} placeholder="e.g. 30 days" style={inputStyle} />
+        </Field>
+        <Field label="MOQ">
+          <input value={values.moq} onChange={(event) => set("moq", event.target.value)} placeholder="e.g. 300 units" style={inputStyle} />
+        </Field>
+        <Field label="Monthly capacity">
+          <input value={values.capacity} onChange={(event) => set("capacity", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Certifications">
+          <input value={values.certs} onChange={(event) => set("certs", event.target.value)} placeholder="Comma separated" style={inputStyle} />
+        </Field>
+      </div>
+      <div style={{ marginTop: 12 }}>
+        <Field label="Company overview">
+          <textarea rows={2} value={values.bio} onChange={(event) => set("bio", event.target.value)} style={{ ...inputStyle, height: "auto", padding: "8px 10px", resize: "vertical" }} />
+        </Field>
+      </div>
+      {error && <Notice tone="danger">{error}</Notice>}
+    </ModalShell>
+  );
+}
+
+function UploadModal({
+  section,
+  onClose,
+  onDone,
+}: {
+  section: "suppliers" | "knowledge";
+  onClose: () => void;
+  onDone: (message: string) => void;
+}) {
+  const meta = SECTIONS[section];
+  const [files, setFiles] = useState<File[]>([]);
+  const [domain, setDomain] = useState("rfq");
+  const [visibility, setVisibility] = useState("operator-only");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function parseSupplierRows(file: File): Promise<IntoolsSupplierImportRow[]> {
+    const text = await file.text();
+    if (file.name.toLowerCase().endsWith(".json")) {
+      const parsed = JSON.parse(text) as Array<Record<string, unknown>>;
+      return parsed.map((entry, index) => ({
+        row_number: index + 1,
+        source_system: "bulk_upload",
+        source_record_id: String(entry.source_record_id || entry.slug || entry.name || index + 1),
+        supplier: {
+          slug: entry.slug ? String(entry.slug) : undefined,
+          name: String(entry.name || "").trim(),
+          type: String(entry.type || "garment_manufacturer"),
+          region: entry.region ? String(entry.region) : null,
+        },
+      }));
+    }
+    const [headerLine, ...lines] = text.replace(/^﻿/, "").trim().split(/\r?\n/);
+    const headers = headerLine.split(",").map((entry) => entry.trim().toLowerCase());
+    return lines.filter(Boolean).map((line, index) => {
+      const cells = line.split(",");
+      const record: Record<string, string> = {};
+      headers.forEach((header, headerIndex) => {
+        record[header] = (cells[headerIndex] || "").trim();
+      });
+      return {
+        row_number: index + 1,
+        source_system: "bulk_upload",
+        source_record_id: record.source_record_id || record.slug || record.name || String(index + 1),
+        supplier: {
+          slug: record.slug || undefined,
+          name: record.name || "",
+          type: record.type || "garment_manufacturer",
+          region: record.region || null,
+        },
+      };
+    });
+  }
+
+  async function submit() {
+    if (!files.length) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (section === "suppliers") {
+        let accepted = 0;
+        for (const file of files) {
+          const rows = await parseSupplierRows(file);
+          const dryRun = await runIntoolsSupplierImportDryRun(rows, false);
+          const promotable = dryRun.rows.filter((row) => row.status === "accepted").map((row) => row.row_number);
+          if (promotable.length) {
+            const promoted = await promoteIntoolsSupplierImportRows(dryRun.run_id, promotable, false);
+            accepted += promoted.rows.filter((row) => row.status === "promoted").length;
+          }
+        }
+        onDone(`${accepted} supplier record${accepted === 1 ? "" : "s"} imported — pending review.`);
+        return;
+      }
+      const results = await Promise.allSettled(
+        files.map((file) =>
+          uploadIntoolsAgentKnowledge(file, {
+            title: file.name.replace(/\.[^.]+$/, ""),
+            domain,
+            visibility,
+          }),
+        ),
+      );
+      const ok = results.filter((result) => result.status === "fulfilled").length;
+      onDone(`${ok} document${ok === 1 ? "" : "s"} uploaded and queued for processing.`);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not process these files."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <ModalShell
+      title={section === "suppliers" ? "Bulk upload suppliers" : "Upload knowledge documents"}
+      hint="Files stay private until reviewed and promoted."
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} style={btnStyle("neutral")}>
+            Cancel
+          </button>
+          <button disabled={busy || !files.length} onClick={() => void submit()} style={btnStyle(files.length ? "success" : "neutral")}>
+            {files.length ? `Upload ${files.length} file${files.length === 1 ? "" : "s"}` : "Upload files"}
+          </button>
+        </>
+      }
+    >
+      {section === "knowledge" && (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}>
+          <Field label="Domain">
+            <select value={domain} onChange={(event) => setDomain(event.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+              {KNOWLEDGE_DOMAINS.map((entry) => (
+                <option key={entry} value={entry}>
+                  {label(entry)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Visibility">
+            <select value={visibility} onChange={(event) => setVisibility(event.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+              <option value="operator-only">Operator-only</option>
+              <option value="buyer-safe">Buyer-safe</option>
+            </select>
+          </Field>
+        </div>
+      )}
+      <label
+        style={{
+          position: "relative",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 6,
+          border: "1.5px dashed #c9d0da",
+          borderRadius: 10,
+          padding: "26px 16px",
+          cursor: "pointer",
+          textAlign: "center",
+          background: "#f9fafb",
+        }}
+      >
+        <span style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>Choose files to upload</span>
+        <span style={{ fontSize: 12, color: C.faint }}>{meta.uploadAccept}</span>
+        <input
+          type="file"
+          multiple
+          accept={meta.uploadAcceptAttr}
+          onChange={(event) => setFiles(Array.from(event.target.files || []))}
+          style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+        />
+      </label>
+      {files.length > 0 && (
+        <ul style={{ listStyle: "none", margin: "12px 0 0", padding: 0, display: "flex", flexDirection: "column", gap: 6 }}>
+          {files.map((file, index) => (
+            <li key={index} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, background: "#f6f8fa", borderRadius: 7, padding: "7px 10px" }}>
+              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+              <span style={{ color: C.faint }}>{formatBytes(file.size)}</span>
+              <button
+                aria-label="Remove file"
+                onClick={() => setFiles((current) => current.filter((_, i) => i !== index))}
+                style={{ border: "none", background: "none", color: C.danger, cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <Notice tone="danger">{error}</Notice>}
+    </ModalShell>
+  );
+}
+
+type InvoiceFormSeed = {
+  description: string;
+  buyerProfileId: string;
+  rfqCaseId: string | null;
+  orderId: string | null;
+  amount: string;
+  notes: string;
+};
+
+function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; onClose: () => void; onDone: (message: string) => void }) {
+  const [form, setForm] = useState(seed);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10));
+
+  function set<K extends keyof InvoiceFormSeed>(key: K, value: InvoiceFormSeed[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const unitAmountCents = Math.round((parseFloat(form.amount) || 0) * 100);
+      if (!form.buyerProfileId.trim()) throw new Error("A buyer profile ID is required.");
+      if (unitAmountCents <= 0) throw new Error("Enter an invoice amount in USD.");
+      await createIntoolsInvoice({
+        buyerProfileId: form.buyerProfileId.trim(),
+        rfqCaseId: form.rfqCaseId,
+        orderId: form.orderId,
+        dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null,
+        notes: form.notes.trim() || null,
+        items: [{ description: form.description.trim() || "Sourcing services", quantity: 1, unitAmountCents, taxAmountCents: 0 }],
+      });
+      onDone("Invoice created — review and send it from the Invoices queue.");
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not create this invoice."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <ModalShell
+      title="Generate invoice"
+      hint="Prefilled from the linked record — edit anything before creating. Totals and eligibility are server-computed."
+      width={520}
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} style={btnStyle("neutral")}>
+            Cancel
+          </button>
+          <button disabled={busy} onClick={(event) => void submit(event)} style={btnStyle("success")}>
+            Create invoice
+          </button>
+        </>
+      }
+    >
+      <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Field label="Description">
+          <input value={form.description} onChange={(event) => set("description", event.target.value)} style={inputStyle} />
+        </Field>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <Field label="Buyer profile ID">
+              <input value={form.buyerProfileId} onChange={(event) => set("buyerProfileId", event.target.value)} style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5 }} />
+            </Field>
+          </div>
+          <div style={{ flex: 1 }}>
+            <Field label="Due date (YYYY-MM-DD)">
+              <input value={dueDate} onChange={(event) => setDueDate(event.target.value)} style={inputStyle} />
+            </Field>
+          </div>
+        </div>
+        <Field label="Amount (USD)">
+          <input value={form.amount} inputMode="decimal" onChange={(event) => set("amount", event.target.value)} style={inputStyle} />
+        </Field>
+        <Field label="Notes">
+          <textarea rows={2} value={form.notes} onChange={(event) => set("notes", event.target.value)} style={{ ...inputStyle, height: "auto", padding: "8px 10px", resize: "vertical" }} />
+        </Field>
+        {error && <Notice tone="danger">{error}</Notice>}
+      </form>
+    </ModalShell>
+  );
+}
+
+/* ------------------------------------------------------------------ Toast */
+
+function Toast({ message }: { message: string }) {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{
+        position: "fixed",
+        bottom: 24,
+        left: "50%",
+        transform: "translateX(-50%)",
+        background: "#202936",
+        color: "#fff",
+        fontSize: 13,
+        fontWeight: 600,
+        padding: "11px 18px",
+        borderRadius: 9,
+        boxShadow: "0 12px 30px rgba(0,0,0,.22)",
+        zIndex: 60,
+      }}
+    >
+      {message}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ Access gate */
 
 function AccessDenied({
   kind = "permission",
@@ -370,13 +3005,10 @@ function AccessDenied({
   onLoggedIn?: () => void;
 }) {
   const permission = kind === "permission";
-  const [credentials, setCredentials] = useState({
-    username: "",
-    password: "",
-  });
+  const [credentials, setCredentials] = useState({ username: "", password: "" });
   const [busy, setBusy] = useState(false);
   const [loginError, setLoginError] = useState("");
-  async function localSubmit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setLoginError("");
@@ -384,11 +3016,7 @@ function AccessDenied({
       await loginLocalIntools(credentials.username, credentials.password);
       onLoggedIn?.();
     } catch (cause) {
-      setLoginError(
-        cause instanceof Error
-          ? cause.message
-          : "Local administrator sign-in failed.",
-      );
+      setLoginError(errorMessage(cause, "Local administrator sign-in failed."));
     } finally {
       setBusy(false);
     }
@@ -401,2891 +3029,210 @@ function AccessDenied({
         display: "grid",
         placeItems: "center",
         padding: 24,
-        background: "#f4f6f9",
+        background: C.page,
+        fontFamily: "'DM Sans', Arial, sans-serif",
       }}
     >
-      <Surface
-        sx={{
-          width: "min(520px, 100%)",
-          p: { xs: 3, sm: 4 },
-          textAlign: "center",
-        }}
-      >
-        <Avatar
-          sx={{
-            mx: "auto",
-            mb: 2,
-            bgcolor: permission ? "#eef1f5" : "#fff1ef",
-            color: permission ? "#45556b" : "#a33b36",
-          }}
-        >
-          {permission ? <LockOutlined /> : <ErrorOutlined />}
-        </Avatar>
-        <Typography variant="h1" sx={{ fontSize: { xs: 28, sm: 34 } }}>
+      <div style={{ width: "min(520px, 100%)", padding: 32, textAlign: "center", background: "#fff", border: `1px solid ${C.border}`, borderRadius: 14 }}>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>
           {permission ? "Intools access required" : "Intools is unavailable"}
-        </Typography>
-        <Typography sx={{ mt: 1.25, color: "text.secondary", lineHeight: 1.6 }}>
+        </h1>
+        <p style={{ marginTop: 10, color: C.dim, lineHeight: 1.6 }}>
           {permission
             ? "This private workspace is available to confirmed Atelix administrators only."
             : "The workspace could not load. Try again or return to sign in."}
-        </Typography>
+        </p>
         {localLogin && (
-          <Box
-            component="form"
-            onSubmit={localSubmit}
-            sx={{ mt: 2, textAlign: "left" }}
-          >
-            <Stack spacing={1.5}>
-              <TextField
+          <form onSubmit={submit} style={{ marginTop: 16, textAlign: "left", display: "grid", gap: 12 }}>
+            <Field label="Local admin username">
+              <input
                 required
-                label="Local admin username"
                 autoComplete="username"
                 value={credentials.username}
-                onChange={(event) =>
-                  setCredentials((value) => ({
-                    ...value,
-                    username: event.target.value,
-                  }))
-                }
+                onChange={(event) => setCredentials((value) => ({ ...value, username: event.target.value }))}
+                style={inputStyle}
               />
-              <TextField
+            </Field>
+            <Field label="Local admin password">
+              <input
                 required
-                label="Local admin password"
                 type="password"
                 autoComplete="current-password"
                 value={credentials.password}
-                onChange={(event) =>
-                  setCredentials((value) => ({
-                    ...value,
-                    password: event.target.value,
-                  }))
-                }
+                onChange={(event) => setCredentials((value) => ({ ...value, password: event.target.value }))}
+                style={inputStyle}
               />
-              {loginError && (
-                <Alert severity="error" role="alert">
-                  {loginError}
-                </Alert>
-              )}
-              <Button type="submit" variant="contained" disabled={busy}>
-                Sign in locally
-              </Button>
-            </Stack>
-          </Box>
+            </Field>
+            {loginError && <Notice tone="danger">{loginError}</Notice>}
+            <button type="submit" disabled={busy} style={btnStyle("primary")}>
+              Sign in locally
+            </button>
+          </form>
         )}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{ mt: 2, justifyContent: "center" }}
-        >
+        <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "center" }}>
           {permission && !localLogin && (
-            <Button
-              variant="contained"
-              onClick={() => navigate("/sign-in?next=%2Fintools")}
-            >
+            <button onClick={() => navigate("/sign-in?next=%2Fintools")} style={btnStyle("primary")}>
               Sign in
-            </Button>
+            </button>
           )}
           {!permission && (
-            <Button
-              variant="contained"
-              onClick={() => location.reload()}
-              startIcon={<Refresh />}
-            >
+            <button onClick={() => location.reload()} style={btnStyle("primary")}>
               Try again
-            </Button>
+            </button>
           )}
-        </Stack>
-      </Surface>
+        </div>
+      </div>
     </main>
   );
 }
 
-function InvoiceList({
-  invoices,
-  selectedId,
-  onSelect,
-}: {
-  invoices: IntoolsInvoice[];
-  selectedId: string | null;
-  onSelect: (invoice: IntoolsInvoice) => void;
-}) {
-  if (!invoices.length)
-    return (
-      <Surface sx={{ p: { xs: 3, sm: 4 }, textAlign: "center" }}>
-        <Description sx={{ color: "#8b96a4", fontSize: 36 }} />
-        <Typography sx={{ mt: 1, fontWeight: 700 }}>
-          No invoices in this view
-        </Typography>
-        <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 14 }}>
-          Create a draft invoice when a commercial handoff is ready.
-        </Typography>
-      </Surface>
-    );
-  return (
-    <Surface sx={{ overflow: "hidden" }}>
-      <Box
-        aria-hidden="true"
-        sx={{
-          display: { xs: "none", sm: "grid" },
-          gridTemplateColumns: "1.15fr 1.4fr .8fr .8fr auto",
-          gap: 1.5,
-          px: 2,
-          py: 1.25,
-          borderBottom: "1px solid #dfe4eb",
-          backgroundColor: "#f6f8fa",
-          color: "#526176",
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: ".04em",
-          textTransform: "uppercase",
-        }}
-      >
-        <Box>Invoice</Box>
-        <Box>Case</Box>
-        <Box>Total</Box>
-        <Box>Due</Box>
-        <Box>Status</Box>
-      </Box>
-      <Box
-        component="ul"
-        aria-label="Invoices"
-        sx={{ listStyle: "none", p: 0, m: 0 }}
-      >
-        {invoices.map((invoice) => (
-          <Box
-            component="li"
-            key={invoice.id}
-            sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}
-          >
-            <Button
-              className="intools-row-button"
-              onClick={() => onSelect(invoice)}
-              fullWidth
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "minmax(0,1fr) auto",
-                  sm: "1.15fr 1.4fr .8fr .8fr auto",
-                },
-                alignItems: "center",
-                gap: { xs: 1, sm: 1.5 },
-                p: { xs: 1.5, sm: 2 },
-                borderRadius: 0,
-                textAlign: "left",
-                color: "inherit",
-                textTransform: "none",
-                backgroundColor: selectedId === invoice.id ? "#f1f7f2" : "#fff",
-                transition: "background-color 180ms ease-out",
-                "&:hover": {
-                  backgroundColor:
-                    selectedId === invoice.id ? "#e9f3eb" : "#f7f9fb",
-                },
-                "&:focus-visible": {
-                  outline: "3px solid #6fae86",
-                  outlineOffset: -3,
-                  zIndex: 1,
-                },
-              }}
-              aria-current={selectedId === invoice.id ? "true" : undefined}
-            >
-              <Box sx={{ minWidth: 0 }}>
-                <Typography
-                  sx={{
-                    fontSize: 14,
-                    fontWeight: 800,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {invoice.invoice_no}
-                </Typography>
-                <Typography
-                  noWrap
-                  sx={{ mt: 0.3, color: "text.secondary", fontSize: 12 }}
-                >
-                  {invoice.buyer_name ||
-                    invoice.buyer_email ||
-                    "Buyer not named"}
-                </Typography>
-              </Box>
-              <Typography
-                noWrap
-                sx={{
-                  display: { xs: "none", sm: "block" },
-                  color: "text.secondary",
-                  fontSize: 13,
-                }}
-              >
-                {invoice.rfq_case_no || invoice.order_no || "No linked case"}
-              </Typography>
-              <Typography
-                sx={{
-                  textAlign: { xs: "right", sm: "left" },
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                {money(invoice.total_cents)}
-              </Typography>
-              <Typography
-                sx={{
-                  display: { xs: "none", sm: "block" },
-                  color: "text.secondary",
-                  fontSize: 12,
-                }}
-              >
-                {shortDate(invoice.due_date)}
-              </Typography>
-              <Box sx={{ justifySelf: { xs: "end", sm: "start" } }}>
-                <StatusChip
-                  status={invoice.effective_status || invoice.status}
-                />
-              </Box>
-              <Typography
-                sx={{
-                  display: { xs: "block", sm: "none" },
-                  gridColumn: "1 / -1",
-                  color: "text.secondary",
-                  fontSize: 12,
-                }}
-              >
-                Due {shortDate(invoice.due_date)} · Balance{" "}
-                {money(invoice.balance_cents)}
-              </Typography>
-            </Button>
-          </Box>
-        ))}
-      </Box>
-    </Surface>
-  );
+/* ------------------------------------------------------------------ routing */
+
+type IntoolsRoute = { section: Section; id: string | null };
+
+function parseIntoolsRoute(pathname = location.pathname): IntoolsRoute {
+  if (pathname === "/intools" || pathname === "/intools/") return { section: "analytics", id: null };
+  const rfq = /^\/intools\/rfq(?:\/([^/]+))?$/.exec(pathname);
+  if (rfq) return { section: "requests", id: rfq[1] ? decodeURIComponent(rfq[1]) : null };
+  const match = /^\/intools\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
+  if (match) {
+    const raw = match[1];
+    const section = (NAV_ORDER as string[]).includes(raw) ? (raw as Section) : "analytics";
+    return { section, id: match[2] ? decodeURIComponent(match[2]) : null };
+  }
+  return { section: "analytics", id: null };
 }
 
-function InvoiceCreateForm({
-  initial,
-  onCreated,
-  onCancel,
-}: {
-  initial?: Partial<InvoiceFormState> | null;
-  onCreated: (invoice: IntoolsInvoiceDetail) => void;
-  onCancel: () => void;
-}) {
-  const [form, setForm] = useState(() => ({ ...emptyForm, ...initial }));
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const [lookupOrderNo, setLookupOrderNo] = useState("");
-  const [lookupBusy, setLookupBusy] = useState(false);
-  const [lookupError, setLookupError] = useState("");
-  const [buyerCountry, setBuyerCountry] = useState<string | null>(null);
-  async function lookupOrder() {
-    const orderNo = lookupOrderNo.trim();
-    if (!orderNo) return;
-    setLookupBusy(true);
-    setLookupError("");
-    try {
-      const detail = await getIntoolsOrderDetail(orderNo);
-      setForm((current) => ({
-        ...current,
-        buyerProfileId: detail.buyer_profile_id,
-        orderId: detail.id,
-        rfqCaseId: detail.rfq_case_id || "",
-        line: {
-          ...current.line,
-          description: current.line.description || `Order ${detail.order_no}`,
-          unitAmount: String(Math.round((detail.total || 0) * 100)),
-        },
-      }));
-      setBuyerCountry(detail.buyer.country || null);
-    } catch (cause) {
-      setLookupError(
-        cause instanceof Error ? cause.message : "Order not found.",
-      );
-    } finally {
-      setLookupBusy(false);
-    }
-  }
-  function set<K extends keyof InvoiceFormState>(
-    key: K,
-    value: InvoiceFormState[K],
-  ) {
-    setForm((current) => ({ ...current, [key]: value }));
-  }
-  function setLine<K extends keyof DraftLine>(key: K, value: string) {
-    setForm((current) => ({
-      ...current,
-      line: { ...current.line, [key]: value },
-    }));
-  }
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    const quantity = Number(form.line.quantity);
-    const unit = Number(form.line.unitAmount);
-    const tax = Number(form.line.taxAmount || 0);
-    const dueDate = form.dueDate.trim();
-    if (
-      !form.buyerProfileId.trim() ||
-      !form.line.description.trim() ||
-      !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      !Number.isInteger(unit) ||
-      unit < 0 ||
-      !Number.isInteger(tax) ||
-      tax < 0 ||
-      (dueDate !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate))
-    ) {
-      setError(
-        "Add a buyer profile ID, valid item values in cents, and an optional YYYY-MM-DD due date.",
-      );
-      return;
-    }
-    setBusy(true);
-    try {
-      const payload: IntoolsCreateInvoicePayload = {
-        buyerProfileId: form.buyerProfileId.trim(),
-        rfqCaseId: form.rfqCaseId.trim() || null,
-        orderId: form.orderId.trim() || null,
-        dueDate: dueDate || null,
-        notes: form.notes.trim() || null,
-        items: [
-          {
-            description: form.line.description.trim(),
-            quantity,
-            unitAmountCents: unit,
-            taxAmountCents: tax,
-          },
-        ],
-      };
-      onCreated(await createIntoolsInvoice(payload));
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not create invoice.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Surface
-      component="form"
-      onSubmit={submit}
-      aria-labelledby="create-invoice-title"
-      sx={{ p: { xs: 2, sm: 3 }, mb: 2 }}
-    >
-      <Stack spacing={2}>
-        <Box>
-          <Typography
-            id="create-invoice-title"
-            variant="h2"
-            sx={{ fontSize: 20 }}
-          >
-            New invoice
-          </Typography>
-          <Typography sx={{ mt: 0.35, color: "text.secondary", fontSize: 13 }}>
-            Values are sent to the server in USD cents; totals and eligibility
-            are server-computed.
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "flex-end",
-            gap: 1,
-            p: 1.5,
-            border: "1px dashed #c9d0da",
-            borderRadius: 1.5,
-          }}
-        >
-          <TextField
-            label="Order number"
-            placeholder="e.g. ORD-2026-0412"
-            value={lookupOrderNo}
-            onChange={(event) => setLookupOrderNo(event.target.value)}
-            sx={{ minWidth: 220 }}
-          />
-          <Button
-            variant="outlined"
-            disabled={lookupBusy || !lookupOrderNo.trim()}
-            onClick={() => void lookupOrder()}
-          >
-            {lookupBusy ? "Looking up…" : "Fill from order"}
-          </Button>
-          <Typography sx={{ fontSize: 12, color: "text.secondary", flexBasis: "100%" }}>
-            {lookupError ||
-              "Auto-fills the buyer, order, RFQ, and line total below from an existing order."}
-          </Typography>
-        </Box>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))" },
-            gap: 1.5,
-          }}
-        >
-          <TextField
-            required
-            label="Buyer profile ID"
-            value={form.buyerProfileId}
-            onChange={(event) => set("buyerProfileId", event.target.value)}
-            helperText="Use the confirmed profile UUID, or fill from an order above."
-          />
-          <TextField
-            label="Due date"
-            type="text"
-            inputMode="numeric"
-            placeholder="YYYY-MM-DD"
-            value={form.dueDate}
-            onChange={(event) => set("dueDate", event.target.value)}
-            helperText="Optional. Use YYYY-MM-DD."
-          />
-          <TextField
-            label="RFQ case ID"
-            value={form.rfqCaseId}
-            onChange={(event) => set("rfqCaseId", event.target.value)}
-          />
-          <TextField
-            label="Order ID"
-            value={form.orderId}
-            onChange={(event) => set("orderId", event.target.value)}
-          />
-          <TextField label="Currency" value="USD" disabled />
-          <TextField
-            label="Tax (USD cents)"
-            inputMode="numeric"
-            value={form.line.taxAmount}
-            onChange={(event) => setLine("taxAmount", event.target.value)}
-            helperText={
-              buyerCountry
-                ? `Buyer country: ${buyerCountry}. Defaults to $0 -- see tax guidance below before charging.`
-                : "Defaults to $0 -- see tax guidance below before charging."
-            }
-          />
-        </Box>
-        <Alert severity="info" sx={{ fontSize: 12.5 }}>
-          <strong>Tax defaults to $0.</strong> Atelix is a US-based sourcing
-          broker invoicing for cross-border services, not tangible goods sold
-          domestically. Under general US sales-tax rules, a seller only
-          collects sales tax where it has nexus, and brokerage/services are
-          frequently exempt even then; for GST jurisdictions (AU, NZ, SG, IN,
-          CA, etc.) cross-border B2B services are commonly zero-rated or
-          reverse-charged to the buyer rather than taxed by the foreign
-          supplier. Neither rule is universal — confirm with a tax advisor
-          before charging tax on a specific invoice rather than relying on
-          this default.
-        </Alert>
-        <Divider />
-        <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
-          Line item
-        </Typography>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              sm: "minmax(0,2fr) .7fr 1fr 1fr",
-            },
-            gap: 1.5,
-          }}
-        >
-          <TextField
-            required
-            label="Description"
-            value={form.line.description}
-            onChange={(event) => setLine("description", event.target.value)}
-          />
-          <TextField
-            required
-            label="Quantity"
-            inputMode="numeric"
-            value={form.line.quantity}
-            onChange={(event) => setLine("quantity", event.target.value)}
-          />
-          <TextField
-            required
-            label="Unit amount (USD cents)"
-            inputMode="numeric"
-            value={form.line.unitAmount}
-            onChange={(event) => setLine("unitAmount", event.target.value)}
-          />
-          <TextField
-            label="Tax (USD cents)"
-            inputMode="numeric"
-            value={form.line.taxAmount}
-            onChange={(event) => setLine("taxAmount", event.target.value)}
-          />
-        </Box>
-        <TextField
-          label="Notes"
-          multiline
-          minRows={3}
-          value={form.notes}
-          onChange={(event) => set("notes", event.target.value)}
-        />
-        {error && (
-          <Alert severity="error" role="alert">
-            {error}
-          </Alert>
-        )}
-        <Stack direction="row" spacing={1} sx={{ justifyContent: "flex-end" }}>
-          <Button type="button" onClick={onCancel} disabled={busy}>
-            Close
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={busy}
-            startIcon={
-              busy ? <CircularProgress size={16} color="inherit" /> : <Add />
-            }
-          >
-            {busy ? "Creating…" : "Create draft"}
-          </Button>
-        </Stack>
-      </Stack>
-    </Surface>
-  );
+function sectionPath(section: Section, id?: string | null) {
+  const base = `/intools/${section}`;
+  return id ? `${base}/${encodeURIComponent(id)}` : base;
 }
 
-function InvoiceDetail({
-  invoice,
+/* ------------------------------------------------------------------ detail router */
+
+function DetailRouter({
+  section,
+  id,
+  onClose,
   onChanged,
-  onBack,
+  onGenerateInvoice,
 }: {
-  invoice: IntoolsInvoiceDetail;
-  onChanged: (invoice: IntoolsInvoiceDetail) => void;
-  onBack: () => void;
+  section: GenericSection;
+  id: string;
+  onClose: () => void;
+  onChanged: () => void;
+  onGenerateInvoice: (seed: InvoiceFormSeed) => void;
 }) {
-  const [dialog, setDialog] = useState<ActionDialog>(null);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [reason, setReason] = useState("");
-  const [payment, setPayment] = useState<IntoolsManualPaymentPayload>({
-    amountCents: invoice.balance_cents,
-    reference: "",
-  });
-  const [editing, setEditing] = useState(false);
-  const [notes, setNotes] = useState(invoice.notes || "");
+  const [rowCache, setRowCache] = useState<Row | null>(null);
   useEffect(() => {
-    setNotes(invoice.notes || "");
-    setEditing(false);
-  }, [invoice.id, invoice.updated_at, invoice.notes]);
-  async function run(
-    action: () => Promise<IntoolsInvoiceDetail>,
-    success: string,
-  ) {
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      onChanged(await action());
-      setMessage(success);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "The action could not be completed.",
-      );
-    } finally {
-      setBusy(false);
-      setDialog(null);
+    if (section === "requests" || section === "audit") {
+      void loadRows(section)
+        .then((rows) => setRowCache(rows.find((row) => row.id === id) || null))
+        .catch(() => setRowCache(null));
     }
-  }
-  function saveDraft(event: FormEvent) {
-    event.preventDefault();
-    void run(
-      () =>
-        updateIntoolsInvoice(invoice.id, {
-          notes,
-          items: invoice.items.map((item) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitAmountCents: item.unit_amount_cents,
-            taxAmountCents: item.tax_amount_cents,
-          })),
-        }),
-      "Draft saved.",
-    );
-  }
-  const canSend = invoice.status === "draft";
-  const canCancel = invoice.status === "draft" || invoice.status === "sent";
-  const canPay = invoice.status === "sent" && invoice.balance_cents > 0;
-  return (
-    <Box>
-      <Button
-        onClick={onBack}
-        startIcon={<ArrowBack />}
-        sx={{ mb: 1.5, px: 0 }}
-      >
-        Back to invoices
-      </Button>
-      <Surface sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={2.25}>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            sx={{
-              justifyContent: "space-between",
-              alignItems: { xs: "flex-start", sm: "center" },
-              gap: 1.5,
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="h2"
-                sx={{ fontSize: { xs: 24, sm: 30 }, overflowWrap: "anywhere" }}
-              >
-                {invoice.invoice_no}
-              </Typography>
-              <Typography
-                sx={{ mt: 0.4, color: "text.secondary", fontSize: 13 }}
-              >
-                {invoice.buyer_name || invoice.buyer_email || "Buyer not named"}{" "}
-                · Created {shortDate(invoice.created_at)}
-              </Typography>
-            </Box>
-            <StatusChip status={invoice.effective_status || invoice.status} />
-          </Stack>
-          <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-            <Button
-              variant="contained"
-              disabled={!canSend || busy}
-              startIcon={<Send />}
-              onClick={() =>
-                void run(() => sendIntoolsInvoice(invoice.id), "Invoice sent.")
-              }
-            >
-              Send invoice
-            </Button>
-            <Button
-              disabled={!canPay || busy}
-              onClick={() => setDialog("payment")}
-            >
-              Record payment
-            </Button>
-            <Button
-              color="error"
-              disabled={!canCancel || busy}
-              onClick={() => setDialog("cancel")}
-            >
-              Cancel invoice
-            </Button>
-            {invoice.status === "draft" && (
-              <Button
-                onClick={() => setEditing((value) => !value)}
-                startIcon={<MoreHoriz />}
-              >
-                {editing ? "Close edit" : "Edit draft"}
-              </Button>
-            )}
-          </Stack>
-          {(message || error) && (
-            <Alert
-              severity={error ? "error" : "success"}
-              role={error ? "alert" : "status"}
-            >
-              {error || message}
-            </Alert>
-          )}
-          {editing && (
-            <Box
-              component="form"
-              onSubmit={saveDraft}
-              sx={{ p: 2, borderRadius: "12px", backgroundColor: "#f6f8fa" }}
-            >
-              <Stack spacing={1.5}>
-                <Typography sx={{ fontWeight: 800 }}>
-                  Edit draft notes
-                </Typography>
-                <TextField
-                  label="Notes"
-                  multiline
-                  minRows={3}
-                  value={notes}
-                  onChange={(event) => setNotes(event.target.value)}
-                />
-                <Stack direction="row" sx={{ justifyContent: "flex-end" }}>
-                  <Button type="submit" variant="contained" disabled={busy}>
-                    Save draft
-                  </Button>
-                </Stack>
-              </Stack>
-            </Box>
-          )}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: {
-                xs: "repeat(2,minmax(0,1fr))",
-                sm: "repeat(4,minmax(0,1fr))",
-              },
-              gap: 1.5,
-            }}
-          >
-            <Metric label="Subtotal" value={money(invoice.subtotal_cents)} />
-            <Metric label="Tax" value={money(invoice.tax_cents)} />
-            <Metric label="Total" value={money(invoice.total_cents)} />
-            <Metric label="Balance" value={money(invoice.balance_cents)} />
-          </Box>
-          <Box
-            component="dl"
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "repeat(2,minmax(0,1fr))" },
-              gap: 1.5,
-              m: 0,
-            }}
-          >
-            {[
-              ["Buyer", invoice.buyer_email || invoice.buyer_name || "—"],
-              ["Due date", shortDate(invoice.due_date)],
-              ["RFQ", invoice.rfq_case_no || "—"],
-              ["Order", invoice.order_no || "—"],
-              ["Currency", "USD"],
-              ["Notes", invoice.notes || "—"],
-            ].map(([label, value]) => (
-              <Box key={label as string}>
-                <Typography
-                  component="dt"
-                  sx={{ color: "text.secondary", fontSize: 12 }}
-                >
-                  {label}
-                </Typography>
-                <Typography
-                  component="dd"
-                  sx={{
-                    m: 0,
-                    mt: 0.25,
-                    fontSize: 14,
-                    overflowWrap: "anywhere",
-                  }}
-                >
-                  {value}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-          <Divider />
-          <Typography sx={{ fontWeight: 800 }}>Items</Typography>
-          <Stack
-            component="ul"
-            spacing={1}
-            sx={{ m: 0, p: 0, listStyle: "none" }}
-          >
-            {invoice.items.length ? (
-              invoice.items.map((item) => (
-                <Box
-                  component="li"
-                  key={item.id}
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0,1fr) auto",
-                    gap: 1,
-                    p: 1.25,
-                    borderRadius: "10px",
-                    backgroundColor: "#f6f8fa",
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      sx={{
-                        fontSize: 13,
-                        fontWeight: 700,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {item.description}
-                    </Typography>
-                    <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                      {item.quantity} × {money(item.unit_amount_cents)} · tax{" "}
-                      {money(item.tax_amount_cents)}
-                    </Typography>
-                  </Box>
-                  <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
-                    {money(item.line_total_cents)}
-                  </Typography>
-                </Box>
-              ))
-            ) : (
-              <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-                No line items returned.
-              </Typography>
-            )}
-          </Stack>
-          <Divider />
-          <Typography sx={{ fontWeight: 800 }}>Payment activity</Typography>
-          {invoice.payments.length ? (
-            <Stack spacing={1}>
-              {invoice.payments.map((item) => (
-                <Box
-                  key={item.id}
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 1,
-                    flexWrap: "wrap",
-                    fontSize: 13,
-                  }}
-                >
-                  <span>
-                    {displayStatus(item.provider)}
-                    {item.reference ? ` · ${item.reference}` : ""}
-                  </span>
-                  <strong>
-                    {money(item.amount_cents)} · {shortDate(item.recorded_at)}
-                  </strong>
-                </Box>
-              ))}
-            </Stack>
-          ) : (
-            <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-              No payments recorded. Partial allocations keep the invoice in sent
-              status until fully settled.
-            </Typography>
-          )}
-          <Divider />
-          <Typography sx={{ fontWeight: 800 }}>Audit history</Typography>
-          {invoice.audit.length ? (
-            <Stack component="ol" spacing={1} sx={{ m: 0, pl: 2.5 }}>
-              {invoice.audit.map((item) => (
-                <Box component="li" key={item.id}>
-                  <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
-                    {displayStatus(item.action)}
-                  </Typography>
-                  <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                    {item.summary || "No summary"} ·{" "}
-                    {item.admin_name || "Admin"} · {shortDate(item.created_at)}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-          ) : (
-            <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-              No audit events returned.
-            </Typography>
-          )}
-        </Stack>
-      </Surface>
-      <Dialog
-        open={dialog === "cancel"}
-        onClose={() => !busy && setDialog(null)}
-        fullWidth
-      >
-        <DialogTitle>Cancel {invoice.invoice_no}?</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ mb: 1.5, color: "text.secondary", fontSize: 14 }}>
-            This records a server-side cancellation. Paid invoices cannot be
-            cancelled.
-          </Typography>
-          <TextField
-            autoFocus
-            fullWidth
-            multiline
-            minRows={2}
-            label="Reason"
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            required
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialog(null)} disabled={busy}>
-            Keep invoice
-          </Button>
-          <Button
-            color="error"
-            variant="contained"
-            disabled={busy || reason.trim().length < 3}
-            onClick={() =>
-              void run(
-                () => cancelIntoolsInvoice(invoice.id, reason.trim()),
-                "Invoice cancelled.",
-              )
-            }
-          >
-            {busy ? "Cancelling…" : "Cancel invoice"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        open={dialog === "payment"}
-        onClose={() => !busy && setDialog(null)}
-        fullWidth
-      >
-        <DialogTitle>Record manual payment</DialogTitle>
-        <DialogContent>
-          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
-            <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
-              The server validates the balance and allocation. Enter USD cents.
-            </Typography>
-            <TextField
-              autoFocus
-              label="Amount (USD cents)"
-              inputMode="numeric"
-              value={payment.amountCents}
-              onChange={(event) =>
-                setPayment((value) => ({
-                  ...value,
-                  amountCents: Number(event.target.value),
-                }))
-              }
-            />
-            <TextField
-              label="Reference"
-              value={payment.reference || ""}
-              onChange={(event) =>
-                setPayment((value) => ({
-                  ...value,
-                  reference: event.target.value,
-                }))
-              }
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDialog(null)} disabled={busy}>
-            Close
-          </Button>
-          <Button
-            variant="contained"
-            disabled={
-              busy ||
-              !Number.isInteger(payment.amountCents) ||
-              payment.amountCents <= 0
-            }
-            onClick={() =>
-              void run(
-                () => recordIntoolsManualPayment(invoice.id, payment),
-                "Payment recorded.",
-              )
-            }
-          >
-            {busy ? "Recording…" : "Record payment"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
-  );
-}
+  }, [section, id]);
 
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <Box sx={{ p: 1.25, borderRadius: "10px", backgroundColor: "#f6f8fa" }}>
-      <Typography sx={{ color: "text.secondary", fontSize: 11 }}>
-        {label}
-      </Typography>
-      <Typography sx={{ mt: 0.3, fontSize: 15, fontWeight: 800 }}>
-        {value}
-      </Typography>
-    </Box>
-  );
-}
-
-const orderStatuses = [
-  "awaiting_payment",
-  "payment_declared",
-  "payment_verified",
-  "fulfilling",
-  "completed",
-  "cancelled",
-  "disputed",
-  "refunded",
-] as const;
-
-function moneyValue(value: number | null | undefined) {
-  return money(Math.round(Number(value || 0) * 100));
-}
-
-function OrderDetail({
-  order,
-  onBack,
-  onChanged,
-  onCreateInvoice,
-}: {
-  order: IntoolsOrderDetail;
-  onBack: () => void;
-  onChanged: (order: IntoolsOrderDetail) => void;
-  onCreateInvoice: (input: {
-    buyerProfileId: string;
-    orderId: string;
-    rfqCaseId: string | null;
-    unitAmountCents: number;
-    description: string;
-  }) => void;
-}) {
-  const [nextStatus, setNextStatus] = useState(order.status);
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  useEffect(() => {
-    setNextStatus(order.status);
-    setNote("");
-  }, [order.order_no, order.status]);
-  async function submitStatus(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (nextStatus === order.status) return;
-    setBusy(true);
-    setError("");
-    setMessage("");
-    try {
-      await updateIntoolsOrderStatus(
-        order.order_no,
-        nextStatus,
-        note.trim() || null,
-      );
-      onChanged(await getIntoolsOrderDetail(order.order_no));
-      setMessage("Order status updated and recorded in the activity history.");
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not update the order status.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  const buyer = order.buyer || {
-    full_name: null,
-    email: null,
-    company_name: null,
-    country: null,
-  };
-  const shippingEta =
-    order.shipping_eta_min_days && order.shipping_eta_max_days
-      ? `${order.shipping_eta_min_days}–${order.shipping_eta_max_days} days`
-      : order.shipping_eta_min_days
-        ? `${order.shipping_eta_min_days} days`
-        : "—";
-  return (
-    <Box>
-      <Button
-        onClick={onBack}
-        startIcon={<ArrowBack />}
-        sx={{ mb: 1.5, px: 0 }}
-      >
-        Back to orders
-      </Button>
-      <Surface sx={{ overflow: "hidden" }}>
-        <Box sx={{ p: { xs: 2, sm: 3 }, borderBottom: "1px solid #dfe4eb" }}>
-          <Stack
-            direction={{ xs: "column", sm: "row" }}
-            sx={{
-              justifyContent: "space-between",
-              alignItems: { xs: "flex-start", sm: "center" },
-              gap: 1.5,
-            }}
-          >
-            <Box sx={{ minWidth: 0 }}>
-              <Typography
-                variant="h2"
-                sx={{ fontSize: { xs: 24, sm: 30 }, overflowWrap: "anywhere" }}
-              >
-                {order.order_no}
-              </Typography>
-              <Typography
-                sx={{ mt: 0.4, color: "text.secondary", fontSize: 13 }}
-              >
-                Placed {shortDate(order.placed_at)} ·{" "}
-                {buyer.company_name || buyer.full_name || "Buyer not named"}
-              </Typography>
-            </Box>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() =>
-                  onCreateInvoice({
-                    buyerProfileId: order.buyer_profile_id,
-                    orderId: order.id,
-                    rfqCaseId: order.rfq_case_id,
-                    unitAmountCents: Math.round((order.total || 0) * 100),
-                    description: `Order ${order.order_no}`,
-                  })
-                }
-              >
-                Create invoice
-              </Button>
-              <StatusChip status={order.status} />
-            </Stack>
-          </Stack>
-        </Box>
-
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1fr) 310px" },
-            alignItems: "start",
-          }}
-        >
-          <Stack spacing={3} sx={{ p: { xs: 2, sm: 3 }, minWidth: 0 }}>
-            <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
-                Order items
-              </Typography>
-              <Stack
-                component="ul"
-                aria-label="Order items"
-                spacing={0}
-                sx={{
-                  m: 0,
-                  mt: 1.25,
-                  p: 0,
-                  listStyle: "none",
-                  borderTop: "1px solid #e8ecf1",
-                }}
-              >
-                {order.items.length ? (
-                  order.items.map((item, index) => (
-                    <Box
-                      component="li"
-                      key={`${item.sku || item.name || "item"}-${index}`}
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "minmax(0,1fr) auto",
-                        gap: 2,
-                        py: 1.5,
-                        borderBottom: "1px solid #e8ecf1",
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography
-                          sx={{
-                            fontSize: 14,
-                            fontWeight: 800,
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {item.name || "Unnamed item"}
-                        </Typography>
-                        <Typography
-                          sx={{
-                            mt: 0.25,
-                            color: "text.secondary",
-                            fontSize: 12,
-                            overflowWrap: "anywhere",
-                          }}
-                        >
-                          {[
-                            item.seller,
-                            item.sku && `SKU ${item.sku}`,
-                            item.qty
-                              ? `${item.qty} × ${moneyValue(item.unit_price)}`
-                              : null,
-                          ]
-                            .filter(Boolean)
-                            .join(" · ") || "No item metadata returned"}
-                        </Typography>
-                        {(item.option_selection || item.buyer_note) && (
-                          <Typography
-                            sx={{
-                              mt: 0.5,
-                              color: "text.secondary",
-                              fontSize: 12,
-                              overflowWrap: "anywhere",
-                            }}
-                          >
-                            {[item.option_selection, item.buyer_note]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </Typography>
-                        )}
-                      </Box>
-                      <Typography
-                        sx={{
-                          fontSize: 14,
-                          fontWeight: 800,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {moneyValue(item.line_total)}
-                      </Typography>
-                    </Box>
-                  ))
-                ) : (
-                  <Typography
-                    sx={{ py: 1.5, color: "text.secondary", fontSize: 13 }}
-                  >
-                    No immutable line items returned.
-                  </Typography>
-                )}
-              </Stack>
-            </Box>
-
-            <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
-                Fulfillment
-              </Typography>
-              {order.fulfillments.length ? (
-                <Stack
-                  component="ul"
-                  aria-label="Fulfillment records"
-                  spacing={0}
-                  sx={{
-                    m: 0,
-                    mt: 1.25,
-                    p: 0,
-                    listStyle: "none",
-                    borderTop: "1px solid #e8ecf1",
-                  }}
-                >
-                  {order.fulfillments.map((fulfillment, index) => (
-                    <Box
-                      component="li"
-                      key={`${fulfillment.factory_name || "factory"}-${index}`}
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: {
-                          xs: "1fr",
-                          sm: "1.2fr .8fr minmax(0,1fr)",
-                        },
-                        gap: 1,
-                        py: 1.25,
-                        borderBottom: "1px solid #e8ecf1",
-                      }}
-                    >
-                      <Typography
-                        sx={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {fulfillment.factory_name || "Supplier not identified"}
-                      </Typography>
-                      <Typography
-                        sx={{ color: "text.secondary", fontSize: 13 }}
-                      >
-                        {displayStatus(
-                          fulfillment.fulfillment_status || "pending",
-                        )}
-                      </Typography>
-                      <Typography
-                        sx={{
-                          color: "text.secondary",
-                          fontSize: 13,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {fulfillment.tracking || "Tracking not recorded"}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography
-                  sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}
-                >
-                  No fulfillment records returned.
-                </Typography>
-              )}
-            </Box>
-
-            <Box>
-              <Typography component="h3" sx={{ fontSize: 15, fontWeight: 800 }}>
-                Activity
-              </Typography>
-              {order.events.length ? (
-                <Stack
-                  component="ol"
-                  aria-label="Order activity"
-                  spacing={0}
-                  sx={{
-                    m: 0,
-                    mt: 1.25,
-                    p: 0,
-                    listStyle: "none",
-                    borderTop: "1px solid #e8ecf1",
-                  }}
-                >
-                  {order.events.map((event, index) => (
-                    <Box
-                      component="li"
-                      key={`${event.created_at}-${index}`}
-                      sx={{ py: 1.25, borderBottom: "1px solid #e8ecf1" }}
-                    >
-                      <Stack
-                        direction={{ xs: "column", sm: "row" }}
-                        sx={{ justifyContent: "space-between", gap: 0.5 }}
-                      >
-                        <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
-                          {displayStatus(event.status)}
-                        </Typography>
-                        <Typography
-                          sx={{ color: "text.secondary", fontSize: 12 }}
-                        >
-                          {shortDate(event.created_at)}
-                        </Typography>
-                      </Stack>
-                      <Typography
-                        sx={{
-                          mt: 0.25,
-                          color: "text.secondary",
-                          fontSize: 13,
-                          overflowWrap: "anywhere",
-                        }}
-                      >
-                        {event.note || "No note recorded"}
-                        {event.created_by_name
-                          ? ` · ${event.created_by_name}`
-                          : ""}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <Typography
-                  sx={{ mt: 1, color: "text.secondary", fontSize: 13 }}
-                >
-                  No status activity returned.
-                </Typography>
-              )}
-            </Box>
-          </Stack>
-
-          <Box
-            sx={{
-              p: { xs: 2, sm: 3 },
-              borderTop: { xs: "1px solid #dfe4eb", lg: 0 },
-              borderLeft: { lg: "1px solid #dfe4eb" },
-              backgroundColor: "#f6f8fa",
-            }}
-          >
-            <Stack spacing={2.5}>
-              <Box>
-                <Typography
-                  component="h3"
-                  sx={{ fontSize: 15, fontWeight: 800 }}
-                >
-                  Order summary
-                </Typography>
-                <Stack spacing={0.85} sx={{ mt: 1.25 }}>
-                  {[
-                    ["Subtotal", moneyValue(order.subtotal)],
-                    ["Service fee", moneyValue(order.fee)],
-                    ["Shipping", moneyValue(order.ship)],
-                    ["Quality control", moneyValue(order.qc_fee)],
-                    ["Insurance", moneyValue(order.ins_fee)],
-                  ].map(([label, value]) => (
-                    <Stack
-                      key={label}
-                      direction="row"
-                      sx={{ justifyContent: "space-between", gap: 2 }}
-                    >
-                      <Typography
-                        sx={{ color: "text.secondary", fontSize: 13 }}
-                      >
-                        {label}
-                      </Typography>
-                      <Typography sx={{ fontSize: 13 }}>{value}</Typography>
-                    </Stack>
-                  ))}
-                  <Divider sx={{ my: 0.35 }} />
-                  <Stack
-                    direction="row"
-                    sx={{ justifyContent: "space-between", gap: 2 }}
-                  >
-                    <Typography sx={{ fontWeight: 800 }}>Total</Typography>
-                    <Typography sx={{ fontWeight: 800 }}>
-                      {moneyValue(order.total)}
-                    </Typography>
-                  </Stack>
-                </Stack>
-              </Box>
-              <Box component="dl" sx={{ m: 0, display: "grid", gap: 1.25 }}>
-                {[
-                  ["Buyer", buyer.company_name || buyer.full_name || "—"],
-                  ["Email", buyer.email || "—"],
-                  ["Country", buyer.country || "—"],
-                  [
-                    "Payment",
-                    order.payment_verified_at
-                      ? `Verified ${shortDate(order.payment_verified_at)}`
-                      : order.payment_declared_at
-                        ? `Declared ${shortDate(order.payment_declared_at)}`
-                        : "Not recorded",
-                  ],
-                  ["Shipping", order.shipping_service || "—"],
-                  ["Delivery estimate", shippingEta],
-                  [
-                    "Destination",
-                    order.ship_address || order.ship_country || "—",
-                  ],
-                  ["Incoterms", order.incoterms || "—"],
-                ].map(([label, value]) => (
-                  <Box key={label}>
-                    <Typography
-                      component="dt"
-                      sx={{
-                        color: "text.secondary",
-                        fontSize: 11,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {label}
-                    </Typography>
-                    <Typography
-                      component="dd"
-                      sx={{
-                        m: 0,
-                        mt: 0.2,
-                        fontSize: 13,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {value}
-                    </Typography>
-                  </Box>
-                ))}
-              </Box>
-              <Box
-                component="form"
-                onSubmit={submitStatus}
-                aria-labelledby="update-order-status-title"
-                sx={{ pt: 2, borderTop: "1px solid #dfe4eb" }}
-              >
-                <Stack spacing={1.25}>
-                  <Box>
-                    <Typography
-                      id="update-order-status-title"
-                      component="h3"
-                      sx={{ fontSize: 15, fontWeight: 800 }}
-                    >
-                      Update status
-                    </Typography>
-                    <Typography
-                      sx={{ mt: 0.25, color: "text.secondary", fontSize: 12 }}
-                    >
-                      The change is added to the order history and buyer
-                      notification workflow.
-                    </Typography>
-                  </Box>
-                  <TextField
-                    select
-                    label="New status"
-                    value={nextStatus}
-                    onChange={(event) => setNextStatus(event.target.value)}
-                    disabled={busy}
-                  >
-                    {orderStatuses.map((status) => (
-                      <MenuItem key={status} value={status}>
-                        {displayStatus(status)}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    label="Update note"
-                    multiline
-                    minRows={3}
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    disabled={busy}
-                    helperText="Optional. This note is visible in the order activity."
-                  />
-                  {(message || error) && (
-                    <Alert
-                      severity={error ? "error" : "success"}
-                      role={error ? "alert" : "status"}
-                    >
-                      {error || message}
-                    </Alert>
-                  )}
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={busy || nextStatus === order.status}
-                    startIcon={
-                      busy ? (
-                        <CircularProgress size={16} color="inherit" />
-                      ) : (
-                        <Refresh />
-                      )
-                    }
-                  >
-                    {busy ? "Updating…" : "Update order"}
-                  </Button>
-                </Stack>
-              </Box>
-            </Stack>
-          </Box>
-        </Box>
-      </Surface>
-    </Box>
-  );
-}
-
-function OrdersPanel({
-  onCreateInvoice,
-}: {
-  onCreateInvoice: (input: {
-    buyerProfileId: string;
-    orderId: string;
-    rfqCaseId: string | null;
-    unitAmountCents: number;
-    description: string;
-  }) => void;
-}) {
-  const [orders, setOrders] = useState<IntoolsOrder[]>([]);
-  const [selected, setSelected] = useState<IntoolsOrderDetail | null>(null);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void listIntoolsOrders()
-      .then((data) => {
-        if (active) setOrders(data);
-      })
-      .catch((cause) => {
-        if (active)
-          setError(
-            cause instanceof Error ? cause.message : "Could not load orders.",
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  if (loading) return <LoadingRows />;
-  if (error)
+  if (section === "invoices") return <InvoiceDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
+  if (section === "orders")
     return (
-      <Alert
-        severity="error"
-        action={<Button onClick={() => location.reload()}>Retry</Button>}
-      >
-        {error}
-      </Alert>
-    );
-  if (selected)
-    return (
-      <OrderDetail
-        order={selected}
-        onBack={() => setSelected(null)}
-        onCreateInvoice={onCreateInvoice}
-        onChanged={(updated) => {
-          setSelected(updated);
-          setOrders((items) =>
-            items.map((item) =>
-              item.id === updated.id
-                ? { ...item, status: updated.status }
-                : item,
-            ),
-          );
-        }}
+      <OrderDrawerBody
+        orderNo={id}
+        onClose={onClose}
+        onChanged={onChanged}
+        onCreateInvoice={(input) =>
+          onGenerateInvoice({
+            description: input.description,
+            buyerProfileId: input.buyerProfileId,
+            rfqCaseId: input.rfqCaseId,
+            orderId: input.orderId,
+            amount: input.amount,
+            notes: `Generated from order ${id}`,
+          })
+        }
       />
     );
-  return orders.length ? (
-    <Surface sx={{ overflow: "hidden" }}>
-      <Box
-        aria-hidden="true"
-        sx={{
-          display: { xs: "none", sm: "grid" },
-          gridTemplateColumns: "1.1fr 1.5fr .8fr .8fr auto",
-          gap: 1.5,
-          px: 2,
-          py: 1.25,
-          borderBottom: "1px solid #dfe4eb",
-          backgroundColor: "#f6f8fa",
-          color: "#526176",
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: ".04em",
-          textTransform: "uppercase",
-        }}
-      >
-        <Box>Order</Box>
-        <Box>Items</Box>
-        <Box>Total</Box>
-        <Box>Placed</Box>
-        <Box>Status</Box>
-      </Box>
-      <Box
-        component="ul"
-        aria-label="Orders"
-        sx={{ listStyle: "none", p: 0, m: 0 }}
-      >
-        {orders.map((order) => (
-          <Box
-            component="li"
-            key={order.id}
-            sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}
-          >
-            <Button
-              key={order.id}
-              disabled={loadingDetail}
-              onClick={() => {
-                setLoadingDetail(true);
-                setError("");
-                void getIntoolsOrderDetail(order.order_no)
-                  .then(setSelected)
-                  .catch((cause) =>
-                    setError(
-                      cause instanceof Error
-                        ? cause.message
-                        : "Could not load order detail.",
-                    ),
-                  )
-                  .finally(() => setLoadingDetail(false));
-              }}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "minmax(0,1fr) auto",
-                  sm: "1.1fr 1.5fr .8fr .8fr auto",
-                },
-                alignItems: "center",
-                gap: 1.5,
-                p: { xs: 1.5, sm: 2 },
-                textAlign: "left",
-                color: "inherit",
-                borderRadius: 0,
-                textTransform: "none",
-                backgroundColor: "#fff",
-                transition: "background-color 180ms ease-out",
-                "&:hover": { backgroundColor: "#f7f9fb" },
-                "&:focus-visible": {
-                  outline: "3px solid #6fae86",
-                  outlineOffset: -3,
-                  zIndex: 1,
-                },
-              }}
-            >
-              <Box>
-                <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
-                  {order.order_no}
-                </Typography>
-                <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                  {order.buyer_name || order.buyer_email || "Buyer not named"}
-                </Typography>
-              </Box>
-              <Typography
-                sx={{
-                  display: { xs: "none", sm: "block" },
-                  color: "text.secondary",
-                  fontSize: 13,
-                }}
-              >
-                {order.item_count} items
-              </Typography>
-              <Typography sx={{ fontSize: 13, fontWeight: 800 }}>
-                {money(Math.round(Number(order.total || 0) * 100))}
-              </Typography>
-              <Typography
-                sx={{
-                  display: { xs: "none", sm: "block" },
-                  color: "text.secondary",
-                  fontSize: 12,
-                }}
-              >
-                {shortDate(order.placed_at)}
-              </Typography>
-              <StatusChip status={order.status} />
-            </Button>
-          </Box>
-        ))}
-      </Box>
-    </Surface>
-  ) : (
-    <Surface sx={{ p: 4, textAlign: "center" }}>
-      <Typography sx={{ fontWeight: 700 }}>No orders returned</Typography>
-    </Surface>
-  );
-}
-
-function AuditPanel() {
-  const [items, setItems] = useState<IntoolsInvoiceAudit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    void listIntoolsAudit(null, null, 100)
-      .then((data) => {
-        if (active) setItems(data);
-      })
-      .catch((cause) => {
-        if (active)
-          setError(
-            cause instanceof Error
-              ? cause.message
-              : "Could not load audit history.",
-          );
-      })
-      .finally(() => {
-        if (active) setLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  if (loading) return <LoadingRows />;
-  if (error) return <Alert severity="error">{error}</Alert>;
-  return (
-    <Surface sx={{ p: { xs: 2, sm: 3 } }}>
-      {items.length ? (
-        <Stack component="ol" spacing={1.5} sx={{ m: 0, pl: 2.5 }}>
-          {items.map((item) => (
-            <Box component="li" key={item.id}>
-              <Typography sx={{ fontWeight: 700, fontSize: 13 }}>
-                {displayStatus(item.action)} · {item.admin_name || "Admin"}
-              </Typography>
-              <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                {item.summary || "No summary"} · {shortDate(item.created_at)}
-              </Typography>
-            </Box>
-          ))}
-        </Stack>
-      ) : (
-        <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
-          No audit events returned.
-        </Typography>
-      )}
-    </Surface>
-  );
-}
-
-const knowledgeDomains: Array<[string, string]> = [
-  ["rfq", "RFQ"],
-  ["sourcing", "Sourcing"],
-  ["operations", "Operations"],
-  ["payments-orders", "Payments and orders"],
-  ["policies", "Policies"],
-  ["support", "Support"],
-];
-const knowledgeStatuses: Array<[string, string]> = [
-  ["all", "All statuses"],
-  ["uploaded", "Uploaded"],
-  ["processing", "Processing"],
-  ["ready", "Ready"],
-  ["published", "Published"],
-  ["failed", "Failed"],
-  ["archived", "Archived"],
-];
-const knowledgeVisibility: Array<[string, string]> = [
-  ["all", "All visibility"],
-  ["buyer-safe", "Buyer-safe"],
-  ["operator-only", "Operator-only"],
-];
-const knowledgeCategories: Array<[string, string]> = [
-  ["all", "All categories"], ["apparel", "Apparel"], ["footwear", "Footwear"], ["bags_accessories", "Bags & accessories"], ["jewelry", "Jewelry"], ["beauty_personal_care", "Beauty & personal care"], ["home_textiles", "Home textiles"], ["fibre_yarn", "Fibre & yarn"], ["fabric", "Fabric"], ["leather", "Leather"], ["interlining", "Interlining"], ["trims_labels", "Trims & labels"], ["packaging", "Packaging"], ["other", "Other"],
-];
-const knowledgeProcurementModes: Array<[string, string]> = [
-  ["all", "All procurement modes"], ["wholesale", "Wholesale"], ["blank", "Blank"], ["private_label", "Private label"], ["white_label", "White label"], ["oem", "OEM"], ["odm", "ODM"], ["cmt", "CMT"],
-];
-const knowledgeMaxBytes = 25 * 1024 * 1024;
-
-function formatBytes(value: number | null | undefined) {
-  const bytes = Number(value) || 0;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1)} MB`;
-}
-
-function KnowledgePanel() {
-  const [documents, setDocuments] = useState<IntoolsAgentKnowledgeDocument[]>([]);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [visibilityFilter, setVisibilityFilter] = useState("all");
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({ complete: 0, total: 0 });
-  const [busyAction, setBusyAction] = useState("");
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-  const [form, setForm] = useState({
-    title: "",
-    domain: "rfq",
-    visibility: "buyer-safe",
-    category: "all",
-    procurementMode: "all",
-    files: [] as File[],
-  });
-
-  async function loadDocuments(nextStatus = statusFilter, nextVisibility = visibilityFilter) {
-    setLoading(true);
-    setError("");
-    try {
-      setDocuments(
-        await listIntoolsAgentKnowledge(
-          nextStatus === "all" ? null : nextStatus,
-          nextVisibility === "all" ? null : nextVisibility,
-        ),
+  if (section === "suppliers") return <SupplierDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
+  if (section === "registrations") return <RegistrationDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
+  if (section === "knowledge") return <KnowledgeDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
+  if (section === "requests") {
+    if (!rowCache)
+      return (
+        <DrawerShell title="Request" subtitle={id} onClose={onClose}>
+          <SkeletonRows />
+        </DrawerShell>
       );
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not load knowledge documents.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadDocuments();
-  }, [statusFilter, visibilityFilter]);
-
-  function chooseFiles(files: FileList | null) {
-    setError("");
-    setMessage("");
-    const selected = Array.from(files ?? []);
-    if (!selected.length) {
-      setForm((current) => ({ ...current, files: [] }));
-      return;
-    }
-    const acceptedExtensions = new Set(["txt", "md", "csv", "pdf", "doc", "docx", "xls", "xlsx"]);
-    const invalid = selected.find((file) => !acceptedExtensions.has(file.name.toLowerCase().split(".").pop() || ""));
-    if (invalid) {
-      setForm((current) => ({ ...current, files: [] }));
-      setError(`${invalid.name} is not a supported knowledge format.`);
-      return;
-    }
-    const oversized = selected.find((file) => file.size > knowledgeMaxBytes);
-    if (oversized) {
-      setForm((current) => ({ ...current, files: [] }));
-      setError(`${oversized.name} exceeds the 25 MB knowledge-file limit.`);
-      return;
-    }
-    setForm((current) => ({ ...current, files: selected }));
-  }
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-    if (form.files.length <= 1 && !form.title.trim()) {
-      setError("Add a title for this knowledge document.");
-      return;
-    }
-    if (!form.files.length) {
-      setError("Choose one or more knowledge files to upload.");
-      return;
-    }
-    setUploading(true);
-    setUploadProgress({ complete: 0, total: form.files.length });
-    try {
-      const queue = [...form.files]; const failures: string[] = [];
-      async function worker() {
-        for (;;) {
-          const file = queue.shift();
-          if (!file) return;
-          const title = form.files.length === 1 ? form.title.trim() : file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim().slice(0, 240);
-          try {
-            await uploadIntoolsAgentKnowledge(file, { title, domain: form.domain, visibility: form.visibility, appliesTo: { categories: form.category === "all" ? [] : [form.category], procurementModes: form.procurementMode === "all" ? [] : [form.procurementMode] } });
-          } catch (cause) {
-            failures.push(`${file.name}: ${cause instanceof Error ? cause.message : "upload failed"}`);
-          } finally {
-            setUploadProgress((current) => ({ ...current, complete: current.complete + 1 }));
-          }
-        }
-      }
-      await Promise.all(Array.from({ length: Math.min(3, form.files.length) }, () => worker()));
-      if (failures.length) throw new Error(`${failures.length} file${failures.length === 1 ? "" : "s"} could not be queued. ${failures.slice(0, 2).join(" ")}`);
-      setForm({ title: "", domain: "rfq", visibility: "buyer-safe", category: "all", procurementMode: "all", files: [] });
-      setMessage(`${form.files.length} knowledge ${form.files.length === 1 ? "file" : "files"} uploaded and queued for processing.`);
-      await loadDocuments();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not upload the knowledge document.",
-      );
-    } finally {
-      setUploading(false);
-      setUploadProgress({ complete: 0, total: 0 });
-    }
-  }
-
-  async function publish(document: IntoolsAgentKnowledgeDocument) {
-    if (document.status !== "ready" || !document.current_version_id) return;
-    setBusyAction(`${document.id}:publish`);
-    setError("");
-    setMessage("");
-    try {
-      await publishIntoolsAgentKnowledge(document.current_version_id);
-      setMessage(`${document.title} is now published.`);
-      await loadDocuments();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not publish this document.");
-    } finally {
-      setBusyAction("");
-    }
-  }
-
-  async function retry(document: IntoolsAgentKnowledgeDocument) {
-    if (document.status !== "failed" || !document.current_version_id) return;
-    setBusyAction(`${document.id}:retry`);
-    setError("");
-    setMessage("");
-    try {
-      await ingestIntoolsAgentKnowledge(document.current_version_id);
-      setMessage(`${document.title} is ready to publish.`);
-      await loadDocuments();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not retry this document.");
-      await loadDocuments();
-    } finally {
-      setBusyAction("");
-    }
-  }
-
-  async function archive(document: IntoolsAgentKnowledgeDocument) {
-    if (document.status === "archived") return;
-    setBusyAction(`${document.id}:archive`);
-    setError("");
-    setMessage("");
-    try {
-      await archiveIntoolsAgentKnowledge(document.id);
-      setMessage(`${document.title} was archived.`);
-      await loadDocuments();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not archive this document.");
-    } finally {
-      setBusyAction("");
-    }
-  }
-
-  return (
-    <Stack spacing={2}>
-      <Surface component="form" onSubmit={submit} sx={{ p: { xs: 2, sm: 3 } }}>
-        <Stack spacing={1.5}>
-          <Box>
-            <Typography variant="h2" sx={{ fontSize: 20 }}>
-              Upload knowledge
-            </Typography>
-            <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 13 }}>
-              Add approved context for the agent. Files stay private until an administrator publishes them.
-            </Typography>
-          </Box>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={1.25}>
-            <TextField
-              label="Document title"
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              required={form.files.length <= 1}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Domain"
-              value={form.domain}
-              onChange={(event) => setForm((current) => ({ ...current, domain: event.target.value }))}
-              sx={{ minWidth: { md: 190 } }}
-            >
-              {knowledgeDomains.map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Visibility"
-              value={form.visibility}
-              onChange={(event) => setForm((current) => ({ ...current, visibility: event.target.value }))}
-              sx={{ minWidth: { md: 180 } }}
-            >
-              {knowledgeVisibility.slice(1).map(([value, label]) => (
-                <MenuItem key={value} value={value}>{label}</MenuItem>
-              ))}
-            </TextField>
-            <TextField select label="Applies to" value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} sx={{ minWidth: { md: 180 } }}>
-              {knowledgeCategories.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-            </TextField>
-            <TextField select label="Procurement mode" value={form.procurementMode} onChange={(event) => setForm((current) => ({ ...current, procurementMode: event.target.value }))} sx={{ minWidth: { md: 190 } }}>
-              {knowledgeProcurementModes.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-            </TextField>
-          </Stack>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} sx={{ alignItems: { sm: "center" } }}>
-            <Button component="label" variant="outlined" disabled={uploading}>
-              Choose files
-              <input
-                hidden
-                type="file"
-                accept=".txt,.md,.csv,.pdf,.doc,.docx,.xls,.xlsx,text/plain,text/markdown,text/csv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                multiple
-                onChange={(event) => chooseFiles(event.target.files)}
-              />
-            </Button>
-            <Typography sx={{ color: form.files.length ? "text.primary" : "text.secondary", fontSize: 13 }}>
-              {form.files.length ? `${form.files.length} selected · ${form.files.slice(0, 2).map((file) => file.name).join(" · ")}${form.files.length > 2 ? " …" : ""}` : "TXT, MD, CSV, PDF, DOC, DOCX, XLS or XLSX · max 25 MB each"}
-            </Typography>
-            <Button type="submit" variant="contained" disabled={uploading} startIcon={uploading ? <CircularProgress size={16} color="inherit" /> : <Add />}>
-              {uploading ? `Uploading ${uploadProgress.complete} of ${uploadProgress.total}…` : "Upload documents"}
-            </Button>
-          </Stack>
-          {uploading && <Typography role="status" aria-live="polite" sx={{ color: "text.secondary", fontSize: 12 }}>
-            Processing up to three files at a time. You can keep this page open while the batch completes.
-          </Typography>}
-          {(error || message) && (
-            <Alert severity={error ? "error" : "success"} role={error ? "alert" : "status"}>
-              {error || message}
-            </Alert>
-          )}
-        </Stack>
-      </Surface>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25}>
-        <Select
-          size="small"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          aria-label="Filter knowledge by status"
-          sx={{ minWidth: 170 }}
-        >
-          {knowledgeStatuses.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-        </Select>
-        <Select
-          size="small"
-          value={visibilityFilter}
-          onChange={(event) => setVisibilityFilter(event.target.value)}
-          aria-label="Filter knowledge by visibility"
-          sx={{ minWidth: 170 }}
-        >
-          {knowledgeVisibility.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-        </Select>
-      </Stack>
-      {loading ? (
-        <Stack spacing={1} aria-label="Loading knowledge documents" role="status">
-          {[1, 2, 3].map((key) => <Surface key={key} sx={{ p: 2 }}><Skeleton width="42%" /><Skeleton width="70%" /></Surface>)}
-        </Stack>
-      ) : documents.length ? (
-        <Surface sx={{ overflow: "hidden" }}>
-          <Box
-            aria-hidden="true"
-            sx={{
-              display: { xs: "none", sm: "grid" },
-              gridTemplateColumns: "1.4fr .8fr .85fr .8fr auto",
-              gap: 1.5,
-              px: 2,
-              py: 1.25,
-              borderBottom: "1px solid #dfe4eb",
-              backgroundColor: "#f6f8fa",
-              color: "#526176",
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: ".04em",
-              textTransform: "uppercase",
-            }}
-          >
-            <Box>Document</Box><Box>Domain</Box><Box>Visibility</Box><Box>Status</Box><Box>Actions</Box>
-          </Box>
-          <Box component="ul" aria-label="Knowledge documents" sx={{ listStyle: "none", p: 0, m: 0 }}>
-            {documents.map((document) => {
-              const publishing = busyAction === `${document.id}:publish`;
-              const retrying = busyAction === `${document.id}:retry`;
-              const archiving = busyAction === `${document.id}:archive`;
-              return (
-                <Box component="li" key={document.id} sx={{ "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" } }}>
-                  <Box sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", sm: "1.4fr .8fr .85fr .8fr auto" }, alignItems: "center", gap: 1.5, p: { xs: 1.5, sm: 2 } }}>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontWeight: 800, fontSize: 14, overflowWrap: "anywhere" }}>{document.title}</Typography>
-                      <Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
-                        {document.original_name || "Original filename unavailable"} · {formatBytes(document.byte_size)} · updated {shortDate(document.updated_at)}
-                      </Typography>
-                      {(document.applies_to.categories?.length || document.applies_to.procurementModes?.length) ? <Typography sx={{ color: "text.secondary", fontSize: 12, overflowWrap: "anywhere" }}>
-                        {[...(document.applies_to.categories ?? []), ...(document.applies_to.procurementModes ?? [])].map(displayStatus).join(" · ")}
-                      </Typography> : null}
-                    </Box>
-                    <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.domain)}</Typography>
-                    <Typography sx={{ display: { xs: "none", sm: "block" }, color: "text.secondary", fontSize: 13 }}>{displayStatus(document.visibility)}</Typography>
-                    <StatusChip status={document.status} />
-                    <Stack direction={{ xs: "column", sm: "row" }} spacing={0.75} sx={{ alignItems: { sm: "center" } }}>
-                      <Button size="small" variant="text" disabled={document.status !== "failed" || !document.current_version_id || Boolean(busyAction)} onClick={() => void retry(document)}>
-                        {retrying ? "Retrying…" : "Retry"}
-                      </Button>
-                      <Button size="small" variant="text" disabled={document.status !== "ready" || !document.current_version_id || Boolean(busyAction)} onClick={() => void publish(document)}>
-                        {publishing ? "Publishing…" : "Publish"}
-                      </Button>
-                      <Button size="small" variant="outlined" disabled={document.status === "archived" || Boolean(busyAction)} onClick={() => void archive(document)}>
-                        {archiving ? "Archiving…" : document.status === "archived" ? "Archived" : "Archive"}
-                      </Button>
-                    </Stack>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
-        </Surface>
-      ) : (
-        <Surface sx={{ p: 4, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 700 }}>No knowledge documents returned</Typography>
-          <Typography sx={{ mt: 0.5, color: "text.secondary", fontSize: 13 }}>
-            Upload an approved context file to begin processing.
-          </Typography>
-        </Surface>
-      )}
-    </Stack>
-  );
-}
-
-type RfqQuoteFormState = {
-  matchId: string | null;
-  factoryId: string;
-  supplierName: string;
-  supplierRegion: string;
-  unitPrice: string;
-  quoteTotal: string;
-  quantity: string;
-  moq: string;
-  leadDays: string;
-  certifications: string;
-  quoteNotes: string;
-  recommended: boolean;
-};
-function quoteFormFrom(
-  detail: IntoolsRfqDetail,
-  matchId: string | null,
-): RfqQuoteFormState {
-  const quote = detail.quotes.find((item) => item.id === matchId);
-  return {
-    matchId,
-    factoryId: quote?.factory_id || "",
-    supplierName: quote?.supplier_name || "",
-    supplierRegion: quote?.supplier_region || "",
-    unitPrice: quote ? String(quote.unit_price_cents / 100) : "",
-    quoteTotal: quote?.quote_total_cents
-      ? String(quote.quote_total_cents / 100)
-      : "",
-    quantity: quote?.quantity ? String(quote.quantity) : "",
-    moq: quote?.moq ? String(quote.moq) : "",
-    leadDays: quote?.lead_days != null ? String(quote.lead_days) : "",
-    certifications: quote?.certifications.join(", ") || "",
-    quoteNotes: quote?.quote_notes || "",
-    recommended: Boolean(quote?.recommended),
-  };
-}
-
-function RfqOpsPanel({
-  routeCaseId,
-  onSelectCase,
-  onBack,
-}: {
-  routeCaseId: string | null;
-  onSelectCase: (id: string) => void;
-  onBack: () => void;
-}) {
-  const [rfqs, setRfqs] = useState<IntoolsRfq[]>([]);
-  const [filter, setFilter] = useState("all");
-  const [selected, setSelected] = useState<IntoolsRfqDetail | null>(null);
-  const [suppliers, setSuppliers] = useState<
-    Array<{ id: string; name: string; region: string | null }>
-  >([]);
-  const [form, setForm] = useState<RfqQuoteFormState | null>(null);
-  const [status, setStatus] = useState("accepted");
-  const [note, setNote] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const load = async (nextFilter = filter) => {
-    setLoading(true);
-    setError("");
-    try {
-      setRfqs(await listIntoolsRfqs(nextFilter === "all" ? null : nextFilter));
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load RFQs.");
-    } finally {
-      setLoading(false);
-    }
-  };
-  useEffect(() => {
-    void load();
-    void listIntoolsSuppliers()
-      .then((rows) =>
-        setSuppliers(
-          rows.map((row) => ({
-            id: row.id,
-            name: row.name,
-            region: row.region,
-          })),
-        ),
-      )
-      .catch(() => undefined);
-  }, []);
-  useEffect(() => {
-    if (!routeCaseId) {
-      if (selected) {
-        setSelected(null);
-        setForm(null);
-      }
-      return;
-    }
-    if (selected?.case.id === routeCaseId) return;
-    let active = true;
-    void getIntoolsRfqDetail(routeCaseId)
-      .then((detail) => {
-        if (!active) return;
-        setSelected(detail);
-        setStatus(detail.case.status);
-        setForm(null);
-      })
-      .catch((cause) => {
-        if (active)
-          setError(
-            cause instanceof Error ? cause.message : "Could not load this RFQ.",
-          );
-      });
-    return () => {
-      active = false;
-    };
-  }, [routeCaseId, selected?.case.id]);
-  async function openRfq(row: IntoolsRfq) {
-    setError("");
-    try {
-      const detail = await getIntoolsRfqDetail(row.id);
-      setSelected(detail);
-      setStatus(detail.case.status);
-      setForm(null);
-      onSelectCase(row.id);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not load this RFQ.",
-      );
-    }
-  }
-  async function saveQuote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected || !form) return;
-    const unitPriceCents = Math.round(Number(form.unitPrice) * 100);
-    if (
-      !form.supplierName.trim() ||
-      !Number.isInteger(unitPriceCents) ||
-      unitPriceCents <= 0
-    ) {
-      setError("Supplier name and a positive unit price are required.");
-      return;
-    }
-    const payload: LegacyIntoolsRfqQuotePayload = {
-      factoryId: form.factoryId || null,
-      supplierName: form.supplierName.trim(),
-      supplierRegion: form.supplierRegion.trim() || null,
-      unitPriceCents,
-      quoteTotalCents: form.quoteTotal
-        ? Math.round(Number(form.quoteTotal) * 100)
-        : null,
-      quantity: form.quantity ? Number(form.quantity) : null,
-      moq: form.moq ? Number(form.moq) : null,
-      leadDays: form.leadDays ? Number(form.leadDays) : null,
-      certifications: form.certifications
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean),
-      quoteNotes: form.quoteNotes.trim() || null,
-      recommended: form.recommended,
-    };
-    setBusy(true);
-    setError("");
-    try {
-      const next = await saveIntoolsRfqQuote(
-        selected.case.id,
-        form.matchId,
-        payload,
-      );
-      setSelected(next);
-      setStatus(next.case.status);
-      setForm(null);
-      await load();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not save this quote.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function saveStatus(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected) return;
-    setBusy(true);
-    setError("");
-    try {
-      const next = await updateIntoolsRfqStatus(
-        selected.case.id,
-        status,
-        note.trim() || null,
-      );
-      setSelected(next);
-      setForm(null);
-      setNote("");
-      await load();
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not update this RFQ.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
-  if (selected)
     return (
-      <Stack spacing={2}>
-        <Button
-          onClick={() => {
-            setSelected(null);
-            setForm(null);
-            onBack();
-          }}
-          startIcon={<ArrowBack />}
-          sx={{ alignSelf: "flex-start", px: 0 }}
-        >
-          Back to RFQs
-        </Button>
-        <Surface sx={{ p: { xs: 2, sm: 3 } }}>
-          <Stack spacing={2}>
-            <Stack
-              direction="row"
-              sx={{ flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "flex-start", sm: "center" }, gap: 1 }}
-            >
-              <Box>
-                <Typography
-                  sx={{
-                    color: "#8793a0",
-                    fontSize: 11,
-                    fontWeight: 800,
-                    letterSpacing: ".08em",
-                  }}
-                >
-                  {selected.case.case_no}
-                </Typography>
-                <Typography
-                  variant="h2"
-                  sx={{ mt: 0.45, fontSize: { xs: 24, sm: 30 } }}
-                >
-                  {selected.case.title}
-                </Typography>
-                <Typography
-                  sx={{ mt: 0.45, color: "text.secondary", fontSize: 13 }}
-                >
-                  {selected.buyer_name ||
-                    selected.buyer_email ||
-                    "Buyer not named"}{" "}
-                  · {selected.buyer_email || "No email"}
-                </Typography>
-              </Box>
-              <Box
-                sx={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.75,
-                  color: "#5b8064",
-                  fontSize: 13,
-                  fontWeight: 700,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    backgroundColor: "#5b8064",
-                  }}
-                />
-                {selected.case.status.replaceAll("_", " ")}
-              </Box>
-            </Stack>
-            <Divider />
-            <Box
-              component="form"
-              onSubmit={saveStatus}
-              sx={{
-                display: "grid",
-                gridTemplateColumns: {
-                  xs: "1fr",
-                  sm: "180px minmax(0,1fr) auto",
-                },
-                gap: 1.25,
-                alignItems: "end",
-              }}
-            >
-              <TextField
-                select
-                label="Request status"
-                value={status}
-                onChange={(event) => setStatus(event.target.value)}
-                size="small"
-              >
-                <MenuItem value="accepted">Accepted by Atelix</MenuItem>
-                <MenuItem value="quotes_ready">Quotes ready</MenuItem>
-                <MenuItem value="awaiting_payment">Awaiting payment</MenuItem>
-                <MenuItem value="sampling">Sampling</MenuItem>
-                <MenuItem value="production">Production</MenuItem>
-                <MenuItem value="quality">Quality & logistics</MenuItem>
-                <MenuItem value="completed">Completed</MenuItem>
-                <MenuItem value="closed">Closed</MenuItem>
-              </TextField>
-              <TextField
-                label="Internal status note"
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                size="small"
-                placeholder="Optional audit note"
-              />
-              <Button
-                type="submit"
-                variant="contained"
-                disabled={busy || status === selected.case.status}
-              >
-                Update status
-              </Button>
-            </Box>
-          </Stack>
-        </Surface>
-        <Surface sx={{ p: { xs: 2, sm: 3 } }}>
-          <Stack spacing={1.5}>
-            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-              <Box>
-                <Typography variant="h3" sx={{ fontSize: 20 }}>
-                  Supplier quotes
-                </Typography>
-                <Typography
-                  sx={{ mt: 0.3, color: "text.secondary", fontSize: 13 }}
-                >
-                  Enter a reviewed factory record or a manually confirmed
-                  factory name and commercial terms.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                onClick={() => setForm(quoteFormFrom(selected, null))}
-                disabled={Boolean(form)}
-              >
-                Add quote
-              </Button>
-            </Stack>
-            {selected.quotes.map((quote) => (
-              <Box
-                key={quote.id}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    md: "minmax(0,1fr) 140px 120px auto",
-                  },
-                  alignItems: "center",
-                  gap: 1.5,
-                  p: 1.5,
-                  borderTop: "1px solid #e8ecf1",
-                }}
-              >
-                <Box>
-                  <Typography sx={{ fontWeight: 800 }}>
-                    {quote.supplier_name}
-                  </Typography>
-                  <Typography
-                    sx={{ mt: 0.3, color: "text.secondary", fontSize: 12 }}
-                  >
-                    {quote.supplier_region || "Region not recorded"} ·{" "}
-                    {money(quote.unit_price_cents)} / unit · MOQ{" "}
-                    {quote.moq || "—"}
-                  </Typography>
-                </Box>
-                <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-                  {quote.lead_days != null
-                    ? `${quote.lead_days} days`
-                    : "Lead time —"}
-                </Typography>
-                <Box sx={{ color: "#5b8064", fontSize: 12, fontWeight: 700 }}>
-                  {quote.recommended ? "Recommended" : quote.status}
-                </Box>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => setForm(quoteFormFrom(selected, quote.id))}
-                >
-                  Edit quote
-                </Button>
-              </Box>
-            ))}
-            {form && (
-              <Box
-                component="form"
-                onSubmit={saveQuote}
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2,minmax(0,1fr))",
-                  },
-                  gap: 1.25,
-                  pt: 1.5,
-                  borderTop: "1px solid #e8ecf1",
-                }}
-              >
-                <TextField
-                  select
-                  label="Factory record (optional)"
-                  value={form.factoryId}
-                  onChange={(event) => {
-                    const factory = suppliers.find(
-                      (item) => item.id === event.target.value,
-                    );
-                    setForm({
-                      ...form,
-                      factoryId: event.target.value,
-                      supplierName: factory?.name || form.supplierName,
-                      supplierRegion: factory?.region || form.supplierRegion,
-                    });
-                  }}
-                  size="small"
-                >
-                  <MenuItem value="">Manual factory name</MenuItem>
-                  {suppliers.map((supplier) => (
-                    <MenuItem key={supplier.id} value={supplier.id}>
-                      {supplier.name}
-                      {supplier.region ? ` · ${supplier.region}` : ""}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  label="Factory name"
-                  value={form.supplierName}
-                  onChange={(event) =>
-                    setForm({ ...form, supplierName: event.target.value })
-                  }
-                  size="small"
-                  required
-                />
-                <TextField
-                  label="Region"
-                  value={form.supplierRegion}
-                  onChange={(event) =>
-                    setForm({ ...form, supplierRegion: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="Unit price (USD)"
-                  type="number"
-                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
-                  value={form.unitPrice}
-                  onChange={(event) =>
-                    setForm({ ...form, unitPrice: event.target.value })
-                  }
-                  size="small"
-                  required
-                />
-                <TextField
-                  label="Quote total (USD)"
-                  type="number"
-                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
-                  value={form.quoteTotal}
-                  onChange={(event) =>
-                    setForm({ ...form, quoteTotal: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="Quantity"
-                  type="number"
-                  value={form.quantity}
-                  onChange={(event) =>
-                    setForm({ ...form, quantity: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="MOQ"
-                  type="number"
-                  value={form.moq}
-                  onChange={(event) =>
-                    setForm({ ...form, moq: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="Lead time (days)"
-                  type="number"
-                  value={form.leadDays}
-                  onChange={(event) =>
-                    setForm({ ...form, leadDays: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="Certifications, comma separated"
-                  value={form.certifications}
-                  onChange={(event) =>
-                    setForm({ ...form, certifications: event.target.value })
-                  }
-                  size="small"
-                />
-                <TextField
-                  label="Quote notes"
-                  value={form.quoteNotes}
-                  onChange={(event) =>
-                    setForm({ ...form, quoteNotes: event.target.value })
-                  }
-                  size="small"
-                  multiline
-                  minRows={2}
-                  sx={{ gridColumn: { sm: "1 / -1" } }}
-                />
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    gridColumn: { sm: "1 / -1" },
-                  }}
-                >
-                  <Checkbox
-                    checked={form.recommended}
-                    onChange={(event) =>
-                      setForm({ ...form, recommended: event.target.checked })
-                    }
-                    slotProps={{ input: { "aria-label": "Mark quote as recommended" } }}
-                  />
-                  <Typography sx={{ fontSize: 13 }}>
-                    Mark as recommended
-                  </Typography>
-                </Box>
-                <Stack direction="row" sx={{ justifyContent: "flex-end", gridColumn: { sm: "1 / -1" }, gap: 1 }}>
-                  <Button type="button" onClick={() => setForm(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="contained" disabled={busy}>
-                    Save quote
-                  </Button>
-                </Stack>
-              </Box>
-            )}
-          </Stack>
-        </Surface>
-        {error && (
-          <Alert severity="error" role="alert">
-            {error}
-          </Alert>
-        )}
-      </Stack>
+      <RequestDrawerBody
+        rfq={rowCache}
+        onClose={onClose}
+        onChanged={onChanged}
+        onGenerateInvoice={(input) =>
+          onGenerateInvoice({
+            description: input.description,
+            buyerProfileId: input.buyerProfileId,
+            rfqCaseId: input.rfqCaseId,
+            orderId: null,
+            amount: input.amount,
+            notes: `Generated from ${rowCache.title}`,
+          })
+        }
+      />
     );
-  return (
-    <Stack spacing={2}>
-      <Stack
-        direction="row"
-        sx={{ flexDirection: { xs: "column", sm: "row" }, justifyContent: "space-between", alignItems: { xs: "stretch", sm: "center" }, gap: 1.5 }}
-      >
-        <Select
-          size="small"
-          value={filter}
-          onChange={(event) => {
-            setFilter(event.target.value);
-            void load(event.target.value);
-          }}
-          aria-label="Filter RFQs by status"
-          sx={{ minWidth: 190 }}
-        >
-          <MenuItem value="all">All request statuses</MenuItem>
-          <MenuItem value="needs_research">Awaiting Atelix review</MenuItem>
-          <MenuItem value="accepted">Accepted by Atelix</MenuItem>
-          <MenuItem value="quotes_ready">Quotes ready</MenuItem>
-          <MenuItem value="awaiting_payment">Awaiting payment</MenuItem>
-          <MenuItem value="sampling">Sampling</MenuItem>
-          <MenuItem value="production">Production</MenuItem>
-          <MenuItem value="completed">Completed</MenuItem>
-        </Select>
-        <Button variant="outlined" onClick={() => void load()}>
-          Refresh requests
-        </Button>
-      </Stack>
-      {error && (
-        <Alert severity="error" role="alert">
-          {error}
-        </Alert>
-      )}
-      {loading ? (
-        <LoadingRows />
-      ) : (
-        <Surface sx={{ overflow: "hidden" }}>
-          <Box
-            sx={{
-              display: { xs: "none", sm: "grid" },
-              gridTemplateColumns: "1.2fr 1.2fr .8fr .8fr auto",
-              gap: 1.5,
-              px: 2,
-              py: 1.25,
-              backgroundColor: "#f6f8fa",
-              color: "#8793a0",
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: ".04em",
-              textTransform: "uppercase",
-            }}
-          >
-            <Box>Request</Box>
-            <Box>Buyer</Box>
-            <Box>Status</Box>
-            <Box>Quotes</Box>
-            <Box />
-          </Box>
-          <Box
-            component="ul"
-            aria-label="RFQ requests"
-            sx={{ p: 0, m: 0, listStyle: "none" }}
-          >
-            {rfqs.map((row) => (
-              <Box
-                component="li"
-                key={row.id}
-                sx={{ borderTop: "1px solid #e8ecf1" }}
-              >
-                <Button
-                  fullWidth
-                  onClick={() => void openRfq(row)}
-                  sx={{
-                    display: "grid",
-                    gridTemplateColumns: {
-                      xs: "1fr auto",
-                      sm: "1.2fr 1.2fr .8fr .8fr auto",
-                    },
-                    gap: 1.5,
-                    p: 2,
-                    borderRadius: 0,
-                    textAlign: "left",
-                    color: "inherit",
-                    textTransform: "none",
-                    "&:hover": { backgroundColor: "#f7faf7" },
-                    "&:focus-visible": {
-                      outline: "3px solid #6fae86",
-                      outlineOffset: -3,
-                    },
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      sx={{ fontWeight: 800, overflowWrap: "anywhere" }}
-                    >
-                      {row.case_no}
-                    </Typography>
-                    <Typography
-                      sx={{
-                        mt: 0.3,
-                        color: "text.secondary",
-                        fontSize: 12,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {row.title}
-                    </Typography>
-                  </Box>
-                  <Typography
-                    sx={{
-                      display: { xs: "none", sm: "block" },
-                      color: "text.secondary",
-                      fontSize: 13,
-                    }}
-                  >
-                    {row.buyer_name || row.buyer_email || "Buyer not named"}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: "#5b8064",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      textTransform: "capitalize",
-                    }}
-                  >
-                    {row.status.replaceAll("_", " ")}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      display: { xs: "none", sm: "block" },
-                      color: "text.secondary",
-                      fontSize: 13,
-                    }}
-                  >
-                    {row.quote_count}
-                  </Typography>
-                  <ArrowForward sx={{ color: "#6fae86", fontSize: 20 }} />
-                </Button>
-              </Box>
-            ))}
-          </Box>
-        </Surface>
-      )}
-    </Stack>
-  );
+  }
+  if (section === "audit") {
+    if (!rowCache)
+      return (
+        <DrawerShell title="Audit entry" subtitle={id} onClose={onClose}>
+          <SkeletonRows />
+        </DrawerShell>
+      );
+    return <AuditDrawerBody row={rowCache} onClose={onClose} />;
+  }
+  return null;
 }
+
+/* ------------------------------------------------------------------ shell */
 
 export function Intools() {
-  const [, setRouteVersion] = useState(0);
+  const [, bump] = useState(0);
+  const forceRoute = useCallback(() => bump((value) => value + 1), []);
   const route = parseIntoolsRoute();
+
+  const [access, setAccess] = useState<"loading" | "allowed" | "permission" | "error">("loading");
   const [ready, setReady] = useState(false);
-  const [access, setAccess] = useState<
-    "loading" | "allowed" | "permission" | "error"
-  >("loading");
-  const supplierId = route.supplierId;
-  const [tab, setTab] = useState<Tab>(route.tab);
-  const [filter, setFilter] = useState("all");
-  const [invoices, setInvoices] = useState<IntoolsInvoice[]>([]);
-  const [selected, setSelected] = useState<IntoolsInvoiceDetail | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [invoiceDraft, setInvoiceDraft] = useState<Partial<InvoiceFormState> | null>(() =>
-    route.creatingInvoice ? invoiceDraftFromSearch(location.search) : null,
-  );
-  const [loadingInvoices, setLoadingInvoices] = useState(false);
-  const [error, setError] = useState("");
   const [localLogin, setLocalLogin] = useState(false);
   const [operatorName, setOperatorName] = useState("");
-  const [messageUnreadCount, setMessageUnreadCount] = useState<number | null>(null);
-  const refreshMessageUnreadCount = () => { void getIntoolsBuyerUnreadCount().then((next) => setMessageUnreadCount(next.unread_count)).catch(() => setMessageUnreadCount(null)); };
+  const [collapsed, setCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth < 960);
+  const [toast, setToast] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [modal, setModal] = useState<
+    | { kind: "supplierForm" }
+    | { kind: "upload"; section: "suppliers" | "knowledge" }
+    | { kind: "invoiceForm"; seed: InvoiceFormSeed }
+    | null
+  >(null);
+  const [pendingBadges, setPendingBadges] = useState<Partial<Record<Section, number>>>({});
+  const reloadRef = useRef<() => void>(() => {});
+
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const showToast = useCallback((message: string) => {
+    setToast(message);
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(""), 3400);
+  }, []);
+
   useEffect(() => {
-    const listener = () => setRouteVersion((value) => value + 1);
+    const listener = () => forceRoute();
     addEventListener("popstate", listener);
     return () => removeEventListener("popstate", listener);
+  }, [forceRoute]);
+
+  useEffect(() => {
+    if (location.pathname === "/intools") navigate("/intools/analytics");
   }, []);
-  useEffect(() => { refreshMessageUnreadCount(); }, []);
+
   useEffect(() => {
-    if (location.pathname === "/intools") navigate("/intools/invoices");
-  }, []);
-  useEffect(() => {
-    setTab(route.tab);
-    if (route.creatingInvoice) {
-      setInvoiceDraft(invoiceDraftFromSearch(location.search));
-      setCreating(true);
-    } else if (route.tab !== "invoices") {
-      setCreating(false);
-      setInvoiceDraft(null);
-    }
-  }, [route.tab, route.creatingInvoice, route.invoiceId, route.rfqId, route.requestId, route.supplierId]);
-  useEffect(() => {
-    if (route.tab !== "invoices" || !route.invoiceId) {
-      setSelected(null);
-      return;
-    }
-    let active = true;
-    void getIntoolsInvoiceDetail(route.invoiceId)
-      .then((detail) => {
-        if (active) setSelected(detail);
-      })
-      .catch((cause) => {
-        if (active)
-          setError(cause instanceof Error ? cause.message : "Could not load invoice detail.");
-      });
-    return () => {
-      active = false;
-    };
-  }, [route.tab, route.invoiceId]);
-  async function loadInvoices(status = filter) {
-    setLoadingInvoices(true);
-    setError("");
-    try {
-      const data = await listIntoolsInvoices(status === "all" ? null : status);
-      setInvoices(data);
-      setAccess("allowed");
-    } catch (cause) {
-      const message =
-        cause instanceof Error ? cause.message : "Could not load invoices.";
-      setError(message);
-      if (
-        /intools unavailable|not authorized|permission|unauthorized/i.test(
-          message,
-        )
-      )
-        setAccess("permission");
-      else setAccess("error");
-    } finally {
-      setLoadingInvoices(false);
-    }
-  }
-  useEffect(() => {
-    const existing = document.querySelector<HTMLMetaElement>(
-      'meta[name="robots"]',
-    );
+    const existing = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
     const meta = existing || document.createElement("meta");
     const previous = meta.content;
     meta.name = "robots";
@@ -3296,6 +3243,19 @@ export function Intools() {
       else meta.remove();
     };
   }, []);
+
+  const refreshBadges = useCallback(() => {
+    void listIntoolsRegistrationRequests("pending_review")
+      .then((rows) => setPendingBadges((current) => ({ ...current, registrations: rows.length })))
+      .catch(() => {});
+    void listIntoolsAgentKnowledge("failed", null)
+      .then((rows) => setPendingBadges((current) => ({ ...current, knowledge: rows.length })))
+      .catch(() => {});
+    void getIntoolsBuyerUnreadCount()
+      .then((next) => setPendingBadges((current) => ({ ...current, messages: next.unread_count })))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -3304,8 +3264,8 @@ export function Intools() {
       if (local.authenticated) {
         setOperatorName("Local administrator");
         setReady(true);
-        if (route.tab !== "invoices") setAccess("allowed");
-        else void loadInvoices();
+        setAccess("allowed");
+        refreshBadges();
         return;
       }
       if (local.available) {
@@ -3323,78 +3283,32 @@ export function Intools() {
       }
       await assertIntoolsAdmin();
       if (!active) return;
-      const name = await getUserDisplayName(session.user);
-      if (!active) return;
-      setOperatorName(name);
+      setOperatorName(await getUserDisplayName(session.user));
       setReady(true);
-      if (route.tab !== "invoices") setAccess("allowed");
-      else void loadInvoices();
+      setAccess("allowed");
+      refreshBadges();
     })().catch(() => {
       if (active) setAccess("error");
     });
     return () => {
       active = false;
     };
+  }, [refreshBadges]);
+
+  const selectSection = useCallback((next: Section) => {
+    navigate(sectionPath(next));
   }, []);
-  function openInvoiceDraft(input: {
-    rfqCaseId: string | null;
-    buyerProfileId: string;
-    orderId: string | null;
-    unitAmountCents?: number;
-    description?: string;
-  }) {
-    const params = new URLSearchParams({ buyerProfileId: input.buyerProfileId });
-    if (input.rfqCaseId) params.set("rfqCaseId", input.rfqCaseId);
-    if (input.orderId) params.set("orderId", input.orderId);
-    if (input.unitAmountCents != null) params.set("unitAmount", String(input.unitAmountCents));
-    if (input.description) params.set("description", input.description);
-    setInvoiceDraft({
-      rfqCaseId: input.rfqCaseId || "",
-      buyerProfileId: input.buyerProfileId,
-      orderId: input.orderId || "",
-      line: {
-        description: input.description || "",
-        quantity: "1",
-        unitAmount: input.unitAmountCents != null ? String(input.unitAmountCents) : "",
-        taxAmount: "0",
-      },
-    });
-    setSelected(null);
-    setCreating(true);
-    setTab("invoices");
-    navigate(`/intools/invoices/new?${params.toString()}`);
-  }
-  function startInvoiceFromOrder(input: {
-    buyerProfileId: string;
-    orderId: string;
-    rfqCaseId: string | null;
-    unitAmountCents: number;
-    description: string;
-  }) {
-    openInvoiceDraft(input);
-  }
-  function startInvoiceFromRfq(input: {
-    rfqCaseId: string;
-    buyerProfileId: string;
-    orderId: string | null;
-    unitAmountCents?: number;
-    description?: string;
-  }) {
-    openInvoiceDraft(input);
-  }
-  async function selectInvoice(invoice: IntoolsInvoice) {
-    setError("");
-    try {
-      setSelected(await getIntoolsInvoiceDetail(invoice.id));
-      navigate(`/intools/invoices/${encodeURIComponent(invoice.id)}`);
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not load invoice detail.",
-      );
-    }
-  }
+
+  const closeDetail = useCallback(() => {
+    navigate(sectionPath(route.section));
+  }, [route.section]);
+
+  const afterMutation = useCallback(() => {
+    setRefreshKey((value) => value + 1);
+    reloadRef.current();
+    refreshBadges();
+  }, [refreshBadges]);
+
   if (access === "permission")
     return (
       <AccessDenied
@@ -3402,768 +3316,232 @@ export function Intools() {
         onLoggedIn={() => {
           setLocalLogin(false);
           setReady(true);
-          void loadInvoices();
+          setAccess("allowed");
+          refreshBadges();
         }}
       />
     );
   if (access === "error" && !ready) return <AccessDenied kind="error" />;
   if (!ready || access === "loading")
     return (
-      <main
-        id="main-content"
-        style={{ minHeight: "100vh", padding: 24, background: "#f4f6f9" }}
-      >
-        <LoadingRows />
+      <main id="main-content" style={{ minHeight: "100vh", padding: 24, background: C.page }}>
+        <SkeletonRows />
       </main>
     );
+
+  const section = route.section;
+  const isGeneric = section !== "analytics" && section !== "messages";
+  const meta = isGeneric ? SECTIONS[section as GenericSection] : null;
+
   return (
     <ThemeProvider theme={intoolsTheme}>
-      <Box
-        className="intools-root workspace-shell workspace-shell--intools"
-        sx={{
+      <div
+        className="intools-root"
+        style={{
           display: "flex",
-          flexDirection: "column",
-          minHeight: "100vh",
           height: "100dvh",
+          width: "100%",
+          fontFamily: "'DM Sans', Arial, sans-serif",
+          color: C.text,
+          background: C.page,
           overflow: "hidden",
-          backgroundColor: "#f4f6f9",
-          color: "text.primary",
         }}
       >
-        <Box
-          component="header"
-          className="workspace-shell__header"
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            minHeight: 68,
-            px: { xs: 2, sm: 4 },
-            borderBottom: "1px solid #ececef",
-            backgroundColor: "#fff",
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1.25 }}>
-            <IconButton
-              aria-label="Return to Atelix sign in"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowBack />
-            </IconButton>
-            <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-              atelix<span style={{ color: "#6fae86" }}>.</span>
-            </Typography>
-            <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-              Intools
-            </Typography>
-          </Box>
-          <Stack direction="row" spacing={1.1} sx={{ alignItems: "center" }}>
-            <Box sx={{ minWidth: 0, textAlign: "right" }}>
-              <Typography
-                sx={{
-                  maxWidth: 180,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  lineHeight: 1.25,
-                }}
-              >
-                {operatorName || "Administrator"}
-              </Typography>
-              <Typography
-                sx={{ color: "text.secondary", fontSize: 11, lineHeight: 1.25 }}
-              >
-                Administrator
-              </Typography>
-            </Box>
-            <NotificationBell mode="intools" onNavigate={navigate} />
-            <Tooltip
-              title={`${operatorName || "Administrator"} · Private administrator workspace`}
-            >
-              <Avatar
-                aria-label={`${operatorName || "Administrator"}, administrator`}
-                sx={{
-                  width: 34,
-                  height: 34,
-                  bgcolor: "#e5e7eb",
-                  color: "#45556b",
-                  fontSize: 12,
-                  fontWeight: 800,
-                }}
-              >
-                {initials(operatorName || "Administrator")}
-              </Avatar>
-            </Tooltip>
-          </Stack>
-        </Box>
-        <Box
-          component="main"
-          className="workspace-shell__content"
-          id="main-content"
-          sx={{
-            width: "100%",
-            minWidth: 0,
-          }}
-        >
-          <Stack spacing={2.5} sx={{ width: "100%", maxWidth: 1240, mx: "auto", px: { xs: 2, sm: 3, md: 4 }, py: { xs: 3, sm: 4, md: 5 }, boxSizing: "border-box" }}>
-            <Box>
-              <Typography variant="h1" sx={{ fontSize: { xs: 30, sm: 40 } }}>
-                Intools
-              </Typography>
-              <Typography
-                sx={{ mt: 0.6, color: "text.secondary", fontSize: 14 }}
-              >
-                Private operations for invoices, orders, and supplier records.
-                Every consequential change is recorded.
-              </Typography>
-            </Box>
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ flexWrap: "wrap" }}
-              role="tablist"
-              aria-label="Intools sections"
-            >
-              {(
-                [
-                  ["analytics", "Analytics"],
-                  ["invoices", "Invoices"],
-                  ["rfq", "RFQ review"],
-                  ["rfqs", "Requests"],
-                  ["orders", "Orders"],
-                  ["audit", "Audit history"],
-                  ["registrations", "Sign-up requests"],
-                  ["knowledge", "Knowledge"],
-                  ["messages", "Messages"],
-                  ["suppliers", "Suppliers"],
-                ] as const
-              ).map(([value, label]) => (
-                <Button
-                  key={value}
-                  role="tab"
-                  aria-selected={tab === value}
-                  onClick={() => {
-                    setTab(value);
-                    setSelected(null);
-                    setCreating(false);
-                    navigate(intoolsTabPath(value));
-                  }}
-                  variant={tab === value ? "contained" : "outlined"}
-                >
-                  {label}
-                </Button>
-              ))}
-            </Stack>
-            {tab === "invoices" && (
-              <>
-                    {selected ? (
-                  <InvoiceDetail
-                    invoice={selected}
-                    onChanged={setSelected}
-                    onBack={() => {
-                      setSelected(null);
-                      navigate("/intools/invoices");
-                    }}
-                  />
-                ) : (
-                  <>
-                    <Stack
-                      direction={{ xs: "column", sm: "row" }}
-                      sx={{
-                        justifyContent: "space-between",
-                        alignItems: { xs: "stretch", sm: "center" },
-                        gap: 1.5,
-                      }}
-                    >
-                      <Select
-                        size="small"
-                        value={filter}
-                        onChange={(event) => {
-                          setFilter(event.target.value);
-                          void loadInvoices(event.target.value);
-                        }}
-                        aria-label="Filter invoices by status"
-                        sx={{ minWidth: 170 }}
-                      >
-                        <MenuItem value="all">All statuses</MenuItem>
-                        <MenuItem value="draft">Draft</MenuItem>
-                        <MenuItem value="sent">Sent</MenuItem>
-                        <MenuItem value="paid">Paid</MenuItem>
-                        <MenuItem value="cancelled">Cancelled</MenuItem>
-                        <MenuItem value="overdue">Overdue</MenuItem>
-                      </Select>
-                      <Button
-                        variant="contained"
-                        onClick={() => {
-                          if (creating) {
-                            setCreating(false);
-                            setInvoiceDraft(null);
-                            navigate("/intools/invoices");
-                          } else {
-                            setCreating(true);
-                            navigate("/intools/invoices/new");
-                          }
-                        }}
-                        startIcon={creating ? <Close /> : <Add />}
-                      >
-                        {creating ? "Close new invoice" : "New invoice"}
-                      </Button>
-                    </Stack>
-                    {creating && (
-                      <InvoiceCreateForm
-                        initial={invoiceDraft}
-                        onCreated={(invoice) => {
-                          setCreating(false);
-                          setInvoiceDraft(null);
-                          setSelected(invoice);
-                          void loadInvoices();
-                          navigate(`/intools/invoices/${encodeURIComponent(invoice.id)}`);
-                        }}
-                        onCancel={() => {
-                          setCreating(false);
-                          setInvoiceDraft(null);
-                          navigate("/intools/invoices");
-                        }}
-                      />
-                    )}
-                    {error && (
-                      <Alert
-                        severity="error"
-                        role="alert"
-                        action={
-                          <Button onClick={() => void loadInvoices()}>
-                            Retry
-                          </Button>
-                        }
-                      >
-                        {error}
-                      </Alert>
-                    )}
-                    {loadingInvoices ? (
-                      <LoadingRows />
-                    ) : (
-                      <InvoiceList
-                        invoices={invoices}
-                        selectedId={null}
-                        onSelect={(invoice) => void selectInvoice(invoice)}
-                      />
-                    )}
-                  </>
-                )}
-              </>
-            )}
-            {tab === "analytics" && <IntoolsAnalytics />}
-            {tab === "rfq" && (
-              <RfqReviewPanel
-                routeCaseId={route.rfqId}
-                onSelectCase={(id) => navigate(`/intools/rfq/${encodeURIComponent(id)}`)}
-                onBack={() => navigate("/intools/rfq")}
-                onCreateInvoice={startInvoiceFromRfq}
-              />
-            )}
-            {tab === "rfqs" && (
-              <RfqReviewPanel
-                routeCaseId={route.requestId}
-                onSelectCase={(id) =>
-                  navigate(`/intools/rfq/${encodeURIComponent(id)}`)
-                }
-                onBack={() => navigate("/intools/requests")}
-                onCreateInvoice={startInvoiceFromRfq}
-              />
-            )}
-            {tab === "orders" && (
-              <OrdersPanel onCreateInvoice={startInvoiceFromOrder} />
-            )}
-            {tab === "audit" && <AuditPanel />}
-            {tab === "registrations" && <RegistrationRequestsPanel />}
-            {tab === "knowledge" && <KnowledgePanel />}
-            {tab === "messages" && <RfqOpsMessagesWorkspace mode="intools" selectedCaseId={route.requestId} onSelectCase={(id) => navigate(`/intools/messages/${encodeURIComponent(id)}`)} unreadCount={messageUnreadCount} onUnreadCount={refreshMessageUnreadCount} />}
-            {tab === "suppliers" && (
-              <IntoolsSuppliers
-                supplierId={supplierId}
-                onOpen={(id) =>
-                  navigate(`/intools/suppliers/${encodeURIComponent(id)}`)
-                }
-                onBack={() => navigate("/intools/suppliers")}
-              />
-            )}
-          </Stack>
-        </Box>
-      </Box>
-    </ThemeProvider>
-  );
-}
-
-const rfqStatusFilters: Array<[string, string]> = [
-  ["needs_research", "Atelix review"],
-  ["awaiting_supplier", "Awaiting suppliers"],
-  ["supplier_replied", "Supplier replied"],
-  ["buyer_review", "Buyer deciding"],
-  ["quote_selected", "Confirming terms"],
-  ["in_production", "In production"],
-  ["draft", "Buyer drafting"],
-  ["closed", "Closed"],
-  ["all", "All"],
-];
-const productionStages: Array<[string, string]> = [
-  ["sampling", "Sampling"],
-  ["bulk_production", "Bulk production"],
-  ["quality_inspection", "Quality inspection"],
-  ["shipped", "Shipped"],
-  ["delivered", "Delivered"],
-];
-
-type QuoteDraft = { unitPrice: string; quoteTotal: string; moq: string; leadTimeDays: string; certifications: string; certificationNote: string; recommended: boolean; notes: string };
-const emptyQuoteDraft: QuoteDraft = { unitPrice: "", quoteTotal: "", moq: "", leadTimeDays: "", certifications: "", certificationNote: "", recommended: false, notes: "" };
-
-function RfqQuoteForm({ caseId, factoryId, existing, onSaved, onMessage }: { caseId: string; factoryId: string; existing: IntoolsRfqQuote | null; onSaved: () => void; onMessage: (message: string) => void }) {
-  const [draft, setDraft] = useState<QuoteDraft>(existing ? { unitPrice: (existing.unit_price_cents / 100).toFixed(2), quoteTotal: existing.quote_total_cents ? (existing.quote_total_cents / 100).toFixed(2) : "", moq: String(existing.moq), leadTimeDays: String(existing.lead_time_days), certifications: existing.certifications.join(", "), certificationNote: existing.certification_note || "", recommended: existing.recommended, notes: existing.notes || "" } : emptyQuoteDraft);
-  const [busy, setBusy] = useState(false);
-  async function save() {
-    const quoteTotalCents = Math.round(parseFloat(draft.quoteTotal || "0") * 100);
-    if (!Number.isFinite(quoteTotalCents) || quoteTotalCents <= 0) {
-      onMessage("Enter a positive quote total in USD.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const quote = await upsertIntoolsRfqQuote(existing?.id ?? null, {
-        rfqCaseId: caseId, factoryId,
-        unitPriceCents: Math.round(parseFloat(draft.unitPrice || "0") * 100),
-        moq: parseInt(draft.moq || "0", 10),
-        leadTimeDays: parseInt(draft.leadTimeDays || "0", 10),
-        certifications: draft.certifications.split(",").map((value) => value.trim()).filter(Boolean),
-        certificationNote: draft.certificationNote.trim() || null,
-        recommended: draft.recommended,
-        notes: draft.notes.trim() || null,
-      });
-      await setIntoolsRfqQuoteTotal(quote.id, quoteTotalCents);
-      onSaved();
-    } catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not save this quote."); }
-    finally { setBusy(false); }
-  }
-  return <Stack spacing={1} sx={{ p: 1.5, border: "1px dashed #cfd6df", borderRadius: 2 }}>
-    <Stack direction="row" spacing={1}>
-      <TextField size="small" label="Unit price (USD)" value={draft.unitPrice} onChange={(event) => setDraft((current) => ({ ...current, unitPrice: event.target.value }))} sx={{ flex: 1 }} />
-      <TextField size="small" label="Quote total (USD)" value={draft.quoteTotal} onChange={(event) => setDraft((current) => ({ ...current, quoteTotal: event.target.value }))} sx={{ flex: 1 }} />
-      <TextField size="small" label="MOQ" value={draft.moq} onChange={(event) => setDraft((current) => ({ ...current, moq: event.target.value }))} sx={{ flex: 1 }} />
-      <TextField size="small" label="Lead time (days)" value={draft.leadTimeDays} onChange={(event) => setDraft((current) => ({ ...current, leadTimeDays: event.target.value }))} sx={{ flex: 1 }} />
-    </Stack>
-    <TextField size="small" label="Certifications (comma-separated)" value={draft.certifications} onChange={(event) => setDraft((current) => ({ ...current, certifications: event.target.value }))} />
-    <TextField size="small" label="Certification note (optional, e.g. pending renewal)" value={draft.certificationNote} onChange={(event) => setDraft((current) => ({ ...current, certificationNote: event.target.value }))} />
-    <TextField size="small" label="Internal notes (optional)" value={draft.notes} onChange={(event) => setDraft((current) => ({ ...current, notes: event.target.value }))} multiline minRows={2} />
-    <FormControlLabel control={<Checkbox size="small" checked={draft.recommended} onChange={(event) => setDraft((current) => ({ ...current, recommended: event.target.checked }))} />} label="Mark as recommended" />
-    <Button size="small" variant="contained" disabled={busy || !draft.unitPrice || !draft.quoteTotal || !draft.moq || !draft.leadTimeDays} onClick={() => void save()} sx={{ alignSelf: "flex-start" }}>{existing ? "Save changes" : "Save draft quote"}</Button>
-  </Stack>;
-}
-
-function RfqReviewPanel({
-  routeCaseId,
-  onSelectCase,
-  onBack,
-  onCreateInvoice,
-}: {
-  routeCaseId: string | null;
-  onSelectCase: (id: string) => void;
-  onBack: () => void;
-  onCreateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; orderId: string | null; unitAmountCents?: number; description?: string }) => void;
-}) {
-  const [statusFilter, setStatusFilter] = useState("needs_research");
-  const [cases, setCases] = useState<IntoolsRfqCase[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [suppliers, setSuppliers] = useState<IntoolsSupplier[]>([]);
-  const [matches, setMatches] = useState<IntoolsRfqSupplierMatch[] | null>(null);
-  const [quotes, setQuotes] = useState<IntoolsRfqQuote[] | null>(null);
-  const [order, setOrder] = useState<{ id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null | undefined>(undefined);
-  const [detailError, setDetailError] = useState("");
-  const [openQuoteFor, setOpenQuoteFor] = useState<string | null>(null);
-  const [orderForm, setOrderForm] = useState({ qty: "", shipCountry: "", shipAddress: "", incoterms: "" });
-  const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [matchSearch, setMatchSearch] = useState("");
-  const [showAllMatches, setShowAllMatches] = useState(false);
-  const [tableSearch, setTableSearch] = useState("");
-  const [tableSort, setTableSort] = useState<"updated" | "title" | "buyer">("updated");
-
-  async function loadCases(nextFilter = statusFilter) {
-    setLoading(true); setError("");
-    try { setCases(await listIntoolsRfqCases(routeCaseId ? null : nextFilter === "all" ? null : nextFilter)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load RFQs."); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { void loadCases(); }, [routeCaseId]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { void listIntoolsSuppliers().then(setSuppliers).catch(() => undefined); }, []);
-
-  const selected = cases.find((item) => item.id === selectedId) || null;
-  async function loadDetail(caseId: string) {
-    setDetailError(""); setMatches(null); setQuotes(null); setOrder(undefined);
-    try {
-      const [nextMatches, nextQuotes, nextOrder] = await Promise.all([
-        generateIntoolsRfqSupplierMatches(caseId),
-        listIntoolsRfqQuotes(caseId),
-        getIntoolsRfqOrder(caseId),
-      ]);
-      setMatches(nextMatches); setQuotes(nextQuotes); setOrder(nextOrder);
-    } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not load this RFQ."); }
-  }
-  function selectCase(caseId: string) {
-    setSelectedId(caseId);
-    setOpenQuoteFor(null);
-    setMatchSearch("");
-    setShowAllMatches(false);
-    onSelectCase(caseId);
-    void loadDetail(caseId);
-  }
-  useEffect(() => {
-    setSelectedId(routeCaseId);
-    if (routeCaseId) void loadDetail(routeCaseId);
-  }, [routeCaseId]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function supplierFor(factoryId: string) { return suppliers.find((item) => item.id === factoryId) || null; }
-  function quoteForFactory(factoryId: string) { return (quotes || []).find((quote) => quote.factory_id === factoryId) || null; }
-
-  async function setMatchStatus(matchId: string, status: "approved" | "rejected") {
-    if (!selected) return;
-    setBusyKey(matchId);
-    try { await setIntoolsRfqSupplierMatchStatus(matchId, status); await loadDetail(selected.id); }
-    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not update this match."); }
-    finally { setBusyKey(null); }
-  }
-  async function publishQuote(quoteId: string) {
-    if (!selected) return;
-    setBusyKey(quoteId);
-    try { await publishIntoolsRfqQuote(quoteId); await loadDetail(selected.id); await loadCases(); }
-    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not publish this quote."); }
-    finally { setBusyKey(null); }
-  }
-  async function declineQuote(quoteId: string) {
-    if (!selected) return;
-    setBusyKey(quoteId);
-    try { await declineIntoolsRfqQuote(quoteId); await loadDetail(selected.id); await loadCases(); }
-    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not decline this quote."); }
-    finally { setBusyKey(null); }
-  }
-  const publishedQuotes = (quotes || []).filter((quote) => quote.status === "published" || quote.status === "selected");
-  const quoteCapReached = publishedQuotes.length >= 3;
-  const selectedQuote = (quotes || []).find((quote) => quote.status === "selected") || null;
-  const matchesFiltered = (matches || []).filter((match) => {
-    if (!matchSearch.trim()) return true;
-    const factory = supplierFor(match.factory_id);
-    const needle = matchSearch.trim().toLowerCase();
-    return factory?.name.toLowerCase().includes(needle) || factory?.region?.toLowerCase().includes(needle);
-  });
-  const matchesApproved = matchesFiltered.filter((match) => match.status !== "suggested");
-  const matchesSuggested = matchesFiltered.filter((match) => match.status === "suggested");
-  const suggestedVisible = showAllMatches ? matchesSuggested : matchesSuggested.slice(0, 15);
-  const matchesVisible = [...matchesApproved, ...suggestedVisible];
-  const visibleCases = cases
-    .filter((item) => {
-      const needle = tableSearch.trim().toLowerCase();
-      if (!needle) return true;
-      return `${item.case_no} ${item.title} ${item.buyer_name} ${item.buyer_email} ${item.buyer_profile_id}`.toLowerCase().includes(needle);
-    })
-    .sort((a, b) => {
-      if (tableSort === "title") return a.title.localeCompare(b.title);
-      if (tableSort === "buyer") return a.buyer_name.localeCompare(b.buyer_name);
-      return b.updated_at.localeCompare(a.updated_at);
-    });
-  async function confirmOrder() {
-    if (!selected || !selectedQuote) return;
-    setBusyKey("confirm-order");
-    try {
-      await confirmIntoolsRfqOrder({ caseId: selected.id, quoteId: selectedQuote.id, qty: parseFloat(orderForm.qty || "0"), shipCountry: orderForm.shipCountry.trim() || null, shipAddress: orderForm.shipAddress.trim() || null, incoterms: orderForm.incoterms.trim() || null });
-      await loadDetail(selected.id); await loadCases();
-    } catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not confirm this order."); }
-    finally { setBusyKey(null); }
-  }
-  async function setStage(stage: string) {
-    if (!order) return;
-    setBusyKey("stage");
-    try { await updateIntoolsOrderProductionStage(order.id, stage); if (selected) await loadDetail(selected.id); }
-    catch (cause) { setDetailError(cause instanceof Error ? cause.message : "Could not update production stage."); }
-    finally { setBusyKey(null); }
-  }
-
-  return <Stack spacing={2}>
-    <Typography sx={{ color: "text.secondary", fontSize: 14 }}>Keep each buyer request selected here while Atelix approves supplier matches, publishes one quote per supplier, and initiates the sample order after the buyer selects a quote.</Typography>
-    <Stack spacing={2}>
-      {!selected && (
-        <Stack spacing={1.25}>
-          <Stack direction="row" sx={{ flexWrap: "wrap", gap: 1.25, alignItems: "center" }}>
-            <TextField
-              size="small"
-              value={tableSearch}
-              onChange={(event) => setTableSearch(event.target.value)}
-              placeholder="Search RFQ, buyer, UUID or email"
-              aria-label="Search RFQs"
-              sx={{ flex: "1 1 280px", maxWidth: 420 }}
-            />
-            <Select size="small" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); void loadCases(event.target.value); }} aria-label="Filter RFQs by status" sx={{ minWidth: 190 }}>
-              {rfqStatusFilters.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
-            </Select>
-            <Select size="small" value={tableSort} onChange={(event) => setTableSort(event.target.value as typeof tableSort)} aria-label="Sort RFQs" sx={{ minWidth: 170 }}>
-              <MenuItem value="updated">Sort: Recently updated</MenuItem>
-              <MenuItem value="title">Sort: RFQ title</MenuItem>
-              <MenuItem value="buyer">Sort: Buyer name</MenuItem>
-            </Select>
-          </Stack>
-          {error && <Alert severity="error">{error}</Alert>}
-          {loading ? <LoadingRows /> : visibleCases.length ? (
-            <Surface sx={{ overflow: "hidden" }}>
-              <Box role="table" aria-label="RFQs" sx={{ minWidth: { xs: 0, md: 860 } }}>
-                <Box role="row" sx={{ display: { xs: "none", md: "grid" }, gridTemplateColumns: "minmax(240px,1.6fr) minmax(160px,1fr) 110px 100px 150px", gap: 1.5, px: 2, py: 1.25, borderBottom: "1px solid #dfe4eb", backgroundColor: "#f6f8fa", color: "#526176", fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase" }}>
-                  <Box role="columnheader">RFQ</Box><Box role="columnheader">Buyer</Box><Box role="columnheader">Status</Box><Box role="columnheader">Quotes</Box><Box role="columnheader">Updated</Box>
-                </Box>
-                <Box component="ul" role="rowgroup" sx={{ listStyle: "none", p: 0, m: 0 }}>
-                  {visibleCases.map((item) => (
-                    <Box component="li" key={item.id} sx={{ borderBottom: "1px solid #e8ecf1", "&:last-child": { borderBottom: 0 } }}>
-                      <Button fullWidth onClick={() => selectCase(item.id)} role="row" aria-current={selectedId === item.id ? "true" : undefined} sx={{ display: "grid", gridTemplateColumns: { xs: "minmax(0,1fr) auto", md: "minmax(240px,1.6fr) minmax(160px,1fr) 110px 100px 150px" }, gap: { xs: 1, md: 1.5 }, alignItems: "center", p: { xs: 1.5, md: 2 }, borderRadius: 0, textAlign: "left", color: "inherit", textTransform: "none", backgroundColor: selectedId === item.id ? "#f1f7f2" : "#fff", "&:hover": { backgroundColor: selectedId === item.id ? "#e9f3eb" : "#f7f9fb" }, "&:focus-visible": { outline: "3px solid #6fae86", outlineOffset: -3, zIndex: 1 } }}>
-                        <Box sx={{ minWidth: 0 }}><Typography sx={{ fontSize: 14, fontWeight: 800, overflowWrap: "anywhere" }}>{item.title}</Typography><Typography sx={{ mt: .3, color: "text.secondary", fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{item.case_no}</Typography><Typography sx={{ display: { xs: "block", md: "none" }, mt: .4, color: "text.secondary", fontSize: 12 }}>{item.buyer_name} · {item.quote_count} quotes</Typography></Box>
-                        <Typography noWrap sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 13 }}>{item.buyer_name || item.buyer_email || "Buyer not named"}</Typography>
-                        <StatusChip status={item.status} />
-                        <Typography sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 13 }}>{item.quote_count}</Typography>
-                        <Typography sx={{ display: { xs: "none", md: "block" }, color: "text.secondary", fontSize: 12 }}>{shortDate(item.updated_at)}</Typography>
-                      </Button>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            </Surface>
-          ) : <Surface sx={{ p: 3, textAlign: "center" }}><Typography sx={{ fontWeight: 700 }}>{cases.length ? "No RFQs match these filters" : "No RFQs in this state"}</Typography><Typography sx={{ mt: .5, color: "text.secondary", fontSize: 13 }}>Try a different search or status filter.</Typography></Surface>}
-        </Stack>
-      )}
-
-      {selected && <Stack spacing={2} sx={{ flex: 1, minWidth: 0, width: "100%" }}>
-        <Button startIcon={<ArrowBack />} onClick={onBack} sx={{ alignSelf: "flex-start", px: 0 }}>Back to RFQ table</Button>
-        <Surface sx={{ p: 2 }}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", gap: 2, flexWrap: "wrap" }}>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="h2" sx={{ fontSize: 20, overflowWrap: "anywhere" }}>{selected.title}</Typography>
-              <Typography sx={{ mt: .3, fontSize: 12, color: "text.secondary" }}>{selected.case_no} · {selected.buyer_name} · {selected.buyer_email}</Typography>
-              <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(3, auto)" }, gap: { xs: .4, sm: 2 }, mt: 1 }}>
-                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>User UUID: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{selected.buyer_profile_id}</Box></Typography>
-                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>Order ID: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{order?.id || "—"}</Box></Typography>
-                <Typography sx={{ color: "text.secondary", fontSize: 11.5 }}>Order no: <Box component="span" sx={{ color: "text.primary", fontFamily: "'DM Mono', monospace" }}>{order?.order_no || "—"}</Box></Typography>
-              </Box>
-            </Box>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() =>
-                  onCreateInvoice({
-                    rfqCaseId: selected.id,
-                    buyerProfileId: selected.buyer_profile_id,
-                    orderId: (order || null)?.id ?? null,
-                    unitAmountCents: order ? Math.round(order.total * 100) : undefined,
-                    description: selected.title || `RFQ ${selected.case_no}`,
-                  })
-                }
-              >
-                Create invoice
-              </Button>
-              <StatusChip status={selected.status} />
-            </Stack>
-          </Stack>
-          {typeof selected.brief === "object" && selected.brief && <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{typeof (selected.brief as Record<string, unknown>).summary === "string" ? (selected.brief as Record<string, unknown>).summary as string : JSON.stringify(selected.brief)}</Typography>}
-        </Surface>
-        {detailError && <Alert severity="error">{detailError}</Alert>}
-
-        <Surface sx={{ p: 2 }}>
-          <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-            <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Supplier matches</Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Chip size="small" label={`Published quotes ${publishedQuotes.length}/3`} color={quoteCapReached ? "warning" : "default"} />
-              <Button size="small" startIcon={<Refresh fontSize="small" />} onClick={() => void loadDetail(selected.id)}>Refresh</Button>
-            </Stack>
-          </Stack>
-          <Typography sx={{ mt: .5, fontSize: 12, color: "text.secondary" }}>The buyer sees up to 3 published quotes side by side. Publishing a 4th is blocked — decline one first to make room.</Typography>
-          {matches !== null && matches.length > 0 && <TextField size="small" placeholder="Search suppliers by name or region" value={matchSearch} onChange={(event) => setMatchSearch(event.target.value)} sx={{ mt: 1.25, width: "100%", maxWidth: 340 }} />}
-          {matches === null ? <LoadingRows /> : matches.length ? <Stack spacing={1} sx={{ mt: 1.25 }}>{matchesVisible.map((match) => { const factory = supplierFor(match.factory_id); const quote = quoteForFactory(match.factory_id); const canPublishMore = !quoteCapReached; return <Box key={match.id} sx={{ p: 1.5, border: quote?.status === "selected" ? "1px solid #4b7657" : "1px solid #eef0f3", borderRadius: "10px", backgroundColor: quote?.status === "selected" ? "#f7fbf7" : "transparent" }}>
-            <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-              <Box><Typography sx={{ fontWeight: 700, fontSize: 13 }}>{factory?.name || match.factory_id}</Typography><Typography sx={{ fontSize: 11.5, color: "text.secondary" }}>{factory?.region}</Typography></Box>
-              <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                <StatusChip status={match.status} />
-                {match.status === "suggested" && <><Button size="small" variant="contained" disabled={busyKey === match.id} onClick={() => void setMatchStatus(match.id, "approved")}>Approve</Button><Button size="small" color="error" disabled={busyKey === match.id} onClick={() => void setMatchStatus(match.id, "rejected")}>Reject</Button></>}
-              </Stack>
-            </Stack>
-            {match.status === "approved" && <Box sx={{ mt: 1.25 }}>
-              {quote ? <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 1 }}>
-                <Typography sx={{ fontSize: 12.5 }}>{money(quote.unit_price_cents)} · MOQ {quote.moq} · {quote.lead_time_days}d lead <StatusChip status={quote.status} /></Typography>
-                <Stack direction="row" spacing={1}>
-                  {quote.status === "draft" && <Button size="small" onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>Edit</Button>}
-                  {quote.status === "draft" && <Tooltip title={canPublishMore ? "" : "3 quotes already published — decline one first"}><span><Button size="small" variant="contained" disabled={busyKey === quote.id || !canPublishMore} onClick={() => void publishQuote(quote.id)}>Publish</Button></span></Tooltip>}
-                  {quote.status === "published" && <Button size="small" color="error" disabled={busyKey === quote.id} onClick={() => void declineQuote(quote.id)}>Decline</Button>}
-                </Stack>
-              </Stack> : <Tooltip title={canPublishMore ? "" : "3 quotes already published — decline one first"}><span><Button size="small" variant="outlined" disabled={!canPublishMore} onClick={() => setOpenQuoteFor(openQuoteFor === match.factory_id ? null : match.factory_id)}>{openQuoteFor === match.factory_id ? "Close" : "Add quote"}</Button></span></Tooltip>}
-              {openQuoteFor === match.factory_id && <Box sx={{ mt: 1 }}><RfqQuoteForm caseId={selected.id} factoryId={match.factory_id} existing={quote} onSaved={() => { setOpenQuoteFor(null); void loadDetail(selected.id); }} onMessage={setDetailError} /></Box>}
-            </Box>}
-          </Box>; })}
-            {!showAllMatches && matchesSuggested.length > 15 && <Button size="small" onClick={() => setShowAllMatches(true)}>Show {matchesSuggested.length - 15} more suggested suppliers</Button>}
-          </Stack> : <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "text.secondary" }}>No eligible suppliers found for this brief yet.</Typography>}
-        </Surface>
-
-        {selectedQuote && <Surface sx={{ p: 2 }}>
-          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>Order</Typography>
-          {order === undefined ? <LoadingRows /> : order ? <Stack spacing={1} sx={{ mt: 1.25 }}>
-            <Typography sx={{ fontSize: 13 }}>{order.order_no} · {money(Math.round(order.total * 100))} · placed {shortDate(order.placed_at)}</Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Select size="small" value={order.production_stage || "sampling"} onChange={(event) => void setStage(event.target.value)}>{productionStages.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</Select>
-              {busyKey === "stage" && <CircularProgress size={16} />}
-            </Stack>
-          </Stack> : <Stack spacing={1} sx={{ mt: 1.25 }}>
-            <Typography sx={{ fontSize: 12.5, color: "text.secondary" }}>Buyer selected {selectedQuote.factory_name}. Initiate the sample order here to create the authoritative order and sampling track visible to the buyer.</Typography>
-            <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-              <TextField size="small" label="Quantity" value={orderForm.qty} onChange={(event) => setOrderForm((current) => ({ ...current, qty: event.target.value }))} sx={{ width: 120 }} />
-              <TextField size="small" label="Ship country" value={orderForm.shipCountry} onChange={(event) => setOrderForm((current) => ({ ...current, shipCountry: event.target.value }))} sx={{ width: 150 }} />
-              <TextField size="small" label="Incoterms" value={orderForm.incoterms} onChange={(event) => setOrderForm((current) => ({ ...current, incoterms: event.target.value }))} sx={{ width: 120 }} />
-            </Stack>
-            <TextField size="small" label="Ship address" value={orderForm.shipAddress} onChange={(event) => setOrderForm((current) => ({ ...current, shipAddress: event.target.value }))} />
-            <Button size="small" variant="contained" disabled={busyKey === "confirm-order" || !orderForm.qty} onClick={() => void confirmOrder()} sx={{ alignSelf: "flex-start" }}>{busyKey === "confirm-order" ? "Initiating…" : "Initiate sample order"}</Button>
-          </Stack>}
-        </Surface>}
-      </Stack>}
-    </Stack>
-  </Stack>;
-}
-
-function RegistrationRequestsPanel() {
-  const [status, setStatus] = useState("pending_review");
-  const [requests, setRequests] = useState<IntoolsRegistrationRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  async function load(nextStatus = status) {
-    setLoading(true);
-    setError("");
-    try {
-      setRequests(
-        await listIntoolsRegistrationRequests(
-          nextStatus === "all" ? null : nextStatus,
-        ),
-      );
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not load sign-up requests.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-  useEffect(() => {
-    void load();
-  }, []);
-  async function approve(id: string) {
-    setError("");
-    try {
-      await approveRegistrationRequest(id);
-      await load();
-    } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Could not approve this request.",
-      );
-    }
-  }
-  return (
-    <Stack spacing={1.5}>
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        sx={{ justifyContent: "space-between", gap: 1.5 }}
-      >
-        <Typography sx={{ color: "text.secondary", fontSize: 14 }}>
-          New accounts stay pending until an administrator approves them.
-        </Typography>
-        <Select
-          size="small"
-          value={status}
-          aria-label="Filter sign-up requests by status"
-          onChange={(event) => {
-            setStatus(event.target.value);
-            void load(event.target.value);
-          }}
-          sx={{ minWidth: 190 }}
-        >
-          <MenuItem value="pending_review">Pending review</MenuItem>
-          <MenuItem value="approved">Approved</MenuItem>
-          <MenuItem value="invited">Invited</MenuItem>
-          <MenuItem value="declined">Declined</MenuItem>
-          <MenuItem value="all">All requests</MenuItem>
-        </Select>
-      </Stack>
-      {error && <Alert severity="error">{error}</Alert>}
-      {loading ? (
-        <LoadingRows />
-      ) : requests.length ? (
-        <Surface sx={{ overflow: "hidden" }}>
-          <Box
-            component="ul"
-            aria-label="Sign-up requests"
-            sx={{ listStyle: "none", p: 0, m: 0 }}
+        <Sidebar
+          active={section}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((value) => !value)}
+          onSelect={selectSection}
+          operatorName={operatorName}
+          badges={pendingBadges}
+        />
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100%" }}>
+          <header
+            style={{
+              height: 60,
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              gap: 16,
+              padding: "0 24px",
+              background: "#fff",
+              borderBottom: "1px solid #e6e9ee",
+            }}
           >
-            {requests.map((request) => (
-              <Box
-                component="li"
-                key={request.id}
-                sx={{
-                  p: { xs: 1.5, sm: 2 },
-                  display: "grid",
-                  gap: 1,
-                  "&:not(:last-child)": { borderBottom: "1px solid #e8ecf1" },
+            <button
+              aria-label="Back to dashboard"
+              onClick={() => navigate("/dashboard")}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 9,
+                border: "1px solid #e6e9ee",
+                background: "#fff",
+                cursor: "pointer",
+                color: "#45556b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M4 11.5 12 4l8 7.5" />
+                <path d="M6 10v9a1 1 0 0 0 1 1h3v-6h4v6h3a1 1 0 0 0 1-1v-9" />
+              </svg>
+            </button>
+            <NotificationBell mode="intools" onNavigate={navigate} />
+            <div
+              aria-hidden="true"
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: 8,
+                background: "#e5e7eb",
+                color: "#45556b",
+                fontSize: 12,
+                fontWeight: 800,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {initialsOf(operatorName || "Administrator")}
+            </div>
+          </header>
+
+          <main id="main-content" style={{ flex: 1, overflowY: "auto", padding: "24px clamp(14px, 4vw, 32px) 60px" }}>
+            <div style={{ maxWidth: 1180, margin: "0 auto" }}>
+              <div
+                style={{
+                  display: meta ? "flex" : "none",
+                  alignItems: "flex-start",
+                  justifyContent: "space-between",
+                  gap: 16,
+                  flexWrap: "wrap",
+                  marginBottom: 18,
                 }}
               >
-                <Stack
-                  direction={{ xs: "column", sm: "row" }}
-                  sx={{ justifyContent: "space-between", gap: 1 }}
-                >
-                  <Box>
-                    <Typography sx={{ fontWeight: 800, fontSize: 14 }}>
-                      {request.name} · {request.company_name}
-                    </Typography>
-                    <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-                      {request.email}
-                      {request.phone
-                        ? ` · ${request.country_code || ""} ${request.phone}`
-                        : ""}
-                    </Typography>
-                  </Box>
-                  <Stack
-                    direction="row"
-                    sx={{ alignItems: "center", gap: 1, flexWrap: "wrap" }}
-                  >
-                    <StatusChip status={request.status} />
-                    {request.status === "pending_review" && (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => void approve(request.id)}
+                <div>
+                  <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>
+                    {meta ? meta.label : SECTION_LABEL[section]}
+                  </h1>
+                  <p style={{ margin: "6px 0 0", color: C.dim, fontSize: 14, maxWidth: 560 }}>
+                    {meta?.description}
+                  </p>
+                </div>
+                {meta && meta.primaryActions.length > 0 && (
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {meta.primaryActions.map((action) => (
+                      <button
+                        key={action.key}
+                        onClick={() => {
+                          if (action.key === "new" && section === "suppliers") setModal({ kind: "supplierForm" });
+                          else if (action.key === "upload" && (section === "suppliers" || section === "knowledge"))
+                            setModal({ kind: "upload", section });
+                          else dispatchEvent(new CustomEvent("intools:primary", { detail: { section, key: action.key } }));
+                        }}
+                        style={{
+                          height: 38,
+                          padding: "0 16px",
+                          borderRadius: 9,
+                          border: "1px solid #334256",
+                          background: "#334256",
+                          color: "#fff",
+                          fontSize: 13.5,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                        }}
                       >
-                        Approve
-                      </Button>
-                    )}
-                  </Stack>
-                </Stack>
-                <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
-                  Sourcing: {request.sourcing} · Revenue:{" "}
-                  {request.annual_revenue}
-                </Typography>
-                <Typography sx={{ color: "text.secondary", fontSize: 12 }}>
-                  Submitted {shortDate(request.created_at)}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Surface>
-      ) : (
-        <Surface sx={{ p: 4, textAlign: "center" }}>
-          <Typography sx={{ fontWeight: 700 }}>No sign-up requests</Typography>
-        </Surface>
-      )}
-    </Stack>
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {section === "analytics" && <IntoolsAnalytics />}
+              {section === "messages" && (
+                <RfqOpsMessagesWorkspace
+                  mode="intools"
+                  selectedCaseId={route.id}
+                  onSelectCase={(id) => navigate(sectionPath("messages", id))}
+                  unreadCount={pendingBadges.messages ?? null}
+                  onUnreadCount={refreshBadges}
+                />
+              )}
+              {isGeneric && (
+                <SectionListView
+                  key={section}
+                  section={section as GenericSection}
+                  refreshKey={refreshKey}
+                  onOpenRow={(row) => navigate(sectionPath(section, row.id))}
+                  onToast={showToast}
+                  onCreateInvoice={() =>
+                    setModal({
+                      kind: "invoiceForm",
+                      seed: { description: "Sourcing services", buyerProfileId: "", rfqCaseId: null, orderId: null, amount: "", notes: "" },
+                    })
+                  }
+                  onPrimaryModal={() => {}}
+                  registerReload={(reload) => {
+                    reloadRef.current = reload;
+                  }}
+                />
+              )}
+            </div>
+          </main>
+        </div>
+
+        {route.id && isGeneric && (
+          <DetailRouter
+            section={section as GenericSection}
+            id={route.id}
+            onClose={closeDetail}
+            onChanged={afterMutation}
+            onGenerateInvoice={(seed) => {
+              closeDetail();
+              setModal({ kind: "invoiceForm", seed });
+            }}
+          />
+        )}
+
+        {modal?.kind === "supplierForm" && (
+          <SupplierFormModal
+            onClose={() => setModal(null)}
+            onDone={(message) => {
+              setModal(null);
+              showToast(message);
+              afterMutation();
+            }}
+          />
+        )}
+        {modal?.kind === "upload" && (
+          <UploadModal
+            section={modal.section}
+            onClose={() => setModal(null)}
+            onDone={(message) => {
+              setModal(null);
+              showToast(message);
+              afterMutation();
+            }}
+          />
+        )}
+        {modal?.kind === "invoiceForm" && (
+          <InvoiceFormModal
+            seed={modal.seed}
+            onClose={() => setModal(null)}
+            onDone={(message) => {
+              setModal(null);
+              showToast(message);
+              navigate(sectionPath("invoices"));
+              afterMutation();
+            }}
+          />
+        )}
+
+        {toast && <Toast message={toast} />}
+      </div>
+    </ThemeProvider>
   );
 }

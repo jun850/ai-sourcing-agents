@@ -50,8 +50,13 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   loading uses geometry-matched skeletons, and end/error states remain inline.
 - Opening an RFQ from Requests keeps the Requests navigation item selected and
   preserves that request context on refresh/deep link.
-- Intools section tabs are route-backed, with one canonical `/intools/<section>`
-  path per operational workspace and detail paths nested beneath that section.
+- Intools navigation is a dark `#1c2430` collapsible left sidebar: the atelix
+  wordmark, nine route-backed section links (Analytics, Invoices, Orders,
+  Requests, Sign-up requests, Suppliers, Knowledge, Messages, Audit history),
+  and an operator pill. The active link shows a moss left bar and a tinted row
+  when expanded, or a moss glyph chip when collapsed to 72px. Each canonical
+  `/intools/<section>` path owns its section, and `/intools/<section>/<id>` opens
+  that record's drawer.
 - The dashboard prompt remains the first screen. The RFQ workspace then uses a
   split conversation + live RFQ review layout, followed by Requests, Messages,
   and Invoices tied back to the RFQ.
@@ -102,16 +107,36 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   contracts and preserve server-authoritative status boundaries.
 - Keep the Intools sign-up queue private, status-filterable, and explicit about
   the manual approval gate; never show it to non-admin users.
-- Intools operational records use one bounded, 14px-radius list panel with
-  row dividers and a quiet column header on desktop. Rows are rectangular,
-  never individually pill-shaped; hover and keyboard focus communicate the
-  active record without adding decorative card shadows.
-- Intools order detail uses one operational surface: a concise record header,
-  structured item, fulfillment, and activity rows, plus a quiet summary rail
-  that stacks below the records on narrow screens. Keep the single status
-  action in that rail with explicit labels, optional audit note, busy state,
-  and inline success or error status; never expose a raw record dump or imply
-  that payment settlement can be changed in the browser.
+- Every Intools section except Analytics and Messages renders through one shared
+  list: a quiet filter row (full-width search plus rounded status chips, moss for
+  the active chip), an optional select-all header, then one bounded 14px-radius
+  panel of rectangular divided rows. Each row has a checkbox, a 30px section-
+  accent lead chip with initials, a title/subtitle button, up to three text
+  columns, and a right-aligned pill status. Rows are never individually
+  pill-shaped and carry no decorative card shadow. Loading uses geometry-matched
+  skeleton rows; the empty state is one centered line inside the same panel.
+- When rows are selected, a moss `#eef4f0` bulk-action strip appears above the
+  panel with the count, a Clear link, and the section's bulk actions. Destructive
+  bulk actions (cancel, decline, archive) open a centered confirmation modal
+  first; every completed action is confirmed by a single dark bottom-centered
+  toast that auto-dismisses.
+- Opening a row slides a right-hand detail drawer (`min(440px, 94vw)`, white,
+  `-8px 0 32px` shadow) over a `rgba(20,26,34,.36)` scrim, closing on the scrim,
+  the ✕, or Escape. The drawer header carries the record title, subtitle, and
+  pill status; the scroll body is uppercase-labelled field rows plus a per-type
+  section (invoice line items / payments / audit, order items / fulfillment /
+  activity, RFQ supplier matches with inline quote fields, supplier intake,
+  sign-up detail, knowledge metadata); the footer holds that record's actions
+  with busy state and inline success or error notices. Never expose a raw record
+  dump or imply that payment settlement or order totals can be set in the browser.
+- Intools create and upload flows (new invoice, new supplier, bulk supplier
+  upload, knowledge upload) use one centered modal on a `rgba(20,26,34,.4)` scrim
+  with a `#f9fafb` footer holding a quiet Cancel and a moss confirm; the confirm
+  is disabled until the form is valid.
+- Intools Analytics keeps its own layout: a range toggle, a three-up metric grid,
+  a daily RFQ-creation bar strip, and a Search Console snapshot block (metric
+  columns, a daily-clicks strip, and top query/page/country/device lists) fed by
+  manual CSV import and visually separated from live commercial records.
 - The access-request form is a compact two-column workflow on desktop and a
   single-column workflow on narrow screens. Its header, fields, primary action,
   and login link stay in one surface; labels use a dedicated label row so

@@ -1564,11 +1564,23 @@ export async function getIntoolsRfqDetail(caseId: string) {
     p_case_id: caseId,
   });
 }
+export type IntoolsRfqStatusResult = {
+  id: string;
+  case_no: string;
+  status: string;
+  note: string | null;
+  updated_at: string;
+};
 export async function updateIntoolsRfqStatus(caseId: string, status: string, note: string | null) {
-  return intoolsRpc<IntoolsRfqDetail>("intools_update_rfq_status", {
+  return intoolsRpc<IntoolsRfqStatusResult>("intools_update_rfq_status", {
     p_case_id: caseId,
     p_status: status,
     p_note: note,
+  });
+}
+export async function declineRegistrationRequest(requestId: string) {
+  return intoolsRpc<IntoolsRegistrationRequest>("intools_decline_registration_request", {
+    p_request_id: requestId,
   });
 }
 export async function saveIntoolsRfqQuote(caseId: string, matchId: string | null, payload: LegacyIntoolsRfqQuotePayload) {

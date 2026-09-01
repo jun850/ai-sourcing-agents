@@ -68,15 +68,19 @@ function DashboardSkeletonBody() {
 
 function IntoolsSkeletonBody() {
   return (
-    <>
-      <div className="route-skeleton-bar" />
-      <div className="route-skeleton-intools-panel">
-        <i className="route-skeleton-title" />
-        <i className="route-skeleton-copy route-skeleton-copy-short" />
-        <div className="route-skeleton-tabs"><i /><i /><i /><i /><i /><i /><i /><i /></div>
-        <div className="route-skeleton-rows"><i /><i /><i /><i /></div>
+    <div className="route-skeleton-intools">
+      <div className="route-skeleton-intools-sidebar">
+        <i /><i /><i /><i /><i /><i /><i /><i /><i />
       </div>
-    </>
+      <div className="route-skeleton-intools-main">
+        <div className="route-skeleton-bar" />
+        <div className="route-skeleton-intools-panel">
+          <i className="route-skeleton-title" />
+          <i className="route-skeleton-copy route-skeleton-copy-short" />
+          <div className="route-skeleton-rows"><i /><i /><i /><i /><i /></div>
+        </div>
+      </div>
+    </div>
   );
 }
 

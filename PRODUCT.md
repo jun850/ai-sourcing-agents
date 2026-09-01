@@ -75,19 +75,41 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Sign-up submissions are stored as Supabase `registration_requests` in
   `pending_review`; Intools exposes the queue and approval action only after
   the server confirms an administrator role.
-- Intools record queues keep the comparison task in one bounded list panel:
-  stable columns on desktop and compact structured rows on narrow screens.
-  Selecting a record opens its existing detail workflow; it does not create a
-  separate storefront-style card surface for every row.
-- Intools top-level workspaces use canonical private routes: `/intools/invoices`,
-  `/intools/rfq`, `/intools/requests`, `/intools/orders`, `/intools/audit`,
-  `/intools/registrations`, and `/intools/suppliers`. Record detail stays under
-  its owning workspace route.
-- Intools order detail keeps immutable order items, fulfillment records, and
-  status activity readable beside server-derived commercial and delivery
-  context. Administrators can request a status change with an optional audit
-  note; the guarded server workflow records the event and controls buyer
-  notification. The browser never writes payment settlement or order totals.
+- Intools is one operator shell: a dark, collapsible left sidebar (wordmark,
+  nine section links, operator pill), a slim top bar (dashboard link,
+  notifications, avatar), and one work surface. Its sections are Analytics,
+  Invoices, Orders, Requests, Sign-up requests, Suppliers, Knowledge, Messages,
+  and Audit history. There is no separate "RFQ review" surface; Requests is the
+  single RFQ queue.
+- Every section except Analytics and Messages is one bounded operational list:
+  a quiet filter row (search + status chips), rectangular selectable rows with a
+  section-accent lead chip and a pill status, and a moss bulk-action toolbar when
+  rows are selected. Bulk actions run the same guarded per-record server
+  operations one row at a time and never bypass eligibility. Opening a row slides
+  a right-hand detail drawer over a scrim; there is no full-page record view and
+  no storefront-style card per row.
+- The detail drawer carries the record's fields plus the operator actions that
+  already existed: invoice send / record-payment / cancel / notes with read-only
+  line items, payments, and audit history; order status change with an optional
+  note beside immutable items, fulfillment, and activity; a Requests supplier-
+  match flow (approve or reject a match, enter a quote with a total, select one,
+  then generate the linked invoice with every field carried over and editable);
+  supplier approve / reject / archive; sign-up approve / decline; knowledge
+  publish / archive. The browser never writes payment settlement or order totals.
+- Centered modals cover create and upload flows (new invoice, new supplier, bulk
+  supplier upload, knowledge upload) and bulk-destructive confirmation; a single
+  bottom toast confirms each completed action.
+- Intools top-level workspaces use canonical private routes
+  `/intools/<section>` for the nine sections, with `/intools/<section>/<id>`
+  opening that record's drawer. `/intools` resolves to `/intools/analytics`, and
+  the retired `/intools/rfq` (and `/intools/rfq/<id>`) paths redirect to
+  `/intools/requests` so older links keep working. `/intools` and
+  `/intools/<path>` stay `no-store` and `noindex`.
+- Intools Analytics is authoritative RFQ and commercial activity (dashboard
+  users, RFQs created, quote pipeline, invoice total, verified suppliers,
+  supplier countries, and a daily RFQ-creation trend) shown beside dated Google
+  Search Console CSV snapshots imported manually and kept separate from live
+  commercial records.
 - The sign-up screen is an access-request workflow, not immediate self-serve
   account creation. It records the request, explains the human review gate,
   and only promises an email invitation after approval.
