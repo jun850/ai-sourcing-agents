@@ -32,7 +32,6 @@ assert.match(coverageMigration, /PERFORM public\.intools_require_admin\(\)/);
 assert.match(detailMigration, /source_count/);
 assert.match(detailMigration, /top_queries/);
 assert.match(detailMigration, /PERFORM public\.intools_require_admin\(\)/);
-
 // Overview fixes migration: all-factory supplier count + correct GSC label keys
 assert.match(overviewFix, /PERFORM public\.intools_require_admin\(\)/);
 assert.match(overviewFix, /'suppliers',\(SELECT count\(\*\) FROM public\.factories\)/);

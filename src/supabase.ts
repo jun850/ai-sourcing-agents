@@ -75,31 +75,6 @@ export type CopilotAgentResponse = {
   options: string[] | null;
   intake?: RfqIntake | null;
 };
-export type LegacyWorkspaceRfqQuote = {
-  id: string;
-  factory_id: string | null;
-  supplier_name: string;
-  supplier_region: string | null;
-  unit_price_cents: number;
-  quote_total_cents: number | null;
-  quantity: number | null;
-  moq: number | null;
-  lead_days: number | null;
-  certifications: string[];
-  quote_notes: string | null;
-  status: "suggested" | "selected" | "approved" | "rejected";
-  recommended: boolean;
-  verified: boolean;
-  updated_at: string;
-};
-export type WorkspaceRfqDecision = {
-  case: WorkspaceRfq & { selected_match_id: string | null; accepted_at: string | null };
-  quotes: LegacyWorkspaceRfqQuote[];
-  invoice_id: string | null;
-  invoice_no: string | null;
-  order_no: string | null;
-  invoice_status: WorkspaceInvoiceStatus | null;
-};
 export type WorkspaceChatMessage = {
   id: string;
   role: "buyer" | "agent" | "system";
@@ -384,23 +359,6 @@ export type IntoolsRfq = {
   invoice_no: string | null;
   updated_at: string;
   created_at: string;
-};
-export type IntoolsRfqDetail = WorkspaceRfqDecision & {
-  buyer_name: string | null;
-  buyer_email: string | null;
-};
-export type LegacyIntoolsRfqQuotePayload = {
-  factoryId?: string | null;
-  supplierName: string;
-  supplierRegion?: string | null;
-  unitPriceCents: number;
-  quoteTotalCents?: number | null;
-  quantity?: number | null;
-  moq?: number | null;
-  leadDays?: number | null;
-  certifications?: string[];
-  quoteNotes?: string | null;
-  recommended?: boolean;
 };
 export type IntoolsOrder = {
   id: string;
@@ -1008,21 +966,6 @@ export async function workspaceSearch(
     return [];
   }
 }
-export async function getWorkspaceRfqDecision(caseId: string) {
-  const { data, error } = await client().rpc("workspace_get_rfq_decision", {
-    p_case_id: caseId,
-  });
-  rpcError(error);
-  return data as WorkspaceRfqDecision;
-}
-export async function selectWorkspaceRfqSupplier(caseId: string, matchId: string) {
-  const { data, error } = await client().rpc("workspace_select_rfq_supplier", {
-    p_case_id: caseId,
-    p_match_id: matchId,
-  });
-  rpcError(error);
-  return data as WorkspaceRfqDecision;
-}
 export async function getWorkspaceInvoiceDetail(invoiceId: string) {
   const { data, error } = await client().rpc("workspace_get_invoice_detail", {
     p_invoice_id: invoiceId,
@@ -1568,11 +1511,6 @@ export async function markIntoolsBuyerConversationRead(
     },
   );
 }
-export async function getIntoolsRfqDetail(caseId: string) {
-  return intoolsRpc<IntoolsRfqDetail>("intools_get_rfq_case_detail", {
-    p_case_id: caseId,
-  });
-}
 export type IntoolsRfqStatusResult = {
   id: string;
   case_no: string;
@@ -1590,13 +1528,6 @@ export async function updateIntoolsRfqStatus(caseId: string, status: string, not
 export async function declineRegistrationRequest(requestId: string) {
   return intoolsRpc<IntoolsRegistrationRequest>("intools_decline_registration_request", {
     p_request_id: requestId,
-  });
-}
-export async function saveIntoolsRfqQuote(caseId: string, matchId: string | null, payload: LegacyIntoolsRfqQuotePayload) {
-  return intoolsRpc<IntoolsRfqDetail>("intools_upsert_rfq_quote", {
-    p_case_id: caseId,
-    p_match_id: matchId,
-    p_payload: payload,
   });
 }
 export async function listIntoolsRegistrationRequests(status: string | null = "pending_review") {
