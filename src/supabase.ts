@@ -301,8 +301,12 @@ export type WorkspaceRfqQuote = {
 };
 export type WorkspaceRfqProduction = {
   quote: { id: string; unit_price_cents: number; moq: number; lead_time_days: number; selected_at: string | null; factory_name: string; factory_region: string | null } | null;
-  order: { id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null;
-  invoice: { id: string; invoice_no: string; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null } | null;
+  lifecycle: { state: string; sample_ready_at: string | null; sample_decision: "approved" | "declined" | null; sample_decided_at: string | null } | null;
+  invoices: Partial<Record<"sample" | "bulk", { id: string; invoice_no: string; phase: "sample" | "bulk"; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null }>>;
+  events: Array<{ event_type: string; phase: "sample" | "bulk" | null; note: string | null; created_at: string }>;
+  /** legacy shape retained only so older workspace views tolerate historic responses */
+  order?: { id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null;
+  invoice?: { id: string; invoice_no: string; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null } | null;
 };
 export type IntoolsInvoiceStatus =
   "draft" | "sent" | "paid" | "cancelled" | "overdue";
@@ -1051,7 +1055,12 @@ export async function selectWorkspaceRfqQuote(quoteId: string) {
 export async function getWorkspaceRfqProduction(caseId: string) {
   const { data, error } = await client().rpc("workspace_get_rfq_production", { p_case_id: caseId });
   rpcError(error);
-  return (data ?? { quote: null, order: null, invoice: null }) as WorkspaceRfqProduction;
+  return (data ?? { quote: null, lifecycle: null, invoices: {}, events: [] }) as WorkspaceRfqProduction;
+}
+export async function decideWorkspaceRfqSample(caseId: string, decision: "approved" | "declined", note?: string) {
+  const { data, error } = await client().rpc("workspace_decide_rfq_sample", { p_case_id: caseId, p_decision: decision, p_note: note?.trim() || null });
+  rpcError(error);
+  return data as WorkspaceRfqProduction;
 }
 export type WorkspaceSelectedSupplier = { rfq_case_id: string; factory_name: string; factory_region: string | null };
 export async function listWorkspaceSelectedSuppliers() {
@@ -1781,6 +1790,12 @@ export async function updateIntoolsOrderProductionStage(orderId: string, stage: 
     p_stage: stage,
     p_note: note ?? null,
   });
+}
+export async function createIntoolsRfqPhaseInvoice(caseId: string, phase: "sample" | "bulk", payload: { dueDate?: string | null; notes?: string | null; items: IntoolsInvoiceItemPayload[] }) {
+  return intoolsRpc<IntoolsInvoiceDetail>("intools_create_rfq_phase_invoice", { p_case_id: caseId, p_phase: phase, p_payload: payload });
+}
+export async function publishIntoolsRfqSample(caseId: string, note?: string | null) {
+  return intoolsRpc<{ rfq_case_id: string; state: string }>("intools_publish_rfq_sample", { p_case_id: caseId, p_note: note?.trim() || null });
 }
 export async function runIntoolsSupplierImportDryRun(
   rows: IntoolsSupplierImportRow[],

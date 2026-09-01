@@ -79,6 +79,7 @@ import {
   getWorkspaceOpsUnreadCount,
   getWorkspaceInvoiceDetail,
   getWorkspaceRfqProduction,
+  decideWorkspaceRfqSample,
   invokeRfqCopilot,
   listRfqAttachments,
   listRfqCasesPage,
@@ -2948,6 +2949,7 @@ function ProductionTab({
   onMessage: (message: string) => void;
 }) {
   const [data, setData] = useState<WorkspaceRfqProduction | null>(null);
+  const [decisionBusy, setDecisionBusy] = useState(false);
   useEffect(() => {
     let active = true;
     void getWorkspaceRfqProduction(caseId)
@@ -2997,6 +2999,16 @@ function ProductionTab({
         </Box>
       </Box>
     );
+  const sampleInvoice = data.invoices.sample;
+  const bulkInvoice = data.invoices.bulk;
+  const activeInvoice = bulkInvoice || sampleInvoice || data.invoice || null;
+  const lifecycleState = data.lifecycle?.state || "sample_invoice_pending";
+  const decideSample = async (decision: "approved" | "declined") => {
+    setDecisionBusy(true);
+    try { setData(await decideWorkspaceRfqSample(caseId, decision)); }
+    catch (cause) { onMessage(cause instanceof Error ? cause.message : "Could not record your sample decision."); }
+    finally { setDecisionBusy(false); }
+  };
   const stages: Array<{
     key: string;
     label: string;
@@ -3014,10 +3026,10 @@ function ProductionTab({
     {
       key: "invoice",
       label: "Invoice payment",
-      done: Boolean(data.invoice && data.invoice.status === "paid"),
-      current: Boolean(data.invoice && data.invoice.status !== "paid"),
-      detail: data.invoice
-        ? data.invoice.status === "paid"
+      done: Boolean(sampleInvoice && sampleInvoice.status === "paid"),
+      current: Boolean(sampleInvoice && sampleInvoice.status !== "paid"),
+      detail: sampleInvoice
+        ? sampleInvoice.status === "paid"
           ? "Paid"
           : "Waiting on you"
         : "Not yet invoiced",
@@ -3034,7 +3046,7 @@ function ProductionTab({
           "delivered",
         ].includes(data.order.production_stage || ""),
       ),
-      current: data.order?.production_stage === "sampling",
+      current: ["sample_in_progress", "sample_awaiting_buyer"].includes(lifecycleState),
     },
     {
       key: "bulk",
@@ -3045,7 +3057,7 @@ function ProductionTab({
           data.order.production_stage || "",
         ),
       ),
-      current: data.order?.production_stage === "bulk_production",
+      current: lifecycleState === "bulk_in_production",
     },
     {
       key: "qc",
@@ -3177,7 +3189,16 @@ function ProductionTab({
         >
           Invoice
         </Typography>
-        {data.invoice ? (
+        {Object.values(data.invoices).length > 1 && (
+          <Stack spacing={0.5} sx={{ mt: 1 }} aria-label="Phase invoices">
+            {Object.values(data.invoices).map((invoice) => invoice && (
+              <MuiButton key={invoice.id} size="small" variant="text" onClick={() => navigate(`/dashboard/invoices/${encodeURIComponent(invoice.id)}`)} sx={{ justifyContent: "space-between", px: 0, textTransform: "none" }}>
+                {invoice.phase === "sample" ? "Sampling" : "Bulk production"} · {invoice.invoice_no}
+              </MuiButton>
+            ))}
+          </Stack>
+        )}
+        {activeInvoice ? (
           <>
             <Stack
               direction="row"
@@ -3189,16 +3210,16 @@ function ProductionTab({
                 <Typography
                   sx={{ fontSize: 15, fontWeight: 700, color: "#202936" }}
                 >
-                  {data.invoice.invoice_no}
+                  {activeInvoice.invoice_no} {activeInvoice === sampleInvoice ? "· Sampling" : "· Bulk"}
                 </Typography>
                 <Typography sx={{ mt: 0.3, fontSize: 12, color: "#758091" }}>
-                  {invoiceDate(data.invoice.due_date)}
+                  {invoiceDate(activeInvoice.due_date)}
                 </Typography>
               </Box>
               <Chip
                 size="small"
-                label={invoiceStatusLabel(data.invoice as WorkspaceInvoice)}
-                color={invoiceStatusColor(data.invoice as WorkspaceInvoice)}
+                label={invoiceStatusLabel(activeInvoice as WorkspaceInvoice)}
+                color={invoiceStatusColor(activeInvoice as WorkspaceInvoice)}
               />
             </Stack>
             <Box
@@ -3214,7 +3235,7 @@ function ProductionTab({
                   Total
                 </Typography>
                 <Typography sx={{ mt: 0.3, fontSize: 15, fontWeight: 700 }}>
-                  {invoiceMoney(data.invoice.total_cents)}
+                  {invoiceMoney(activeInvoice.total_cents)}
                 </Typography>
               </Box>
               <Box>
@@ -3226,14 +3247,14 @@ function ProductionTab({
                     mt: 0.3,
                     fontSize: 15,
                     fontWeight: 700,
-                    color: data.invoice.balance_cents ? "#9a4f47" : "#202936",
+                    color: activeInvoice.balance_cents ? "#9a4f47" : "#202936",
                   }}
                 >
-                  {invoiceMoney(data.invoice.balance_cents)}
+                  {invoiceMoney(activeInvoice.balance_cents)}
                 </Typography>
               </Box>
             </Box>
-            {data.invoice.status === "sent" && (
+            {activeInvoice.status === "sent" && (
               <MuiButton
                 fullWidth
                 variant="contained"
@@ -3244,12 +3265,18 @@ function ProductionTab({
                 }}
                 onClick={() =>
                   navigate(
-                    `/dashboard/invoices/${encodeURIComponent(data.invoice!.id)}`,
+                    `/dashboard/invoices/${encodeURIComponent(activeInvoice.id)}`,
                   )
                 }
               >
                 Pay invoice
               </MuiButton>
+            )}
+            {lifecycleState === "sample_awaiting_buyer" && (
+              <Stack direction="row" spacing={1} sx={{ mt: 1.25 }}>
+                <MuiButton variant="contained" disabled={decisionBusy} onClick={() => void decideSample("approved")} sx={{ backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}>Approve sample</MuiButton>
+                <MuiButton variant="outlined" color="error" disabled={decisionBusy} onClick={() => void decideSample("declined")}>Decline sample</MuiButton>
+              </Stack>
             )}
             <Stack
               direction="row"
@@ -3265,8 +3292,7 @@ function ProductionTab({
           </>
         ) : (
           <Typography sx={{ mt: 1.25, fontSize: 12.5, color: "#9aa4b0" }}>
-            Not yet invoiced. Atelix sends an invoice once production is
-            confirmed.
+            Atelix will send the sampling invoice once the selected proposal is reviewed.
           </Typography>
         )}
       </Box>
