@@ -2042,13 +2042,13 @@ function RequestDrawerBody({
   const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
   const [supplierQuery, setSupplierQuery] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (refresh = false) => {
     setLoading(true);
     setError("");
     try {
       const [cases, generated, quotes, suppliers] = await Promise.all([
         listIntoolsRfqCases(null),
-        generateIntoolsRfqSupplierMatches(rfq.id),
+        generateIntoolsRfqSupplierMatches(rfq.id, refresh),
         listIntoolsRfqQuotes(rfq.id),
         listIntoolsSuppliers(),
       ]);
@@ -2098,7 +2098,7 @@ function RequestDrawerBody({
     try {
       await fn();
       setNotice(message);
-      await load();
+      await load(false);
       onChanged();
     } catch (cause) {
       setError(errorMessage(cause, "The action could not be completed."));
@@ -2181,6 +2181,11 @@ function RequestDrawerBody({
       <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint, marginBottom: 6 }}>
         Supplier matches
       </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+        <button disabled={loading || Boolean(busyId)} onClick={() => void load(true)} style={btnStyle("neutral", "sm")} aria-busy={loading}>
+          Refresh recommendations
+        </button>
+      </div>
       <input
         type="text"
         value={supplierQuery}
@@ -2207,11 +2212,17 @@ function RequestDrawerBody({
                     {row.supplier?.name || "Unknown supplier"}
                   </div>
                   <div style={{ fontSize: 11.5, color: C.dim }}>
-                    {row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")}
+                    {row.match.recommendation?.country || row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")} · score {Number(row.match.score).toFixed(0)}
                   </div>
                 </div>
                 <span style={statusPill(status)}>{label(status)}</span>
               </div>
+              {row.match.recommendation && (
+                <div style={{ marginTop: 7, padding: "8px 9px", background: "#f7f9fb", borderRadius: 8, fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>
+                  <strong>Routing rationale.</strong> {row.match.recommendation.opsNote || "Deterministic supplier and country fit."}
+                  {row.match.recommendation.unknowns?.[0] && <div style={{ color: C.dim, marginTop: 3 }}>{row.match.recommendation.unknowns[0]}</div>}
+                </div>
+              )}
 
               {status === "suggested" && (
                 <div style={{ display: "flex", gap: 6, marginTop: 7 }}>
@@ -2292,11 +2303,31 @@ function RequestDrawerBody({
 }
 
 /* -- Supplier drawer -- */
+type SupplierEditDraft = {
+  slug: string; name: string; type: string; region: string; loc: string; years: string; moq: string; lead: string; capacity: string;
+  certs: string; tags: string; sales: string; phone: string; web: string; founded: string; employees: string; area: string; port: string; bio: string; img: string; logo_img: string; page_img: string;
+};
+function supplierEditDraft(supplier: IntoolsSupplier): SupplierEditDraft {
+  return {
+    slug: supplier.slug || "", name: supplier.name || "", type: supplier.type || "garment_manufacturer", region: supplier.region || "", loc: supplier.loc || "",
+    years: supplier.years == null ? "" : String(supplier.years), moq: supplier.moq || "", lead: supplier.lead || "", capacity: supplier.capacity || "",
+    certs: (supplier.certs || []).join(", "), tags: (supplier.tags || []).join(", "), sales: supplier.sales || "", phone: supplier.phone || "", web: supplier.web || "",
+    founded: supplier.founded == null ? "" : String(supplier.founded), employees: supplier.employees || "", area: supplier.area || "", port: supplier.port || "", bio: supplier.bio || "",
+    img: supplier.img || "", logo_img: supplier.logo_img || "", page_img: supplier.page_img || "",
+  };
+}
+function supplierEditPayload(draft: SupplierEditDraft): IntoolsSupplierPayload {
+  const text = (value: string) => value.trim() || null;
+  const list = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
+  const integer = (value: string) => value.trim() ? Number.parseInt(value, 10) : null;
+  return { slug: draft.slug.trim(), name: draft.name.trim(), type: draft.type, region: text(draft.region), loc: text(draft.loc), years: integer(draft.years), moq: text(draft.moq), lead: text(draft.lead), capacity: text(draft.capacity), certs: list(draft.certs), tags: list(draft.tags), sales: text(draft.sales), phone: text(draft.phone), web: text(draft.web), founded: integer(draft.founded), employees: text(draft.employees), area: text(draft.area), port: text(draft.port), bio: text(draft.bio), img: text(draft.img), logo_img: text(draft.logo_img), page_img: text(draft.page_img) };
+}
 function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const [detail, setDetail] = useState<IntoolsSupplierDetail | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState<SupplierEditDraft | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -2325,6 +2356,15 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
     }
   }
 
+  async function saveSupplier() {
+    if (!detail || !draft) return;
+    if (!draft.name.trim() || !draft.slug.trim()) { setError("Supplier name and slug are required."); return; }
+    await run(async () => {
+      await saveIntoolsSupplier(detail.id, supplierEditPayload(draft), detail.updated_at);
+      setDraft(null);
+    }, "Supplier information saved.");
+  }
+
   if (error && !detail)
     return (
       <DrawerShell title="Supplier" subtitle={id} onClose={onClose}>
@@ -2345,13 +2385,16 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
       subtitle={`${detail.slug} · ${detail.region || detail.loc || "Region not recorded"}`}
       status={brokerStatus}
       onClose={onClose}
-      footer={
+      footer={draft ? <><button disabled={busy} onClick={() => setDraft(null)} style={btnStyle("neutral")}>Cancel</button><button disabled={busy} onClick={() => void saveSupplier()} style={btnStyle("success")}>Save changes</button></> :
         <>
           <button disabled={busy || detail.broker_status === "approved"} onClick={() => void run(() => setIntoolsSupplierBrokerStatus(detail.id, "approved"), "Supplier approved.")} style={btnStyle("success")}>
             Approve
           </button>
           <button disabled={busy || detail.broker_status === "rejected"} onClick={() => void run(() => setIntoolsSupplierBrokerStatus(detail.id, "rejected"), "Supplier rejected.")} style={btnStyle("danger")}>
             Reject
+          </button>
+          <button disabled={busy || Boolean(detail.curation_locked)} onClick={() => setDraft(supplierEditDraft(detail))} style={btnStyle("primary")}>
+            Edit
           </button>
           <button
             disabled={busy}
@@ -2368,7 +2411,11 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
         </>
       }
     >
-      <FieldRows
+      {detail.curation_locked && <div role="status" style={{ marginBottom: 10, padding: "9px 10px", borderRadius: 8, background: TONES.info.bg, color: TONES.info.color, fontSize: 12.5 }}>Curated fields are locked. Unlock the supplier in the Supplier workspace before editing.</div>}
+      {draft ? <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 10 }} aria-busy={busy}>
+        {([['Supplier name','name'],['Slug','slug'],['Type','type'],['Country','region'],['City / location','loc'],['Years in business','years'],['MOQ','moq'],['Lead time','lead'],['Monthly capacity','capacity'],['Certifications','certs'],['Capability tags','tags'],['Sales contact','sales'],['Phone','phone'],['Website','web'],['Founded year','founded'],['Employees','employees'],['Factory area','area'],['Port','port'],['Legacy image URL','img'],['Logo URL','logo_img'],['Company image URL','page_img']] as Array<[string,keyof SupplierEditDraft]>).map(([field,key]) => <Field key={key} label={field}><input value={draft[key]} onChange={(event) => setDraft((current) => current ? { ...current, [key]: event.target.value } : current)} style={inputStyle} /></Field>)}
+        <label style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "column", gap: 5, fontSize: 12, fontWeight: 700, color: C.head }}>Internal profile<textarea value={draft.bio} onChange={(event) => setDraft((current) => current ? { ...current, bio: event.target.value } : current)} style={{ ...inputStyle, height: 100, padding: 10, resize: "vertical" }} /></label>
+      </div> : <FieldRows
         rows={[
           ["Type", label(detail.type || "—")],
           ["Region", detail.region || detail.loc || "—"],
@@ -2382,7 +2429,7 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
           ["Products", `${detail.product_count ?? detail.products.length}`],
           ["Company overview", detail.bio || "—"],
         ]}
-      />
+      />}
       {detail.source_contacts.length > 0 && (
         <>
           <GroupLabel>Source contacts</GroupLabel>

@@ -1698,6 +1698,13 @@ export type IntoolsRfqSupplierMatch = {
   status: "suggested" | "selected" | "approved" | "rejected";
   eligibility: Record<string, unknown>;
   score: number;
+  recommendation: {
+    country?: string;
+    policyVersion?: number;
+    scoreComponents?: Record<string, number>;
+    opsNote?: string;
+    unknowns?: string[];
+  };
 };
 export type IntoolsRfqQuote = {
   id: string;
@@ -1729,9 +1736,10 @@ export type IntoolsRfqQuotePayload = {
 export async function listIntoolsRfqCases(status: string | null = null) {
   return intoolsRpc<IntoolsRfqCase[]>("intools_list_rfq_cases", { p_status: status });
 }
-export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string) {
+export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string, refresh = true) {
   return intoolsRpc<IntoolsRfqSupplierMatch[]>("intools_generate_rfq_supplier_matches", {
     p_case_id: rfqCaseId,
+    p_refresh: refresh,
   });
 }
 export async function setIntoolsRfqSupplierMatchStatus(matchId: string, status: "suggested" | "selected" | "approved" | "rejected") {
