@@ -396,7 +396,7 @@ const SECTIONS: Record<GenericSection, SectionMeta> = {
     searchPlaceholder: "Search suppliers",
     emptyText: "Reviewed supplier records will appear here.",
     selectable: true,
-    columnLabels: ["Region", "Type", "Products"],
+    columnLabels: ["Region", "Type"],
     filters: ["all", "approved", "review", "rejected", "archived"],
     primaryActions: [
       { key: "new", label: "New supplier" },
@@ -532,7 +532,6 @@ async function loadRows(section: GenericSection): Promise<Row[]> {
         cols: [
           supplier.region || supplier.loc || "—",
           label(supplier.type || "—"),
-          `${supplier.product_count ?? 0} products`,
         ],
         archived: supplier.archived_at != null,
       };
@@ -1204,7 +1203,7 @@ function SectionListView({
                 style={{ width: 16, height: 16, accentColor: C.moss, cursor: "pointer", flexShrink: 0 }}
               />
               <span aria-hidden="true" style={{ width: 30, flexShrink: 0 }} />
-              <span aria-hidden="true" style={{ flex: "1.4 1 110px", minWidth: 64 }} />
+              <span style={{ flex: "1.4 1 110px", minWidth: 64, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: C.head }}>Applicant</span>
               {meta.columnLabels.map((columnLabel) => (
                 <span
                   key={columnLabel}
@@ -1225,7 +1224,7 @@ function SectionListView({
                   {columnLabel}
                 </span>
               ))}
-              <span style={{ flex: "0 0 auto", minWidth: 74 }} />
+              <span style={{ flex: "0 0 auto", minWidth: 104, textAlign: "right", fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: C.head }}>Status</span>
             </div>
           )}
           <ul style={{ listStyle: "none", margin: 0, padding: 0 }} aria-label={meta.label}>
@@ -1329,7 +1328,7 @@ function SectionListView({
                         {value}
                       </span>
                     ))}
-                    <span style={{ flex: "0 0 auto", minWidth: 74, display: "flex", justifyContent: "flex-end" }}>
+                    <span style={{ flex: "0 0 auto", minWidth: 104, display: "flex", justifyContent: "flex-end" }}>
                       {row.status && <span style={statusPill(row.status)}>{label(row.status)}</span>}
                     </span>
                   </div>
