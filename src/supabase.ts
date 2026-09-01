@@ -1629,14 +1629,9 @@ export type IntoolsRfqSupplierMatch = {
   factory_id: string;
   status: "suggested" | "selected" | "approved" | "rejected";
   eligibility: Record<string, unknown>;
+  // score + recommendation stay on the wire for auditing but are not rendered.
   score: number;
-  recommendation: {
-    country?: string;
-    policyVersion?: number;
-    scoreComponents?: Record<string, number>;
-    opsNote?: string;
-    unknowns?: string[];
-  };
+  recommendation: Record<string, unknown>;
 };
 export type IntoolsRfqQuote = {
   id: string;
@@ -1668,11 +1663,48 @@ export type IntoolsRfqQuotePayload = {
 export async function listIntoolsRfqCases(status: string | null = null) {
   return intoolsRpc<IntoolsRfqCase[]>("intools_list_rfq_cases", { p_status: status });
 }
-export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string, refresh = true) {
-  return intoolsRpc<IntoolsRfqSupplierMatch[]>("intools_generate_rfq_supplier_matches", {
-    p_case_id: rfqCaseId,
-    p_refresh: refresh,
+// AI-assisted supplier routing runs in the `rfq-supplier-routing` edge function
+// (it calls Gemini Flash via OpenRouter + the Algolia supplier index). `refresh`
+// forces a full re-rank; the default "ensure" mode generates only when the RFQ
+// has no matches yet or the cached run is stale.
+export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string, refresh = false) {
+  const mode = refresh ? "refresh" : "ensure";
+  if (localIntoolsAdmin) {
+    const response = await fetch("/api/intools/edge/rfq-supplier-routing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({ rfqCaseId, mode }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok)
+      throw new Error(
+        payload && typeof payload === "object" && "reason" in payload
+          ? String((payload as { reason?: unknown }).reason)
+          : "Supplier routing is unavailable.",
+      );
+    return payload as IntoolsRfqSupplierMatch[];
+  }
+  if (!url || !publishableKey)
+    throw new Error("Supplier routing is not configured for this environment.");
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in again before loading supplier matches.");
+  const response = await fetch(`${url}/functions/v1/rfq-supplier-routing`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ rfqCaseId, mode }),
   });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok)
+    throw new Error(
+      payload && typeof payload === "object" && "reason" in payload
+        ? String((payload as { reason?: unknown }).reason)
+        : "Supplier routing failed.",
+    );
+  return payload as IntoolsRfqSupplierMatch[];
 }
 export async function setIntoolsRfqSupplierMatchStatus(matchId: string, status: "suggested" | "selected" | "approved" | "rejected") {
   return intoolsRpc<IntoolsRfqSupplierMatch>("intools_set_rfq_supplier_match_status", {

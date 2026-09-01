@@ -2197,17 +2197,11 @@ function RequestDrawerBody({
                     {row.supplier?.name || "Unknown supplier"}
                   </div>
                   <div style={{ fontSize: 11.5, color: C.dim }}>
-                    {row.match.recommendation?.country || row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")} · score {Number(row.match.score).toFixed(0)}
+                    {row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")}
                   </div>
                 </div>
                 <span style={statusPill(status)}>{label(status)}</span>
               </div>
-              {row.match.recommendation && (
-                <div style={{ marginTop: 7, padding: "8px 9px", background: "#f7f9fb", borderRadius: 8, fontSize: 11.5, color: C.ink, lineHeight: 1.45 }}>
-                  <strong>Routing rationale.</strong> {row.match.recommendation.opsNote || "Deterministic supplier and country fit."}
-                  {row.match.recommendation.unknowns?.[0] && <div style={{ color: C.dim, marginTop: 3 }}>{row.match.recommendation.unknowns[0]}</div>}
-                </div>
-              )}
 
               {status === "suggested" && (
                 <div style={{ display: "flex", gap: 6, marginTop: 7 }}>

@@ -43,6 +43,8 @@ const allowedRpcs = new Set([
   "intools_supplier_import_dry_run", "intools_promote_supplier_import_rows",
   "intools_promote_supplier_intake", "intools_set_supplier_broker_status",
   "intools_generate_rfq_supplier_matches", "intools_set_rfq_supplier_match_status",
+  "intools_rfq_routing_context", "intools_rfq_routing_candidates", "intools_persist_rfq_routing",
+  "intools_supplier_search_full_snapshot",
   "intools_list_buyer_conversations", "intools_get_buyer_conversation",
   "intools_list_buyer_messages", "intools_send_buyer_message",
   "rfq_ops_get_message",
@@ -111,6 +113,24 @@ if (localIntoolsEnabled) {
       const rpcResponse = await fetch(`${localConfig.url}/rest/v1/rpc/${name}`, { method: "POST", headers: { apikey: localConfig.key, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(args) });
       const data = await rpcResponse.json();
       return response.setHeader("Cache-Control", "no-store").status(rpcResponse.status).json(data);
+    } catch (error) { return response.status(403).json({ error: error instanceof Error ? error.message : "Intools unavailable." }); }
+  });
+  // Forwards an allow-listed edge function call with a real admin JWT. Used by
+  // the local Intools seam for the AI supplier-routing engine. Requires
+  // `npm run supabase:local:functions` (supabase functions serve).
+  const allowedEdge = new Set(["rfq-supplier-routing", "algolia-supplier-sync"]);
+  app.post("/api/intools/edge/:name", async (request, response) => {
+    if (!configured()) return response.status(404).end();
+    if (!readCookie(request) || !allowedEdge.has(request.params.name)) return response.status(401).json({ error: "Intools unavailable." });
+    try {
+      const accessToken = await checkedAdminToken();
+      const edgeResponse = await fetch(`${localConfig.url}/functions/v1/${request.params.name}`, {
+        method: "POST",
+        headers: { apikey: localConfig.key, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(request.body ?? {}),
+      });
+      const data = await edgeResponse.json().catch(() => null);
+      return response.setHeader("Cache-Control", "no-store").status(edgeResponse.status).json(data);
     } catch (error) { return response.status(403).json({ error: error instanceof Error ? error.message : "Intools unavailable." }); }
   });
 }
