@@ -21,7 +21,11 @@ export default async function handler(request, response) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const publishableKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
     || process.env.VITE_SUPABASE_ANON_KEY;
-  if (!authorization.startsWith('Bearer ') || !supabaseUrl || !publishableKey) {
+  if (!authorization.startsWith('Bearer ')) {
+    response.status(401).json({ ok: false, reason: 'unauthorized' });
+    return;
+  }
+  if (!supabaseUrl || !publishableKey) {
     response.status(503).json({ ok: false, reason: 'service_unavailable' });
     return;
   }

@@ -1,6 +1,6 @@
 /* Vercel attaches the ISO country code at the edge. This endpoint deliberately
    returns only a coarse country and an exchange rate; no IP is persisted. */
-module.exports = async (request, response) => {
+export default async function handler(request, response) {
   const country = String(request.headers['x-vercel-ip-country'] || '').toUpperCase();
   response.setHeader('Content-Type', 'application/json; charset=utf-8');
   response.setHeader('Cache-Control', 'private, no-store, max-age=0');
@@ -18,4 +18,4 @@ module.exports = async (request, response) => {
   } catch (_) {
     response.status(200).json({ country: 'ID', currency: 'USD', rate: 1 });
   }
-};
+}

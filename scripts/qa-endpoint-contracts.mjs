@@ -9,6 +9,7 @@ const root = join(fileURLToPath(new URL("..", import.meta.url)));
 const source = await readFile(join(root, "src/supabase.ts"), "utf8");
 const server = await readFile(join(root, "server/index.mjs"), "utf8");
 const copilotApi = await readFile(join(root, "api/rfq-copilot.js"), "utf8");
+const visitorCountryApi = await readFile(join(root, "api/visitor-country.js"), "utf8");
 const migrationDirectory = join(root, "supabase/migrations");
 const functionDirectory = join(root, "supabase/functions");
 const migrations = await Promise.all(
@@ -49,6 +50,9 @@ for (const route of ["rfq-copilot.js", "visitor-country.js"]) {
 }
 assert.match(copilotApi, /functions\/v1\/copilot-agent/);
 assert.match(copilotApi, /authorization/i);
+assert.match(copilotApi, /status\(401\)\.json\(\{ ok: false, reason: 'unauthorized' \}\)/);
+assert.match(visitorCountryApi, /export default async function handler/);
+assert.doesNotMatch(visitorCountryApi, /module\.exports/);
 assert.match(server, /app\.get\("\/health"/);
 assert.match(server, /new Set\(\[/);
 assert.match(server, /"intools_notification_center"/);
