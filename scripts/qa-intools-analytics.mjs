@@ -1,25 +1,42 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [ui, client, migration, detailMigration, routes] = await Promise.all([
+const [ui, client, coverageMigration, detailMigration, overviewFix, routes] = await Promise.all([
   readFile(new URL("../src/intools-analytics.tsx", import.meta.url), "utf8"),
   readFile(new URL("../src/supabase.ts", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831140000_analytics_supplier_coverage.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831150000_search_console_snapshot_detail.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260901140000_intools_analytics_overview_fixes.sql", import.meta.url), "utf8"),
   readFile(new URL("../src/intools.tsx", import.meta.url), "utf8"),
 ]);
 
-assert.match(ui, /Verified suppliers/);
+// Metric tiles
+assert.match(ui, /"Active users"/);
+assert.match(ui, /"Suppliers"/);
 assert.match(ui, /Supplier countries/);
-assert.match(client, /verified_suppliers: number; supplier_countries: number/);
+assert.doesNotMatch(ui, /Dashboard users|Verified suppliers/);
+assert.match(client, /suppliers: number; supplier_countries: number/);
 assert.match(client, /search_console_snapshot/);
-assert.match(migration, /PERFORM public\.intools_require_admin\(\)/);
-assert.match(migration, /verify_state='verified' AND f\.broker_status='approved'/);
-assert.match(migration, /count\(DISTINCT lower\(trim\(f\.region\)\)\)/);
+
+// RFQ creation trend chart removed; Search Console visualises impressions
+assert.doesNotMatch(ui, /RFQ creation trend/);
+assert.match(ui, /Daily impressions/);
+assert.doesNotMatch(ui, /Daily clicks/);
+assert.match(ui, /Top queries/);
+
+// Base migrations still present
+assert.match(coverageMigration, /PERFORM public\.intools_require_admin\(\)/);
 assert.match(detailMigration, /source_count/);
 assert.match(detailMigration, /top_queries/);
 assert.match(detailMigration, /PERFORM public\.intools_require_admin\(\)/);
-assert.match(ui, /Daily clicks/);
-assert.match(ui, /Top queries/);
-assert.match(routes, /if \(tab === "analytics"\) return "\/intools\/analytics"/);
+
+// Overview fixes migration: all-factory supplier count + correct GSC label keys
+assert.match(overviewFix, /PERFORM public\.intools_require_admin\(\)/);
+assert.match(overviewFix, /'suppliers',\(SELECT count\(\*\) FROM public\.factories\)/);
+assert.match(overviewFix, /item->>'Top queries'/);
+assert.match(overviewFix, /item->>'Top pages'/);
+assert.doesNotMatch(overviewFix, /item->>'Query'|item->>'Page'/);
+
+assert.match(routes, /navigate\("\/intools\/analytics"\)/);
+assert.match(routes, /section: "analytics"/);
 console.log("intools analytics QA passed");
