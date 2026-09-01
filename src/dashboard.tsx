@@ -109,7 +109,7 @@ import { WorkspaceCommandPalette } from "./workspace-command-palette";
 import { WorkspaceLottie } from "./workspace-lottie";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
-import { classifyRfqIntake, intakeFromBrief, type RfqIntake } from "./rfq-intake";
+import { classifyRfqIntake, extractProductPhrase, intakeFromBrief, type RfqIntake } from "./rfq-intake";
 import {
   RfqReviewPipeline,
   StageTimeline,
@@ -307,16 +307,25 @@ function normaliseBuyerPrompt(message: string) {
     .replace(/\bmetres?\b/gi, "meters");
 }
 
-function fieldsFromInitialPrompt(message: string): RfqFields {
+function fieldsFromInitialPrompt(message: string, intake?: RfqIntake): RfqFields {
   const source = normaliseBuyerPrompt(message);
   const fields = { ...defaultRfqFields };
   const quantity = source.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?|meters?|yards?|kg|kgs?)\b/i);
   if (quantity) fields.quantity = `${quantity[1]} ${quantity[2]}`;
-  const product = source.match(/\b(hoodies?|t-?shirts?|tees?|polo shirts?|shirts?|pants|trousers?|dresses?|jackets?|coats?|fabrics?)\b/i)?.[0];
-  if (product) fields.product = product;
   const material = source.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
   const textileWeight = source.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
   if (material || textileWeight) fields.material = [material, textileWeight].filter(Boolean).join(", ");
+  // Capture the buyer's whole product phrase ("short pants", "short-sleeve
+  // blouse"), not just the head noun. Fall back to a fabric description when the
+  // request is raw yardage rather than a finished item.
+  const product = extractProductPhrase(source);
+  if (product) fields.product = product;
+  else if ((intake?.items[0]?.category ?? "") === "fabric" || (!product && /\bfabrics?\b|\btextiles?\b|\byardage\b/i.test(source))) {
+    const weave = source.match(/\b(twill|poplin|jersey|fleece|canvas|denim|chambray|corduroy|flannel|sateen|satin|chiffon|voile|oxford|terry|french terry|ripstop|gabardine|interlock|pique|muslin|drill|crepe|georgette|organza|taffeta|velvet|velour|tweed|herringbone)\b/i)?.[0];
+    const weaveBits = [material, weave].filter(Boolean).join(" ");
+    if (/\bfabrics?\b|\btextiles?\b|\byardage\b/i.test(source)) fields.product = weaveBits ? `${weaveBits} fabric` : "Fabric";
+    else if (weaveBits) fields.product = weaveBits;
+  }
   const color = source.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
   if (color) fields.colors = color;
   const sizes = source.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
@@ -5399,7 +5408,7 @@ export function Dashboard({ path }: { path: string }) {
     setMessage("");
     try {
       const intake = classifyRfqIntake(brief);
-      const initialFields = fieldsFromInitialPrompt(brief);
+      const initialFields = fieldsFromInitialPrompt(brief, intake);
       const initialBrief = briefFromFields(brief, initialFields, intake);
       const createdRecord = await createRfqCase({
         title: brief.length > 120 ? `${brief.slice(0, 120).trim()}…` : brief,

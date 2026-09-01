@@ -18,6 +18,7 @@ const INTAKE_SOURCE_PATH = join(HERE, "..", "supabase", "functions", "_shared", 
 const WORKSPACE_INTAKE_SOURCE_PATH = join(HERE, "..", "src", "rfq-intake.ts");
 const SUPABASE_SOURCE_PATH = join(HERE, "..", "src", "supabase.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
+const { extractProductPhrase } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
 const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
 const WORKSPACE_INTAKE_SOURCE = readFileSync(WORKSPACE_INTAKE_SOURCE_PATH, "utf8");
 const SUPABASE_SOURCE = readFileSync(SUPABASE_SOURCE_PATH, "utf8");
@@ -244,6 +245,34 @@ test("copilot intake cannot replace the workspace model unless it is renderable"
   assert.match(WORKSPACE_INTAKE_SOURCE, /export function isRfqIntake/);
   assert.match(WORKSPACE_INTAKE_SOURCE, /Array\.isArray\(intake\.items\)/);
   assert.match(SUPABASE_SOURCE, /intake: isRfqIntake\(response\.intake\) \? response\.intake : null/);
+});
+
+test("product phrase capture keeps the buyer's whole noun phrase, not just the head noun", () => {
+  assert.equal(extractProductPhrase("100 pcs black cotton short pants for men"), "cotton short pants");
+  assert.equal(extractProductPhrase("300 short-sleeve blouses in white"), "short-sleeve blouses");
+  assert.equal(extractProductPhrase("I need 100 pcs short in black"), "short");
+  assert.equal(extractProductPhrase("200 oversized denim jackets"), "oversized denim jackets");
+  assert.equal(extractProductPhrase("100 high-waisted wide-leg trousers"), "high-waisted wide-leg trousers");
+  // "top" must not be mistaken for a product in ordinary wording.
+  assert.equal(extractProductPhrase("we need a top quality supplier for 500 t-shirts"), "t-shirts");
+  assert.equal(extractProductPhrase("please confirm the delivery date"), null);
+});
+
+test("client and edge product-phrase extractors stay in sync", () => {
+  const grab = (path) => {
+    const s = readFileSync(path, "utf8");
+    return s.slice(s.indexOf("const PRODUCT_DESCRIPTOR"), s.indexOf("const PRODUCT_PHRASE_RE"));
+  };
+  assert.ok(grab(WORKSPACE_INTAKE_SOURCE_PATH).includes("PRODUCT_HEAD_NOUN"));
+  assert.equal(grab(WORKSPACE_INTAKE_SOURCE_PATH), grab(INTAKE_SOURCE_PATH));
+});
+
+test("product-phrase rule is documented for the drafting agent", () => {
+  const doc = readFileSync(join(HERE, "..", "docs", "rfq-knowledge", "07-product-phrase-capture.md"), "utf8");
+  assert.match(doc, /whole product noun phrase|complete product noun phrase/i);
+  assert.match(doc, /short-sleeve blouse/);
+  const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(agent, /complete product noun phrase/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);
