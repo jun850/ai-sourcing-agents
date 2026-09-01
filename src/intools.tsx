@@ -186,20 +186,6 @@ function shortDate(value: string | null | undefined) {
     ? String(value)
     : parsed.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
-function relativeTime(value: string | null | undefined) {
-  if (!value) return "—";
-  const then = new Date(value).getTime();
-  if (Number.isNaN(then)) return "—";
-  const diff = Date.now() - then;
-  if (diff < 60_000) return "just now";
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d ago`;
-  return shortDate(value);
-}
 function formatBytes(value: number | null | undefined) {
   const bytes = Number(value) || 0;
   if (bytes < 1024) return `${bytes} B`;
@@ -360,7 +346,7 @@ const SECTIONS: Record<GenericSection, SectionMeta> = {
     searchPlaceholder: "Search requests",
     emptyText: "New RFQ cases will appear here for review.",
     selectable: true,
-    columnLabels: ["Buyer", "Updated"],
+    columnLabels: ["Buyer"],
     filters: [
       "all",
       "needs_research",
@@ -499,7 +485,7 @@ async function loadRows(section: GenericSection): Promise<Row[]> {
       title: rfq.case_no,
       subtitle: rfq.title || "Untitled request",
       status: rfq.status,
-      cols: [rfq.buyer_name || rfq.buyer_email || "—", relativeTime(rfq.updated_at)],
+      cols: [rfq.buyer_name || rfq.buyer_email || "—"],
       archived: rfq.status === "archived",
     }));
   }
@@ -2174,7 +2160,6 @@ function RequestDrawerBody({
           ["Buyer email", caseRecord?.buyer_email || "—"],
           ["Matches", String(caseRecord?.match_count ?? matches.length)],
           ["Quotes", String(caseRecord?.quote_count ?? 0)],
-          ["Updated", rfq.cols[1] || "—"],
         ]}
       />
 
