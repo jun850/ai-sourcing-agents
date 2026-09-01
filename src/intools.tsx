@@ -15,6 +15,7 @@ import {
   archiveIntoolsSupplier,
   assertIntoolsAdmin,
   cancelIntoolsInvoice,
+  createIntoolsRfqPhaseInvoice,
   createIntoolsInvoice,
   declineRegistrationRequest,
   generateIntoolsRfqSupplierMatches,
@@ -2030,7 +2031,7 @@ function RequestDrawerBody({
   rfq: Row;
   onClose: () => void;
   onChanged: () => void;
-  onGenerateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; description: string; amount: string }) => void;
+  onGenerateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; description: string; amount: string; phase: "sample" }) => void;
 }) {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [caseRecord, setCaseRecord] = useState<IntoolsRfqCase | null>(null);
@@ -2121,13 +2122,15 @@ function RequestDrawerBody({
           certifications: [],
           recommended: draft.recommended,
         });
-        if (totalCents > 0) await setIntoolsRfqQuoteTotal(quote.id, totalCents);
+        if (totalCents <= 0) throw new Error("Enter a positive total price before publishing this quote.");
+        await setIntoolsRfqQuoteTotal(quote.id, totalCents);
+        await publishIntoolsRfqQuote(quote.id);
       },
-      "Quote saved.",
+      "Quote published to the buyer’s Quotes tab.",
     );
   }
 
-  const selectedRow = matches.find((row) => row.match.status === "selected");
+  const selectedRow = matches.find((row) => row.quote?.status === "selected");
   const canGenerate = Boolean(selectedRow?.quote?.quote_total_cents);
   const filtered = matches.filter((row) => {
     const q = supplierQuery.trim().toLowerCase();
@@ -2151,6 +2154,7 @@ function RequestDrawerBody({
               buyerProfileId: caseRecord?.buyer_profile_id || "",
               description: `${rfq.title} — ${rfq.subtitle}`,
               amount: selectedRow?.quote?.quote_total_cents ? (selectedRow.quote.quote_total_cents / 100).toFixed(2) : "",
+              phase: "sample",
             })
           }
           style={{
@@ -2159,7 +2163,7 @@ function RequestDrawerBody({
             cursor: canGenerate ? "pointer" : "not-allowed",
           }}
         >
-          {canGenerate ? "Generate invoice" : "Select a supplier + quote total first"}
+          {canGenerate ? "Create sampling invoice" : "Await buyer quote selection"}
         </button>
       }
     >
@@ -2191,6 +2195,7 @@ function RequestDrawerBody({
       {!loading &&
         filtered.map((row) => {
           const status = row.match.status;
+          const quoteLocked = Boolean(row.quote && row.quote.status !== "draft");
           const draft = draftFor(row);
           const busy = busyId === row.match.id;
           return (
@@ -2238,21 +2243,22 @@ function RequestDrawerBody({
                 >
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                     <Field label="Unit price (USD)">
-                      <input value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                      <input disabled={quoteLocked} value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
                     </Field>
                     <Field label="MOQ">
-                      <input value={draft.moq} onChange={(event) => setDraft(row, { moq: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                      <input disabled={quoteLocked} value={draft.moq} onChange={(event) => setDraft(row, { moq: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
                     </Field>
                     <Field label="Lead time (days)">
-                      <input value={draft.leadTime} onChange={(event) => setDraft(row, { leadTime: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                      <input disabled={quoteLocked} value={draft.leadTime} onChange={(event) => setDraft(row, { leadTime: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
                     </Field>
                     <Field label="Total price (USD)">
-                      <input value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                      <input disabled={quoteLocked} value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
                     </Field>
                   </div>
                   <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9, fontSize: 12, color: "#3b4453", cursor: "pointer" }}>
                     <input
                       type="checkbox"
+                      disabled={quoteLocked}
                       checked={draft.recommended}
                       onChange={(event) => setDraft(row, { recommended: event.target.checked })}
                       style={{ width: 15, height: 15, accentColor: C.moss, cursor: "pointer" }}
@@ -2260,27 +2266,11 @@ function RequestDrawerBody({
                     Mark as recommended
                   </label>
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                    <button disabled={busy} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
+                    <button disabled={busy || quoteLocked} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
                       Save quote
                     </button>
-                    {status === "approved" && row.quote && (
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            row.match.id,
-                            async () => {
-                              await setIntoolsRfqSupplierMatchStatus(row.match.id, "selected");
-                              await publishIntoolsRfqQuote(row.quote!.id);
-                            },
-                            "Supplier selected — generate the invoice when ready.",
-                          )
-                        }
-                        style={btnStyle("primary", "sm")}
-                      >
-                        Select for invoice
-                      </button>
-                    )}
+                    {row.quote?.status === "published" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Visible to buyer</span>}
+                    {row.quote?.status === "selected" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected by buyer · sampling invoice ready</span>}
                   </div>
                   {status === "selected" && (
                     <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected for invoice</div>
@@ -2291,7 +2281,7 @@ function RequestDrawerBody({
           );
         })}
       <p style={{ margin: "10px 0 0", fontSize: 12, color: C.faint }}>
-        Approve a supplier, add a quote total, and select it — then generate the invoice with every field carried over.
+        Approve a supplier, enter the reviewed quote, and save to publish it. The buyer selects one quote before sampling can be invoiced.
       </p>
 
       {error && <Notice tone="danger">{error}</Notice>}
@@ -2884,6 +2874,7 @@ type InvoiceFormSeed = {
   orderId: string | null;
   amount: string;
   notes: string;
+  phase?: "sample" | "bulk";
 };
 
 function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; onClose: () => void; onDone: (message: string) => void }) {
@@ -2904,15 +2895,13 @@ function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; on
       const unitAmountCents = Math.round((parseFloat(form.amount) || 0) * 100);
       if (!form.buyerProfileId.trim()) throw new Error("A buyer profile ID is required.");
       if (unitAmountCents <= 0) throw new Error("Enter an invoice amount in USD.");
-      await createIntoolsInvoice({
-        buyerProfileId: form.buyerProfileId.trim(),
-        rfqCaseId: form.rfqCaseId,
-        orderId: form.orderId,
-        dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null,
-        notes: form.notes.trim() || null,
-        items: [{ description: form.description.trim() || "Sourcing services", quantity: 1, unitAmountCents, taxAmountCents: 0 }],
-      });
-      onDone("Invoice created — review and send it from the Invoices queue.");
+      const items = [{ description: form.description.trim() || "Sourcing services", quantity: 1, unitAmountCents, taxAmountCents: 0 }];
+      if (form.phase && form.rfqCaseId) {
+        await createIntoolsRfqPhaseInvoice(form.rfqCaseId, form.phase, { dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null, notes: form.notes.trim() || null, items });
+      } else {
+        await createIntoolsInvoice({ buyerProfileId: form.buyerProfileId.trim(), rfqCaseId: form.rfqCaseId, orderId: form.orderId, dueDate: /^\d{4}-\d{2}-\d{2}$/.test(dueDate) ? dueDate : null, notes: form.notes.trim() || null, items });
+      }
+      onDone(`${form.phase === "sample" ? "Sampling" : "Invoice"} invoice created — review and send it from the Invoices queue.`);
     } catch (cause) {
       setError(errorMessage(cause, "Could not create this invoice."));
     } finally {
@@ -2922,8 +2911,8 @@ function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; on
 
   return (
     <ModalShell
-      title="Generate invoice"
-      hint="Prefilled from the linked record — edit anything before creating. Totals and eligibility are server-computed."
+      title={form.phase === "sample" ? "Create sampling invoice" : "Generate invoice"}
+      hint={form.phase === "sample" ? "The selected buyer quote is required. Server-side lifecycle checks determine eligibility." : "Prefilled from the linked record — edit anything before creating. Totals and eligibility are server-computed."}
       width={520}
       onClose={onClose}
       footer={
@@ -2932,7 +2921,7 @@ function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; on
             Cancel
           </button>
           <button disabled={busy} onClick={(event) => void submit(event)} style={btnStyle("success")}>
-            Create invoice
+            Create {form.phase === "sample" ? "sampling " : ""}invoice
           </button>
         </>
       }
@@ -3173,6 +3162,7 @@ function DetailRouter({
             orderId: null,
             amount: input.amount,
             notes: `Generated from ${rowCache.title}`,
+            phase: input.phase,
           })
         }
       />
