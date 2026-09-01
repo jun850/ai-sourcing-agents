@@ -2894,7 +2894,7 @@ function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; on
     setError("");
     try {
       const unitAmountCents = Math.round((parseFloat(form.amount) || 0) * 100);
-      if (!form.buyerProfileId.trim()) throw new Error("A buyer profile ID is required.");
+      if (!form.phase && !form.buyerProfileId.trim()) throw new Error("A buyer profile ID is required.");
       if (unitAmountCents <= 0) throw new Error("Enter an invoice amount in USD.");
       const items = [{ description: form.description.trim() || "Sourcing services", quantity: 1, unitAmountCents, taxAmountCents: 0 }];
       if (form.phase && form.rfqCaseId) {
@@ -2934,7 +2934,7 @@ function InvoiceFormModal({ seed, onClose, onDone }: { seed: InvoiceFormSeed; on
         <div style={{ display: "flex", gap: 10 }}>
           <div style={{ flex: 1 }}>
             <Field label="Buyer profile ID">
-              <input value={form.buyerProfileId} onChange={(event) => set("buyerProfileId", event.target.value)} style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5 }} />
+              <input value={form.buyerProfileId} readOnly={Boolean(form.phase)} aria-readonly={Boolean(form.phase)} onChange={(event) => set("buyerProfileId", event.target.value)} style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12.5, background: form.phase ? "#f6f8fa" : "#fff", color: form.phase ? C.dim : C.text }} />
             </Field>
           </div>
           <div style={{ flex: 1 }}>
