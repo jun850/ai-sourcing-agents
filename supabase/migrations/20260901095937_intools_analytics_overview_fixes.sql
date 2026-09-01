@@ -32,4 +32,4 @@ BEGIN
   RETURN v_result;
 END; $$;
 REVOKE ALL ON FUNCTION public.intools_get_analytics_overview(date,date) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.intools_get_analytics_overview(date,date) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.intools_get_analytics_overview(date,date) TO authenticated;;
