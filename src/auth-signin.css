@@ -132,9 +132,11 @@
 }
 .signin-input::placeholder { color: #9aa1aa; }
 .signin-input:hover:not(:disabled) { border-color: #cfd4da; }
-.signin-input:focus {
+.signin-input:focus,
+.signin-input:focus-visible {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  outline: none;
 }
 .signin-input:disabled {
   color: var(--ws-body);
@@ -160,7 +162,7 @@
 }
 .signin-reveal:hover { color: var(--ws-ink); }
 .signin-reveal:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid rgba(17, 24, 39, 0.35);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -184,7 +186,7 @@
 }
 .signin-submit:hover:not(:disabled) { background: var(--ws-moss-hover); }
 .signin-submit:focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 3px solid rgba(17, 24, 39, 0.35);
   outline-offset: 3px;
 }
 .signin-submit:disabled { background: #d7dbe1; cursor: not-allowed; }
@@ -211,7 +213,7 @@
 }
 .signin-link:hover { text-decoration: underline; }
 .signin-link:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid rgba(17, 24, 39, 0.35);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -280,9 +282,11 @@
   text-align: center;
   outline: 0;
 }
-.signin-otp-input:focus {
+.signin-otp-input:focus,
+.signin-otp-input:focus-visible {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  outline: none;
 }
 .signin-otp-verify {
   flex-shrink: 0;
@@ -326,9 +330,11 @@
   background-repeat: no-repeat;
   background-position: right 14px center;
 }
-.signin-select:focus {
+.signin-select:focus,
+.signin-select:focus-visible {
   border-color: transparent;
   box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
+  outline: none;
 }
 
 /* ── Footer help ───────────────────────────────────────────────────── */
@@ -372,4 +378,17 @@
 
 @media (prefers-reduced-motion: reduce) {
   .signin-input, .signin-submit { transition: none; }
+}
+
+/* No green anywhere on the auth screens. The global a11y focus ring
+   (responsive-a11y.css: `input:focus-visible { outline: 3px solid var(--focus-ring) }`,
+   green) is overridden here with a neutral indicator; inputs rely on their
+   own box-shadow ring instead of an outline. */
+.signin-screen :focus-visible {
+  outline-color: rgba(17, 24, 39, 0.35);
+}
+.signin-screen .signin-input:focus-visible,
+.signin-screen .signin-otp-input:focus-visible,
+.signin-screen .signin-select:focus-visible {
+  outline: none;
 }

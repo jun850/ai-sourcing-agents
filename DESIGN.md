@@ -159,6 +159,11 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   control, keeping both columns on the same 52px outlined-field rhythm.
 - Auth labels remain in a stable 18px row above their outlined controls; they do
   not float into or notch the border on focus, input, selection, or autofill.
+- The sign-in and sign-up screens carry no green on any focus indicator. Fields,
+  selects, the primary action, and links take a neutral (slate) focus ring only —
+  the field border goes transparent on focus and a soft neutral box-shadow ring
+  stands in. The global green a11y focus ring is explicitly overridden inside
+  `.signin-screen`; do not reintroduce moss/accent outlines here.
 - Auth and supplier-intake forms use a shared Material 3-inspired control
   vocabulary: outlined text fields, select menus, searchable Autocomplete
   lookups, native-labelled radio/checkbox groups, inline status alerts, and

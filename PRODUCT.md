@@ -121,6 +121,9 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   Only `approved` or `invited` emails may receive a link, and Auth may not create
   a missing user during sign-in. Every valid email submission receives the same
   generic response so account and approval status cannot be enumerated.
+- The sign-in and sign-up screens use no green on any focus indicator: fields,
+  selects, the primary action, and links show a neutral slate focus ring only.
+  The global green accessibility focus ring is overridden within these screens.
 - Access request, sign-in, and supplier-intake forms use the shared Material
   component layer. Searchable lookup controls are limited to bounded,
   user-supplied options such as country calling code, manufacturing category,
