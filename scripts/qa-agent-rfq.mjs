@@ -15,8 +15,12 @@ import { fileURLToPath } from "node:url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = join(HERE, "fixtures", "agent-rfq", "golden-cases.json");
 const INTAKE_SOURCE_PATH = join(HERE, "..", "supabase", "functions", "_shared", "rfq-intake.ts");
+const WORKSPACE_INTAKE_SOURCE_PATH = join(HERE, "..", "src", "rfq-intake.ts");
+const SUPABASE_SOURCE_PATH = join(HERE, "..", "src", "supabase.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
 const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
+const WORKSPACE_INTAKE_SOURCE = readFileSync(WORKSPACE_INTAKE_SOURCE_PATH, "utf8");
+const SUPABASE_SOURCE = readFileSync(SUPABASE_SOURCE_PATH, "utf8");
 const PRESET = "@preset/marketplace-copilot";
 const SUPPORT_EMAIL = "info@arcanawangsa.com";
 const FIELDS = [
@@ -234,6 +238,12 @@ test("agent permits ongoing draft clarifications", () => {
   const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
   assert.doesNotMatch(agent, /MAX_CLARIFICATIONS/);
   assert.match(agent, /Buyers can continue/);
+});
+
+test("copilot intake cannot replace the workspace model unless it is renderable", () => {
+  assert.match(WORKSPACE_INTAKE_SOURCE, /export function isRfqIntake/);
+  assert.match(WORKSPACE_INTAKE_SOURCE, /Array\.isArray\(intake\.items\)/);
+  assert.match(SUPABASE_SOURCE, /intake: isRfqIntake\(response\.intake\) \? response\.intake : null/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);

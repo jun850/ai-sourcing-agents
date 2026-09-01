@@ -4,7 +4,7 @@ import {
   type Session,
   type User,
 } from "@supabase/supabase-js";
-import type { RfqIntake } from "./rfq-intake";
+import { isRfqIntake, type RfqIntake } from "./rfq-intake";
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const publishableKey = (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ??
@@ -892,10 +892,9 @@ export async function invokeRfqCopilot(input: {
             typeof option === "string" && option.trim().length > 0,
         ).slice(0, 3)
       : null,
-    intake:
-      response.intake && typeof response.intake === "object" && !Array.isArray(response.intake)
-        ? (response.intake as RfqIntake)
-        : null,
+    // The server's internal classifier may include a compact intake summary.
+    // Only expose a full workspace intake object to rendering code.
+    intake: isRfqIntake(response.intake) ? response.intake : null,
   } as CopilotAgentResponse;
 }
 export async function listWorkspaceProducts() {
