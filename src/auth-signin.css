@@ -133,8 +133,8 @@
 .signin-input::placeholder { color: #9aa1aa; }
 .signin-input:hover:not(:disabled) { border-color: #cfd4da; }
 .signin-input:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(29, 90, 60, 0.12);
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
 }
 .signin-input:disabled {
   color: var(--ws-body);
@@ -281,8 +281,8 @@
   outline: 0;
 }
 .signin-otp-input:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(29, 90, 60, 0.12);
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
 }
 .signin-otp-verify {
   flex-shrink: 0;
@@ -327,8 +327,8 @@
   background-position: right 14px center;
 }
 .signin-select:focus {
-  border-color: var(--green);
-  box-shadow: 0 0 0 3px rgba(29, 90, 60, 0.12);
+  border-color: transparent;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
 }
 
 /* ── Footer help ───────────────────────────────────────────────────── */
