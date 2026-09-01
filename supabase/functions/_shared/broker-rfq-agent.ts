@@ -279,6 +279,33 @@ async function finish(
   }).eq("id", turnId);
 }
 
+// A patch RPC raises SQLSTATE 40001 ("RFQ was updated elsewhere") whenever the
+// p_expected_revision we pass no longer matches the row -- e.g. a concurrent
+// reference-detail write earlier in this same request, or a client whose cached
+// revision fell behind. The earlier behaviour swallowed that error, finished the
+// turn as settled, and echoed the *stale* revision back, so the client kept
+// resending the same doomed revision in a tight loop. Instead: re-read the
+// authoritative revision, hand it back, and let the buyer resend once.
+async function staleRevision(
+  admin: any,
+  rfqCaseId: string,
+  profileId: string,
+  turnId: string,
+  fallbackRevision: number,
+  startedAt: number,
+) {
+  const { data: fresh } = await admin.rpc("agent_rfq_get_context", { p_case_id: rfqCaseId, p_profile_id: profileId });
+  const currentRevision = Number(fresh?.rfq?.revision ?? fallbackRevision);
+  const result = output(
+    "unavailable",
+    "Your RFQ draft moved on while I was saving that. I’ve reloaded the latest version — please send your last message again.",
+    currentRevision,
+    { verificationStatus: "stale" },
+  );
+  await finish(admin, turnId, result, "unavailable", "stale_revision", startedAt);
+  return reply(result, 409);
+}
+
 // Legacy function routes delegate here. All supplier, invoice, order, and
 // payment facts are read server-side; browser supplied context is never used.
 export async function handleBrokerRfqAgent(request: Request) {
@@ -401,6 +428,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   }
   if (Object.keys(reconciledPatch.patch).length) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: activeRevision, p_patch: reconciledPatch.patch, p_turn_id: turn.id });
+    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt);
     if (!error) {
       const savedPatch = applied?.savedPatch || reconciledPatch.patch;
       const result = output("draft_updated", reconciled?.reply || `Noted on ${capturedDetails(savedPatch)} from your attached reference. Is there anything else we need to know? When you’re ready, you can click Submit RFQ.`, Number(applied?.revision || activeRevision), { savedPatch, changedFields: applied?.changedFields || Object.keys(savedPatch), undoToken: applied?.undoToken || null, verificationStatus: "reference-derived", intake: appliedIntake || intake });
@@ -429,7 +457,10 @@ export async function handleBrokerRfqAgent(request: Request) {
   // through the provider path below.
   const immediatePatch = deterministicPatch(`${message}${referenceEvidence}`, intake);
   if (Object.keys(immediatePatch).length) {
-    const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: expectedRevision, p_patch: immediatePatch, p_turn_id: turn.id });
+    // activeRevision, not the client-supplied expectedRevision: agent_rfq_apply_reference_details
+    // above may have already bumped the row within this same request.
+    const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: activeRevision, p_patch: immediatePatch, p_turn_id: turn.id });
+    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt);
     if (!error) {
       const savedPatch = applied?.savedPatch || immediatePatch;
       const referencePrefix = referenceEvidence
