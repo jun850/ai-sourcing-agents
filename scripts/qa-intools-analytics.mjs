@@ -6,7 +6,7 @@ const [ui, client, coverageMigration, detailMigration, overviewFix, routes] = aw
   readFile(new URL("../src/supabase.ts", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831140000_analytics_supplier_coverage.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831150000_search_console_snapshot_detail.sql", import.meta.url), "utf8"),
-  readFile(new URL("../supabase/migrations/20260901140000_intools_analytics_overview_fixes.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260901095937_intools_analytics_overview_fixes.sql", import.meta.url), "utf8"),
   readFile(new URL("../src/intools.tsx", import.meta.url), "utf8"),
 ]);
 
@@ -23,6 +23,9 @@ assert.doesNotMatch(ui, /RFQ creation trend/);
 assert.match(ui, /Daily impressions/);
 assert.doesNotMatch(ui, /Daily clicks/);
 assert.match(ui, /Top queries/);
+// No "0 clicks · 0%" noise: Search Console lists and tiles drop clicks/CTR
+assert.doesNotMatch(ui, /clicks · |Average CTR|\bpercent\b/);
+assert.match(ui, /row\.impressions\)\} impr\./);
 
 // Base migrations still present
 assert.match(coverageMigration, /PERFORM public\.intools_require_admin\(\)/);
