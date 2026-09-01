@@ -1,4 +1,5 @@
 import {
+  Component,
   useCallback,
   useEffect,
   useRef,
@@ -186,6 +187,51 @@ type AgentStatus = {
   text: string;
   tone: "success" | "info" | "warning" | "error";
 };
+
+class RfqWorkspaceBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <RoundedSurface
+        role="alert"
+        sx={{
+          display: "grid",
+          gap: 1.5,
+          minHeight: 360,
+          placeItems: "center",
+          px: 3,
+          py: 5,
+          textAlign: "center",
+        }}
+      >
+        <Box>
+          <Typography component="h2" sx={{ fontSize: 18, fontWeight: 700 }}>
+            This RFQ could not be displayed
+          </Typography>
+          <Typography sx={{ mt: 0.75, color: "#667384", fontSize: 14 }}>
+            Your saved request is unchanged. Reload it to continue.
+          </Typography>
+          <MuiButton
+            variant="contained"
+            onClick={() => window.location.reload()}
+            sx={{ mt: 2, backgroundColor: "#4b7657", "&:hover": { backgroundColor: "#3d6548" } }}
+          >
+            Reload RFQ
+          </MuiButton>
+        </Box>
+      </RoundedSurface>
+    );
+  }
+}
 
 const rfqFieldLabels: Record<keyof RfqFields, string> = {
   product: "Product",
@@ -5437,8 +5483,9 @@ export function Dashboard({ path }: { path: string }) {
           ? rfq.record.brief.summary
           : rfq.record.title;
       return (
-        <RfqWorkspace
-          key={rfq.record.id}
+        <RfqWorkspaceBoundary key={rfq.record.id}>
+          <RfqWorkspace
+            key={rfq.record.id}
           caseId={rfq.record.id}
           caseNo={rfq.record.case_no}
           brief={summary}
@@ -5475,7 +5522,8 @@ export function Dashboard({ path }: { path: string }) {
               ),
             );
           }}
-        />
+          />
+        </RfqWorkspaceBoundary>
       );
     }
     if (view === "requests")
