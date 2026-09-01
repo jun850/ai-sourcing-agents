@@ -1,15 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { algoliasearch } from "npm:algoliasearch@5.20.0";
 
 // Keeps the private `atelix_suppliers` Algolia index in sync with eligible
 // factories. Server-side only — the index is never queried from the browser.
-//   { mode: "drain" }  - process the supplier_search_outbox in bounded batches
+//   { mode: "drain" }  - process supplier_search_outbox in bounded batches
 //   { mode: "full" }   - rebuild the index from every currently-eligible factory
 //
-// Callable by an admin session (operator "Reindex" action) or by the service
-// role (managed pg_cron drain job). Deletions and eligibility are decided in
-// Postgres; this function only mirrors the result into Algolia.
+// Callable by an admin session (operator "Reindex" action) or the service role
+// (managed pg_cron drain job). Eligibility and deletions are decided in Postgres;
+// this only mirrors the result into Algolia via its REST API (no SDK, matching
+// the existing algolia-sync function).
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +17,8 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 const ALGOLIA_INDEX = Deno.env.get("ALGOLIA_SUPPLIER_INDEX") || "atelix_suppliers";
+const APP_ID = Deno.env.get("ALGOLIA_APP_ID");
+const API_KEY = Deno.env.get("ALGOLIA_ADMIN_API_KEY");
 const INDEX_SETTINGS = {
   searchableAttributes: ["name", "type", "unordered(tags)", "unordered(certs)", "bio_excerpt", "region"],
   attributesForFaceting: [
@@ -39,6 +41,27 @@ function json(body: unknown, status = 200) {
   });
 }
 
+async function algolia(path: string, body: unknown, method = "POST", write = true) {
+  const host = write ? `${APP_ID}.algolia.net` : `${APP_ID}-dsn.algolia.net`;
+  const res = await fetch(`https://${host}/1/indexes/${encodeURIComponent(ALGOLIA_INDEX)}${path}`, {
+    method,
+    headers: {
+      "X-Algolia-Application-Id": APP_ID!,
+      "X-Algolia-API-Key": API_KEY!,
+      "Content-Type": "application/json",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`algolia_${res.status}:${(await res.text()).slice(0, 300)}`);
+  return res.json();
+}
+
+async function batch(requests: { action: string; body: Record<string, unknown> }[]) {
+  for (let offset = 0; offset < requests.length; offset += 500) {
+    await algolia("/batch", { requests: requests.slice(offset, offset + 500) });
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (request.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
@@ -46,10 +69,8 @@ Deno.serve(async (request) => {
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const url = Deno.env.get("SUPABASE_URL");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const appId = Deno.env.get("ALGOLIA_APP_ID");
-  const apiKey = Deno.env.get("ALGOLIA_ADMIN_API_KEY");
   if (!token || !url || !serviceKey) return json({ ok: false, reason: "unauthorized" }, 401);
-  if (!appId || !apiKey) return json({ ok: false, reason: "algolia_not_configured" }, 503);
+  if (!APP_ID || !API_KEY) return json({ ok: false, reason: "algolia_not_configured" }, 503);
 
   let body: { mode?: unknown; limit?: unknown };
   try {
@@ -60,17 +81,14 @@ Deno.serve(async (request) => {
   const mode = body.mode === "full" ? "full" : "drain";
 
   const admin = createClient(url, serviceKey);
-  // A non-service token must belong to a real user; the RPCs re-check admin.
   if (token !== serviceKey) {
     const { data: { user } } = await admin.auth.getUser(token);
     if (!user) return json({ ok: false, reason: "unauthorized" }, 401);
   }
 
-  const client = algoliasearch(appId, apiKey);
-
   try {
     if (mode === "full") {
-      await client.setSettings({ indexName: ALGOLIA_INDEX, indexSettings: INDEX_SETTINGS });
+      await algolia("/settings", INDEX_SETTINGS, "PUT");
       let after: string | null = null;
       let indexed = 0;
       for (let page = 0; page < 40; page++) {
@@ -81,7 +99,7 @@ Deno.serve(async (request) => {
         if (error) return json({ ok: false, reason: "snapshot_failed", detail: error.message }, 500);
         const records = (data ?? []) as { objectID: string }[];
         if (records.length === 0) break;
-        await client.saveObjects({ indexName: ALGOLIA_INDEX, objects: records as Record<string, unknown>[] });
+        await batch(records.map((body) => ({ action: "updateObject", body: body as Record<string, unknown> })));
         indexed += records.length;
         after = records[records.length - 1].objectID;
         if (records.length < 500) break;
@@ -92,7 +110,12 @@ Deno.serve(async (request) => {
     const limit = Math.max(1, Math.min(500, Number(body.limit) || 200));
     const { data, error } = await admin.rpc("intools_supplier_search_claim", { p_limit: limit });
     if (error) return json({ ok: false, reason: "claim_failed", detail: error.message }, 500);
-    const rows = (data ?? []) as { id: string; factory_id: string; op: string; record: Record<string, unknown> | null }[];
+    const rows = (data ?? []) as {
+      id: string;
+      factory_id: string;
+      op: string;
+      record: Record<string, unknown> | null;
+    }[];
     const done: string[] = [];
     const failed: string[] = [];
     let lastError: string | null = null;
@@ -102,17 +125,11 @@ Deno.serve(async (request) => {
 
     try {
       if (upserts.length) {
-        await client.saveObjects({
-          indexName: ALGOLIA_INDEX,
-          objects: upserts.map((r) => r.record as Record<string, unknown>),
-        });
+        await batch(upserts.map((r) => ({ action: "updateObject", body: r.record as Record<string, unknown> })));
         for (const r of upserts) done.push(r.id);
       }
       if (deletes.length) {
-        await client.deleteObjects({
-          indexName: ALGOLIA_INDEX,
-          objectIDs: deletes.map((r) => r.factory_id),
-        });
+        await batch(deletes.map((r) => ({ action: "deleteObject", body: { objectID: r.factory_id } })));
         for (const r of deletes) done.push(r.id);
       }
     } catch (cause) {
@@ -120,11 +137,7 @@ Deno.serve(async (request) => {
       for (const r of rows) if (!done.includes(r.id)) failed.push(r.id);
     }
 
-    await admin.rpc("intools_supplier_search_complete", {
-      p_done: done,
-      p_failed: failed,
-      p_error: lastError,
-    });
+    await admin.rpc("intools_supplier_search_complete", { p_done: done, p_failed: failed, p_error: lastError });
     return json({ ok: true, mode, processed: done.length, failed: failed.length });
   } catch (cause) {
     return json({ ok: false, reason: cause instanceof Error ? cause.message.slice(0, 300) : "sync_failed" }, 500);

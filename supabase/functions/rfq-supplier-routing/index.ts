@@ -1,6 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { algoliasearch } from "npm:algoliasearch@5.20.0";
 import {
   computeRoutingPrior,
   hardFallbackOrder,
@@ -83,27 +82,38 @@ async function algoliaCandidateIds(
   signals: ReturnType<typeof computeRoutingPrior>["signals"],
 ): Promise<{ ids: string[] } | { error: string }> {
   const appId = Deno.env.get("ALGOLIA_APP_ID");
-  const apiKey = Deno.env.get("ALGOLIA_ADMIN_API_KEY") || Deno.env.get("ALGOLIA_SEARCH_API_KEY");
+  const apiKey =
+    Deno.env.get("ALGOLIA_ADMIN_API_KEY") ||
+    Deno.env.get("ALGOLIA_SEARCH_API_KEY") ||
+    Deno.env.get("ALGOLIA_WRITE_API_KEY");
   if (!appId || !apiKey) return { error: "algolia_unavailable" };
+  const { query, optionalFilters } = buildAlgoliaQuery(ctx, signals);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8_000);
   try {
-    const client = algoliasearch(appId, apiKey);
-    const { query, optionalFilters } = buildAlgoliaQuery(ctx, signals);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8_000);
-    try {
-      const res: any = await client.searchSingleIndex({
-        indexName: ALGOLIA_INDEX,
-        searchParams: { query, optionalFilters, hitsPerPage: 60, attributesToRetrieve: ["objectID"] },
-      });
-      const ids = (res?.hits ?? [])
-        .map((h: any) => String(h.objectID || ""))
-        .filter((v: string) => isUuid(v));
-      return { ids };
-    } finally {
-      clearTimeout(timeout);
-    }
+    const res = await fetch(
+      `https://${appId}-dsn.algolia.net/1/indexes/${encodeURIComponent(ALGOLIA_INDEX)}/query`,
+      {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "X-Algolia-Application-Id": appId,
+          "X-Algolia-API-Key": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query, optionalFilters, hitsPerPage: 60, attributesToRetrieve: ["objectID"] }),
+      },
+    );
+    if (!res.ok) return { error: `algolia_${res.status}` };
+    const payload = await res.json().catch(() => null);
+    const ids = (payload?.hits ?? [])
+      .map((h: any) => String(h.objectID || ""))
+      .filter((v: string) => isUuid(v));
+    return { ids };
   } catch (cause) {
     return { error: `algolia_${cause instanceof Error ? cause.name : "error"}`.slice(0, 60) };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
