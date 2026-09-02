@@ -22,10 +22,10 @@ assert.match(client, /search_console_snapshot/);
 assert.match(client, /customer_geography: IntoolsCustomerDistribution\[\]/);
 assert.match(client, /customer_revenue_tiers: IntoolsCustomerDistribution\[\]/);
 
-// Customer distribution: one aggregate admin RPC, not buyer-level browser reads.
-assert.match(ui, /Customer distribution/);
-assert.match(ui, /By country/);
-assert.match(ui, /By annual revenue/);
+// Customer distribution section is hidden from the analytics UI; the aggregate
+// admin RPC stays in place (server-authoritative) for later reuse.
+assert.doesNotMatch(ui, /Customer distribution/);
+assert.doesNotMatch(ui, /By annual revenue/);
 assert.match(customerDistributionMigration, /PERFORM public\.intools_require_admin\(\)/);
 assert.match(customerDistributionMigration, /'Not specified'/);
 assert.match(customerDistributionMigration, /customer_geography/);
