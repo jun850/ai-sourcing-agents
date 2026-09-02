@@ -296,12 +296,12 @@ test("knowledge retrieval alone cannot create a reference conflict", () => {
   assert.match(agent, /const reconciled = hasReferenceEvidence \? await reconcileWithAgent/);
 });
 
-test("product-phrase rule is documented for the drafting agent", () => {
-  const doc = readFileSync(join(HERE, "..", "docs", "rfq-knowledge", "07-product-phrase-capture.md"), "utf8");
-  assert.match(doc, /whole product noun phrase|complete product noun phrase/i);
-  assert.match(doc, /short-sleeve blouse/);
+test("product-phrase rule remains in the drafting agent contract", () => {
   const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
-  assert.match(agent, /complete product noun phrase/);
+  const intake = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "rfq-intake.ts"), "utf8");
+  assert.match(agent, /extractProductPhrases/);
+  assert.match(intake, /whole descriptor \+ head-noun phrase/i);
+  assert.match(intake, /short-sleeve blouse/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);

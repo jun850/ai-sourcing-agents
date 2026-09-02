@@ -23,6 +23,7 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
 - Hard eligibility checks before any model-written summary.
 - Models may structure or summarize supplied facts, but never create commercial or supplier facts.
 - Supabase is authoritative for identity, roles, sourcing records, and permissions.
+- Supabase access must remain load-safe across every product change. Before implementing or releasing application code, server/Edge code, migrations/RPCs, tests, scripts, imports, backfills, automation, polling, or user-seeding, inspect the affected and invoked code for PostgREST call volume. Use bounded, idempotent bulk RPC/SQL or paginated batches with limited concurrency and retry backoff; never introduce high-frequency loops, N+1/per-record request storms, retry storms, or tight polling. Record this review in verification whenever a task can invoke Supabase.
 - Stripe webhooks are authoritative for payment settlement.
 - Quality, logistics, invoice, and payment states are authoritative only when recorded by guarded server workflows.
 - Every consequential change is attributable and auditable.
