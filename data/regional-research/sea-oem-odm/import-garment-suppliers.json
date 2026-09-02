@@ -1,0 +1,806 @@
+[
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-01",
+    "source_url": "https://megayabali.com/",
+    "supplier": {
+      "name": "Megaya Bali",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Denpasar (Bali)",
+      "verify_state": "unverified",
+      "moq": "No MOQ (startup-friendly)",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "menswear",
+        "womenswear",
+        "activewear",
+        "swimwear",
+        "kidswear",
+        "babywear",
+        "uniforms",
+        "accessories"
+      ],
+      "web": "https://megayabali.com/",
+      "bio": "Integrated OEM/ODM garment maker in Denpasar. Full service: consultation Contact: +62 877-1699-9693."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-02",
+    "source_url": "https://cmgarmindo.com/",
+    "supplier": {
+      "name": "CM Garmindo",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bali",
+      "verify_state": "unverified",
+      "moq": "20 pcs per style/colour (min ~60 pcs total)",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "Intertek QA",
+        "SEDEX (Fair Trade)",
+        "EU REACH",
+        "US CPSIA",
+        "Canada CCPSA",
+        "SASO"
+      ],
+      "tags": [
+        "knitwear",
+        "woven",
+        "activewear",
+        "swimwear",
+        "resortwear",
+        "leisurewear",
+        "sleepwear",
+        "kidswear",
+        "t-shirts"
+      ],
+      "web": "https://cmgarmindo.com/",
+      "bio": "Bali knit and woven OEM/ODM/white-label maker aimed at small brands. MOQ 20 pcs per style per variation Contact: start@cmgarmindo.com."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-03",
+    "source_url": "https://www.yogiandboo.com/",
+    "supplier": {
+      "name": "Yogi & Boo",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Kuta (Bali)",
+      "verify_state": "unverified",
+      "moq": "Request quote (startup-friendly)",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "SA8000",
+        "ISO 14001",
+        "Import/Export licensed"
+      ],
+      "tags": [
+        "t-shirts",
+        "resortwear",
+        "swimwear",
+        "boardshorts",
+        "rashguards",
+        "activewear",
+        "yogawear",
+        "kidswear"
+      ],
+      "web": "https://www.yogiandboo.com/",
+      "bio": "Australian/Balinese-owned manufacturer since 1987 with in-house digital printing for natural fibres and polyester. Strong reported delivery record. MOQ and lead time not published. Researched from public web Sep 2026; not yet contacted or verified. Contact: info@yogiandboo.com."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-04",
+    "source_url": "https://badassgarment.com/",
+    "supplier": {
+      "name": "Badass Garment Factory",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bali",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "WRAP (Gold)"
+      ],
+      "tags": [
+        "swimwear",
+        "beachwear",
+        "resortwear",
+        "kidswear",
+        "sublimation-print"
+      ],
+      "web": "https://badassgarment.com/",
+      "bio": "WRAP Gold-certified Bali factory (est. 2005) specialising in swimwear Contact: badassgarment@gmail.com / +62 361 729106."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-05",
+    "source_url": "https://www.kampoengconfectie.com/",
+    "supplier": {
+      "name": "Kampoeng Confectie",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bandung (West Java)",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "~6 months idea-to-collection",
+      "capacity": null,
+      "certs": [
+        "Sustainable/fair-labour (self-declared)"
+      ],
+      "tags": [
+        "casualwear",
+        "streetwear",
+        "uniforms",
+        "custom-apparel",
+        "t-shirts"
+      ],
+      "web": "https://www.kampoengconfectie.com/",
+      "bio": "Bandung one-stop sustainable/fair fashion manufacturer offering material guidance Contact: contact@kampoengconfectie.com / +62 822 6249 4106."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-06",
+    "source_url": "https://widhibaligarment.com/",
+    "supplier": {
+      "name": "Widhi Bali Garment",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Kuta Utara / Badung (Bali)",
+      "verify_state": "unverified",
+      "moq": "No MOQ (small test runs)",
+      "lead": "Under 8 weeks concept-to-launch",
+      "capacity": null,
+      "certs": [
+        "Woman-owned (self-declared)"
+      ],
+      "tags": [
+        "swimwear",
+        "resortwear",
+        "activewear",
+        "lingerie",
+        "kidswear"
+      ],
+      "web": "https://widhibaligarment.com/",
+      "bio": "Woman-owned Bali maker Contact: contact@widhibaligarment.com / +62 812 3962 2523."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-07",
+    "source_url": "https://merrygarmentbali.com/",
+    "supplier": {
+      "name": "Merry Garment Bali",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bali",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "OEKO-TEX inks",
+        "recycled/organic materials"
+      ],
+      "tags": [
+        "knitwear",
+        "linen-garments",
+        "crochet",
+        "cotton-tees",
+        "hemp-blends",
+        "t-shirts"
+      ],
+      "web": "https://merrygarmentbali.com/",
+      "bio": "Small ethical Bali workshop for cotton knits/tees Contact: info@merrygarmentbali.com / +62 812 3863 1324."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-08",
+    "source_url": "https://www.dewatabalimanufacturer.com/",
+    "supplier": {
+      "name": "Dewata Bali Manufacturer",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Mengwi / Badung (Bali)",
+      "verify_state": "unverified",
+      "moq": "100 pcs ready-design / 250 pcs custom (20 per style-colour)",
+      "lead": "Bulk 4-8 weeks; samples 3 days-2 weeks",
+      "capacity": "~1000 pcs/month",
+      "certs": [],
+      "tags": [
+        "swimwear",
+        "activewear",
+        "loungewear",
+        "resortwear",
+        "kidswear"
+      ],
+      "web": "https://www.dewatabalimanufacturer.com/",
+      "bio": "Bali maker of swimwear Contact: +62 819 5397 6803."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-09",
+    "source_url": "https://loveanchorfashionproduction.com/",
+    "supplier": {
+      "name": "Love Anchor Fashion Production",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Canggu (Bali)",
+      "verify_state": "unverified",
+      "moq": "~200 pcs per design (per directory listings)",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "Fair-wage/ethical (self-declared)"
+      ],
+      "tags": [
+        "private-label",
+        "swimwear",
+        "activewear",
+        "hand-dyed-garments",
+        "printed-garments"
+      ],
+      "web": "https://loveanchorfashionproduction.com/",
+      "bio": "Canggu private-label producer with a network of Indonesian artisans/factories; 30+ years combined experience. MOQ ~200 pcs/design per third-party directories; not confirmed on own site. Researched from public web Sep 2026; not yet contacted or verified. Contact: +62 853 3399 9917."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-10",
+    "source_url": "https://www.oneloveclothingproductionbali.com/",
+    "supplier": {
+      "name": "One Love Clothing Production",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bali",
+      "verify_state": "unverified",
+      "moq": "Low MOQ (startup-friendly)",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "Ethical/sustainable (self-declared)"
+      ],
+      "tags": [
+        "t-shirts",
+        "denim",
+        "dresses",
+        "swimwear",
+        "activewear",
+        "menswear"
+      ],
+      "web": "https://www.oneloveclothingproductionbali.com/",
+      "bio": "Bali ethical manufacturer for independent designers; low minimum production runs. Products include t-shirts"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-11",
+    "source_url": "https://www.siobhanandnuala.com/",
+    "supplier": {
+      "name": "S&F Ethical Garment Manufacturing (Siobhan & Nuala)",
+      "type": "garment_manufacturer",
+      "region": "Indonesia",
+      "loc": "Bali",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [
+        "Ethical/WRAP-aligned (self-declared)"
+      ],
+      "tags": [
+        "childrenswear",
+        "streetwear",
+        "resortwear",
+        "formalwear",
+        "activewear",
+        "swimwear",
+        "ready-to-label"
+      ],
+      "web": "https://www.siobhanandnuala.com/",
+      "bio": "Australian-owned Bali factory since 2014. Full custom manufacturing plus ready-to-label catalogues (activewear Contact: support@siobhanandnuala.com."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-12",
+    "source_url": "https://owlmotekar.com/konveksi-tas/",
+    "supplier": {
+      "name": "CV Owl Motekar (Konveksi Tas Bandung)",
+      "type": "accessories_supplier",
+      "region": "Indonesia",
+      "loc": "Bandung (West Java)",
+      "verify_state": "unverified",
+      "moq": "~60 pcs",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "canvas-tote-bags",
+        "goodie-bags",
+        "backpacks",
+        "sling-bags",
+        "pouches",
+        "drawstring-bags"
+      ],
+      "web": "https://owlmotekar.com/konveksi-tas/",
+      "bio": "Bandung bag workshop (also owlmotekar.com / kampungtas.com). Canvas totes and goodie bags with screen print Contact: kampungtas7@gmail.com / +62 819-1061-1512."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-13",
+    "source_url": "https://kabulkonveksitas.co.id/produk/tote-bag/",
+    "supplier": {
+      "name": "Kabul Konveksi Tas",
+      "type": "accessories_supplier",
+      "region": "Indonesia",
+      "loc": "Klego / Boyolali (Central Java)",
+      "verify_state": "unverified",
+      "moq": "100 pcs (negotiable)",
+      "lead": "Request quote (fast turnaround claimed)",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "canvas-tote-bags",
+        "goodie-bags",
+        "drawstring-bags",
+        "backpacks",
+        "seminar-bags",
+        "cooler-bags"
+      ],
+      "web": "https://kabulkonveksitas.co.id/produk/tote-bag/",
+      "bio": "Boyolali bag maker operating since 2007 (company est. 2017). Tote bags from 100 pcs Contact: info@kabulkonveksitas.co.id / +62 812 8865 8742."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-14",
+    "source_url": "https://www.tnmk-garment.com/",
+    "supplier": {
+      "name": "Tanamongkol Part. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Bangkok",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "t-shirts",
+        "polos",
+        "hoodies",
+        "leggings",
+        "shorts",
+        "pants",
+        "pyjamas",
+        "jackets",
+        "activewear",
+        "kidswear",
+        "bags"
+      ],
+      "web": "https://www.tnmk-garment.com/",
+      "bio": "Bangkok knitted-apparel manufacturer Contact: admin@tnmkgarment.com / +66 2 809 3770."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-15",
+    "source_url": "https://thaitshirtfactory.com/",
+    "supplier": {
+      "name": "Thai T-Shirt Factory",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Bang Lamung / Pattaya (Chonburi)",
+      "verify_state": "unverified",
+      "moq": "~50 pcs per design",
+      "lead": "Request quote",
+      "capacity": "250-800 units/day",
+      "certs": [],
+      "tags": [
+        "t-shirts",
+        "hoodies",
+        "polos",
+        "tank-tops",
+        "sweatshirts",
+        "caps",
+        "crop-tops"
+      ],
+      "web": "https://thaitshirtfactory.com/",
+      "bio": "Pattaya cut-make-print factory Contact: info@thaitshirtfactory.com / +66 88 523 9552."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-16",
+    "source_url": "https://thumbinthai.com/",
+    "supplier": {
+      "name": "Thumb In Thai Co. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Bang Khun Thian / Bangkok",
+      "verify_state": "unverified",
+      "moq": "~30-100 pcs per colour (mixed sizes ok)",
+      "lead": "Sampling 7-20 days; bulk 14-20 days after approval",
+      "capacity": "~2000 units/day",
+      "certs": [],
+      "tags": [
+        "t-shirts",
+        "hoodies",
+        "sweatshirts",
+        "oversized-tees",
+        "crop-tees",
+        "polos"
+      ],
+      "web": "https://thumbinthai.com/",
+      "bio": "Bangkok full-service tee manufacturer. MOQ ~30-100 pcs per colour Contact: sales.tshirt@thumbinthai.com / +66 61 997 9998."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-17",
+    "source_url": "https://www.chinaimportal.com/blog/thailand-clothing-manufacturers/",
+    "supplier": {
+      "name": "The Atelier (Chiang Mai)",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Chiang Mai",
+      "verify_state": "unverified",
+      "moq": "~50 pcs per design",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "dresses",
+        "outerwear",
+        "trousers",
+        "tops",
+        "low-to-medium-run"
+      ],
+      "web": "https://www.chinaimportal.com/blog/thailand-clothing-manufacturers/",
+      "bio": "Chiang Mai low-to-medium MOQ manufacturer; ~50 pcs per design. Handles both small and larger runs. Direct website not confirmed; listed via third-party directory. Researched from public web Sep 2026; not yet contacted or verified."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-18",
+    "source_url": "https://www.leelineapparel.com/thailand-clothing-manufacturers/",
+    "supplier": {
+      "name": "CRE8 Streetwear",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Northern Thailand (Chiang Mai area)",
+      "verify_state": "unverified",
+      "moq": "~200 units per style/month",
+      "lead": "Request quote",
+      "capacity": "~10000 units/month",
+      "certs": [],
+      "tags": [
+        "streetwear-t-shirts",
+        "hoodies",
+        "cut-and-sew",
+        "private-label"
+      ],
+      "web": "https://www.leelineapparel.com/thailand-clothing-manufacturers/",
+      "bio": "Northern-Thailand streetwear OEM/ODM for designers and private labels; orders roughly 200 to 10000 units per month. Own domain currently unreachable; listed via directories. Researched from public web Sep 2026; not yet contacted or verified."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-19",
+    "source_url": "https://www.fkkt.co.th/",
+    "supplier": {
+      "name": "FKK (Thailand) Co. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Khlong Luang / Pathum Thani",
+      "verify_state": "unverified",
+      "moq": "Small-lot orders accepted",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "sportswear",
+        "uniforms",
+        "workwear",
+        "sublimation-print",
+        "specialised-sewing"
+      ],
+      "web": "https://www.fkkt.co.th/",
+      "bio": "Pathum Thani factory (Rangsit Prosper Estate) for sportswear"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-20",
+    "source_url": "https://apparel-oem.com/en/asia/thailand",
+    "supplier": {
+      "name": "T.K. Garment Co. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Bangkok",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "menswear",
+        "casualwear",
+        "fashion-wear"
+      ],
+      "web": "https://apparel-oem.com/en/asia/thailand",
+      "bio": "Bangkok textile/garment maker with 40+ years in menswear"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-21",
+    "source_url": "https://apparel-oem.com/en/asia/thailand",
+    "supplier": {
+      "name": "Riccardo Garment Co. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Bangkok",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "knitwear",
+        "menswear",
+        "kidswear",
+        "casual-to-formal"
+      ],
+      "web": "https://apparel-oem.com/en/asia/thailand",
+      "bio": "Bangkok knit-fabric garment maker covering casual to formal wear"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-22",
+    "source_url": "https://blog.handbag-asia.com/custom-canvas-tote-bags/",
+    "supplier": {
+      "name": "Prestige Creations (Handbag-Asia)",
+      "type": "accessories_supplier",
+      "region": "Thailand",
+      "loc": "Chiang Mai",
+      "verify_state": "unverified",
+      "moq": "50 pcs",
+      "lead": "Standard 7-14 business days; rush 3-5 days",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "canvas-tote-bags",
+        "cotton-bags",
+        "screen-print",
+        "embroidery",
+        "digital-print"
+      ],
+      "web": "https://blog.handbag-asia.com/custom-canvas-tote-bags/",
+      "bio": "Chiang Mai canvas-bag maker for small brands and startups. MOQ 50 pcs; standard production 7-14 business days"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-23",
+    "source_url": "https://apparel-oem.com/en/asia/thailand",
+    "supplier": {
+      "name": "Hi-Tech Apparel Co. Ltd",
+      "type": "garment_manufacturer",
+      "region": "Thailand",
+      "loc": "Thung Khru / Bangkok",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "sportswear",
+        "casualwear",
+        "team-uniforms"
+      ],
+      "web": "https://apparel-oem.com/en/asia/thailand",
+      "bio": "Bangkok sportswear and casualwear manufacturer that supplies professional sports teams. Listed via Apparel-OEM directory. MOQ and lead time not published. Researched from public web Sep 2026; not yet contacted or verified."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-24",
+    "source_url": "https://lelitex.com/",
+    "supplier": {
+      "name": "Lelitex / Lim Fashion Sdn Bhd",
+      "type": "garment_manufacturer",
+      "region": "Malaysia",
+      "loc": "Batu Pahat (Johor)",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": "~10000 dozens/month",
+      "certs": [],
+      "tags": [
+        "polo-shirts",
+        "t-shirts",
+        "sportswear",
+        "tracksuits",
+        "jackets",
+        "sweaters",
+        "uniforms",
+        "pyjamas",
+        "hijab",
+        "kidswear"
+      ],
+      "web": "https://lelitex.com/",
+      "bio": "Batu Pahat garment factory since 1988 Contact: contact@lelitex.com / +60 17 989 6399."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-25",
+    "source_url": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+    "supplier": {
+      "name": "DNR Apparels (DNR Garments Manufacturing)",
+      "type": "garment_manufacturer",
+      "region": "Malaysia",
+      "loc": "Malaysia (city not published)",
+      "verify_state": "unverified",
+      "moq": "100 pcs ready-made / 400 pcs OEM custom",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "t-shirts",
+        "hoodies",
+        "polos",
+        "teamwear",
+        "private-label-basics",
+        "CMT"
+      ],
+      "web": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+      "bio": "Malaysian OEM/CMT/private-label maker. MOQ 100 pcs for ready-made items"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-26",
+    "source_url": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+    "supplier": {
+      "name": "Hytex Apparels Sdn Bhd",
+      "type": "garment_manufacturer",
+      "region": "Malaysia",
+      "loc": "Malaysia (city not published)",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "t-shirts",
+        "fleece",
+        "sweatshirts",
+        "joggers",
+        "lounge-sets",
+        "institutional-apparel"
+      ],
+      "web": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+      "bio": "Malaysian OEM garment producer with in-house screen and heat-transfer printing; casual knits and lounge sets. MOQ"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-27",
+    "source_url": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+    "supplier": {
+      "name": "Sheng Li Knitting Industries Sdn Bhd",
+      "type": "garment_manufacturer",
+      "region": "Malaysia",
+      "loc": "Malaysia (city not published)",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "polo-shirts",
+        "t-shirts",
+        "sports-basics",
+        "corporate-wear",
+        "in-house-knit-fabric"
+      ],
+      "web": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+      "bio": "Malaysian vertically integrated knitter/garment maker (own knitted fabrics) doing OEM/ODM polos"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-28",
+    "source_url": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+    "supplier": {
+      "name": "Whitex Garments Sdn Bhd",
+      "type": "garment_manufacturer",
+      "region": "Malaysia",
+      "loc": "West Malaysia",
+      "verify_state": "unverified",
+      "moq": "Request quote",
+      "lead": "Request quote",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "knitted-underwear",
+        "seamless-undergarments",
+        "base-layers",
+        "private-label-intimates"
+      ],
+      "web": "https://absanoh.com/blogs/fashion-wiki/top-5-garment-manufacturers-in-malaysia",
+      "bio": "West Malaysia OEM/ODM maker of knitted and seamless underwear"
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-29",
+    "source_url": "https://hockjoo.com/",
+    "supplier": {
+      "name": "Hock Joo Bag Sdn Bhd",
+      "type": "accessories_supplier",
+      "region": "Malaysia",
+      "loc": "Serom / Muar (Johor)",
+      "verify_state": "unverified",
+      "moq": "100 pcs custom OEM / no MOQ for logo-print on stock bags",
+      "lead": "Logo-print 5-10 working days (orders under 2000 pcs)",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "canvas-tote-bags",
+        "non-woven-bags",
+        "jute-bags",
+        "drawstring-bags",
+        "backpacks",
+        "cut-and-sew-bags"
+      ],
+      "web": "https://hockjoo.com/",
+      "bio": "Muar (Johor) bag factory doing cutting Contact: taytonglian@gmail.com / +60 6 975 3228."
+    }
+  },
+  {
+    "source_system": "regional_web",
+    "source_record_id": "sea-garment-30",
+    "source_url": "https://thecottonink.com/product/tote-bag/",
+    "supplier": {
+      "name": "The Cotton Ink Sdn Bhd",
+      "type": "accessories_supplier",
+      "region": "Malaysia",
+      "loc": "Petaling Jaya (Selangor)",
+      "verify_state": "unverified",
+      "moq": "10 pcs ready-made / 500 pcs custom-made",
+      "lead": "Ready 8-15 working days; custom 13-25 working days",
+      "capacity": null,
+      "certs": [],
+      "tags": [
+        "canvas-tote-bags",
+        "t-shirts",
+        "caps",
+        "polos",
+        "hoodies",
+        "business-shirts",
+        "corporate-gifts"
+      ],
+      "web": "https://thecottonink.com/product/tote-bag/",
+      "bio": "Petaling Jaya custom apparel and tote-bag printer. MOQ 10 pcs (ready-made) / 500 pcs (custom); samples 3-5 days; ready orders 8-15 working days Contact: +60 12 603 1641."
+    }
+  }
+]
