@@ -4434,8 +4434,7 @@ function DashboardHome({
             lineHeight: 1.55,
           }}
         >
-          Describe what you need, or attach a reference. We turn it into a clear
-          RFQ and route it to vetted suppliers.
+          Tell us what you need, whether it's a private label, white label or even OEM.
         </Typography>
       </Box>
 
