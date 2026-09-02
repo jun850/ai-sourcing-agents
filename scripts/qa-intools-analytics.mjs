@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [ui, client, coverageMigration, detailMigration, overviewFix, customerDistributionMigration, routes] = await Promise.all([
+const [ui, client, coverageMigration, detailMigration, overviewFix, customerDistributionMigration, customerMetadataMigration, routes] = await Promise.all([
   readFile(new URL("../src/intools-analytics.tsx", import.meta.url), "utf8"),
   readFile(new URL("../src/supabase.ts", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831140000_analytics_supplier_coverage.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260831150000_search_console_snapshot_detail.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260901095937_intools_analytics_overview_fixes.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260902104915_intools_customer_distribution.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260902111500_intools_customer_distribution_metadata.sql", import.meta.url), "utf8"),
   readFile(new URL("../src/intools.tsx", import.meta.url), "utf8"),
 ]);
 
@@ -31,6 +32,11 @@ assert.match(customerDistributionMigration, /customer_geography/);
 assert.match(customerDistributionMigration, /customer_revenue_tiers/);
 assert.match(customerDistributionMigration, /WHERE p\.role = 'buyer'/);
 assert.match(customerDistributionMigration, /LIMIT 1/);
+assert.match(client, /getIntoolsCustomerDistribution/);
+assert.match(customerMetadataMigration, /intools_get_customer_distribution/);
+assert.match(customerMetadataMigration, /raw_user_meta_data->>'annual_revenue'/);
+assert.match(customerMetadataMigration, /PERFORM public\.intools_require_admin\(\)/);
+assert.match(customerMetadataMigration, /WHERE p\.role = 'buyer'/);
 
 // RFQ creation trend chart removed; Search Console visualises impressions
 assert.doesNotMatch(ui, /RFQ creation trend/);

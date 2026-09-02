@@ -1552,9 +1552,13 @@ export async function listIntoolsSuppliers() {
 }
 export type IntoolsSearchConsoleRow = { label: string; clicks: number; impressions: number; ctr: number; position: number };
 export type IntoolsCustomerDistribution = { label: string; customers: number; percentage: number };
+export type IntoolsCustomerDistributionOverview = { customers: number; countries_reported: number; revenue_reported: number; geography: IntoolsCustomerDistribution[]; revenue_tiers: IntoolsCustomerDistribution[] };
 export type IntoolsAnalyticsOverview = { users: number; rfqs: number; quote_value_cents: number; invoice_total_cents: number; suppliers: number; supplier_countries: number; customer_geography: IntoolsCustomerDistribution[]; customer_revenue_tiers: IntoolsCustomerDistribution[]; trend: Array<{ date: string; rfqs: number; invoices_cents: number }>; search_console_imports: Array<{ id: string; source_type: string; coverage_start: string | null; coverage_end: string | null; original_filename: string; row_count: number; imported_at: string }>; search_console_snapshot: { coverage_start: string | null; coverage_end: string | null; imported_at: string | null; source_count: number; clicks: number; impressions: number; ctr: number; position: number; trend: Array<{ date: string; clicks: number; impressions: number }>; top_countries: IntoolsSearchConsoleRow[]; top_devices: IntoolsSearchConsoleRow[]; top_queries: IntoolsSearchConsoleRow[]; top_pages: IntoolsSearchConsoleRow[] } };
 export async function getIntoolsAnalyticsOverview(start: string, end: string) {
   return intoolsRpc<IntoolsAnalyticsOverview>("intools_get_analytics_overview", { p_start: start, p_end: end });
+}
+export async function getIntoolsCustomerDistribution() {
+  return intoolsRpc<IntoolsCustomerDistributionOverview>("intools_get_customer_distribution");
 }
 export async function importIntoolsSearchConsoleCsv(input: { sourceType: string; filename: string; headers: string[]; rows: Record<string, string>[]; coverageStart: string | null; coverageEnd: string | null }) {
   return intoolsRpc("intools_import_search_console_csv", { p_source_type: input.sourceType, p_filename: input.filename, p_headers: input.headers, p_rows: input.rows, p_coverage_start: input.coverageStart, p_coverage_end: input.coverageEnd });
