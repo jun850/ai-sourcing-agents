@@ -18,7 +18,9 @@ const conversationPanel = dashboard.slice(
 
 const forbidden = [
   ["clean prompt bordered surface", /border:\s*["']1px solid/ , cleanPrompt],
+  ["clean prompt focus border is not transparent", /"&:focus-within":\s*\{[^}]*borderColor:\s*"(?!transparent)/, cleanPrompt],
   ["conversation bordered surface", /border:\s*["']1px solid/ , conversation],
+  ["conversation focus border is not transparent", /"&:focus-within":\s*\{[^}]*borderColor:\s*"(?!transparent)/, conversation],
   ["clean prompt green focus outline", /\.clean-prompt-form \.MuiPaper-root:focus-within\s*\{\s*outline:/, responsive],
   ["clean prompt focus border", /\.clean-prompt-form \.MuiPaper-root:focus-within\s*\{[^}]*border-color:\s*(?!transparent)/, responsive],
   ["conversation green focus outline", /\.conversation-composer:focus-within\s*\{\s*outline:/, responsive],

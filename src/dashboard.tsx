@@ -1208,7 +1208,9 @@ function CleanPromptComposer({
             transition:
               "border-color 180ms ease, box-shadow 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
             "&:focus-within": {
-              border: 0,
+              border: "0 !important",
+              borderColor: "transparent !important",
+              outline: "0 !important",
               boxShadow: "0 4px 8px rgba(32,41,54,.05)",
             },
           }}
@@ -1603,7 +1605,8 @@ function ConversationChatPanel({
           flex: "0 0 auto",
           p: { xs: 0.5, sm: 0.75 },
           pl: { xs: 0.75, sm: 1 },
-          border: 0,
+          border: "0 !important",
+          borderColor: "transparent !important",
           borderRadius: expanded ? "16px" : "14px",
           backgroundColor: "#fff",
           colorScheme: "light",
@@ -1611,7 +1614,9 @@ function ConversationChatPanel({
           transition:
             "box-shadow 180ms ease, border-color 180ms ease, border-radius 220ms cubic-bezier(.22,1,.36,1)",
           "&:focus-within": {
-            border: 0,
+            border: "0 !important",
+            borderColor: "transparent !important",
+            outline: "0 !important",
             boxShadow: "0 4px 8px rgba(32,41,54,.05)",
           },
         }}
