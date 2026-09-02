@@ -20,6 +20,7 @@ const forbidden = [
   ["clean prompt bordered surface", /border:\s*["']1px solid/ , cleanPrompt],
   ["conversation bordered surface", /border:\s*["']1px solid/ , conversation],
   ["clean prompt green focus outline", /\.clean-prompt-form \.MuiPaper-root:focus-within\s*\{\s*outline:/, responsive],
+  ["clean prompt focus border", /\.clean-prompt-form \.MuiPaper-root:focus-within\s*\{[^}]*border-color:\s*(?!transparent)/, responsive],
   ["conversation green focus outline", /\.conversation-composer:focus-within\s*\{\s*outline:/, responsive],
   ["conversation assistant bubble has no bounded visual surface", /message\.from === "You" \? "#f0f1f3" : "transparent"/, conversationPanel],
 ];

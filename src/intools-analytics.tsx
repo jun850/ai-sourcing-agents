@@ -16,7 +16,8 @@ function parseCsv(text: string) {
 }
 
 function SearchConsoleList({ title, rows }: { title: string; rows: IntoolsSearchConsoleRow[] }) {
-  return <Box><Typography sx={{ fontWeight: 800, fontSize: 14 }}>{title}</Typography>{rows.length ? <Box component="ul" sx={{ listStyle: "none", m: 0, mt: .75, p: 0 }}>{rows.map((row) => <Box component="li" key={row.label} sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 1.25, py: .85, borderTop: "1px solid #e8ecf1" }}><Typography title={row.label} sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: 700 }}>{row.label}</Typography><Typography sx={{ color: "text.secondary", fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{number(row.impressions)} impr.</Typography></Box>)}</Box> : <Typography sx={{ mt: .75, color: "text.secondary", fontSize: 12 }}>Import the matching export to populate this list.</Typography>}</Box>;
+  const displayedRows = title === "Countries" ? [...rows].sort((a, b) => b.impressions - a.impressions || a.label.localeCompare(b.label)) : rows;
+  return <Box><Typography sx={{ fontWeight: 800, fontSize: 14 }}>{title}</Typography>{displayedRows.length ? <Box component="ul" sx={{ listStyle: "none", m: 0, mt: .75, p: 0 }}>{displayedRows.map((row) => <Box component="li" key={row.label} sx={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) auto", gap: 1.25, py: .85, borderTop: "1px solid #e8ecf1" }}><Typography title={row.label} sx={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 13, fontWeight: 700 }}>{row.label}</Typography><Typography sx={{ color: "text.secondary", fontSize: 12, fontVariantNumeric: "tabular-nums" }}>{number(row.impressions)} impr.</Typography></Box>)}</Box> : <Typography sx={{ mt: .75, color: "text.secondary", fontSize: 12 }}>Import the matching export to populate this list.</Typography>}</Box>;
 }
 
 export function IntoolsAnalytics() {

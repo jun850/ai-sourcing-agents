@@ -23,6 +23,7 @@ assert.doesNotMatch(ui, /RFQ creation trend/);
 assert.match(ui, /Daily impressions/);
 assert.doesNotMatch(ui, /Daily clicks/);
 assert.match(ui, /Top queries/);
+assert.match(ui, /title === "Countries" \? \[\.\.\.rows\]\.sort\(\(a, b\) => b\.impressions - a\.impressions/);
 // No "0 clicks · 0%" noise: Search Console lists and tiles drop clicks/CTR
 assert.doesNotMatch(ui, /clicks · |Average CTR|\bpercent\b/);
 assert.match(ui, /row\.impressions\)\} impr\./);
