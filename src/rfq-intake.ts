@@ -95,10 +95,12 @@ const PRODUCT_DESCRIPTOR = "short|long|extra[- ]?long|three[- ]?quarter|3\\/4|qu
 const PRODUCT_HEAD_NOUN = "t[- ]?shirts?|tees?|singlets?|polo[- ]?shirts?|polos?|rugby[- ]?shirts?|henleys?|sweatshirts?|hoodies?|overshirts?|shirts?|blouses?|tunics?|tank[- ]?tops?|camisoles?|tube[- ]?tops?|crop[- ]?tops?|halter[- ]?tops?|bralettes?|trousers?|pants?|slacks?|chinos?|jeans|joggers?|sweatpants?|track[- ]?pants?|leggings?|jeggings?|shorts?|boardshorts?|bermudas?|culottes?|skorts?|skirts?|kilts?|dresses?|gowns?|sundresses?|jumpsuits?|playsuits?|rompers?|overalls?|dungarees?|boilersuits?|jackets?|blazers?|coats?|overcoats?|parkas?|anoraks?|windbreakers?|raincoats?|trench[- ]?coats?|gilets?|bodywarmers?|puffers?|cardigans?|sweaters?|jumpers?|pullovers?|ponchos?|capes?|vests?|waistcoats?|suits?|tuxedos?|uniforms?|scrubs?|coveralls?|aprons?|smocks?|robes?|bathrobes?|dressing[- ]?gowns?|kimonos?|kaftans?|caftans?|abayas?|kurtas?|sarongs?|activewear|sportswear|tracksuits?|loungewear|pyjamas?|pajamas?|nightwear|nightgowns?|nightdresses?|nighties|sleepwear|underwear|boxer[- ]?briefs?|panties|knickers?|thongs?|bras?|lingerie|shapewear|bodysuits?|leotards?|unitards?|corsets?|bustiers?|swimwear|swimsuits?|swim[- ]?trunks?|bikinis?|tankinis?|one[- ]?pieces?|rash[- ]?guards?|wetsuits?|base[- ]?layers?|socks?|stockings?|tights?|pantyhose|hosiery|leg[- ]?warmers?|gloves?|mittens?|scarves|scarfs?|shawls?|snoods?|hats?|caps?|beanies?|berets?|bucket[- ]?hats?|visors?|headbands?|bandanas?|balaclavas?|neckties?|bow[- ]?ties?|cravats?|pocket[- ]?squares?|cummerbunds?|belts?|sneakers?|trainers?|shoes?|boots?|sandals?|loafers?|espadrilles?|mules?|clogs?|slippers?|moccasins?|tops";
 const PRODUCT_PHRASE_RE = new RegExp("\\b((?:(?:performance|" + PRODUCT_DESCRIPTOR + ")[- ]+){0,4}(?:" + PRODUCT_HEAD_NOUN + "))\\b", "gi");
 export function extractProductPhrase(message: string): string | null {
+  return extractProductPhrases(message).sort((left, right) => right.length - left.length)[0] || null;
+}
+export function extractProductPhrases(message: string): string[] {
   const source = String(message || "").replace(/[‘’]/g, "'").replace(/\s+/g, " ").trim();
   const candidates = [...source.matchAll(PRODUCT_PHRASE_RE)]
     .map((match) => match[1].replace(/\s+/g, " ").trim().toLowerCase())
     .filter((phrase) => phrase !== "tops" && phrase !== "top");
-  if (!candidates.length) return null;
-  return candidates.filter((phrase) => !["activewear", "sportswear", "loungewear"].includes(phrase)).sort((left, right) => right.length - left.length)[0] || candidates.at(-1) || null;
+  return [...new Set(candidates.filter((phrase) => !["activewear", "sportswear", "loungewear"].includes(phrase)))];
 }

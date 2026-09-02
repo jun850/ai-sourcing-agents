@@ -1,5 +1,5 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { classifyIntake, extractProductPhrase, immediateQuestion } from "./rfq-intake.ts";
+import { classifyIntake, extractProductPhrases, immediateQuestion } from "./rfq-intake.ts";
 
 export const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -236,8 +236,9 @@ function deterministicPatch(message: string, intake: ReturnType<typeof classifyI
   if (material || textileWeight) result.material = [material, textileWeight].filter(Boolean).join(", ");
   // Keep the buyer's full product noun phrase ("short pants", "short-sleeve
   // blouse"), not just its head noun. See extractProductPhrase.
-  const productPhrase = extractProductPhrase(source);
-  if (productPhrase) result.product = productPhrase;
+  const productPhrases = extractProductPhrases(source);
+  const productPhrase = productPhrases[0] || null;
+  if (productPhrases.length) result.product = productPhrases.join("; ");
   const weave = source.match(/\b(twill|poplin|jersey|fleece|canvas|denim|chambray|corduroy|flannel|sateen|satin|chiffon|voile|oxford|terry|french terry|ripstop|gabardine|interlock|pique|piqué|muslin|drill|ponte|mesh|jacquard|dobby|crepe|georgette|organza|taffeta|velvet|velour|tweed|herringbone|houndstooth|melton|boucle|batiste|broadcloth|shirting|suiting)\b/i)?.[0];
   if (intake.category === "fabric" && !productPhrase) {
     const weaveBits = [material, weave].filter(Boolean).join(" ");
@@ -414,8 +415,8 @@ export async function handleBrokerRfqAgent(request: Request) {
   });
   await admin.from("agent_rfq_turns").update({ request_evidence: [{ referenceFacts: referenceFacts || [], referenceChunks: referenceContext || [], knowledgeChunks: knowledgeContext || [] }] }).eq("id", turn.id);
 
-  const hasEvidence = Boolean((referenceFacts || []).length || (referenceContext || []).length || (knowledgeContext || []).length);
-  const reconciled = hasEvidence ? await reconcileWithAgent({
+  const hasReferenceEvidence = Boolean((referenceFacts || []).length || (referenceContext || []).length);
+  const reconciled = hasReferenceEvidence ? await reconcileWithAgent({
     message,
     current: currentFields(context.rfq.brief),
     intake,

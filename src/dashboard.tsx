@@ -109,7 +109,7 @@ import { WorkspaceCommandPalette } from "./workspace-command-palette";
 import { WorkspaceLottie } from "./workspace-lottie";
 import { useInfiniteList } from "./use-infinite-list";
 import { RfqOpsMessagesWorkspace } from "./rfq-ops-messages";
-import { classifyRfqIntake, extractProductPhrase, intakeFromBrief, type RfqIntake } from "./rfq-intake";
+import { classifyRfqIntake, extractProductPhrases, intakeFromBrief, type RfqIntake } from "./rfq-intake";
 import {
   RfqReviewPipeline,
   StageTimeline,
@@ -329,27 +329,30 @@ function normaliseBuyerPrompt(message: string) {
 function fieldsFromInitialPrompt(message: string, intake?: RfqIntake): RfqFields {
   const source = normaliseBuyerPrompt(message);
   const fields = { ...defaultRfqFields };
-  const quantity = source.match(/\b(\d[\d,.]*)\s*(pcs?|pieces?|units?|meters?|yards?|kg|kgs?)\b/i);
-  if (quantity) fields.quantity = `${quantity[1]} ${quantity[2]}`;
+  const quantities = [...source.matchAll(/\b(\d[\d,.]*)\s*(?:(total|overall)\s+)?(pcs?|pieces?|units?|meters?|yards?|kg|kgs?)\b/gi)];
+  const quantity = quantities.find((match) => match[2]) || quantities.sort((left, right) => Number(right[1].replace(/,/g, "")) - Number(left[1].replace(/,/g, "")))[0];
+  if (quantity) fields.quantity = `${quantity[1]} ${quantity[2] ? "total " : ""}${quantity[3]}`;
   const material = source.match(/\b((?:organic\s+)?(?:cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim)(?:[-\s]+blend)?)\b/i)?.[0];
   const textileWeight = source.match(/\b(?:\d{2,4}\s*gsm|\d+(?:\.\d+)?\s*(?:oz|ounces?))\b/i)?.[0];
   if (material || textileWeight) fields.material = [material, textileWeight].filter(Boolean).join(", ");
   // Capture the buyer's whole product phrase ("short pants", "short-sleeve
   // blouse"), not just the head noun. Fall back to a fabric description when the
   // request is raw yardage rather than a finished item.
-  const product = extractProductPhrase(source);
-  if (product) fields.product = product;
+  const products = extractProductPhrases(source);
+  const product = products[0] || null;
+  if (products.length) fields.product = products.join("; ");
   else if ((intake?.items[0]?.category ?? "") === "fabric" || (!product && /\bfabrics?\b|\btextiles?\b|\byardage\b/i.test(source))) {
     const weave = source.match(/\b(twill|poplin|jersey|fleece|canvas|denim|chambray|corduroy|flannel|sateen|satin|chiffon|voile|oxford|terry|french terry|ripstop|gabardine|interlock|pique|muslin|drill|crepe|georgette|organza|taffeta|velvet|velour|tweed|herringbone)\b/i)?.[0];
     const weaveBits = [material, weave].filter(Boolean).join(" ");
     if (/\bfabrics?\b|\btextiles?\b|\byardage\b/i.test(source)) fields.product = weaveBits ? `${weaveBits} fabric` : "Fabric";
     else if (weaveBits) fields.product = weaveBits;
   }
-  const color = source.match(/\b(black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple)\b/i)?.[0];
-  if (color) fields.colors = color;
-  const sizes = source.match(/\b(?:sizes?\s*)?(?:xs|s|m|l|xl|xxl|xxxl|sml)(?:\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl))?\b/i)?.[0];
+  const colorNames = "black|white|navy|blue|red|green|grey|gray|beige|brown|pink|yellow|orange|purple";
+  const colors = [...source.matchAll(new RegExp(`\\b(${colorNames})\\b`, "gi"))].map((match) => `${match[1][0].toUpperCase()}${match[1].slice(1).toLowerCase()}`);
+  if (colors.length) fields.colors = [...new Set(colors)].join(", ");
+  const sizes = source.match(/\b(?:xs|s|m|l|xl|xxl|xxxl)\s*(?:to|[-–/,])\s*(?:xs|s|m|l|xl|xxl|xxxl)\b/i)?.[0] || source.match(/\bsizes?\s+(?:xs|s|m|l|xl|xxl|xxxl)(?:\s*(?:,|and|or|\/|[-–])\s*(?:xs|s|m|l|xl|xxl|xxxl))+\b/i)?.[0];
   if (sizes) fields.sizes = sizes;
-  const budget = source.match(/\b(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b|\b\d[\d,.]*\s*(?:usd|us\$|\$)(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b/i)?.[0];
+  const budget = source.match(/\b(?:EXW|FCA|FAS|FOB|CFR|CIF|CPT|CIP|DAP|DPU|DDP)\s+(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:or\s+(?:less|under|below))|\s*(?:each|per)\s*(?:pieces?|pcs?|units?))*\b|\b(?:usd|us\$|\$)\s*\d[\d,.]*(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b|\b\d[\d,.]*\s*(?:usd|us\$|\$)(?:\s*(?:each|per)\s*(?:pieces?|pcs?|units?))?\b/i)?.[0];
   if (budget) fields.budget = budget;
   const timeline = source.match(/\b(?:within\s+)?\d[\d,.]*\s*(?:business\s+days?|days?|weeks?|months?)\b/i)?.[0];
   if (timeline) fields.timeline = timeline;

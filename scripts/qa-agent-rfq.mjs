@@ -18,7 +18,7 @@ const INTAKE_SOURCE_PATH = join(HERE, "..", "supabase", "functions", "_shared", 
 const WORKSPACE_INTAKE_SOURCE_PATH = join(HERE, "..", "src", "rfq-intake.ts");
 const SUPABASE_SOURCE_PATH = join(HERE, "..", "src", "supabase.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
-const { classifyRfqIntake, extractProductPhrase } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
+const { classifyRfqIntake, extractProductPhrase, extractProductPhrases } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
 const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
 const WORKSPACE_INTAKE_SOURCE = readFileSync(WORKSPACE_INTAKE_SOURCE_PATH, "utf8");
 const SUPABASE_SOURCE = readFileSync(SUPABASE_SOURCE_PATH, "utf8");
@@ -284,6 +284,16 @@ test("agent prompt preserves advanced sourcing terms without treating them as co
   assert.match(agent, /EXW, FCA, FAS, FOB, CFR, CIF, CPT, CIP, DAP, DPU, DDP/);
   assert.match(agent, /never convert them into accepted terms, prices, supplier commitments, or payment state/);
   assert.match(agent, /500 total pieces/);
+});
+
+test("one RFQ can retain multiple buyer-stated products", () => {
+  assert.deepEqual(extractProductPhrases("Source cotton t-shirts and fleece hoodies in the same RFQ."), ["cotton t-shirts", "fleece hoodies"]);
+});
+
+test("knowledge retrieval alone cannot create a reference conflict", () => {
+  const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(agent, /const hasReferenceEvidence = Boolean\(\(referenceFacts \|\| \[\]\)\.length \|\| \(referenceContext \|\| \[\]\)\.length\)/);
+  assert.match(agent, /const reconciled = hasReferenceEvidence \? await reconcileWithAgent/);
 });
 
 test("product-phrase rule is documented for the drafting agent", () => {
