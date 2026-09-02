@@ -1,0 +1,54 @@
+-- Add customer geography and self-reported annual-revenue distribution to the
+-- existing admin analytics RPC. This deliberately aggregates in PostgreSQL so
+-- the browser makes one bounded request and never receives buyer-level data.
+CREATE OR REPLACE FUNCTION public.intools_get_analytics_overview(p_start date, p_end date)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $$
+DECLARE v_result jsonb;
+BEGIN
+  PERFORM public.intools_require_admin();
+  IF p_start IS NULL OR p_end IS NULL OR p_start > p_end OR p_end-p_start > 366 THEN RAISE EXCEPTION 'Invalid analytics range' USING ERRCODE='22023'; END IF;
+  WITH latest_imports AS (
+    SELECT DISTINCT ON (source_type) source_type,coverage_start,coverage_end,imported_at,rows FROM public.intools_search_console_imports ORDER BY source_type,imported_at DESC
+  ), chart_rows AS (
+    SELECT row.value AS item FROM latest_imports i CROSS JOIN LATERAL jsonb_array_elements(i.rows) AS row(value) WHERE i.source_type='chart'
+  ), snapshot AS (
+    SELECT jsonb_build_object(
+      'coverage_start',(SELECT coverage_start FROM latest_imports WHERE source_type='chart'),'coverage_end',(SELECT coverage_end FROM latest_imports WHERE source_type='chart'),'imported_at',(SELECT imported_at FROM latest_imports WHERE source_type='chart'),'source_count',(SELECT count(*) FROM latest_imports),
+      'clicks',COALESCE((SELECT sum(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric) FROM chart_rows),0),'impressions',COALESCE((SELECT sum(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric) FROM chart_rows),0),'ctr',COALESCE((SELECT avg(NULLIF(regexp_replace(item->>'CTR','[^0-9.-]','','g'),'')::numeric)/100 FROM chart_rows),0),'position',COALESCE((SELECT avg(NULLIF(regexp_replace(item->>'Position','[^0-9.-]','','g'),'')::numeric) FROM chart_rows),0),
+      'trend',COALESCE((SELECT jsonb_agg(jsonb_build_object('date',item->>'Date','clicks',COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0),'impressions',COALESCE(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric,0)) ORDER BY item->>'Date') FROM chart_rows),'[]'::jsonb),
+      'top_countries',COALESCE((SELECT jsonb_agg(entry ORDER BY (entry->>'clicks')::numeric DESC) FROM (SELECT jsonb_build_object('label',item->>'Country','clicks',COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0),'impressions',COALESCE(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric,0),'ctr',COALESCE(NULLIF(regexp_replace(item->>'CTR','[^0-9.-]','','g'),'')::numeric,0)/100,'position',COALESCE(NULLIF(regexp_replace(item->>'Position','[^0-9.-]','','g'),'')::numeric,0)) entry FROM latest_imports i CROSS JOIN LATERAL jsonb_array_elements(i.rows) row(item) WHERE i.source_type='countries' ORDER BY COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0) DESC LIMIT 5) x),'[]'::jsonb),
+      'top_devices',COALESCE((SELECT jsonb_agg(entry ORDER BY (entry->>'clicks')::numeric DESC) FROM (SELECT jsonb_build_object('label',item->>'Device','clicks',COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0),'impressions',COALESCE(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric,0),'ctr',COALESCE(NULLIF(regexp_replace(item->>'CTR','[^0-9.-]','','g'),'')::numeric,0)/100,'position',COALESCE(NULLIF(regexp_replace(item->>'Position','[^0-9.-]','','g'),'')::numeric,0)) entry FROM latest_imports i CROSS JOIN LATERAL jsonb_array_elements(i.rows) row(item) WHERE i.source_type='devices' ORDER BY COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0) DESC LIMIT 5) x),'[]'::jsonb),
+      'top_queries',COALESCE((SELECT jsonb_agg(entry ORDER BY (entry->>'clicks')::numeric DESC) FROM (SELECT jsonb_build_object('label',item->>'Top queries','clicks',COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0),'impressions',COALESCE(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric,0),'ctr',COALESCE(NULLIF(regexp_replace(item->>'CTR','[^0-9.-]','','g'),'')::numeric,0)/100,'position',COALESCE(NULLIF(regexp_replace(item->>'Position','[^0-9.-]','','g'),'')::numeric,0)) entry FROM latest_imports i CROSS JOIN LATERAL jsonb_array_elements(i.rows) row(item) WHERE i.source_type='queries' ORDER BY COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0) DESC LIMIT 5) x),'[]'::jsonb),
+      'top_pages',COALESCE((SELECT jsonb_agg(entry ORDER BY (entry->>'clicks')::numeric DESC) FROM (SELECT jsonb_build_object('label',item->>'Top pages','clicks',COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0),'impressions',COALESCE(NULLIF(regexp_replace(item->>'Impressions','[^0-9.-]','','g'),'')::numeric,0),'ctr',COALESCE(NULLIF(regexp_replace(item->>'CTR','[^0-9.-]','','g'),'')::numeric,0)/100,'position',COALESCE(NULLIF(regexp_replace(item->>'Position','[^0-9.-]','','g'),'')::numeric,0)) entry FROM latest_imports i CROSS JOIN LATERAL jsonb_array_elements(i.rows) row(item) WHERE i.source_type='pages' ORDER BY COALESCE(NULLIF(regexp_replace(item->>'Clicks','[^0-9.-]','','g'),'')::numeric,0) DESC LIMIT 5) x),'[]'::jsonb)
+    ) data
+  ), customer_base AS (
+    SELECT
+      COALESCE(NULLIF(btrim(p.country), ''), NULLIF(btrim(r.country_code), ''), 'Not specified') AS country,
+      COALESCE(NULLIF(btrim(r.annual_revenue), ''), 'Not specified') AS annual_revenue
+    FROM public.profiles p
+    JOIN auth.users u ON u.id = p.id
+    LEFT JOIN LATERAL (
+      SELECT rr.country_code, rr.annual_revenue
+      FROM public.registration_requests rr
+      WHERE lower(rr.email) = lower(u.email)
+        AND rr.status IN ('approved', 'invited')
+      ORDER BY rr.updated_at DESC, rr.created_at DESC
+      LIMIT 1
+    ) r ON true
+    WHERE p.role = 'buyer'
+  ), geography AS (
+    SELECT country AS label, count(*)::integer AS customers,
+      round(count(*) * 100.0 / NULLIF(sum(count(*)) OVER (), 0), 1) AS percentage
+    FROM customer_base GROUP BY country
+  ), revenue_tiers AS (
+    SELECT annual_revenue AS label, count(*)::integer AS customers,
+      round(count(*) * 100.0 / NULLIF(sum(count(*)) OVER (), 0), 1) AS percentage
+    FROM customer_base GROUP BY annual_revenue
+  )
+  SELECT jsonb_build_object(
+    'users',(SELECT count(*) FROM customer_base),'rfqs',(SELECT count(*) FROM public.rfq_cases c WHERE c.source='workspace' AND c.created_at>=p_start AND c.created_at<p_end+1),'quote_value_cents',(SELECT COALESCE(sum(q.quote_total_cents),0) FROM public.rfq_quotes q WHERE q.status IN ('published','selected') AND q.created_at>=p_start AND q.created_at<p_end+1 AND NOT EXISTS (SELECT 1 FROM public.orders o WHERE o.rfq_case_id=q.rfq_case_id AND o.status='cancelled')),'invoice_total_cents',(SELECT COALESCE(sum(i.total_cents),0) FROM public.invoices i WHERE i.status<>'cancelled' AND i.created_at>=p_start AND i.created_at<p_end+1),'suppliers',(SELECT count(*) FROM public.factories),'supplier_countries',(SELECT count(DISTINCT lower(trim(f.region))) FROM public.factories f WHERE f.archived_at IS NULL AND nullif(trim(f.region),'') IS NOT NULL),'customer_geography',(SELECT COALESCE(jsonb_agg(jsonb_build_object('label',label,'customers',customers,'percentage',percentage) ORDER BY customers DESC,label),'[]'::jsonb) FROM geography),'customer_revenue_tiers',(SELECT COALESCE(jsonb_agg(jsonb_build_object('label',label,'customers',customers,'percentage',percentage) ORDER BY customers DESC,label),'[]'::jsonb) FROM revenue_tiers),'trend',(SELECT COALESCE(jsonb_agg(jsonb_build_object('date',d::date,'rfqs',(SELECT count(*) FROM public.rfq_cases c WHERE c.source='workspace' AND c.created_at>=d AND c.created_at<d+interval '1 day'),'invoices_cents',(SELECT COALESCE(sum(i.total_cents),0) FROM public.invoices i WHERE i.status<>'cancelled' AND i.created_at>=d AND i.created_at<d+interval '1 day')) ORDER BY d),'[]'::jsonb) FROM generate_series(p_start::timestamptz,p_end::timestamptz,interval '1 day') d),'search_console_imports',(SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'source_type',source_type,'coverage_start',coverage_start,'coverage_end',coverage_end,'original_filename',original_filename,'row_count',row_count,'imported_at',imported_at) ORDER BY imported_at DESC),'[]'::jsonb) FROM public.intools_search_console_imports),'search_console_snapshot',(SELECT data FROM snapshot)
+  ) INTO v_result;
+  RETURN v_result;
+END; $$;
+REVOKE ALL ON FUNCTION public.intools_get_analytics_overview(date,date) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.intools_get_analytics_overview(date,date) TO authenticated;
