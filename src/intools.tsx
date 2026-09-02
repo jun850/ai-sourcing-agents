@@ -1089,7 +1089,7 @@ function SectionListView({
       const matchesFilter = filter === "all" ? true : row.status === filter;
       const text = `${row.title} ${row.subtitle} ${row.cols.join(" ")}`.toLowerCase();
       return matchesFilter && (!q || text.includes(q));
-    });
+    }).sort((left, right) => Number(Boolean(left.archived)) - Number(Boolean(right.archived)));
   }, [rows, query, filter]);
 
   const selectableVisible = visible.filter((row) => !row.archived);
@@ -1606,7 +1606,7 @@ function DrawerShell({
               height: 28,
               flexShrink: 0,
               borderRadius: 8,
-              border: "1px solid #e6e9ee",
+              border: "none",
               background: "#fff",
               cursor: "pointer",
               color: "#526176",
@@ -2249,7 +2249,6 @@ function RequestDrawerBody({
         rows={[
           ["Buyer", caseRecord?.buyer_name || rfq.cols[0] || "—"],
           ["Buyer email", caseRecord?.buyer_email || "—"],
-          ["Matches", String(caseRecord?.match_count ?? matches.length)],
           ["Quotes", String(caseRecord?.quote_count ?? 0)],
         ]}
       />

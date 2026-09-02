@@ -18,7 +18,7 @@ const INTAKE_SOURCE_PATH = join(HERE, "..", "supabase", "functions", "_shared", 
 const WORKSPACE_INTAKE_SOURCE_PATH = join(HERE, "..", "src", "rfq-intake.ts");
 const SUPABASE_SOURCE_PATH = join(HERE, "..", "src", "supabase.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
-const { extractProductPhrase } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
+const { classifyRfqIntake, extractProductPhrase } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
 const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
 const WORKSPACE_INTAKE_SOURCE = readFileSync(WORKSPACE_INTAKE_SOURCE_PATH, "utf8");
 const SUPABASE_SOURCE = readFileSync(SUPABASE_SOURCE_PATH, "utf8");
@@ -261,10 +261,29 @@ test("product phrase capture keeps the buyer's whole noun phrase, not just the h
 test("client and edge product-phrase extractors stay in sync", () => {
   const grab = (path) => {
     const s = readFileSync(path, "utf8");
-    return s.slice(s.indexOf("const PRODUCT_DESCRIPTOR"), s.indexOf("const PRODUCT_PHRASE_RE"));
+    return s.slice(s.indexOf("const PRODUCT_HEAD_NOUN"), s.indexOf("export function extractProductPhrase"));
   };
   assert.ok(grab(WORKSPACE_INTAKE_SOURCE_PATH).includes("PRODUCT_HEAD_NOUN"));
   assert.equal(grab(WORKSPACE_INTAKE_SOURCE_PATH), grab(INTAKE_SOURCE_PATH));
+});
+
+test("complex private-label briefs retain totals, allocations, technical details, and commercial requirements", () => {
+  const intake = classifyRfqIntake("Private label performance yoga jackets: 500 total pieces, split into 250 pieces in Black and 250 pieces in Pink, XS–XL, constructed from a high-performance polyester/spandex blend with moisture-wicking stretch and recovery, FOB $10 or less per unit, 30% deposit / 70% before shipment, individual polybag packaging and custom neck labels.");
+  const fields = Object.fromEntries(intake.items[0].fields.map((field) => [field.key, field.value]));
+  assert.equal(fields.item, "performance yoga jackets");
+  assert.equal(fields.quantity, "500 pieces");
+  assert.equal(fields.size_color_scope, "XS–XL · Black (250 pcs), Pink (250 pcs)");
+  assert.match(fields.material_construction, /polyester\/spandex blend/i);
+  assert.equal(fields.incoterm, "FOB");
+  assert.equal(fields.payment_terms, "30% deposit");
+  assert.match(fields.packaging, /polybag/i);
+});
+
+test("agent prompt preserves advanced sourcing terms without treating them as commitments", () => {
+  const agent = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+  assert.match(agent, /EXW, FCA, FAS, FOB, CFR, CIF, CPT, CIP, DAP, DPU, DDP/);
+  assert.match(agent, /never convert them into accepted terms, prices, supplier commitments, or payment state/);
+  assert.match(agent, /500 total pieces/);
 });
 
 test("product-phrase rule is documented for the drafting agent", () => {
