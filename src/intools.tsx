@@ -2196,9 +2196,7 @@ function RequestDrawerBody({
                   <div style={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>
                     {row.supplier?.name || "Unknown supplier"}
                   </div>
-                  <div style={{ fontSize: 11.5, color: C.dim }}>
-                    {row.supplier?.region || "—"} · {label(row.supplier?.type || "supplier")}
-                  </div>
+                  <div style={{ fontSize: 11.5, color: C.dim }}>{row.supplier?.region || "—"}</div>
                 </div>
                 <span style={statusPill(status)}>{label(status)}</span>
               </div>
@@ -2271,10 +2269,6 @@ function RequestDrawerBody({
             </div>
           );
         })}
-      <p style={{ margin: "10px 0 0", fontSize: 12, color: C.faint }}>
-        Approve a supplier, enter the reviewed quote, and save to publish it. The buyer selects one quote before sampling can be invoiced.
-      </p>
-
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="success">{notice}</Notice>}
     </DrawerShell>
