@@ -161,6 +161,97 @@ const SECTION_ACCENT: Record<string, string> = {
 function label(value: string) {
   return value.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+// Trusted supplier-import source systems (see broker_valid_source in the DB).
+const SUPPLIER_IMPORT_SOURCE_SYSTEMS = ["manual", "apparelx", "regional_web"];
+
+// RFC 4180-ish CSV reader: honours quoted fields, embedded commas/newlines,
+// and "" escapes. Returns objects keyed by lower-cased header.
+function parseCsvTable(text: string): Record<string, string>[] {
+  const clean = text.replace(/^﻿/, "");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < clean.length; index += 1) {
+    const char = clean[index];
+    const next = clean[index + 1];
+    if (char === '"' && quoted && next === '"') { cell += '"'; index += 1; continue; }
+    if (char === '"') { quoted = !quoted; continue; }
+    if (char === "," && !quoted) { row.push(cell); cell = ""; continue; }
+    if ((char === "\n" || char === "\r") && !quoted) {
+      if (char === "\r" && next === "\n") index += 1;
+      row.push(cell); cell = "";
+      if (row.some((value) => value.trim())) rows.push(row);
+      row = [];
+      continue;
+    }
+    cell += char;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  const [header, ...body] = rows;
+  if (!header?.length) return [];
+  const keys = header.map((key) => key.trim().toLowerCase());
+  return body.map((values) => Object.fromEntries(keys.map((key, column) => [key, (values[column] ?? "").trim()])));
+}
+
+function splitDelimitedList(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (typeof value === "string") return value.split(/[;|]/).map((item) => item.trim()).filter(Boolean);
+  return [];
+}
+function optionalText(...candidates: unknown[]): string | null {
+  for (const candidate of candidates) {
+    const text = typeof candidate === "string" ? candidate.trim() : candidate;
+    if (text !== undefined && text !== null && text !== "") return String(text);
+  }
+  return null;
+}
+function optionalYear(value: unknown): number | null {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(String(value).replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+// Normalises one uploaded entry (flat CSV row or nested/flat JSON object) into a
+// dry-run import row. Accepts both the importer column set and the research CSV
+// column set, and never emits an untrusted source_system.
+function supplierImportRowFromEntry(entry: Record<string, unknown>, index: number): IntoolsSupplierImportRow {
+  const nested = entry.supplier && typeof entry.supplier === "object" ? entry.supplier as Record<string, unknown> : null;
+  const raw = nested ?? entry;
+  const sourceUrl = optionalText(entry.source_url, raw.source_url, raw.website, raw.web);
+  const declared = typeof entry.source_system === "string" ? entry.source_system.trim().toLowerCase() : "";
+  const source_system = SUPPLIER_IMPORT_SOURCE_SYSTEMS.includes(declared)
+    ? declared
+    : sourceUrl && /^https:\/\/[^\s]+$/.test(sourceUrl) ? "regional_web" : "manual";
+  const supplier: IntoolsSupplierPayload = {
+    slug: optionalText(raw.slug) ?? undefined,
+    name: optionalText(raw.name, raw.factory_name, raw.company, raw.company_name) ?? "",
+    type: (optionalText(raw.type) ?? "garment_manufacturer"),
+    region: optionalText(raw.region, raw.country),
+    loc: optionalText(raw.loc, raw.city, raw.location),
+    moq: optionalText(raw.moq),
+    lead: optionalText(raw.lead, raw.avg_lead_time, raw.lead_time),
+    capacity: optionalText(raw.capacity),
+    web: optionalText(raw.web, raw.website),
+    sales: optionalText(raw.sales, raw.contact_email, raw.email),
+    phone: optionalText(raw.phone, raw.contact_phone),
+    bio: optionalText(raw.bio, raw.notes, raw.description),
+    years: optionalYear(raw.years),
+    founded: optionalYear(raw.founded),
+    certs: splitDelimitedList(raw.certs ?? raw.certifications),
+    tags: splitDelimitedList(raw.tags ?? raw.items_supported ?? raw.items),
+  };
+  return {
+    row_number: index + 1,
+    source_system,
+    source_record_id: String(
+      entry.source_record_id || raw.source_record_id || supplier.slug || supplier.name || index + 1,
+    ).trim(),
+    source_url: source_system === "manual" ? null : sourceUrl,
+    supplier,
+  };
+}
 function initialsOf(name: string) {
   return (
     name
@@ -2596,7 +2687,24 @@ function AuditDrawerBody({ row, onClose }: { row: Row; onClose: () => void }) {
 
 /* ------------------------------------------------------------------ Modals owned by shell */
 
-const SUPPLIER_TYPES = ["fabric_mill", "garment_manufacturer", "trim_supplier"];
+const SUPPLIER_TYPES = [
+  "garment_manufacturer",
+  "fabric_mill",
+  "trim_supplier",
+  "accessories_supplier",
+  "yarn_supplier",
+  "textile_trading_company",
+  "material_innovator",
+];
+// material_innovator is the supplier bucket the routing engine maps
+// beauty_personal_care demand onto, so it doubles as the skincare / beauty
+// OEM-ODM category.
+const SUPPLIER_TYPE_LABELS: Record<string, string> = {
+  material_innovator: "Skincare / beauty (material innovator)",
+};
+function supplierTypeLabel(value: string) {
+  return SUPPLIER_TYPE_LABELS[value] || label(value);
+}
 const KNOWLEDGE_DOMAINS = ["rfq", "sourcing", "operations", "payments-orders", "policies", "support"];
 
 function SupplierFormModal({ onClose, onDone }: { onClose: () => void; onDone: (message: string) => void }) {
@@ -2683,7 +2791,7 @@ function SupplierFormModal({ onClose, onDone }: { onClose: () => void; onDone: (
           <select value={values.type} onChange={(event) => set("type", event.target.value)} style={{ ...inputStyle, background: "#fff" }}>
             {SUPPLIER_TYPES.map((type) => (
               <option key={type} value={type}>
-                {label(type)}
+                {supplierTypeLabel(type)}
               </option>
             ))}
           </select>
@@ -2732,40 +2840,21 @@ function UploadModal({
 
   async function parseSupplierRows(file: File): Promise<IntoolsSupplierImportRow[]> {
     const text = await file.text();
+    let entries: Record<string, unknown>[];
     if (file.name.toLowerCase().endsWith(".json")) {
-      const parsed = JSON.parse(text) as Array<Record<string, unknown>>;
-      return parsed.map((entry, index) => ({
-        row_number: index + 1,
-        source_system: "bulk_upload",
-        source_record_id: String(entry.source_record_id || entry.slug || entry.name || index + 1),
-        supplier: {
-          slug: entry.slug ? String(entry.slug) : undefined,
-          name: String(entry.name || "").trim(),
-          type: String(entry.type || "garment_manufacturer"),
-          region: entry.region ? String(entry.region) : null,
-        },
-      }));
+      const parsed: unknown = JSON.parse(text);
+      const list = Array.isArray(parsed)
+        ? parsed
+        : parsed && typeof parsed === "object" && Array.isArray((parsed as { rows?: unknown }).rows)
+          ? (parsed as { rows: unknown[] }).rows
+          : [];
+      entries = list.filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object");
+    } else {
+      entries = parseCsvTable(text);
     }
-    const [headerLine, ...lines] = text.replace(/^﻿/, "").trim().split(/\r?\n/);
-    const headers = headerLine.split(",").map((entry) => entry.trim().toLowerCase());
-    return lines.filter(Boolean).map((line, index) => {
-      const cells = line.split(",");
-      const record: Record<string, string> = {};
-      headers.forEach((header, headerIndex) => {
-        record[header] = (cells[headerIndex] || "").trim();
-      });
-      return {
-        row_number: index + 1,
-        source_system: "bulk_upload",
-        source_record_id: record.source_record_id || record.slug || record.name || String(index + 1),
-        supplier: {
-          slug: record.slug || undefined,
-          name: record.name || "",
-          type: record.type || "garment_manufacturer",
-          region: record.region || null,
-        },
-      };
-    });
+    if (!entries.length) throw new Error("No rows found in this file.");
+    if (entries.length > 50) throw new Error(`Import up to 50 rows per file; this file has ${entries.length}.`);
+    return entries.map((entry, index) => supplierImportRowFromEntry(entry, index));
   }
 
   async function submit() {
@@ -2775,16 +2864,31 @@ function UploadModal({
     try {
       if (section === "suppliers") {
         let accepted = 0;
+        let rejected = 0;
+        const reasons = new Set<string>();
         for (const file of files) {
           const rows = await parseSupplierRows(file);
           const dryRun = await runIntoolsSupplierImportDryRun(rows, false);
           const promotable = dryRun.rows.filter((row) => row.status === "accepted").map((row) => row.row_number);
+          for (const row of dryRun.rows) {
+            if (row.status === "accepted") continue;
+            rejected += 1;
+            for (const issue of row.errors || []) reasons.add(`${issue.path}: ${issue.message}`);
+          }
           if (promotable.length) {
             const promoted = await promoteIntoolsSupplierImportRows(dryRun.run_id, promotable, false);
             accepted += promoted.rows.filter((row) => row.status === "promoted").length;
           }
         }
-        onDone(`${accepted} supplier record${accepted === 1 ? "" : "s"} imported — pending review.`);
+        if (!accepted) {
+          throw new Error(
+            `No rows imported (${rejected} rejected)${reasons.size ? ` — ${[...reasons].slice(0, 4).join("; ")}` : ""}.`,
+          );
+        }
+        onDone(
+          `${accepted} supplier record${accepted === 1 ? "" : "s"} imported — pending review.` +
+            (rejected ? ` ${rejected} row${rejected === 1 ? "" : "s"} rejected.` : ""),
+        );
         return;
       }
       const results = await Promise.allSettled(
