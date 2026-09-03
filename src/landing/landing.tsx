@@ -69,7 +69,7 @@ export function SiteHeader() {
 
 export function HeroSection() {
   const copy = atelixContent.hero;
-  return <section className="hero" aria-labelledby="hero-title"><div><p className="hero-eyebrow">{copy.eyebrow}</p><h1 id="hero-title">{copy.title} <em>{copy.emphasis}</em></h1><p className="lede">{copy.description}</p><ActionButton href="/sign-in">{copy.cta} <ArrowRight size={16} aria-hidden="true" /></ActionButton></div><div className="hero-art"><img src="/assets/generated/sourcing-agent.svg" alt={copy.imageAlt} /></div></section>;
+  return <section className="hero" aria-labelledby="hero-title"><div><p className="hero-eyebrow">{copy.eyebrow}</p><h1 id="hero-title">{copy.title} <em>{copy.emphasis}</em></h1><p className="lede">{copy.description}</p><div className="hero-actions"><ActionButton href="/sign-in">{copy.cta} <ArrowRight size={16} aria-hidden="true" /></ActionButton><a className="product-hunt-badge" href="https://www.producthunt.com/products/atelix?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-atelix" target="_blank" rel="noopener noreferrer"><img alt="Atelix - Match your brand with trusted factories across Asia | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1240172&theme=light&t=1788423526766" /></a></div></div><div className="hero-art"><img src="/assets/generated/sourcing-agent.svg" alt={copy.imageAlt} /></div></section>;
 }
 
 export function BrandRail() {
