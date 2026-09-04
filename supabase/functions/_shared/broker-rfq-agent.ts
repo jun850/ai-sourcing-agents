@@ -1,11 +1,6 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { classifyIntake, extractProductPhrases, immediateQuestion } from "./rfq-intake.ts";
-
-export const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+import { corsHeaders, preflight, requireAllowedOrigin } from "./stripe.ts";
 
 const PRESET = "@preset/marketplace-copilot";
 const FIELDS = ["product", "quantity", "material", "certifications", "colors", "sizes", "budget", "timeline"] as const;
@@ -22,8 +17,8 @@ const FIELD_LABELS: Record<Field, string> = {
   timeline: "timeline",
 };
 
-function reply(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json", "Cache-Control": "no-store" } });
+function rawReply(body: unknown, status = 200, headers: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), { status, headers: { ...headers, "Content-Type": "application/json", "Cache-Control": "no-store" } });
 }
 function text(value: unknown, max: number) { return typeof value === "string" ? value.trim().slice(0, max) : ""; }
 function uuid(value: string) { return /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(value); }
@@ -305,6 +300,7 @@ async function staleRevision(
   turnId: string,
   fallbackRevision: number,
   startedAt: number,
+  replyFn: (body: unknown, status?: number) => Response,
 ) {
   const { data: fresh } = await admin.rpc("agent_rfq_get_context", { p_case_id: rfqCaseId, p_profile_id: profileId });
   const currentRevision = Number(fresh?.rfq?.revision ?? fallbackRevision);
@@ -315,14 +311,17 @@ async function staleRevision(
     { verificationStatus: "stale" },
   );
   await finish(admin, turnId, result, "unavailable", "stale_revision", startedAt);
-  return reply(result, 409);
+  return replyFn(result, 409);
 }
 
 // Legacy function routes delegate here. All supplier, invoice, order, and
 // payment facts are read server-side; browser supplied context is never used.
 export async function handleBrokerRfqAgent(request: Request) {
   const startedAt = Date.now();
-  if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
+  if (request.method === "OPTIONS") return preflight(request);
+  try { requireAllowedOrigin(request); } catch { return new Response(JSON.stringify({ ok: false, reason: "origin_not_allowed" }), { status: 403, headers: { "Content-Type": "application/json", "Vary": "Origin" } }); }
+  const cors = corsHeaders(request);
+  const reply = (body: unknown, status = 200) => rawReply(body, status, cors);
   if (request.method !== "POST") return reply({ ok: false, reason: "method_not_allowed" }, 405);
   const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   if (!token) return reply({ ok: false, reason: "unauthorized" }, 401);
@@ -440,7 +439,7 @@ export async function handleBrokerRfqAgent(request: Request) {
   }
   if (Object.keys(reconciledPatch.patch).length) {
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: activeRevision, p_patch: reconciledPatch.patch, p_turn_id: turn.id });
-    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt);
+    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt, reply);
     if (!error) {
       const savedPatch = applied?.savedPatch || reconciledPatch.patch;
       const result = output("draft_updated", reconciled?.reply || `Noted on ${capturedDetails(savedPatch)} from your attached reference. Is there anything else we need to know? When you’re ready, you can click Submit RFQ.`, Number(applied?.revision || activeRevision), { savedPatch, changedFields: applied?.changedFields || Object.keys(savedPatch), undoToken: applied?.undoToken || null, verificationStatus: "reference-derived", intake: appliedIntake || intake });
@@ -472,7 +471,7 @@ export async function handleBrokerRfqAgent(request: Request) {
     // activeRevision, not the client-supplied expectedRevision: agent_rfq_apply_reference_details
     // above may have already bumped the row within this same request.
     const { data: applied, error } = await admin.rpc("agent_rfq_apply_patch", { p_case_id: rfqCaseId, p_profile_id: user.id, p_expected_revision: activeRevision, p_patch: immediatePatch, p_turn_id: turn.id });
-    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt);
+    if (error?.code === "40001") return await staleRevision(admin, rfqCaseId, user.id, turn.id, activeRevision, startedAt, reply);
     if (!error) {
       const savedPatch = applied?.savedPatch || immediatePatch;
       const referencePrefix = referenceEvidence

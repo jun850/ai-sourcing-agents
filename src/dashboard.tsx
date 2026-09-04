@@ -81,6 +81,7 @@ import {
   getWorkspaceRfqProduction,
   decideWorkspaceRfqSample,
   invokeRfqCopilot,
+  getRfqCaseById,
   listRfqAttachments,
   listRfqCasesPage,
   listRfqMessages,
@@ -1840,6 +1841,14 @@ function FilesTab({ attachments }: { attachments: RfqAttachment[] }) {
           <Typography sx={{ flexShrink: 0, fontSize: 11.5, color: "#9ba1aa" }}>
             {(attachment.byte_size / 1024 / 1024).toFixed(1)} MB
           </Typography>
+          {attachment.extraction_status === "failed" && (
+            <Typography
+              role="status"
+              sx={{ flexShrink: 0, fontSize: 11.5, fontWeight: 650, color: "#923c39" }}
+            >
+              Could not read this file
+            </Typography>
+          )}
         </Box>
       ))}
     </Stack>
@@ -2108,7 +2117,7 @@ function TimelineRail({
 
 /** Compact supplier shortlist shown in the RFQ workspace Quotes tab. Reads and
  *  writes through the same guarded workspace RPCs as the full Quotes tab. */
-function QuotesRail({
+function useQuotesData({
   caseId,
   onMessage,
   onSelected,
@@ -2146,6 +2155,19 @@ function QuotesRail({
       setBusyId(null);
     }
   }
+  return { quotes, busyId, select };
+}
+
+function QuotesRail({
+  caseId,
+  onMessage,
+  onSelected,
+}: {
+  caseId: string;
+  onMessage: (message: string) => void;
+  onSelected: () => void;
+}) {
+  const { quotes, busyId, select } = useQuotesData({ caseId, onMessage, onSelected });
   return (
     <Box>
       <Typography
@@ -2342,6 +2364,8 @@ function RfqDocumentPanel({
   onQuoteSelected,
   agentStatus,
   changedFields,
+  undoToken,
+  onUndo,
   preparing = false,
   actionPending = false,
   justSubmitted = false,
@@ -2369,6 +2393,8 @@ function RfqDocumentPanel({
   onQuoteSelected: () => void;
   agentStatus: AgentStatus | null;
   changedFields: Array<keyof RfqFields>;
+  undoToken?: string | null;
+  onUndo?: () => void;
   preparing?: boolean;
   actionPending?: boolean;
   justSubmitted?: boolean;
@@ -2455,6 +2481,10 @@ function RfqDocumentPanel({
                   px: 1.25,
                   py: 1,
                   borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 1,
                   backgroundColor:
                     agentStatus.tone === "error"
                       ? "#fdf0ef"
@@ -2471,9 +2501,21 @@ function RfqDocumentPanel({
                   lineHeight: 1.5,
                 }}
               >
-                {changedFields.length > 0
-                  ? `Updated ${changedFields.map((field) => rfqFieldLabels[field]).join(", ")}.`
-                  : agentStatus.text}
+                <span>
+                  {changedFields.length > 0
+                    ? `Updated ${changedFields.map((field) => rfqFieldLabels[field]).join(", ")}.`
+                    : agentStatus.text}
+                </span>
+                {changedFields.length > 0 && undoToken && onUndo && phase !== "submitted" && (
+                  <MuiButton
+                    onClick={onUndo}
+                    disabled={actionPending}
+                    size="small"
+                    sx={{ flexShrink: 0, minWidth: 0, px: 0.5, py: 0, fontSize: 12.5, fontWeight: 650, color: "inherit", textDecoration: "underline" }}
+                  >
+                    Undo
+                  </MuiButton>
+                )}
               </Box>
             )}
             <Box
@@ -2654,39 +2696,7 @@ function QuotesTab({
   onMessage: (message: string) => void;
   onSelected: () => void;
 }) {
-  const [quotes, setQuotes] = useState<WorkspaceRfqQuote[] | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const load = useCallback(async () => {
-    try {
-      setQuotes(await listWorkspaceRfqQuotes(caseId));
-    } catch (cause) {
-      onMessage(
-        cause instanceof Error ? cause.message : "Could not load quotes.",
-      );
-    }
-  }, [caseId, onMessage]);
-  useEffect(() => {
-    void load();
-  }, [load]);
-  async function select(quoteId: string) {
-    setBusyId(quoteId);
-    try {
-      await selectWorkspaceRfqQuote(quoteId);
-      await load();
-      onSelected();
-      onMessage(
-        "Supplier selected. Atelix will confirm terms before any commercial commitment.",
-      );
-    } catch (cause) {
-      onMessage(
-        cause instanceof Error
-          ? cause.message
-          : "Could not select this supplier.",
-      );
-    } finally {
-      setBusyId(null);
-    }
-  }
+  const { quotes, busyId, select } = useQuotesData({ caseId, onMessage, onSelected });
   if (quotes === null)
     return (
       <Box
@@ -3377,6 +3387,7 @@ function RfqWorkspace({
   const [documentActionPending, setDocumentActionPending] = useState(false);
   const initialTurnStarted = useRef(false);
   const extractionStarted = useRef(new Set<string>());
+  const pendingReconcileRef = useRef(false);
 
   useEffect(() => {
     setAttachments((current) => files.map((file) => ({ ...file, ...(current.find((item) => item.id === file.id) || {}) })));
@@ -3533,7 +3544,12 @@ function RfqWorkspace({
     ]);
   }
   async function sendConversationMessage(message: string, optimistic = true, action?: "reconcile_references", expectedRevisionOverride?: number) {
-    if (agentPending) return null;
+    if (agentPending) {
+      // A reconcile call arriving while the opening turn is still in flight
+      // must not be lost: queue exactly one retry for after it settles.
+      if (action === "reconcile_references") pendingReconcileRef.current = true;
+      return null;
+    }
     const clientMessageId = newClientMessageId();
     setAgentPending(true);
     setChangedFields([]);
@@ -3570,6 +3586,10 @@ function RfqWorkspace({
       return null;
     } finally {
       setAgentPending(false);
+      if (pendingReconcileRef.current) {
+        pendingReconcileRef.current = false;
+        void sendConversationMessage("", false, "reconcile_references");
+      }
     }
   }
   async function undoAgentChange() {
@@ -3611,10 +3631,22 @@ function RfqWorkspace({
     if (!pending.length) return;
     pending.forEach((attachment) => extractionStarted.current.add(attachment.id));
     void Promise.allSettled(pending.map((attachment) => extractRfqAttachment(caseId, attachment.id))).then(async (results) => {
-      const updates = results.filter((result): result is PromiseFulfilledResult<RfqAttachment> => result.status === "fulfilled").map((result) => result.value);
-      if (!updates.length) return;
-      setAttachments((current) => current.map((attachment) => updates.find((update) => update.id === attachment.id) ?? attachment));
-      await sendConversationMessage("", false, "reconcile_references");
+      const updated = new Map<string, RfqAttachment>();
+      const failedIds = new Set<string>();
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") updated.set(pending[index].id, result.value);
+        else failedIds.add(pending[index].id);
+      });
+      if (!updated.size && !failedIds.size) return;
+      setAttachments((current) => current.map((attachment) => {
+        const fulfilled = updated.get(attachment.id);
+        if (fulfilled) return fulfilled;
+        // A rejected extraction must surface visibly rather than staying
+        // stuck as "processing" forever with no error state.
+        if (failedIds.has(attachment.id)) return { ...attachment, extraction_status: "failed" };
+        return attachment;
+      }));
+      if (updated.size) await sendConversationMessage("", false, "reconcile_references");
     });
   }, [attachments, caseId]);
   function saveEdit() {
@@ -3625,9 +3657,13 @@ function RfqWorkspace({
       brief: briefFromFields(brief, draft, intakeDraft),
       status: "draft",
     })
-      .then(() => {
+      .then((updated) => {
         setFields(draft);
         setIntake(intakeDraft);
+        if (typeof updated?.agent_revision === "number") {
+          setAgentRevision(updated.agent_revision);
+          onAgentDraftPatched(draft, updated.agent_revision, intakeDraft);
+        }
         setPhase("review");
         setConversationMessages((current) => [
           ...current,
@@ -3661,7 +3697,11 @@ function RfqWorkspace({
       brief: briefFromFields(brief, fields, intake),
       status: "needs_research",
     })
-      .then(() => {
+      .then((updated) => {
+        if (typeof updated?.agent_revision === "number") {
+          setAgentRevision(updated.agent_revision);
+          onAgentDraftPatched(fields, updated.agent_revision, intake);
+        }
         setPhase("submitted");
         setConversationMessages((current) => [
           ...current,
@@ -3727,6 +3767,8 @@ function RfqWorkspace({
       onQuoteSelected={() => setStatusOverride("quote_selected")}
       agentStatus={agentStatus}
       changedFields={changedFields}
+      undoToken={undoToken}
+      onUndo={undoAgentChange}
       preparing={preparingDocument}
       justSubmitted={justSubmitted}
       actionPending={documentActionPending}
@@ -5337,15 +5379,22 @@ export function Dashboard({ path }: { path: string }) {
   const requestDetailId = requestDetailIdFromPath(path);
   const messageCaseId = /^\/dashboard\/messages\/([^/]+)$/.exec(path)?.[1] || null;
   useEffect(() => {
-    if (!requestDetailId) return;
-    const item = historyItems.find((entry) => entry.id === requestDetailId);
-    if (!item || rfq?.record.id === item.id) return;
+    if (!requestDetailId || rfq?.record.id === requestDetailId) return;
+    const cached = historyItems.find((entry) => entry.id === requestDetailId);
+    // The cursor page only holds the most recently updated 40 requests; an
+    // older request opened via direct/deep link (or shared) falls outside it
+    // and needs its own single-record lookup rather than staying stuck.
+    if (!cached && (historyLoading || historyLoadingMore)) return;
     let active = true;
     setRfqLoading(true);
-    void listRfqAttachments(item.id)
-      .then((attachments) => {
-        if (!active) return;
-        setRfq({ record: item, attachments });
+    void (cached ? Promise.resolve(cached) : getRfqCaseById(requestDetailId))
+      .then(async (item) => {
+        if (!active || !item) {
+          if (active && !item) setMessage("This request could not be found.");
+          return;
+        }
+        const attachments = await listRfqAttachments(item.id);
+        if (active) setRfq({ record: item, attachments });
       })
       .catch((cause) => {
         if (!active) return;
@@ -5359,7 +5408,7 @@ export function Dashboard({ path }: { path: string }) {
     return () => {
       active = false;
     };
-  }, [historyItems, requestDetailId, rfq?.record.id]);
+  }, [historyItems, historyLoading, historyLoadingMore, requestDetailId, rfq?.record.id]);
   const view: DashboardView =
     path === "/dashboard/requests" || requestDetailId
       ? "requests"

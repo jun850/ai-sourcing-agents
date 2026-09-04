@@ -1473,6 +1473,33 @@ function PrimaryActionBridge({
 
 /* ------------------------------------------------------------------ Modal shell */
 
+// Shared Escape-to-close, Tab focus trap, and focus-return for ModalShell and
+// DrawerShell, matching the pattern already used in supplier-intake.tsx.
+function useDialogAccessibility(onClose: () => void) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const timer = window.setTimeout(() => containerRef.current?.focus(), 40);
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("keydown", closeOnEscape);
+      previous?.focus?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab") return;
+    const focusable = Array.from(containerRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])") || []);
+    if (!focusable.length) return;
+    const first = focusable[0]; const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  }
+  return { containerRef, onKeyDown };
+}
+
 function ModalShell({
   title,
   hint,
@@ -1488,6 +1515,7 @@ function ModalShell({
   footer?: ReactNode;
   width?: number;
 }) {
+  const { containerRef, onKeyDown } = useDialogAccessibility(onClose);
   return (
     <div
       onClick={onClose}
@@ -1503,9 +1531,13 @@ function ModalShell({
       }}
     >
       <div
+        ref={containerRef}
         role="dialog"
+        aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={onKeyDown}
         style={{
           width: `min(${width}px, 100%)`,
           background: "#fff",
@@ -1559,6 +1591,7 @@ function DrawerShell({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const { containerRef, onKeyDown } = useDialogAccessibility(onClose);
   return (
     <div
       onClick={onClose}
@@ -1572,9 +1605,13 @@ function DrawerShell({
       }}
     >
       <div
+        ref={containerRef}
         role="dialog"
+        aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={onKeyDown}
         style={{
           width: "min(440px, 94vw)",
           height: "100%",
@@ -2115,7 +2152,7 @@ function RequestDrawerBody({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [busyId, setBusyId] = useState("");
+  const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
   const [supplierQuery, setSupplierQuery] = useState("");
 
@@ -2169,7 +2206,7 @@ function RequestDrawerBody({
   }
 
   async function act(matchId: string, fn: () => Promise<unknown>, message: string) {
-    setBusyId(matchId);
+    setBusyIds((current) => new Set(current).add(matchId));
     setError("");
     setNotice("");
     try {
@@ -2180,7 +2217,11 @@ function RequestDrawerBody({
     } catch (cause) {
       setError(errorMessage(cause, "The action could not be completed."));
     } finally {
-      setBusyId("");
+      setBusyIds((current) => {
+        const next = new Set(current);
+        next.delete(matchId);
+        return next;
+      });
     }
   }
 
@@ -2257,7 +2298,7 @@ function RequestDrawerBody({
         Supplier matches
       </div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
-        <button disabled={loading || Boolean(busyId)} onClick={() => void load(true)} style={btnStyle("neutral", "sm")} aria-busy={loading}>
+        <button disabled={loading || busyIds.size > 0} onClick={() => void load(true)} style={btnStyle("neutral", "sm")} aria-busy={loading}>
           Refresh recommendations
         </button>
       </div>
@@ -2278,7 +2319,7 @@ function RequestDrawerBody({
           const status = row.match.status;
           const quoteLocked = Boolean(row.quote && row.quote.status !== "draft");
           const draft = draftFor(row);
-          const busy = busyId === row.match.id;
+          const busy = busyIds.has(row.match.id);
           return (
             <div key={row.match.id} style={{ padding: "9px 0", borderBottom: "1px solid #f0f2f5" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2900,7 +2941,13 @@ function UploadModal({
         ),
       );
       const ok = results.filter((result) => result.status === "fulfilled").length;
-      onDone(`${ok} document${ok === 1 ? "" : "s"} uploaded and queued for processing.`);
+      const failed = results
+        .map((result, index) => (result.status === "rejected" ? { name: files[index].name, reason: errorMessage(result.reason, "unknown error") } : null))
+        .filter((entry): entry is { name: string; reason: string } => entry !== null);
+      onDone(
+        `${ok} document${ok === 1 ? "" : "s"} uploaded and queued for processing.` +
+          (failed.length ? ` ${failed.length} failed — ${failed.slice(0, 4).map((entry) => `${entry.name}: ${entry.reason}`).join("; ")}.` : ""),
+      );
     } catch (cause) {
       setError(errorMessage(cause, "Could not process these files."));
     } finally {
@@ -3341,7 +3388,12 @@ export function Intools() {
   }, [forceRoute]);
 
   useEffect(() => {
-    if (location.pathname === "/intools") navigate("/intools/analytics");
+    if (location.pathname === "/intools") { navigate("/intools/analytics"); return; }
+    // Retired route: content already renders as Requests via parseIntoolsRoute,
+    // but the address bar must also move so reload/share links land on the
+    // canonical path per the documented redirect contract.
+    const rfqAlias = /^\/intools\/rfq(?:\/([^/]+))?$/.exec(location.pathname);
+    if (rfqAlias) navigate(sectionPath("requests", rfqAlias[1] ? decodeURIComponent(rfqAlias[1]) : null));
   }, []);
 
   useEffect(() => {
@@ -3608,6 +3660,7 @@ export function Intools() {
 
         {route.id && isGeneric && (
           <DetailRouter
+            key={`${section}:${route.id}`}
             section={section as GenericSection}
             id={route.id}
             onClose={closeDetail}

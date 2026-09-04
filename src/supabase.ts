@@ -719,6 +719,15 @@ export async function listRfqCasesPage({
     hasMore: items.length === Math.min(Math.max(limit, 1), 100),
   };
 }
+export async function getRfqCaseById(id: string) {
+  const { data, error } = await client()
+    .from("atelix_rfq_workspace")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  rpcError(error);
+  return (data ?? null) as WorkspaceRfq | null;
+}
 export async function createRfqCase(input: {
   title: string;
   brief: Record<string, unknown>;

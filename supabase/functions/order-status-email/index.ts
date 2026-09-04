@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "jsr:@supabase/supabase-js@2";
 import { siteUrl } from "../_shared/stripe.ts";
+import { requireAdmin } from "../_shared/auth.ts";
 
 const STATUS_LABEL: Record<string, string> = {
   awaiting_payment: "Awaiting payment",
@@ -22,20 +22,12 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const authHeader = req.headers.get("Authorization") || "";
-  const jwt = authHeader.replace("Bearer ", "");
-  if (!jwt) return new Response("Unauthorized", { status: 401 });
-
-  const admin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
-  const { data: { user }, error: userErr } = await admin.auth.getUser(jwt);
-  if (userErr || !user) return new Response("Unauthorized", { status: 401 });
-
-  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).single();
-  if (!profile || profile.role !== "admin") return new Response("Forbidden", { status: 403 });
+  try {
+    await requireAdmin(req);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Forbidden";
+    return new Response(message, { status: message === "Unauthorized" ? 401 : 403 });
+  }
 
   let body: any;
   try { body = await req.json(); } catch { return new Response("Invalid JSON", { status: 400 }); }

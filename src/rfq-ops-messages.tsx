@@ -6,6 +6,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
+import { useReducedMotion } from "framer-motion";
 import {
   Alert, Avatar, Box, Button, Chip, IconButton,
   Skeleton, Stack, Typography,
@@ -62,6 +63,7 @@ export function RfqOpsMessagesWorkspace({
   mode?: "buyer" | "intools";
 }) {
   const conversationSentinel = useRef<HTMLDivElement | null>(null);
+  const reduceMotion = useReducedMotion();
   const [messages, setMessages] = useState<RfqOpsMessage[]>([]);
   const [active, setActive] = useState<RfqOpsConversation | null>(null);
   const [loadingThread, setLoadingThread] = useState(false);
@@ -69,7 +71,7 @@ export function RfqOpsMessagesWorkspace({
   const [draft, setDraft] = useState("");
   const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
   const [sending, setSending] = useState(false);
-  const [uploadMessageId, setUploadMessageId] = useState("");
+  const uploadMessageIdRef = useRef("");
   const fileInput = useRef<HTMLInputElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [newMessagesBelow, setNewMessagesBelow] = useState(false);
@@ -164,25 +166,28 @@ export function RfqOpsMessagesWorkspace({
     if (!node) return;
     const nearBottom = node.scrollHeight - node.scrollTop - node.clientHeight < 96;
     if (nearBottom) {
-      node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+      node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
       setNewMessagesBelow(false);
     } else {
       setNewMessagesBelow(true);
     }
-  }, [messages.length]);
+  }, [active?.id, messages.length, reduceMotion]);
 
   async function chooseFiles(files: FileList | null) {
     const values = Array.from(files || []);
     if (!values.length || !active) return;
     const invalid = values.find((file) => !ACCEPTED.has(file.type) || file.size > MAX_BYTES);
     if (invalid) { setError("Use a JPG, PNG, WebP, or PDF up to 25 MB."); return; }
-    const clientMessageId = uploadMessageId || createRfqOpsMessageId();
+    // Committed synchronously (not via state) so two rapid picks before the
+    // first batch's upload resolves still share one client_message_id instead
+    // of reserving attachments under an id that never makes it into state.
+    const clientMessageId = uploadMessageIdRef.current || createRfqOpsMessageId();
+    uploadMessageIdRef.current = clientMessageId;
     try {
       const next = await Promise.all(values.slice(0, 10 - attachments.length).map(async (file) => {
         const reservation = await (mode === "buyer" ? reserveWorkspaceOpsUpload({ conversationId: active.id, clientMessageId, originalName: file.name }) : reserveIntoolsBuyerUpload({ conversationId: active.id, clientMessageId, originalName: file.name }));
         return { id: reservation.id, file, reservation, upload: await uploadRfqOpsAttachment({ reservation, file }) };
       }));
-      setUploadMessageId(clientMessageId);
       setAttachments((current) => [...current, ...next.map(({ id, file, reservation, upload }) => ({ id, file, reservation, upload }))]);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not add that attachment."); }
   }
@@ -198,12 +203,12 @@ export function RfqOpsMessagesWorkspace({
     try {
       // Each attachment is reserved against the message id generated before upload.
       // Current UI accepts one batch, so send its reservation-compatible descriptors.
-      const clientMessageId = uploadMessageId || createRfqOpsMessageId();
+      const clientMessageId = uploadMessageIdRef.current || createRfqOpsMessageId();
       const input = { client_message_id: clientMessageId, body: draft, attachments: attachments.flatMap((item) => item.upload ? [item.upload] : []) };
       const sent = await (mode === "buyer" ? sendWorkspaceOpsMessage(active.id, input) : sendIntoolsBuyerMessage(active.id, input));
       mergeMessage(sent);
       updateConversationPreview(sent);
-      setDraft(""); setAttachments([]); setUploadMessageId(""); onUnreadCount?.();
+      setDraft(""); setAttachments([]); uploadMessageIdRef.current = ""; onUnreadCount?.();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "We could not send your message. Your draft is still here."); }
     finally { setSending(false); }
   }
@@ -454,7 +459,7 @@ export function RfqOpsMessagesWorkspace({
                 onClick={() => {
                   const node = scrollRef.current;
                   if (!node) return;
-                  node.scrollTo({ top: node.scrollHeight, behavior: "smooth" });
+                  node.scrollTo({ top: node.scrollHeight, behavior: reduceMotion ? "auto" : "smooth" });
                   setNewMessagesBelow(false);
                 }}
                 sx={{ alignSelf: "center", mb: 0.5, textTransform: "none", fontSize: 12 }}

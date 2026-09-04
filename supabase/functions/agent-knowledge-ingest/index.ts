@@ -3,6 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import JSZip from "npm:jszip@3.10.1";
 import * as XLSX from "npm:xlsx@0.18.5";
 import pdf from "npm:pdf-parse@1.1.1";
+import { requireAdmin } from "../_shared/auth.ts";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -78,14 +79,15 @@ async function extract(blob: Blob, contentType: string) {
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
   if (request.method !== "POST") return json({ ok: false, reason: "method_not_allowed" }, 405);
-  const token = (request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+  try {
+    await requireAdmin(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Forbidden";
+    return json({ ok: false, reason: message === "Unauthorized" ? "unauthorized" : "forbidden" }, message === "Unauthorized" ? 401 : 403);
+  }
   const url = Deno.env.get("SUPABASE_URL"); const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (!token || !url || !key) return json({ ok: false, reason: "unauthorized" }, 401);
+  if (!url || !key) return json({ ok: false, reason: "unauthorized" }, 401);
   const admin = createClient(url, key);
-  const { data: { user } } = await admin.auth.getUser(token);
-  if (!user || !user.email_confirmed_at) return json({ ok: false, reason: "unauthorized" }, 401);
-  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (profile?.role !== "admin") return json({ ok: false, reason: "forbidden" }, 403);
   let body: { versionId?: unknown };
   try { body = await request.json(); } catch { return json({ ok: false, reason: "invalid_json" }, 400); }
   if (!validUuid(body.versionId)) return json({ ok: false, reason: "invalid_version" }, 400);
