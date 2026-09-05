@@ -806,6 +806,7 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [selectedId, setSelectedId] = useState("");
+  const [editorMode, setEditorMode] = useState<"source" | "preview">("source");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -871,30 +872,31 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
   const restorable = settings?.versions.find((item) => item.status === "retired") || null;
   return (
     <section aria-labelledby="master-settings-title">
-      <div style={{ marginBottom: 18 }}>
-        <h1 id="master-settings-title" style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>Master settings</h1>
-        <p style={{ margin: "6px 0 0", color: C.dim, fontSize: 14, maxWidth: 620 }}>Versioned operational defaults. Activated templates are immutable and every change remains attributable.</p>
+      <div style={{ marginBottom: 26 }}>
+        <h1 id="master-settings-title" style={{ margin: 0, fontSize: 30, lineHeight: 1.15, fontWeight: 800, letterSpacing: "-0.025em" }}>Master settings</h1>
+        <p style={{ margin: "9px 0 0", color: C.dim, fontSize: 14, lineHeight: 1.55, maxWidth: 680 }}>Versioned operational defaults. Activated templates are immutable and every change remains attributable.</p>
       </div>
       {!settings && !error && <SkeletonRows />}
       {settings && (
         <SurfacePanel>
-          {featureFlags && <div style={{ padding: "22px 20px 20px", borderBottom: `1px solid ${C.line}` }}>
+          {featureFlags && <div style={{ padding: "28px 24px 26px", borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, letterSpacing: "-0.01em" }}>Controlled rollout</h2>
-                <p style={{ margin: "6px 0 0", color: C.dim, fontSize: 12.5, lineHeight: 1.55, maxWidth: 680 }}>All authority remains in guarded Supabase operations. Enable dependent capabilities in order; AI QC stays advisory until reviewed evidence is reliable.</p>
+                <div style={{ color: C.faint, fontSize: 12, fontWeight: 700 }}>Master settings / Operations</div>
+                <h2 style={{ margin: "7px 0 0", fontSize: 21, fontWeight: 800, letterSpacing: "-0.02em" }}>Controlled rollout</h2>
+                <p style={{ margin: "7px 0 0", color: C.dim, fontSize: 13, lineHeight: 1.55, maxWidth: 680 }}>Manage the capabilities available to the sourcing team. Authority remains in guarded Supabase operations.</p>
               </div>
-              <span style={{ ...statusPill("active"), whiteSpace: "nowrap" }}>{Object.values(featureFlags).filter(Boolean).length} of {HUMAN_LOOP_FLAG_ORDER.length} enabled</span>
+              <span style={{ ...statusPill("active"), whiteSpace: "nowrap", marginTop: 2 }}>{Object.values(featureFlags).filter(Boolean).length} of {HUMAN_LOOP_FLAG_ORDER.length} enabled</span>
             </div>
-            <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 1, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 12, background: C.border }}>
+            <div style={{ marginTop: 24, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 12, background: C.surface }}>
               {HUMAN_LOOP_FLAG_ORDER.map((key) => {
                 const enabled = featureFlags[key];
                 const meta = HUMAN_LOOP_FLAG_META[key];
                 return (
-                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, minHeight: 82, padding: "14px 15px", background: C.surface }}>
+                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, minHeight: 82, padding: "17px 18px", background: C.surface, borderTop: key === HUMAN_LOOP_FLAG_ORDER[0] ? 0 : `1px solid ${C.line}` }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{meta.title}</div>
-                      <div style={{ marginTop: 4, color: C.dim, fontSize: 11.5, lineHeight: 1.45 }}>{meta.description}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{meta.title}</div>
+                      <div style={{ marginTop: 5, color: C.dim, fontSize: 12.5, lineHeight: 1.45 }}>{meta.description}</div>
                     </div>
                     <button
                       type="button"
@@ -902,7 +904,7 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
                       aria-pressed={enabled}
                       aria-label={`${meta.title}: ${enabled ? "On" : "Off"}. Toggle`}
                       onClick={() => void toggleFeature(key)}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0, border: 0, borderRadius: 999, padding: "5px 9px 5px 6px", background: enabled ? "#e3f1e8" : "#eef1f4", color: enabled ? TONES.success.color : C.dim, fontFamily: "inherit", fontSize: 11.5, fontWeight: 800, cursor: busy ? "wait" : "pointer" }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0, border: 0, borderRadius: 999, padding: "6px 10px 6px 7px", background: enabled ? "#e3f1e8" : "#eef1f4", color: enabled ? TONES.success.color : C.dim, fontFamily: "inherit", fontSize: 12, fontWeight: 800, cursor: busy ? "wait" : "pointer" }}
                     >
                       <span aria-hidden="true" style={{ position: "relative", display: "inline-flex", alignItems: "center", width: 28, height: 16, borderRadius: 999, background: enabled ? C.moss : "#b9c1ca", transition: "background 140ms ease" }}>
                         <span style={{ position: "absolute", left: 3, width: 12, height: 12, borderRadius: "50%", background: C.surface, boxShadow: "0 1px 2px rgba(20,32,44,.18)", transform: `translateX(${enabled ? 10 : 0}px)`, transition: "transform 140ms ease" }} />
@@ -914,44 +916,53 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
               })}
             </div>
           </div>}
-          <div style={{ padding: "20px", borderBottom: `1px solid ${C.line}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ padding: "30px 24px 26px", borderBottom: `1px solid ${C.line}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Supplier outreach email</h2>
-                <p style={{ margin: "5px 0 0", color: C.dim, fontSize: 12.5 }}>English · {settings.capability_enabled ? "available in Requests" : "rollout disabled"}</p>
+                <div style={{ color: C.faint, fontSize: 12, fontWeight: 700 }}>Master settings / Outreach</div>
+                <h2 style={{ margin: "8px 0 0", fontSize: 24, fontWeight: 800, letterSpacing: "-0.025em" }}>Supplier outreach email</h2>
+                <p style={{ margin: "8px 0 0", color: C.dim, fontSize: 13, lineHeight: 1.55 }}>Create an editable English draft for supplier review. Activated versions remain immutable.</p>
               </div>
-              <span style={statusPill(settings.active_template ? "active" : "draft")}>{settings.active_template ? `Active v${settings.active_template.version}` : "No active version"}</span>
+              <span style={{ ...statusPill(settings.active_template ? "active" : "draft"), marginTop: 2 }}>{settings.active_template ? `Active v${settings.active_template.version}` : "No active version"}</span>
             </div>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(280px, .85fr)", gap: 22, padding: "20px" }} aria-busy={busy}>
-            <div style={{ display: "grid", alignContent: "start", gap: 14 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Template editor</div>
-                <p style={{ margin: "5px 0 0", color: C.dim, fontSize: 12, lineHeight: 1.5 }}>Create a draft version, then activate it when Ops has reviewed the copy.</p>
+          <div style={{ padding: "26px 24px 28px" }} aria-busy={busy}>
+            <div style={{ maxWidth: 980, display: "grid", gap: 24 }}>
+              <Field label="Subject">
+                <input value={subject} maxLength={240} aria-label="Subject template" onChange={(event) => setSubject(event.target.value)} style={{ ...inputStyle, height: 44, borderRadius: 9, fontSize: 14 }} />
+              </Field>
+              <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: C.text }}>Body</div>
+                  <div role="group" aria-label="Template body view" style={{ display: "inline-flex", padding: 3, border: `1px solid ${C.border}`, borderRadius: 9, background: "#f6f8fa" }}>
+                    {(["source", "preview"] as const).map((mode) => {
+                      const active = editorMode === mode;
+                      return <button key={mode} type="button" aria-pressed={active} onClick={() => setEditorMode(mode)} style={{ border: 0, borderRadius: 6, padding: "7px 12px", background: active ? C.surface : "transparent", color: active ? C.text : C.dim, boxShadow: active ? "0 1px 2px rgba(32,41,54,.12)" : "none", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{mode === "source" ? "Source" : "Preview"}</button>;
+                    })}
+                  </div>
+                </div>
+                {editorMode === "source" ? (
+                  <textarea value={body} maxLength={12000} rows={16} aria-label="Body template" onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, width: "100%", height: "auto", minHeight: 340, marginTop: 12, resize: "vertical", padding: "16px 18px", borderRadius: 9, background: "#fbfcfd", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65 }} />
+                ) : (
+                  <div aria-label="Non-production template preview" style={{ minHeight: 340, marginTop: 12, padding: "30px 34px", border: `1px solid ${C.border}`, borderRadius: 9, background: C.surface, color: C.text, fontSize: 13.5, lineHeight: 1.65 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800 }}>{templatePreview(subject)}</div>
+                    <div style={{ marginTop: 18, whiteSpace: "pre-wrap" }}>{templatePreview(body)}</div>
+                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}`, color: C.faint, fontSize: 11.5 }}>Non-production preview · values are illustrative only</div>
+                  </div>
+                )}
               </div>
-              <Field label="Subject template">
-                <input value={subject} maxLength={240} onChange={(event) => setSubject(event.target.value)} style={{ ...inputStyle, height: 40 }} />
-              </Field>
-              <Field label="Body template">
-                <textarea value={body} maxLength={12000} rows={13} onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 280, resize: "vertical", padding: 12, lineHeight: 1.55 }} />
-              </Field>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button disabled={busy} onClick={() => void saveVersion()} style={btnStyle("primary")}>Save as new version</button>
-                <button disabled={busy || !selected || selected.status === "active"} onClick={() => selected && void activate(selected.id)} style={btnStyle("success")}>Activate selected version</button>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>Template variables</div>
+                <p style={{ margin: "6px 0 12px", color: C.dim, fontSize: 12.5, lineHeight: 1.55 }}>{settings.instruction}</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+                  {settings.placeholders.map((placeholder) => <code key={placeholder} style={{ display: "inline-flex", alignItems: "center", padding: "6px 9px", border: `1px solid ${C.border}`, borderRadius: 999, background: C.surface, color: C.head, fontSize: 11.5, lineHeight: 1.2 }}>{placeholder}</code>)}
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap", paddingTop: 20, borderTop: `1px solid ${C.line}` }}>
                 <button disabled={busy || !restorable} onClick={() => restorable && void activate(restorable.id)} style={btnStyle("neutral")}>Restore last active version</button>
-              </div>
-            </div>
-            <div style={{ display: "grid", alignContent: "start", gap: 18 }}>
-              <div>
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Supported placeholders</div>
-                <p style={{ margin: "6px 0 9px", color: C.dim, fontSize: 12, lineHeight: 1.55 }}>{settings.instruction}</p>
-                <code style={{ display: "block", padding: "10px 11px", borderRadius: 9, background: "#f6f8fa", color: C.text, fontSize: 11.5, lineHeight: 1.8, overflowWrap: "anywhere" }}>{settings.placeholders.join("  ")}</code>
-              </div>
-              <div aria-label="Non-production template preview">
-                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Non-production preview</div>
-                <div style={{ marginTop: 7, padding: 13, borderRadius: 10, background: "#f6f8fa", color: C.text, fontSize: 12.5, minHeight: 150 }}>
-                  <strong>{templatePreview(subject)}</strong>
-                  <div style={{ marginTop: 9, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{templatePreview(body)}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button disabled={busy || !selected || selected.status === "active"} onClick={() => selected && void activate(selected.id)} style={btnStyle("success")}>Activate selected version</button>
+                  <button disabled={busy} onClick={() => void saveVersion()} style={btnStyle("primary")}>Save as new version</button>
                 </div>
               </div>
             </div>
