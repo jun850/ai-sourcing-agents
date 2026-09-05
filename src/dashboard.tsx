@@ -3080,8 +3080,8 @@ function ProductionTab({
           sx={{ mt: 0.75, fontSize: 13, color: "#758091", maxWidth: 480 }}
         >
           {data.order
-            ? `Sample order ${data.order.order_no} is active. Production stage: ${productionStageLabel(data.order.production_stage)}.`
-            : "Atelix has the selected supplier and will initiate the sample order from Intools. It will appear here once confirmed."}
+            ? `Bulk order ${data.order.order_no} is active. Production stage: ${productionStageLabel(data.order.production_stage)}.`
+            : "Atelix is coordinating sampling with the selected supplier. A bulk order appears here only after the required invoice is settled."}
         </Typography>
         <Box sx={{ mt: 2.5, display: "grid", gap: 0 }}>
           {stages.map((stage, index) => (

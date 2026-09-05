@@ -107,7 +107,7 @@ export type RfqOpsMessageAttachment = {
   id: string;
   storage_path: string;
   original_name: string;
-  content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf";
+  content_type: "image/jpeg" | "image/png" | "image/webp" | "application/pdf" | "video/mp4" | "video/quicktime" | "video/webm";
   byte_size: number;
   created_at: string;
 };
@@ -278,7 +278,7 @@ export type WorkspaceRfqProduction = {
   quote: { id: string; unit_price_cents: number; moq: number; lead_time_days: number; selected_at: string | null; factory_name: string; factory_region: string | null } | null;
   lifecycle: { state: string; sample_ready_at: string | null; sample_decision: "approved" | "declined" | null; sample_decided_at: string | null } | null;
   invoices: Partial<Record<"sample" | "bulk", { id: string; invoice_no: string; phase: "sample" | "bulk"; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null }>>;
-  events: Array<{ event_type: string; phase: "sample" | "bulk" | null; note: string | null; created_at: string }>;
+  events: Array<{ id: string; event_type: string; phase: "sample" | "bulk" | null; actor_profile_id: string | null; actor_name: string | null; note: string | null; metadata: Record<string, unknown>; created_at: string }>;
   /** legacy shape retained only so older workspace views tolerate historic responses */
   order?: { id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null;
   invoice?: { id: string; invoice_no: string; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null } | null;
@@ -1028,6 +1028,9 @@ const RFQ_OPS_ATTACHMENT_TYPES = new Set<RfqOpsMessageAttachment["content_type"]
   "image/png",
   "image/webp",
   "application/pdf",
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
 ]);
 const RFQ_OPS_ATTACHMENT_MAX_BYTES = 25 * 1024 * 1024;
 
@@ -1132,7 +1135,7 @@ export async function uploadRfqOpsAttachment(input: {
     throw new Error("The file name no longer matches its upload reservation.");
   if (!RFQ_OPS_ATTACHMENT_TYPES.has(file.type as RfqOpsMessageAttachment["content_type"]) ||
       file.size > RFQ_OPS_ATTACHMENT_MAX_BYTES)
-    throw new Error("Use a JPG, PNG, WebP, or PDF up to 25 MB.");
+    throw new Error("Use a JPG, PNG, WebP, PDF, MP4, MOV, or WebM file up to 25 MB.");
   const session = await getSession();
   if (!session) throw new Error("Sign in to attach files to an Ops message.");
   const { error } = await client().storage.from(RFQ_OPS_ATTACHMENT_BUCKET).upload(reservation.storage_path, file, {
@@ -1634,6 +1637,8 @@ export type IntoolsRfqCase = {
   buyer_email: string;
   match_count: number;
   quote_count: number;
+  lifecycle_state: string | null;
+  order: { id: string; order_no: string; status: string; production_stage: string | null } | null;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;

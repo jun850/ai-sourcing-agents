@@ -23,7 +23,7 @@ import {
 } from "./supabase";
 import { useInfiniteList } from "./use-infinite-list";
 
-const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
+const ACCEPTED = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf", "video/mp4", "video/quicktime", "video/webm"]);
 const MAX_BYTES = 25 * 1024 * 1024;
 
 function relativeShort(value: string | null | undefined) {
@@ -177,7 +177,7 @@ export function RfqOpsMessagesWorkspace({
     const values = Array.from(files || []);
     if (!values.length || !active) return;
     const invalid = values.find((file) => !ACCEPTED.has(file.type) || file.size > MAX_BYTES);
-    if (invalid) { setError("Use a JPG, PNG, WebP, or PDF up to 25 MB."); return; }
+    if (invalid) { setError("Use a JPG, PNG, WebP, PDF, MP4, MOV, or WebM file up to 25 MB."); return; }
     // Committed synchronously (not via state) so two rapid picks before the
     // first batch's upload resolves still share one client_message_id instead
     // of reserving attachments under an id that never makes it into state.
@@ -501,7 +501,7 @@ export function RfqOpsMessagesWorkspace({
                   hidden
                   type="file"
                   multiple
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,video/mp4,video/quicktime,video/webm"
                   onChange={(event) => {
                     void chooseFiles(event.target.files);
                     event.currentTarget.value = "";

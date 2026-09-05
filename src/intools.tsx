@@ -38,6 +38,7 @@ import {
   promoteIntoolsSupplierImportRows,
   publishIntoolsAgentKnowledge,
   publishIntoolsRfqQuote,
+  publishIntoolsRfqSample,
   recordIntoolsManualPayment,
   runIntoolsSupplierImportDryRun,
   saveIntoolsSupplier,
@@ -47,6 +48,7 @@ import {
   setIntoolsSupplierBrokerStatus,
   setIntoolsSupplierBrokerStatusBulk,
   updateIntoolsInvoice,
+  updateIntoolsOrderProductionStage,
   updateIntoolsOrderStatus,
   updateIntoolsRfqStatus,
   uploadIntoolsAgentKnowledge,
@@ -2155,6 +2157,7 @@ function RequestDrawerBody({
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
   const [supplierQuery, setSupplierQuery] = useState("");
+  const [productionNote, setProductionNote] = useState("");
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -2249,6 +2252,29 @@ function RequestDrawerBody({
     );
   }
 
+  const productionAction = (() => {
+    if (caseRecord?.lifecycle_state === "sample_in_progress") {
+      return { label: "Publish sample ready", stage: null as string | null };
+    }
+    const current = caseRecord?.order?.production_stage;
+    if (current === "bulk_production") return { label: "Move to quality inspection", stage: "quality_inspection" };
+    if (current === "quality_inspection") return { label: "Mark as shipped", stage: "shipped" };
+    if (current === "shipped") return { label: "Mark as delivered", stage: "delivered" };
+    return null;
+  })();
+
+  async function advanceProduction() {
+    if (!caseRecord || !productionAction) return;
+    await act(
+      rfq.id,
+      () => productionAction.stage
+        ? updateIntoolsOrderProductionStage(caseRecord.order!.id, productionAction.stage, productionNote.trim() || null)
+        : publishIntoolsRfqSample(rfq.id, productionNote.trim() || null),
+      productionAction.stage ? "Production stage updated." : "Sample published for buyer review.",
+    );
+    setProductionNote("");
+  }
+
   const selectedRow = matches.find((row) => row.quote?.status === "selected");
   const canGenerate = Boolean(selectedRow?.quote?.quote_total_cents);
   const filtered = matches.filter((row) => {
@@ -2291,8 +2317,32 @@ function RequestDrawerBody({
           ["Buyer", caseRecord?.buyer_name || rfq.cols[0] || "—"],
           ["Buyer email", caseRecord?.buyer_email || "—"],
           ["Quotes", String(caseRecord?.quote_count ?? 0)],
+          ["Lifecycle", caseRecord?.lifecycle_state ? label(caseRecord.lifecycle_state) : "Not started"],
+          ["Order", caseRecord?.order?.order_no || "Not created"],
+          ["Production stage", caseRecord?.order?.production_stage ? label(caseRecord.order.production_stage) : "Not started"],
         ]}
       />
+
+      {productionAction && (
+        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", alignItems: "end", gap: 8, marginTop: 12 }}>
+          <Field label="Update note (optional)">
+            <input
+              value={productionNote}
+              maxLength={2000}
+              onChange={(event) => setProductionNote(event.target.value)}
+              style={{ ...inputStyle, height: 32, fontSize: 12.5 }}
+            />
+          </Field>
+          <button
+            disabled={busyIds.has(rfq.id)}
+            aria-busy={busyIds.has(rfq.id)}
+            onClick={() => void advanceProduction()}
+            style={btnStyle("success", "sm")}
+          >
+            {productionAction.label}
+          </button>
+        </div>
+      )}
 
       <div style={{ marginTop: 14, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint, marginBottom: 6 }}>
         Supplier matches
