@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const [outreach, quote, ui, client, server] = await Promise.all([
+const [outreach, htmlUpgrade, quote, ui, client, server] = await Promise.all([
   readFile(new URL("../supabase/migrations/20260905093000_human_loop_wave2_outreach.sql", import.meta.url), "utf8"),
+  readFile(new URL("../supabase/migrations/20260905133000_upgrade_outreach_email_template_html.sql", import.meta.url), "utf8"),
   readFile(new URL("../supabase/migrations/20260905094500_human_loop_wave3_atomic_quote.sql", import.meta.url), "utf8"),
   readFile(new URL("../src/intools.tsx", import.meta.url), "utf8"),
   readFile(new URL("../src/supabase.ts", import.meta.url), "utf8"),
@@ -19,12 +20,18 @@ for (const rpc of ["intools_get_rfq_outreach_settings", "intools_save_rfq_outrea
 }
 assert.match(outreach, /status IN \('draft','active','retired'\)/);
 assert.match(outreach, /status IN \('draft','copied','contacted','superseded'\)/);
+assert.match(htmlUpgrade, /<!doctype html>/i);
+assert.match(htmlUpgrade, /<html lang="en">/i);
+assert.match(htmlUpgrade, /<body style="/i);
+assert.match(htmlUpgrade, /<table role="presentation"/i);
 assert.match(outreach, /Supplier outreach templates are not enabled/);
 assert.match(outreach, /Supplier response requires a valid evidence reference/);
 assert.match(ui, /Prepare supplier email/);
 assert.match(ui, /Copying|does not mark the supplier contacted/);
 assert.match(ui, /Record supplier response/);
 assert.match(ui, /Master settings/);
+assert.match(ui, /function TemplateSourceEditor/);
+assert.match(ui, /srcDoc=\{templatePreviewDocument\(body\)\}/);
 
 assert.match(quote, /CREATE OR REPLACE FUNCTION public\.intools_publish_rfq_quote_reviewed/);
 assert.match(quote, /FOR UPDATE/);

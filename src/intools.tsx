@@ -759,6 +759,42 @@ function templatePreview(value: string) {
   return Object.entries(sample).reduce((next, [token, replacement]) => next.split(token).join(replacement), value);
 }
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[character] ?? character);
+}
+
+function templatePreviewDocument(value: string) {
+  const rendered = templatePreview(value);
+  if (/<(?:!doctype\s+html|html|body|table|div|p|style)\b/i.test(rendered)) return rendered;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"></head><body style="margin:0;padding:32px;background:#ffffff;color:#202936;font-family:Arial,sans-serif;"><pre style="margin:0;white-space:pre-wrap;font:16px/1.6 Arial,sans-serif;">${escapeHtml(rendered)}</pre></body></html>`;
+}
+
+function TemplateSourceEditor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const lineCount = Math.max(1, value.split("\n").length);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "48px minmax(0, 1fr)", minHeight: 420, marginTop: 14, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 10, background: "#fbfcfd" }}>
+      <div aria-hidden="true" style={{ padding: "16px 10px 16px 0", borderRight: `1px solid ${C.line}`, background: "#f5f7f9", color: C.faint, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, textAlign: "right", userSelect: "none" }}>
+        {Array.from({ length: lineCount }, (_, index) => <div key={index}>{index + 1}</div>)}
+      </div>
+      <textarea
+        value={value}
+        maxLength={12000}
+        rows={18}
+        aria-label="Body template source"
+        spellCheck={false}
+        onChange={(event) => onChange(event.target.value)}
+        style={{ width: "100%", minHeight: 420, border: 0, outline: 0, resize: "vertical", padding: "16px 18px", background: "transparent", color: C.text, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, boxSizing: "border-box" }}
+      />
+    </div>
+  );
+}
+
 const HUMAN_LOOP_FLAG_ORDER: HumanLoopFeatureFlag[] = [
   "outreach_templates_enabled",
   "atomic_quote_publication_enabled",
@@ -942,12 +978,15 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
                   </div>
                 </div>
                 {editorMode === "source" ? (
-                  <textarea value={body} maxLength={12000} rows={16} aria-label="Body template" onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, width: "100%", height: "auto", minHeight: 340, marginTop: 12, resize: "vertical", padding: "16px 18px", borderRadius: 9, background: "#fbfcfd", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65 }} />
+                  <TemplateSourceEditor value={body} onChange={setBody} />
                 ) : (
-                  <div aria-label="Non-production template preview" style={{ minHeight: 340, marginTop: 12, padding: "30px 34px", border: `1px solid ${C.border}`, borderRadius: 9, background: C.surface, color: C.text, fontSize: 13.5, lineHeight: 1.65 }}>
-                    <div style={{ fontSize: 16, fontWeight: 800 }}>{templatePreview(subject)}</div>
-                    <div style={{ marginTop: 18, whiteSpace: "pre-wrap" }}>{templatePreview(body)}</div>
-                    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.line}`, color: C.faint, fontSize: 11.5 }}>Non-production preview · values are illustrative only</div>
+                  <div aria-label="Non-production template preview" style={{ marginTop: 14, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 10, background: "#f5f7f9" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 42, padding: "0 14px", borderBottom: `1px solid ${C.line}`, color: C.dim, fontSize: 12.5 }}>
+                      <span style={{ fontWeight: 800, color: C.head }}>Preview</span>
+                      <span aria-hidden="true">·</span>
+                      <span>Illustrative values only</span>
+                    </div>
+                    <iframe title="Non-production email preview" sandbox="" srcDoc={templatePreviewDocument(body)} style={{ display: "block", width: "100%", minHeight: 420, border: 0, background: "#fff" }} />
                   </div>
                 )}
               </div>
