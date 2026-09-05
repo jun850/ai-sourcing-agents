@@ -29,6 +29,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Working tables become structured list rows on narrow screens; do not force horizontal task scrolling.
 - The authenticated Dashboard and Intools work areas own vertical scrolling across the full available width. Keep the scrollbar at the right edge of the workspace and center only the inner content measure or table surface.
 - Provide default, hover, focus-visible, active, disabled, loading, empty, error, success, and permission-denied states where applicable.
+- Keep interaction treatment plain and neutral: fields, toggles, icon buttons, tooltips, prompts, and segmented controls must not add green focus rings, colored halos, or control-level box shadows. Use a restrained slate outline or border for keyboard focus; reserve soft neutral shadows for larger working surfaces such as the prompt, drawer, and modal.
 - Loading states use layout-shaped skeletons within the existing route or list surface. Do not render visible loading sentences or swap stable action labels for progress wording; keep `aria-busy` on the affected region or control and stop shimmer when reduced motion is requested.
 - Motion communicates state in roughly 150–250 ms and has a reduced-motion alternative.
 - Body copy stays within a readable measure. Controls remain at least 24 by 24 CSS pixels, with larger touch targets where practical.
@@ -161,10 +162,10 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Auth labels remain in a stable 18px row above their outlined controls; they do
   not float into or notch the border on focus, input, selection, or autofill.
 - The sign-in and sign-up screens carry no green on any focus indicator. Fields,
-  selects, the primary action, and links take a neutral (slate) focus ring only —
-  the field border goes transparent on focus and a soft neutral box-shadow ring
-  stands in. The global green a11y focus ring is explicitly overridden inside
-  `.signin-screen`; do not reintroduce moss/accent outlines here.
+  selects, the primary action, and links take a neutral (slate) focus outline
+  or border only, without a box-shadow ring. The global green a11y focus ring is
+  explicitly overridden inside `.signin-screen`; do not reintroduce moss/accent
+  outlines or focus shadows here.
 - Auth and supplier-intake forms use a shared Material 3-inspired control
   vocabulary: outlined text fields, select menus, searchable Autocomplete
   lookups, native-labelled radio/checkbox groups, inline status alerts, and

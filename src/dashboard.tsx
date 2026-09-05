@@ -1089,7 +1089,7 @@ function UploadTray({
                     transform: "scale(1.04)",
                   },
                   "&:focus-visible": {
-                    outline: "2px solid #4b7657",
+                    outline: "2px solid #8b96a4",
                     outlineOffset: 2,
                   },
                 }}
@@ -1739,8 +1739,10 @@ function RfqField({
             fontSize: 13,
             outline: 0,
             "&:focus": {
-              borderColor: "#4b7657",
-              boxShadow: "0 0 0 3px rgba(75,118,87,.14)",
+              borderColor: "#8b96a4",
+              boxShadow: "none",
+              outline: "2px solid #8b96a4",
+              outlineOffset: 2,
             },
           }}
         />
@@ -1772,7 +1774,7 @@ function IntakeSpecification({ intake, editing, onChange }: { intake: RfqIntake;
     {intake.items.map((item, itemIndex) => <Box key={item.id} sx={{ mt: 1.25, borderTop: "1px solid #edf0f3" }}>
       {item.fields.map((detail, fieldIndex) => <Box key={detail.key} sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "minmax(130px,.45fr) minmax(0,1fr)" }, gap: { xs: 0.5, sm: 2 }, py: 1.25, borderBottom: "1px solid #edf0f3" }}>
         <Typography sx={{ color: "#667384", fontSize: 12.5 }}>{detail.label}</Typography>
-        {editing ? <Box component="input" value={detail.value} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(itemIndex, fieldIndex, event.target.value)} aria-label={detail.label} placeholder={detail.state === "not_applicable" ? "Optional" : "Not specified"} sx={{ width: "100%", minWidth: 0, border: "1px solid #ccd5df", borderRadius: 1.5, px: 1, py: 0.65, color: "#354357", backgroundColor: "#fff", font: "inherit", fontSize: 13, outline: 0, "&:focus": { borderColor: "#4b7657", boxShadow: "0 0 0 3px rgba(75,118,87,.14)" } }} /> : <Typography sx={{ color: detail.value ? "#3f4c5e" : "#758091", fontSize: 13, lineHeight: 1.45 }}>{detail.value || "—"}</Typography>}
+        {editing ? <Box component="input" value={detail.value} onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(itemIndex, fieldIndex, event.target.value)} aria-label={detail.label} placeholder={detail.state === "not_applicable" ? "Optional" : "Not specified"} sx={{ width: "100%", minWidth: 0, border: "1px solid #ccd5df", borderRadius: 1.5, px: 1, py: 0.65, color: "#354357", backgroundColor: "#fff", font: "inherit", fontSize: 13, outline: 0, "&:focus": { borderColor: "#8b96a4", boxShadow: "none", outline: "2px solid #8b96a4", outlineOffset: 2 } }} /> : <Typography sx={{ color: detail.value ? "#3f4c5e" : "#758091", fontSize: 13, lineHeight: 1.45 }}>{detail.value || "—"}</Typography>}
       </Box>)}
     </Box>)}
   </Box>;
@@ -1937,7 +1939,7 @@ function RfqTabBar({
             fontWeight: tab === item ? 700 : 600,
             cursor: "pointer",
             "&:focus-visible": {
-              outline: "3px solid rgba(75,118,87,.32)",
+              outline: "2px solid #8b96a4",
               outlineOffset: 2,
             },
           }}
@@ -2777,7 +2779,7 @@ function QuotesTab({
                 backgroundColor: "#fff",
                 overflow: "hidden",
                 opacity: decided && !selected ? 0.55 : 1,
-                boxShadow: selected ? "0 8px 22px rgba(75,118,87,.10)" : "none",
+                boxShadow: "none",
               }}
             >
               <Box
@@ -3832,7 +3834,7 @@ function RfqWorkspace({
             fontWeight: 600,
             cursor: "pointer",
             "&:hover": { color: "#202936" },
-            "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: 2, borderRadius: 1 },
+            "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: 2, borderRadius: 1 },
           }}
         >
           <ArrowBack sx={{ fontSize: 16 }} />
@@ -4185,7 +4187,7 @@ function WorkspaceRequests({
                       cursor: "pointer",
                       "&:last-of-type": { borderBottom: 0 },
                       "&:hover": { backgroundColor: "#fcfdfc" },
-                      "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                      "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: -3 },
                     }}
                   >
                     <Box sx={{ minWidth: 0 }}>
@@ -4594,7 +4596,7 @@ function DashboardHome({
                     cursor: "pointer",
                     "&:last-of-type": { borderBottom: 0 },
                     "&:hover": { backgroundColor: "#fcfdfc" },
-                    "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                    "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: -3 },
                   }}
                 >
                   <Box
@@ -5775,7 +5777,7 @@ export function Dashboard({ path }: { path: string }) {
                     font: "inherit",
                     cursor: "pointer",
                     "&:hover": { borderColor: "#c7ccd4" },
-                    "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: 1 },
+                    "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: 1 },
                   }}
                 >
                   <Search sx={{ fontSize: 17 }} />

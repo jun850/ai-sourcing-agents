@@ -8,7 +8,7 @@
   --atelix-green: var(--green, #1d5a3c);
   --atelix-dark: var(--dark, #123b27);
   --atelix-accent: var(--accent, #88b863);
-  --atelix-focus: var(--focus-ring, #6c9d3f);
+  --atelix-focus: var(--focus-ring, #8b96a4);
   --atelix-radius-control: 999px;
   --atelix-radius-surface: 14px;
   --atelix-shadow-tight: 0 5px 10px rgba(18, 59, 39, 0.08);
@@ -139,8 +139,9 @@
 .atelix-action-button:focus-visible,
 .atelix-icon-label:focus-visible,
 .atelix-skip-link:focus-visible {
-  outline: 3px solid var(--atelix-focus);
+  outline: 2px solid var(--atelix-focus);
   outline-offset: 3px;
+  box-shadow: none;
 }
 
 .atelix-action-button:active:not(:disabled) {

@@ -904,10 +904,10 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
                       aria-pressed={enabled}
                       aria-label={`${meta.title}: ${enabled ? "On" : "Off"}. Toggle`}
                       onClick={() => void toggleFeature(key)}
-                      style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0, border: 0, borderRadius: 999, padding: "6px 10px 6px 7px", background: enabled ? "#e3f1e8" : "#eef1f4", color: enabled ? TONES.success.color : C.dim, fontFamily: "inherit", fontSize: 12, fontWeight: 800, cursor: busy ? "wait" : "pointer" }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, flexShrink: 0, border: 0, borderRadius: 6, padding: 0, background: "transparent", color: enabled ? TONES.success.color : C.dim, fontFamily: "inherit", fontSize: 12, fontWeight: 800, cursor: busy ? "wait" : "pointer" }}
                     >
-                      <span aria-hidden="true" style={{ position: "relative", display: "inline-flex", alignItems: "center", width: 28, height: 16, borderRadius: 999, background: enabled ? C.moss : "#b9c1ca", transition: "background 140ms ease" }}>
-                        <span style={{ position: "absolute", left: 3, width: 12, height: 12, borderRadius: "50%", background: C.surface, boxShadow: "0 1px 2px rgba(20,32,44,.18)", transform: `translateX(${enabled ? 10 : 0}px)`, transition: "transform 140ms ease" }} />
+                      <span aria-hidden="true" style={{ position: "relative", display: "inline-flex", alignItems: "center", width: 28, height: 16, borderRadius: 999, background: enabled ? "#c9dacf" : "#dfe3e7", transition: "background 140ms ease" }}>
+                        <span style={{ position: "absolute", left: 3, width: 12, height: 12, borderRadius: "50%", background: enabled ? C.moss : "#89929b", transform: `translateX(${enabled ? 10 : 0}px)`, transition: "transform 140ms ease, background 140ms ease" }} />
                       </span>
                       {enabled ? "On" : "Off"}
                     </button>
@@ -937,7 +937,7 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
                   <div role="group" aria-label="Template body view" style={{ display: "inline-flex", padding: 3, border: `1px solid ${C.border}`, borderRadius: 9, background: "#f6f8fa" }}>
                     {(["source", "preview"] as const).map((mode) => {
                       const active = editorMode === mode;
-                      return <button key={mode} type="button" aria-pressed={active} onClick={() => setEditorMode(mode)} style={{ border: 0, borderRadius: 6, padding: "7px 12px", background: active ? C.surface : "transparent", color: active ? C.text : C.dim, boxShadow: active ? "0 1px 2px rgba(32,41,54,.12)" : "none", fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{mode === "source" ? "Source" : "Preview"}</button>;
+                      return <button key={mode} type="button" aria-pressed={active} onClick={() => setEditorMode(mode)} style={{ border: `1px solid ${active ? C.border : "transparent"}`, borderRadius: 6, padding: "7px 12px", background: active ? C.surface : "transparent", color: active ? C.text : C.dim, fontFamily: "inherit", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}>{mode === "source" ? "Source" : "Preview"}</button>;
                     })}
                   </div>
                 </div>

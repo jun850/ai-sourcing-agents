@@ -134,9 +134,10 @@
 .signin-input:hover:not(:disabled) { border-color: #cfd4da; }
 .signin-input:focus,
 .signin-input:focus-visible {
-  border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
-  outline: none;
+  border-color: #8b96a4;
+  box-shadow: none;
+  outline: 2px solid #8b96a4;
+  outline-offset: 2px;
 }
 .signin-input:disabled {
   color: var(--ws-body);
@@ -284,9 +285,10 @@
 }
 .signin-otp-input:focus,
 .signin-otp-input:focus-visible {
-  border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
-  outline: none;
+  border-color: #8b96a4;
+  box-shadow: none;
+  outline: 2px solid #8b96a4;
+  outline-offset: 2px;
 }
 .signin-otp-verify {
   flex-shrink: 0;
@@ -332,9 +334,10 @@
 }
 .signin-select:focus,
 .signin-select:focus-visible {
-  border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.08);
-  outline: none;
+  border-color: #8b96a4;
+  box-shadow: none;
+  outline: 2px solid #8b96a4;
+  outline-offset: 2px;
 }
 
 /* ── Footer help ───────────────────────────────────────────────────── */
@@ -380,10 +383,7 @@
   .signin-input, .signin-submit { transition: none; }
 }
 
-/* No green anywhere on the auth screens. The global a11y focus ring
-   (responsive-a11y.css: `input:focus-visible { outline: 3px solid var(--focus-ring) }`,
-   green) is overridden here with a neutral indicator; inputs rely on their
-   own box-shadow ring instead of an outline. */
+/* No green or decorative focus shadow on auth screens. */
 .signin-screen :focus-visible {
   outline-color: rgba(17, 24, 39, 0.35);
 }

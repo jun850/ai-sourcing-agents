@@ -302,7 +302,7 @@ export function RfqOpsMessagesWorkspace({
                       background: selected ? "#f0f1f3" : "#fff",
                       cursor: "pointer",
                       "&:hover": { background: selected ? "#f0f1f3" : "#fcfdfc" },
-                      "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                      "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: -3 },
                     }}
                   >
                     <Avatar

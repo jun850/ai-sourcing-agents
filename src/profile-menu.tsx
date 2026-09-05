@@ -40,7 +40,7 @@ export function ProfileMenu({ profile, onProfileChange, triggerLabel = "Open pro
         <Box sx={{ minWidth: 0 }}><Typography noWrap sx={{ fontSize: 14, fontWeight: 800, letterSpacing: "-.01em" }}>{profile.full_name}</Typography><Typography noWrap sx={{ mt: .2, color: "#667384", fontSize: 12 }}>{profile.email || "Private workspace"}</Typography></Box>
       </Box>
       <Divider sx={{ mx: 1.25 }} />
-      <MenuItem onClick={() => { setAnchor(null); setEditing(true); }} sx={{ gap: 1.25, mt: .75, minHeight: 58, borderRadius: 2, alignItems: "center", "&:hover": { bgcolor: "#f1f6f2" }, "&.Mui-focusVisible": { bgcolor: "#e8f2eb", outline: "2px solid #4b7657", outlineOffset: -2 } }}>
+      <MenuItem onClick={() => { setAnchor(null); setEditing(true); }} sx={{ gap: 1.25, mt: .75, minHeight: 58, borderRadius: 2, alignItems: "center", "&:hover": { bgcolor: "#f1f2f3" }, "&.Mui-focusVisible": { bgcolor: "#f1f2f3", outline: "2px solid #8b96a4", outlineOffset: -2, boxShadow: "none" } }}>
         <Box sx={{ display: "grid", placeItems: "center", width: 32, height: 32, borderRadius: 1.5, bgcolor: "#e8f2eb", color: "#3d704d", flexShrink: 0 }}><EditOutlined fontSize="small" /></Box>
         <Box><Typography sx={{ fontSize: 13, fontWeight: 800 }}>Profile settings</Typography><Typography sx={{ mt: .1, color: "#667384", fontSize: 11.5 }}>Name and profile photo</Typography></Box>
       </MenuItem>

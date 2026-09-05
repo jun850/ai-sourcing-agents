@@ -96,8 +96,8 @@
 .product-search-field:focus-within,
 .product-select-field:focus-within,
 .product-status-tabs:focus-within {
-  border-color: #8bab91;
-  box-shadow: 0 0 0 3px rgba(136, 184, 99, .2);
+  border-color: #aeb7c2;
+  box-shadow: none;
 }
 
 .product-status-tabs {

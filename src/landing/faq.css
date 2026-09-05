@@ -72,8 +72,9 @@
 
 .faq summary:focus-visible,
 .resource-faq summary:focus-visible {
-  outline: 3px solid #c8e979;
+  outline: 2px solid #8b96a4;
   outline-offset: -3px;
+  box-shadow: none;
 }
 
 @media (max-width: 760px) {

@@ -237,7 +237,7 @@ export function NotificationBell({ mode, onNavigate }: { mode: Mode; onNavigate:
                   cursor: "pointer",
                   "&:last-of-type": { borderBottom: 0 },
                   "&:hover": { backgroundColor: "#f7f7f8" },
-                  "&:focus-visible": { outline: "3px solid rgba(75,118,87,.32)", outlineOffset: -3 },
+                  "&:focus-visible": { outline: "2px solid #8b96a4", outlineOffset: -3 },
                 }}
               >
                 <Box component="span" aria-hidden="true" sx={{ flexShrink: 0, mt: 0.75, width: 6, height: 6, borderRadius: "999px", backgroundColor: item.read_at || item.sent ? "transparent" : "#c0564a" }} />

@@ -42,6 +42,11 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   white rounded, soft-shadow surface. They must remain borderless in default and
   focused states; focus must not add a green frame or outline around the
   composer container.
+- Interaction controls use a plain, neutral treatment across buyer and operator
+  surfaces: fields, toggles, icon buttons, tooltips, prompts, and segmented
+  controls do not use green focus rings, colored halos, or control-level box
+  shadows. Keyboard focus remains visible through a restrained slate outline or
+  border; larger working surfaces may retain a soft neutral shadow.
 - Chat messages are persisted to the RFQ thread through guarded workspace RPCs;
   the assistant acknowledgement is status-only and must not invent supplier,
   price, MOQ, certification, capacity, availability, quote, or payment facts.
@@ -122,9 +127,10 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   Only `approved` or `invited` emails may receive a link, and Auth may not create
   a missing user during sign-in. Every valid email submission receives the same
   generic response so account and approval status cannot be enumerated.
-- The sign-in and sign-up screens use no green on any focus indicator: fields,
-  selects, the primary action, and links show a neutral slate focus ring only.
-  The global green accessibility focus ring is overridden within these screens.
+- The sign-in and sign-up screens use no green or focus shadow on any focus
+  indicator: fields, selects, the primary action, and links show a neutral slate
+  outline or border only. The global green accessibility focus ring is
+  overridden within these screens.
 - Access request, sign-in, and supplier-intake forms use the shared Material
   component layer. Searchable lookup controls are limited to bounded,
   user-supplied options such as country calling code, manufacturing category,
