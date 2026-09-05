@@ -776,20 +776,21 @@ function templatePreviewDocument(value: string) {
 }
 
 function TemplateSourceEditor({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const lineNumbersRef = useRef<HTMLDivElement | null>(null);
   const lineCount = Math.max(1, value.split("\n").length);
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "48px minmax(0, 1fr)", minHeight: 420, marginTop: 14, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 10, background: "#fbfcfd" }}>
-      <div aria-hidden="true" style={{ padding: "16px 10px 16px 0", borderRight: `1px solid ${C.line}`, background: "#f5f7f9", color: C.faint, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, textAlign: "right", userSelect: "none" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "48px minmax(0, 1fr)", height: 420, marginTop: 14, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 10, background: "#fbfcfd" }}>
+      <div ref={lineNumbersRef} aria-hidden="true" style={{ height: "100%", overflow: "hidden", padding: "16px 10px 16px 0", borderRight: `1px solid ${C.line}`, background: "#f5f7f9", color: C.faint, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, textAlign: "right", userSelect: "none", boxSizing: "border-box" }}>
         {Array.from({ length: lineCount }, (_, index) => <div key={index}>{index + 1}</div>)}
       </div>
       <textarea
         value={value}
         maxLength={12000}
-        rows={18}
         aria-label="Body template source"
         spellCheck={false}
+        onScroll={(event) => { if (lineNumbersRef.current) lineNumbersRef.current.scrollTop = event.currentTarget.scrollTop; }}
         onChange={(event) => onChange(event.target.value)}
-        style={{ width: "100%", minHeight: 420, border: 0, outline: 0, resize: "vertical", padding: "16px 18px", background: "transparent", color: C.text, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, boxSizing: "border-box" }}
+        style={{ width: "100%", height: "100%", border: 0, outline: 0, resize: "none", padding: "16px 18px", background: "transparent", color: C.text, fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace", fontSize: 12.5, lineHeight: 1.65, boxSizing: "border-box" }}
       />
     </div>
   );
