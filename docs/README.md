@@ -4,7 +4,7 @@ This folder documents the **next feature wave** described in [`AI_NATIVE_HUMAN_L
 
 **Ground rule for every document in this folder:** nothing is invented. Every requirement, limit, RPC name, table, and diagram traces back to a specific section of a source document. Where the source is silent, the document says **"Not specified in source docs"** instead of guessing.
 
-**Infrastructure decision:** the delivery uses only Supabase Pro and Vercel for hosted infrastructure. Supabase owns authoritative data, private evidence, scheduling, leases, and Realtime. The existing Vercel project hosts the Vite app, and a separate Vercel Hobby container project runs resumable FFmpeg/OpenCV work. GCP, AWS, and Tencent are excluded. OpenRouter and Stripe remain external application providers, not infrastructure hosts for Atelix.
+**Infrastructure decision:** the delivery uses only Supabase Pro and Vercel for hosted infrastructure. Supabase owns authoritative data, private evidence, scheduling, leases, and Realtime. The existing Vercel project hosts the Vite app, and a separate native Vercel Hobby Python Function runs resumable OpenCV media work. GCP, AWS, and Tencent are excluded. OpenRouter and Stripe remain external application providers, not infrastructure hosts for Atelix.
 
 ## Document framework
 
@@ -40,5 +40,5 @@ This set follows the standard BRD → PRD → SDD/TSD progression, so each docum
 ## A note on scope and fidelity
 
 - This documentation set covers the feature wave in `PLAN.md`. It does **not** re-document already-shipped baseline features (auth, Messages, the four buyer surfaces, Intools' original nine sections) beyond what's needed for context — those are already specified in `PRODUCT.md`/`DESIGN.md`/`AGENTS.md`/`CLAUDE.md` and are treated as given.
-- "Final tech stack" and similar TSD-style sections list only technologies the source documents name or the approved infrastructure decision adds (Supabase Pro Postgres/Storage/Vault/cron, Vercel Hobby container functions, FFmpeg/FFprobe/OpenCV, OpenRouter, Stripe, the existing Vite frontend). Nothing (e.g., a caching layer or a different cloud) is added just to fill out a template section — where the source is silent, the document says so.
+- "Final tech stack" and similar TSD-style sections list only technologies the source documents name or the approved infrastructure decision adds (Supabase Pro Postgres/Storage/Vault/cron, native Vercel Hobby Python Functions, OpenCV, OpenRouter, Stripe, the existing Vite frontend). Nothing (e.g., a caching layer or a different cloud) is added just to fill out a template section — where the source is silent, the document says so.
 - Wireframes are literal, text-based layouts of the fields and controls `PLAN.md` explicitly lists (e.g., the outreach modal's stated buttons and status fields) — they are not new visual designs, and none should be treated as approved UI beyond what the source specifies.

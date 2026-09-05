@@ -554,17 +554,16 @@ The selected first-release stack is:
 - A new private Supabase Storage bucket for immutable QC evidence.
 - Supabase TUS resumable upload for large videos.
 - Supabase Vault, `pg_cron`, and `pg_net` for the authenticated worker schedule.
-- A separate Vercel Hobby project for stateless, resumable CPU media processing from an OCI container.
-- FFprobe and FFmpeg for validation, decoding, frame extraction, timestamps, and contact sheets.
-- OpenCV for deterministic evidence-quality checks and frame selection.
+- A separate native Vercel Hobby Python Function project for stateless, resumable CPU media processing.
+- OpenCV for validation, decoding, frame extraction, timestamps, contact sheets, deterministic evidence-quality checks, and frame selection.
 - OpenRouter multimodal image requests for evidence-linked visual-risk analysis.
 - The existing notification ledger and private Supabase Broadcast pattern for committed-event invalidation.
 
 Supabase recommends resumable upload for files above 6 MB and unstable networks, using the direct Storage hostname for best performance: <https://supabase.com/docs/guides/storage/uploads/resumable-uploads>.
 
-Supabase Edge Functions remain the authorization and lightweight orchestration seam. They do not run FFmpeg/OpenCV because hosted limits include 256 MB memory and two seconds of CPU per request: <https://supabase.com/docs/guides/functions/limits>.
+Supabase Edge Functions remain the authorization and lightweight orchestration seam. They do not run OpenCV because hosted limits include 256 MB memory and two seconds of CPU per request: <https://supabase.com/docs/guides/functions/limits>.
 
-The media worker is deployed as a separate Vercel project rooted at `workers/qc`, using `Dockerfile.vercel`. Keeping it separate avoids changing the existing Vite project's routing or build ownership. Vercel container functions provide the FFmpeg/OpenCV runtime boundary: <https://vercel.com/docs/functions/container-images>.
+The media worker is deployed as a separate native Vercel Python Function project rooted at `workers/qc`, pinned to Python 3.12 with `.python-version`. Keeping it separate avoids changing the existing Vite project's routing or build ownership. OpenCV handles bounded media validation and frame extraction without Docker or a system FFmpeg dependency: <https://vercel.com/docs/functions/runtimes/python>.
 
 The linked Vercel team is on Hobby. Each invocation therefore stays within the documented 300-second, 2 GB, one-vCPU maximum. The worker stops starting new work after 220 seconds and checkpoints or completes before 240 seconds: <https://vercel.com/docs/functions/limitations>.
 
@@ -663,7 +662,7 @@ Analysis copies:
 
 Video frame strategy:
 
-1. Decode and validate with FFprobe/FFmpeg.
+1. Decode and validate with OpenCV.
 2. Divide video work into deterministic time segments and persist the completed-segment cursor.
 3. Sample a baseline of one frame per second within each segment.
 4. Add scene-change and low-motion close-up candidates.
@@ -737,7 +736,7 @@ flowchart TD
     UE --> ST[Private Supabase Storage]
     ST --> J[Bounded QC analysis queue]
     J --> SC[Supabase Pro cron and Vault trigger]
-    SC --> W[Vercel Hobby resumable FFmpeg and OpenCV worker]
+    SC --> W[Vercel Hobby resumable OpenCV Python worker]
     W --> OR[OpenRouter visual-risk analysis]
     OR --> F[Evidence-linked findings]
     F --> HR[Ops QC review]
@@ -1166,7 +1165,7 @@ Shared hotspots such as `src/dashboard.tsx`, `src/intools.tsx`, and `src/supabas
 
 ### Wave 5 — Vision engine
 
-- Build the separate, containerized Vercel Hobby FFmpeg/OpenCV worker.
+- Build the separate native Vercel Hobby OpenCV Python Function worker.
 - Add the Supabase Pro Vault-backed `pg_cron`/`pg_net` trigger and resumable stage checkpoints.
 - Add strict OpenRouter vision analysis.
 - Validate evidence citations and privacy routing.

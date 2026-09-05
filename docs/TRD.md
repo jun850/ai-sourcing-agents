@@ -39,8 +39,8 @@ flowchart TB
         Cron["Vault + pg_cron + pg_net<br/>authenticated POST every 2 minutes"]
     end
 
-    subgraph Worker["Separate Vercel Hobby container project"]
-        FFmpeg["FFprobe / FFmpeg / OpenCV<br/>deterministic media processing"]
+    subgraph Worker["Separate native Vercel Hobby Python Function project"]
+        OpenCV["OpenCV<br/>deterministic media processing"]
     end
 
     subgraph AI["Model providers"]
@@ -106,7 +106,7 @@ flowchart LR
 | **Outreach / rollout** | Template governance and audited dependency-aware feature flags (Master settings) + per-match draft/copy/contact | Backend: RPCs, tables, audit triggers (Luna A). Frontend: Master settings UI, outreach modal (Luna B) |
 | **Quote** | Atomic reviewed-quote publication | Backend: one RPC replacing 3-call path (Luna A) |
 | **Production** | RFQ Timeline/Orders extension, lifecycle substates | Backend: aggregate RPC extension (Luna A). Frontend: Intools production controls, buyer progress presentation (Luna B) |
-| **QC — upload & pipeline** | Reservation → TUS upload → finalize → queue → worker (FFmpeg/OpenCV) → OpenRouter analysis | Backend: worker (Luna A per vision-engine wave). Frontend: fixtures/model-quality tooling (Luna B per vision-engine wave) |
+| **QC — upload & pipeline** | Reservation → TUS upload → finalize → queue → worker (OpenCV) → OpenRouter analysis | Backend: worker (Luna A per vision-engine wave). Frontend: fixtures/model-quality tooling (Luna B per vision-engine wave) |
 | **QC — review** | Ops decision, immutable review versions, shipment guard | Backend: review RPC (Luna A). Frontend: Ops review controls, buyer-safe evidence reads (Luna B) |
 | **Realtime & notifications** | Broadcast invalidation, notification policy, idempotent delivery | Backend: event triggers (Luna A). Frontend: realtime invalidation client logic, accessibility/UI tests (Luna B) |
 
@@ -149,7 +149,7 @@ Field-level contracts for every table above are in [I.5 Data models](#i5-data-mo
 | Quote RPC | Intools → Postgres | One atomic reviewed-quote publish |
 | QC upload RPCs + direct TUS | Intools ↔ Postgres, Intools → Storage | Reserve → upload → finalize → queue |
 | QC worker trigger | Supabase Pro Vault/`pg_cron`/`pg_net` → Vercel Hobby `POST /run` | One authenticated trigger every two minutes; no media/user payload |
-| QC worker RPCs | Vercel Hobby container (service role) → Postgres | Claim one → context → checkpoint or complete, bulk and bounded |
+| QC worker RPCs | Vercel Hobby Python Function (service role) → Postgres | Claim one → context → checkpoint or complete, bulk and bounded |
 | QC review RPC | Intools → Postgres | Publish immutable human decision |
 | Aggregate read RPCs | Buyer/Intools → Postgres | One bounded response per surface load |
 | Realtime channel | Postgres → Buyer/Intools | Invalidation-only broadcast |
@@ -215,15 +215,15 @@ See [`data-flows.md`](data-flows.md) for the full set (end-to-end flowchart, plu
 | Server API surface | Guarded Postgres RPCs via PostgREST (`intools_*`, `workspace_*`, `qc_*` naming) | `PLAN.md` §15 |
 | Auth/orchestration seam (lightweight) | Supabase Edge Functions (authorization only — not media processing; hosted limit 256 MB memory / 2s CPU) | `PLAN.md` §11.1 |
 | Durable scheduler | Supabase Pro Vault + `pg_cron` + `pg_net`; authenticated trigger every two minutes | `PLAN.md` §11.1 |
-| Async media processing | Separate Vercel Hobby OCI-container project rooted at `workers/qc`; 300s/2 GB/1-vCPU platform ceiling; 240s application budget | `PLAN.md` §11.1 |
-| Media tooling | FFprobe, FFmpeg, OpenCV | `PLAN.md` §11.1, §11.3 |
+| Async media processing | Separate native Vercel Hobby Python Function project rooted at `workers/qc`; Python 3.12 runtime; 300s/2 GB/1-vCPU platform ceiling; 240s application budget | `PLAN.md` §11.1 |
+| Media tooling | OpenCV | `PLAN.md` §11.1, §11.3 |
 | AI — visual QC | OpenRouter, preset `@preset/marketplace-qc-triage`, initial model `google/gemini-3.5-flash-lite` | `PLAN.md` §11.2 |
 | AI — RFQ copilot (baseline, unchanged by this plan) | OpenRouter, preset `@preset/marketplace-copilot` | `PRODUCT.md` §Workspace flow contract |
 | Realtime | Supabase Broadcast (private channels) | `PLAN.md` §15.7 |
 | Payments | Stripe Checkout + webhooks | `PRODUCT.md`; `AGENTS.md`; `PLAN.md` §2.3 |
 | Search (retired, do not reintroduce) | Algolia | `PRODUCT.md`; `CLAUDE.md` |
 
-**Not specified in source docs:** specific Postgres version, exact container base-image tag, CI/CD tooling, caching layer (e.g., no Redis is mentioned anywhere in the source set), specific frontend framework version, or Vercel worker region.
+**Not specified in source docs:** specific Postgres version, CI/CD tooling, caching layer (e.g., no Redis is mentioned anywhere in the source set), specific frontend framework version, or Vercel worker region.
 
 ## II.2 API specification
 
@@ -330,7 +330,7 @@ Allowlisted categories: `evidence_quality`, `reference_mismatch`, `construction_
 - **Limits:** ≤10 images/update; ≤1 video/update; ≤250 MB/video; ≤3 min/video; no-overwrite, generated immutable paths.
 - **Finalize checks:** valid reservation; allowed filename/extension; declared MIME type; storage object size; well-formed SHA-256 declaration; unique storage path. Before any model request, the worker verifies downloaded bytes against that checksum, checks magic bytes, and requires a successful decoder plus image-dimension or video-duration/resolution probe.
 - **Analysis copies:** ≤2048px long edge (stills); metadata stripped; original + derived checksums retained; originals never overwritten.
-- **Video frame strategy:** decode/validate (FFprobe/FFmpeg) → deterministic time segments with persisted cursor → sample 1 fps baseline → add scene-change/low-motion candidates → measure blur/exposure/entropy/motion → persist private derived candidates → dedupe across segments → select ≤72 frames → produce ≤8 timestamped 3×3 contact sheets → retain frame/contact-sheet mapping for citations.
+- **Video frame strategy:** decode/validate with OpenCV → deterministic time segments with persisted cursor → sample 1 fps baseline → add scene-change/low-motion candidates → measure blur/exposure/entropy/motion → persist private derived candidates → dedupe across segments → select ≤72 frames → produce ≤8 timestamped 3×3 contact sheets → retain frame/contact-sheet mapping for citations.
 - An unusable/incomplete/blurred/dark/corrupt/duplicated/checklist-incomplete evidence set → `evidence_quality` risk, never a defect verdict.
 
 ## II.6 Testing strategy
@@ -402,7 +402,7 @@ Security standards are covered in [I.6 Security considerations](#i6-security-con
 | 2 — Supplier outreach | Private template/draft/event/generation tables; guarded outreach RPCs; Master settings; approved-match outreach modal; copy and contact kept as separate audited actions |
 | 3 — Quote atomicity | One atomic reviewed-quote publication RPC; attach supplier evidence + approval identity; replace sequential browser calls; preserve visibility/cap |
 | 4 — Production and QC foundation | Production-update and QC contracts; private QC bucket + resumable upload; checklist versions + capture requirements; Ops review controls + buyer-safe evidence reads; shipment approval guard |
-| 5 — Vision engine | Separate Vercel Hobby FFmpeg/OpenCV container worker; Supabase Pro scheduler; resumable stage checkpoints; strict OpenRouter vision analysis; evidence-citation + privacy-routing validation; internal shadow mode |
+| 5 — Vision engine | Separate native Vercel Hobby OpenCV Python Function; Supabase Pro scheduler; resumable stage checkpoints; strict OpenRouter vision analysis; evidence-citation + privacy-routing validation; internal shadow mode |
 | 6 — Realtime and notifications | Private RFQ activity invalidation; bounded aggregate refresh; production/QC notification mapping; canonical deep links + delivery idempotency |
 | 7 — Hardening and controlled rollout | Complete RLS/DB/media/model/UI/payment/load/browser testing; one sampled image inspection + one short sampled video; review shadow findings with Ops; enable buyer-visible reviewed QC evidence only after the human workflow is reliable |
 

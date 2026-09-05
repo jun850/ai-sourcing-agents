@@ -4,7 +4,6 @@ import base64
 import hashlib
 import json
 import os
-import subprocess
 import tempfile
 import time
 from pathlib import Path
@@ -45,15 +44,20 @@ async def rpc(client: httpx.AsyncClient, name: str, payload: dict[str, Any]) -> 
 
 
 def probe(path: Path, mime: str) -> dict[str, Any]:
-    output = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration:stream=codec_type,width,height", "-of", "json", str(path)],
-        check=True, capture_output=True, text=True, timeout=20,
-    )
-    report = json.loads(output.stdout)
-    duration = float(report.get("format", {}).get("duration") or 0)
+    if not mime.startswith("video/"):
+        return {"duration_seconds": 0, "streams": [{"codec_type": "image"}]}
+    capture = cv2.VideoCapture(str(path))
+    if not capture.isOpened():
+        raise ValueError("Stored video could not be decoded")
+    fps = float(capture.get(cv2.CAP_PROP_FPS) or 0)
+    frame_count = float(capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+    width = int(capture.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+    height = int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+    capture.release()
+    duration = frame_count / fps if fps > 0 else 0
     if mime.startswith("video/") and not 0 < duration <= 180:
         raise ValueError("Video duration must be between 0 and 180 seconds")
-    return {"duration_seconds": duration, "streams": report.get("streams", [])}
+    return {"duration_seconds": duration, "streams": [{"codec_type": "video", "width": width, "height": height, "fps": fps}]}
 
 
 def validate_magic(path: Path, mime: str) -> None:
@@ -78,17 +82,31 @@ def derive_images(source: Path, mime: str, directory: Path) -> tuple[list[Path],
         with Image.open(source) as image:
             image.verify()
         with Image.open(source) as image:
-            image.convert("RGB").thumbnail((2048, 2048))
-            image.save(target, "JPEG", quality=88, optimize=True)
+            converted = image.convert("RGB")
+            converted.thumbnail((2048, 2048))
+            converted.save(target, "JPEG", quality=88, optimize=True)
         derived.append(target)
     else:
         duration = report["duration_seconds"]
         count = min(MAX_DERIVED_IMAGES, max(1, int(duration)))
-        for index in range(count):
-            timestamp = min(duration - 0.001, (index + 0.5) * duration / count)
-            target = directory / f"frame-{index:03d}.jpg"
-            subprocess.run(["ffmpeg", "-v", "error", "-ss", f"{timestamp:.3f}", "-i", str(source), "-frames:v", "1", "-vf", "scale='min(2048,iw)':-2", "-q:v", "3", str(target)], check=True, timeout=30)
-            derived.append(target)
+        capture = cv2.VideoCapture(str(source))
+        try:
+            for index in range(count):
+                timestamp = min(duration - 0.001, (index + 0.5) * duration / count)
+                capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
+                ok, frame = capture.read()
+                if not ok or frame is None:
+                    raise ValueError("Stored video frame could not be decoded")
+                height, width = frame.shape[:2]
+                scale = min(1.0, 2048 / max(width, height))
+                if scale < 1:
+                    frame = cv2.resize(frame, (round(width * scale), round(height * scale)), interpolation=cv2.INTER_AREA)
+                target = directory / f"frame-{index:03d}.jpg"
+                if not cv2.imwrite(str(target), frame, [cv2.IMWRITE_JPEG_QUALITY, 88]):
+                    raise ValueError("Derived frame could not be encoded")
+                derived.append(target)
+        finally:
+            capture.release()
     quality = []
     for image_path in derived:
         matrix = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
@@ -242,7 +260,7 @@ async def run(authorization: Optional[str] = Header(default=None)) -> dict[str, 
                 findings, usage = await analyze(client, context, derived[:MAX_DERIVED_IMAGES])
                 if time.monotonic() - started >= HARD_BUDGET_SECONDS:
                     raise TimeoutError("Worker budget exhausted before completion")
-                await rpc(client, "qc_complete_analysis_jobs", {"p_results": [{"job_id": job_ids[0], "lease_token": lease, "schema_version": "qc-risk-v1", "engine_versions": {"ffmpeg": "system", "opencv": cv2.__version__}, "preprocessing_report": preprocessing, "derived_manifest": derived_manifest, "findings": findings, **usage}]})
+                await rpc(client, "qc_complete_analysis_jobs", {"p_results": [{"job_id": job_ids[0], "lease_token": lease, "schema_version": "qc-risk-v1", "engine_versions": {"media_decoder": "opencv", "opencv": cv2.__version__}, "preprocessing_report": preprocessing, "derived_manifest": derived_manifest, "findings": findings, **usage}]})
                 return {"claimed": 1, "completed": 1, "findings": len(findings)}
         except Exception as exc:
             await rpc(client, "qc_checkpoint_analysis_jobs", {"p_results": [{"job_id": job_ids[0], "lease_token": lease, "stage": "failed_attempt", "cursor": {}, "derived_manifest": derived_manifest, "error": str(exc)[:2000], "release": True}]})

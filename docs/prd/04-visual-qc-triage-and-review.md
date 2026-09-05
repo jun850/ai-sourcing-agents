@@ -135,7 +135,7 @@ No visual mockup exists in the source; this schematic lays out the Ops QC review
 - **Delivery placement:** Wave 4 — Production and QC foundation (contracts, bucket, checklists, Ops review controls, shipment guard); Wave 5 — Vision engine (worker, OpenRouter analysis, evidence-citation validation, internal shadow mode); Wave 7 — Hardening and controlled rollout (one sampled image inspection and one short sampled video before broader rollout; enable buyer-visible reviewed QC evidence only after the human workflow is reliable). (`PLAN.md` §22)
 - **Rollout flags:** `qc_evidence_upload_enabled`, `qc_ai_shadow_enabled`, `qc_buyer_visibility_enabled`. (`PLAN.md` §25)
 - **Launch mode:** internal shadow mode — no structured labeled QC dataset exists today; every run requires Ops review; category/checklist/prompt/analyzer/frame-selection/model versions preserved for held-out per-category evaluation sets. Do not train a custom detector until a specific recurring defect has consistent human-reviewed positive/negative examples and a held-out evaluation set; any future detector remains triage-only until a separately approved authority change. (`PLAN.md` §20)
-- **Infrastructure boundary:** Supabase Pro owns the private evidence, job checkpoints, leases, scheduler, and authoritative review. A separate Vercel Hobby OCI-container project performs resumable FFmpeg/OpenCV stages. GCP, AWS, and Tencent are excluded. (`PLAN.md` §11.1)
+- **Infrastructure boundary:** Supabase Pro owns the private evidence, job checkpoints, leases, scheduler, and authoritative review. A separate native Vercel Hobby Python Function performs resumable OpenCV stages. GCP, AWS, and Tencent are excluded. (`PLAN.md` §11.1)
 
 ## 8. Open questions / not specified in source docs
 

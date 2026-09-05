@@ -29,7 +29,7 @@ flowchart TD
     UE --> ST[Private Supabase Storage]
     ST --> J[Bounded QC analysis queue]
     J --> SC[Supabase Pro Vault and pg_cron trigger]
-    SC --> W[Vercel Hobby resumable FFmpeg and OpenCV worker]
+    SC --> W[Vercel Hobby resumable OpenCV Python worker]
     W --> OR[OpenRouter visual-risk analysis]
     OR --> F[Evidence-linked findings]
     F --> HR[Ops QC review]
@@ -150,7 +150,7 @@ sequenceDiagram
     participant DB as Supabase Postgres
     participant Storage as Supabase Storage (rfq-qc-evidence)
     participant Scheduler as Supabase Pro Vault + pg_cron + pg_net
-    participant Worker as Vercel Hobby container (FFmpeg/OpenCV)
+    participant Worker as Vercel Hobby Python Function (OpenCV)
     participant OR as OpenRouter (@preset/marketplace-qc-triage)
     actor Buyer
 
@@ -169,7 +169,7 @@ sequenceDiagram
         alt stage incomplete or execution budget reached
             Worker->>DB: qc_checkpoint_analysis_jobs(results) [persist stage/cursor/artifact manifest; release or renew]
         else analysis ready to complete
-            Worker->>Worker: FFprobe/FFmpeg/OpenCV; <=72 frames; <=8 contact sheets
+            Worker->>Worker: OpenCV validation/extraction; <=72 frames; <=8 contact sheets
             Worker->>OR: derived images only (no full video, no buyer/supplier identity, no signed URLs); zdr=true, data_collection=deny, strict JSON schema
             OR-->>Worker: evidence-linked findings (allowlisted categories only, no pass/fail)
             Worker->>DB: qc_complete_analysis_jobs(results) [validates asset IDs/timestamps/checklist refs/lease]

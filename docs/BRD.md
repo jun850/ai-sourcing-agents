@@ -126,7 +126,7 @@ A tenth Intools section, **Master settings** (`/intools/settings`), is added —
 ### 6.2 Assumptions carried from the baseline contract
 
 - Supabase remains authoritative for identity, roles, sourcing records, and permissions. (`PRODUCT.md`; `AGENTS.md`)
-- Supabase Pro and Vercel are the only hosted infrastructure in this delivery. Supabase Pro owns Storage, queue state, leases, Vault-backed scheduling, and Realtime; the existing Vercel project hosts the app and a separate Vercel Hobby project hosts the resumable media worker. GCP, AWS, and Tencent are excluded. (`PLAN.md` §11.1)
+- Supabase Pro and Vercel are the only hosted infrastructure in this delivery. Supabase Pro owns Storage, queue state, leases, Vault-backed scheduling, and Realtime; the existing Vercel project hosts the app and a separate native Vercel Hobby Python Function hosts the resumable media worker. GCP, AWS, and Tencent are excluded. (`PLAN.md` §11.1)
 - Stripe webhooks remain the only payment-settlement authority. (`PRODUCT.md`; `AGENTS.md`; `PLAN.md` §2.3)
 - Every consequential change is attributable and auditable. (`PRODUCT.md`)
 - Applied migrations are never rewritten; all schema change is additive. (`AGENTS.md`; `CLAUDE.md`; `PLAN.md` §2.4)
