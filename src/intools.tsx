@@ -20,7 +20,9 @@ import {
   createIntoolsInvoice,
   declineRegistrationRequest,
   generateIntoolsRfqSupplierMatches,
+  getIntoolsRfqOperations,
   getIntoolsRfqOutreachSettings,
+  getIntoolsHumanLoopFeatureFlags,
   getIntoolsBuyerUnreadCount,
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
@@ -41,6 +43,7 @@ import {
   prepareIntoolsRfqOutreachDraft,
   publishIntoolsAgentKnowledge,
   publishIntoolsRfqQuoteReviewed,
+  publishIntoolsRfqProductionUpdate,
   publishIntoolsRfqSample,
   recordIntoolsManualPayment,
   recordIntoolsRfqOutreachCopy,
@@ -51,14 +54,19 @@ import {
   saveIntoolsRfqOutreachTemplate,
   sendIntoolsInvoice,
   setIntoolsRfqSupplierMatchStatus,
+  setIntoolsHumanLoopFeatureFlag,
   setIntoolsSupplierBrokerStatus,
   setIntoolsSupplierBrokerStatusBulk,
+  subscribeToRfqActivity,
   markIntoolsRfqSupplierContacted,
   updateIntoolsInvoice,
   updateIntoolsOrderProductionStage,
   updateIntoolsOrderStatus,
   updateIntoolsRfqStatus,
   updateIntoolsRfqOutreachDraft,
+  beginIntoolsManualQcReview,
+  reviewIntoolsQcInspection,
+  uploadIntoolsQcEvidence,
   uploadIntoolsAgentKnowledge,
   type IntoolsAgentKnowledgeDocument,
   type IntoolsInvoice,
@@ -69,8 +77,12 @@ import {
   type IntoolsRfqCase,
   type IntoolsOutreachDraft,
   type IntoolsOutreachSettings,
+  type HumanLoopFeatureFlag,
+  type HumanLoopFeatureFlags,
   type IntoolsRfqQuote,
   type IntoolsRfqSupplierMatch,
+  type IntoolsProductionUpdate,
+  type IntoolsQcInspection,
   type IntoolsSupplier,
   type IntoolsSupplierDetail,
   type IntoolsSupplierImportRow,
@@ -748,6 +760,7 @@ function templatePreview(value: string) {
 
 function MasterSettingsView({ onToast }: { onToast: (message: string) => void }) {
   const [settings, setSettings] = useState<IntoolsOutreachSettings | null>(null);
+  const [featureFlags, setFeatureFlags] = useState<HumanLoopFeatureFlags | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -757,8 +770,9 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
   const load = useCallback(async (preferredId?: string) => {
     setError("");
     try {
-      const next = await getIntoolsRfqOutreachSettings();
+      const [next, flags] = await Promise.all([getIntoolsRfqOutreachSettings(), getIntoolsHumanLoopFeatureFlags()]);
       setSettings(next);
+      setFeatureFlags(flags);
       const selected = next.versions.find((item) => item.id === preferredId)
         || next.active_template
         || next.versions[0];
@@ -799,6 +813,18 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
     } finally { setBusy(false); }
   }
 
+  async function toggleFeature(key: HumanLoopFeatureFlag) {
+    if (!featureFlags) return;
+    setBusy(true); setError("");
+    try {
+      const next = await setIntoolsHumanLoopFeatureFlag(key, !featureFlags[key]);
+      setFeatureFlags(next);
+      await load(selectedId);
+      onToast(`${label(key)} ${next[key] ? "enabled" : "disabled"}.`);
+    } catch (cause) { setError(errorMessage(cause, "Could not update this rollout flag.")); }
+    finally { setBusy(false); }
+  }
+
   const selected = settings?.versions.find((item) => item.id === selectedId) || null;
   const restorable = settings?.versions.find((item) => item.status === "retired") || null;
   return (
@@ -810,6 +836,13 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
       {!settings && !error && <SkeletonRows />}
       {settings && (
         <SurfacePanel>
+          {featureFlags && <div style={{ padding: 18, borderBottom: `1px solid ${C.line}` }}>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Controlled rollout</h2>
+            <p style={{ margin: "5px 0 12px", color: C.dim, fontSize: 12.5 }}>All authority remains in guarded Supabase operations. Enable dependent capabilities in order and keep AI QC in shadow mode until reviewed evidence is reliable.</p>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {(Object.keys(featureFlags) as HumanLoopFeatureFlag[]).map((key) => <button key={key} disabled={busy} aria-pressed={featureFlags[key]} onClick={() => void toggleFeature(key)} style={btnStyle(featureFlags[key] ? "success" : "neutral", "sm")}>{label(key)} · {featureFlags[key] ? "On" : "Off"}</button>)}
+            </div>
+          </div>}
           <div style={{ padding: 18, borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
               <div>
@@ -2373,37 +2406,62 @@ function RequestDrawerBody({
   const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
   const [supplierQuery, setSupplierQuery] = useState("");
   const [productionNote, setProductionNote] = useState("");
+  const [productionUpdates, setProductionUpdates] = useState<IntoolsProductionUpdate[]>([]);
+  const [operationsFeatures, setOperationsFeatures] = useState({ production_updates_enabled: false, qc_evidence_upload_enabled: false, qc_ai_shadow_enabled: false, qc_buyer_visibility_enabled: false });
+  const [productionSource, setProductionSource] = useState("");
+  const [nextExpectedAt, setNextExpectedAt] = useState("");
+  const [productionEvidence, setProductionEvidence] = useState("");
+  const [productionException, setProductionException] = useState("");
+  const [productionMitigation, setProductionMitigation] = useState("");
+  const [productionBuyerAction, setProductionBuyerAction] = useState("");
+  const [qcInspection, setQcInspection] = useState<IntoolsQcInspection | null>(null);
+  const [qcCategory, setQcCategory] = useState<IntoolsQcInspection["category"]>("apparel");
+  const [qcDecision, setQcDecision] = useState<"approved" | "rework_required" | "reinspection_required" | "insufficient_evidence">("approved");
+  const [qcNote, setQcNote] = useState("");
+  const [qcBuyerSummary, setQcBuyerSummary] = useState("");
+  const [qcExpectedNext, setQcExpectedNext] = useState("");
+  const [qcFindingDispositions, setQcFindingDispositions] = useState<Record<string, { disposition: "accepted" | "dismissed" | "amended"; note: string }>>({});
+  const [qcVisibleAssets, setQcVisibleAssets] = useState<Set<string>>(new Set());
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const operationsLoadRef = useRef<{ inFlight: boolean; trailing: boolean; timer: ReturnType<typeof setTimeout> | null }>({ inFlight: false, trailing: false, timer: null });
   const [outreachDraft, setOutreachDraft] = useState<IntoolsOutreachDraft | null>(null);
 
   const load = useCallback(async (refresh = false) => {
+    if (operationsLoadRef.current.inFlight) { operationsLoadRef.current.trailing = true; return; }
+    operationsLoadRef.current.inFlight = true;
     setLoading(true);
     setError("");
     try {
-      const [cases, generated, quotes, suppliers] = await Promise.all([
-        listIntoolsRfqCases(null),
-        generateIntoolsRfqSupplierMatches(rfq.id, refresh),
-        listIntoolsRfqQuotes(rfq.id),
-        listIntoolsSuppliers(),
-      ]);
-      setCaseRecord(cases.find((entry) => entry.id === rfq.id) || null);
-      const supplierById = new Map(suppliers.map((supplier) => [supplier.id, supplier]));
-      const matchPriority: Record<string, number> = { selected: 0, approved: 1, suggested: 2, rejected: 3 };
-      setMatches(
-        generated.map((match) => ({
-          match,
-          supplier: supplierById.get(match.factory_id),
-          quote: quotes.find((quote) => quote.factory_id === match.factory_id),
-        })).sort((a, b) => (matchPriority[a.match.status] ?? 9) - (matchPriority[b.match.status] ?? 9)),
-      );
+      if (refresh) await generateIntoolsRfqSupplierMatches(rfq.id, true);
+      const operations = await getIntoolsRfqOperations(rfq.id);
+      setCaseRecord(operations.case);
+      setMatches(operations.matches.map((entry) => ({ match: entry, supplier: entry.supplier, quote: entry.quote })));
+      setProductionUpdates(operations.production_updates);
+      setOperationsFeatures(operations.features);
+      setQcInspection(operations.qc_inspection);
+      setQcVisibleAssets(new Set(operations.features.qc_buyer_visibility_enabled ? operations.qc_inspection?.review?.buyer_visible_asset_ids || [] : []));
+      setQcFindingDispositions((current) => Object.fromEntries((operations.qc_inspection?.findings || []).filter((finding) => current[finding.id]).map((finding) => [finding.id, current[finding.id]])));
     } catch (cause) {
       setError(errorMessage(cause, "Could not load supplier matches for this request."));
     } finally {
+      operationsLoadRef.current.inFlight = false;
       setLoading(false);
+      if (operationsLoadRef.current.trailing) { operationsLoadRef.current.trailing = false; void load(false); }
     }
   }, [rfq.id]);
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    let active = true;
+    let subscription: { unsubscribe: () => void } | null = null;
+    const invalidate = () => {
+      if (operationsLoadRef.current.timer) clearTimeout(operationsLoadRef.current.timer);
+      operationsLoadRef.current.timer = setTimeout(() => { if (active) void load(false); }, 180);
+    };
+    void subscribeToRfqActivity(rfq.id, invalidate).then((next) => { if (active) subscription = next; else next.unsubscribe(); }).catch(() => undefined);
+    return () => { active = false; if (operationsLoadRef.current.timer) clearTimeout(operationsLoadRef.current.timer); subscription?.unsubscribe(); };
+  }, [load, rfq.id]);
 
   function baseDraft(row: MatchRow): QuoteDraft {
     return {
@@ -2498,6 +2556,44 @@ function RequestDrawerBody({
     setProductionNote("");
   }
 
+  async function publishProductionUpdate() {
+    if (!caseRecord?.order || !productionNote.trim() || !productionSource.trim()) return;
+    await act(rfq.id, () => publishIntoolsRfqProductionUpdate(rfq.id, {
+      phase: caseRecord.lifecycle_state?.startsWith("sample") ? "sample" : "bulk",
+      stage: caseRecord.order?.production_stage || "bulk_production",
+      note: productionNote.trim(), source: productionSource.trim(),
+      nextExpectedAt: nextExpectedAt ? new Date(nextExpectedAt).toISOString() : null,
+      evidenceReferences: productionEvidence.split("\n").map((item) => item.trim()).filter(Boolean),
+      exceptionSeverity: productionException || null, mitigation: productionMitigation.trim() || null,
+      requiredBuyerAction: productionBuyerAction.trim() || null,
+    }, productionUpdates[0]?.revision || 0), "Production update published to the buyer timeline.");
+    setProductionNote(""); setProductionSource(""); setNextExpectedAt(""); setProductionEvidence(""); setProductionException(""); setProductionMitigation(""); setProductionBuyerAction("");
+  }
+
+  async function startQcReview() {
+    await act(rfq.id, () => beginIntoolsManualQcReview(rfq.id, qcCategory), "Manual QC inspection opened. AI analysis remains optional.");
+  }
+
+  async function uploadQcFile(file: File) {
+    if (!qcInspection) return;
+    setError(""); setNotice(""); setUploadProgress(0);
+    try {
+      await uploadIntoolsQcEvidence(rfq.id, qcInspection.id, file, setUploadProgress);
+      setNotice("QC evidence uploaded directly to private Supabase Storage.");
+      await load(false);
+    } catch (cause) { setError(errorMessage(cause, "Could not upload QC evidence.")); }
+    finally { setUploadProgress(null); }
+  }
+
+  async function publishQcReview() {
+    if (!qcInspection || !qcNote.trim()) return;
+    const findingDispositions = qcInspection.findings.map((finding) => ({ finding_id: finding.id, ...qcFindingDispositions[finding.id] }));
+    await act(qcInspection.id, () => reviewIntoolsQcInspection(qcInspection.id, qcInspection.current_analysis_run_id, qcDecision, qcNote.trim(), [...qcVisibleAssets], qcInspection.revision, findingDispositions, qcBuyerSummary, qcExpectedNext ? new Date(qcExpectedNext).toISOString() : null), "Authoritative human QC review published.");
+    setQcNote(""); setQcBuyerSummary(""); setQcExpectedNext(""); setQcFindingDispositions({});
+  }
+
+  const qcFindingsComplete = Boolean(qcInspection && qcInspection.findings.every((finding) => qcFindingDispositions[finding.id] && (qcFindingDispositions[finding.id].disposition !== "amended" || qcFindingDispositions[finding.id].note.trim())));
+
   const selectedRow = matches.find((row) => row.quote?.status === "selected");
   const canGenerate = Boolean(selectedRow?.quote?.quote_total_cents);
   const filtered = matches.filter((row) => {
@@ -2548,7 +2644,7 @@ function RequestDrawerBody({
 
       {productionAction && (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) auto", alignItems: "end", gap: 8, marginTop: 12 }}>
-          <Field label="Update note (optional)">
+          <Field label="Stage or verified update note">
             <input
               value={productionNote}
               maxLength={2000}
@@ -2564,6 +2660,61 @@ function RequestDrawerBody({
           >
             {productionAction.label}
           </button>
+        </div>
+      )}
+
+      {caseRecord?.order && (
+        <div style={{ marginTop: 14, padding: 12, borderRadius: 9, background: "#f8faf9", display: "grid", gap: 9 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint }}>Verified production update</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
+            <Field label="Source"><input value={productionSource} maxLength={500} placeholder="Factory email, call note, inspection" onChange={(event) => setProductionSource(event.target.value)} style={{ ...inputStyle, height: 32, fontSize: 12.5 }} /></Field>
+            <Field label="Next expected update"><input type="datetime-local" value={nextExpectedAt} onChange={(event) => setNextExpectedAt(event.target.value)} style={{ ...inputStyle, height: 32, fontSize: 12.5 }} /></Field>
+          </div>
+          <Field label="Evidence references (one per line)"><textarea value={productionEvidence} maxLength={4000} rows={2} onChange={(event) => setProductionEvidence(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 58, resize: "vertical", padding: 9 }} /></Field>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 8 }}>
+            <Field label="Exception severity"><select value={productionException} onChange={(event) => setProductionException(event.target.value)} style={{ ...inputStyle, height: 34 }}><option value="">No exception</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></Field>
+            <Field label="Required buyer action"><input value={productionBuyerAction} maxLength={1000} onChange={(event) => setProductionBuyerAction(event.target.value)} style={{ ...inputStyle, height: 34 }} /></Field>
+          </div>
+          {productionException && <Field label="Mitigation or follow-up"><input value={productionMitigation} maxLength={2000} onChange={(event) => setProductionMitigation(event.target.value)} style={{ ...inputStyle, height: 34 }} /></Field>}
+          <button title={operationsFeatures.production_updates_enabled ? undefined : "Enable production updates in Master settings."} disabled={!operationsFeatures.production_updates_enabled || busyIds.has(rfq.id) || !productionNote.trim() || !productionSource.trim() || Boolean(productionException && !productionMitigation.trim())} onClick={() => void publishProductionUpdate()} style={btnStyle("primary", "sm")}>Publish verified update</button>
+          {productionUpdates[0] && <div style={{ fontSize: 11.5, color: C.dim }}>Latest v{productionUpdates[0].revision}: {productionUpdates[0].note}</div>}
+        </div>
+      )}
+
+      {caseRecord?.order?.production_stage === "quality_inspection" && (
+        <div style={{ marginTop: 14, padding: 12, borderRadius: 9, background: "#f8faf9", display: "grid", gap: 9 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint }}>Quality evidence and human review</div>
+          {!qcInspection ? <>
+            <Field label="Checklist category"><select value={qcCategory} onChange={(event) => setQcCategory(event.target.value as IntoolsQcInspection["category"])} style={{ ...inputStyle, height: 34 }}>
+              <option value="apparel">Finished apparel</option><option value="fabric">Fabric and materials</option><option value="trim">Trims and hardware</option><option value="fashion_accessory">Fashion accessories</option><option value="skincare">Skincare</option><option value="beauty">Beauty</option>
+            </select></Field>
+            <button title={operationsFeatures.qc_evidence_upload_enabled ? undefined : "Enable QC evidence upload in Master settings."} disabled={!operationsFeatures.qc_evidence_upload_enabled || busyIds.has(rfq.id)} onClick={() => void startQcReview()} style={btnStyle("primary", "sm")}>Open manual QC inspection</button>
+          </> : <>
+            <div style={{ fontSize: 12, color: C.dim }}>Checklist v{qcInspection.checklist.version} · {label(qcInspection.category)} · {label(qcInspection.substate)}</div>
+            <div style={{ fontSize: 11.5, color: C.faint }}>{qcInspection.checklist.capture_instructions}</div>
+            {qcInspection.findings.map((finding) => <div key={finding.id} style={{ padding: 9, borderRadius: 8, background: "#fff", display: "grid", gap: 6 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, color: C.head }}>{label(finding.category)} · {label(finding.severity)} · AI-suggested</div>
+              <div style={{ fontSize: 12, color: C.dim }}>{finding.summary}{finding.evidence.frame_id ? ` · ${finding.evidence.frame_id}` : ""}</div>
+              <select aria-label={`Disposition for ${finding.category}`} value={qcFindingDispositions[finding.id]?.disposition || ""} onChange={(event) => setQcFindingDispositions((current) => ({ ...current, [finding.id]: { disposition: event.target.value as "accepted" | "dismissed" | "amended", note: current[finding.id]?.note || "" } }))} style={{ ...inputStyle, height: 32 }}><option value="">Review this finding</option><option value="accepted">Accept observation</option><option value="dismissed">Dismiss observation</option><option value="amended">Amend observation</option></select>
+              {qcFindingDispositions[finding.id]?.disposition === "amended" && <input aria-label={`Amendment for ${finding.category}`} value={qcFindingDispositions[finding.id]?.note || ""} maxLength={1000} onChange={(event) => setQcFindingDispositions((current) => ({ ...current, [finding.id]: { disposition: "amended", note: event.target.value } }))} style={{ ...inputStyle, height: 32 }} />}
+            </div>)}
+            <label style={{ ...btnStyle("neutral", "sm"), width: "fit-content", cursor: uploadProgress === null && operationsFeatures.qc_evidence_upload_enabled ? "pointer" : "not-allowed", opacity: operationsFeatures.qc_evidence_upload_enabled ? 1 : 0.55 }}>
+              {uploadProgress === null ? "Upload private QC evidence" : `Uploading ${uploadProgress}%`}
+              <input type="file" hidden disabled={uploadProgress !== null || !operationsFeatures.qc_evidence_upload_enabled} accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime,video/webm" onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadQcFile(file); event.currentTarget.value = ""; }} />
+            </label>
+            {qcInspection.assets.map((asset) => <label key={asset.id} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: C.dim }}>
+              <input type="checkbox" disabled={!operationsFeatures.qc_buyer_visibility_enabled} checked={qcVisibleAssets.has(asset.id)} onChange={(event) => setQcVisibleAssets((current) => { const next = new Set(current); if (event.target.checked) next.add(asset.id); else next.delete(asset.id); return next; })} />
+              Share {asset.original_name} with buyer after review ({Math.ceil(asset.byte_size / 1024)} KB)
+            </label>)}
+            <div style={{ display: "grid", gridTemplateColumns: "180px minmax(0,1fr)", gap: 8 }}>
+              <Field label="Decision"><select value={qcDecision} onChange={(event) => setQcDecision(event.target.value as typeof qcDecision)} style={{ ...inputStyle, height: 34 }}><option value="approved">Approve</option><option value="rework_required">Require rework</option><option value="reinspection_required">Require reinspection</option><option value="insufficient_evidence">Insufficient evidence</option></select></Field>
+              <Field label="Internal review rationale"><input value={qcNote} maxLength={4000} onChange={(event) => setQcNote(event.target.value)} style={{ ...inputStyle, height: 34 }} /></Field>
+            </div>
+            <Field label="Buyer-visible summary"><input value={qcBuyerSummary} maxLength={2000} onChange={(event) => setQcBuyerSummary(event.target.value)} placeholder="Optional; a decision-specific summary is used if blank" style={{ ...inputStyle, height: 34 }} /></Field>
+            {qcDecision !== "approved" && <Field label="Next expected update"><input type="datetime-local" value={qcExpectedNext} onChange={(event) => setQcExpectedNext(event.target.value)} style={{ ...inputStyle, height: 34 }} /></Field>}
+            <button disabled={busyIds.has(qcInspection.id) || !qcNote.trim() || qcInspection.assets.length === 0 || !qcFindingsComplete || Boolean(qcDecision !== "approved" && !qcExpectedNext)} onClick={() => void publishQcReview()} style={btnStyle("success", "sm")}>Publish human QC review</button>
+            <div style={{ fontSize: 11.5, color: C.faint }}>AI findings are triage only. This attributed review is the sole QC authority and an approval is required before shipment.</div>
+          </>}
         </div>
       )}
 

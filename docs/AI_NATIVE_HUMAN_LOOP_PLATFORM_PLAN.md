@@ -195,6 +195,8 @@ Agents can read only the minimum data needed for their job and return strictly t
 
 Add the explicitly requested `/intools/settings` route as the tenth Intools navigation section, titled **Master settings**. This is allowed because it is an explicitly requested operational surface.
 
+The same surface exposes the seven audited rollout flags in dependency order. It never displays or accepts provider secrets: Supabase Vault and Vercel encrypted environment variables remain the only worker-secret stores. Server guards reject unsafe dependency changes, including quote publication without outreach and AI/buyer QC rollout without evidence upload.
+
 The first settings group is **Supplier outreach email** and contains:
 
 - English subject template.
@@ -641,17 +643,16 @@ Initial limits:
 - Maximum three minutes per video.
 - Upload without overwrite to generated immutable paths.
 
-Finalize validation checks:
+Reservation/finalize validation checks:
 
 - Valid reservation.
 - Allowed filename and extension.
 - Declared MIME type.
-- Magic bytes.
 - Storage object size.
-- SHA-256 checksum.
-- Successful decoder probe.
-- Image dimensions or video duration/resolution.
+- A well-formed SHA-256 declaration, retained with the immutable asset.
 - Unique storage path.
+
+The bounded worker verifies the downloaded bytes against that SHA-256, checks magic bytes, and runs the successful decoder/dimension or duration probe before any model request. An asset stays non-authoritative evidence if these worker checks fail; finalize never implies that the media passed QC.
 
 Analysis copies:
 
@@ -882,9 +883,9 @@ One bulk call validates run/result schemas, asset IDs, timestamps, checklist ref
 
 ### 15.5 QC review RPC
 
-#### `intools_review_qc_inspection(p_inspection_id, p_analysis_run_id, p_decision, p_note, p_buyer_visible_asset_ids, p_expected_revision)`
+#### `intools_review_qc_inspection(p_inspection_id, p_analysis_run_id, p_decision, p_note, p_buyer_visible_asset_ids, p_expected_revision, p_finding_dispositions, p_buyer_visible_summary, p_expected_next_update)`
 
-Admin-only. Creates an immutable review, updates inspection substate, appends audit/lifecycle events, emits notifications, and unlocks shipment only for `approved`.
+Admin-only. Requires one accepted/dismissed/amended disposition for every finding in the selected run, preserves the exact checklist and asset set, separates private rationale from the buyer-safe summary, requires a next-update time for non-approved decisions, creates an immutable review, updates inspection substate, appends audit/lifecycle events, emits notifications, and unlocks shipment only for `approved`.
 
 ### 15.6 Aggregate read RPCs
 

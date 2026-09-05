@@ -38,6 +38,8 @@ Ops must contact eligible, approved suppliers with a consistent, reviewable emai
 
 Location: `/intools/settings`, titled **Master settings**, the tenth Intools navigation section. (`PLAN.md` §5.1)
 
+The surface also shows the seven controlled-rollout flags as attributed on/off controls. Database guards enforce dependency order; secrets and worker credentials never appear in this UI.
+
 The group contains: English subject template; English body template; supported-placeholder reference; preview with clearly labeled non-production sample values; save as a new version; activate version; restore the last active version; creator, activator, and timestamps; read-only template audit history. (`PLAN.md` §5.1)
 
 Rules:

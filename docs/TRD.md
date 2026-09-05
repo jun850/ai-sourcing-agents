@@ -103,7 +103,7 @@ flowchart LR
 
 | Module | Responsibility | Owns (per `PLAN.md` §21) |
 |---|---|---|
-| **Outreach** | Template governance (Master settings) + per-match draft/copy/contact | Backend: RPCs, tables, audit triggers (Luna A). Frontend: Master settings UI, outreach modal (Luna B) |
+| **Outreach / rollout** | Template governance and audited dependency-aware feature flags (Master settings) + per-match draft/copy/contact | Backend: RPCs, tables, audit triggers (Luna A). Frontend: Master settings UI, outreach modal (Luna B) |
 | **Quote** | Atomic reviewed-quote publication | Backend: one RPC replacing 3-call path (Luna A) |
 | **Production** | RFQ Timeline/Orders extension, lifecycle substates | Backend: aggregate RPC extension (Luna A). Frontend: Intools production controls, buyer progress presentation (Luna B) |
 | **QC — upload & pipeline** | Reservation → TUS upload → finalize → queue → worker (FFmpeg/OpenCV) → OpenRouter analysis | Backend: worker (Luna A per vision-engine wave). Frontend: fixtures/model-quality tooling (Luna B per vision-engine wave) |
@@ -268,7 +268,7 @@ See [`data-flows.md`](data-flows.md) for the full set (end-to-end flowchart, plu
 
 | RPC | Params | Behavior |
 |---|---|---|
-| `intools_review_qc_inspection` | `p_inspection_id, p_analysis_run_id, p_decision, p_note, p_buyer_visible_asset_ids, p_expected_revision` | Admin-only. Creates immutable review; updates inspection substate; appends audit/lifecycle events; emits notifications; unlocks shipment **only** for `approved`. |
+| `intools_review_qc_inspection` | `p_inspection_id, p_analysis_run_id, p_decision, p_note, p_buyer_visible_asset_ids, p_expected_revision, p_finding_dispositions, p_buyer_visible_summary, p_expected_next_update` | Admin-only. Requires one disposition per run finding; snapshots checklist/assets; keeps private rationale separate from buyer-safe summary; requires follow-up time for non-approved decisions; creates the immutable review and unlocks shipment **only** for `approved`. |
 
 ### II.2.6 Aggregate read RPCs (`PLAN.md` §15.6)
 
@@ -328,7 +328,7 @@ Allowlisted categories: `evidence_quality`, `reference_mismatch`, `construction_
 - **Bucket:** `rfq-qc-evidence` (private).
 - **Accepted MIME types:** `image/jpeg`, `image/png`, `image/webp`, `video/mp4`, `video/quicktime`, `video/webm`.
 - **Limits:** ≤10 images/update; ≤1 video/update; ≤250 MB/video; ≤3 min/video; no-overwrite, generated immutable paths.
-- **Finalize checks:** valid reservation; allowed filename/extension; declared MIME type; magic bytes; storage object size; SHA-256 checksum; successful decoder probe; image dimensions or video duration/resolution; unique storage path.
+- **Finalize checks:** valid reservation; allowed filename/extension; declared MIME type; storage object size; well-formed SHA-256 declaration; unique storage path. Before any model request, the worker verifies downloaded bytes against that checksum, checks magic bytes, and requires a successful decoder plus image-dimension or video-duration/resolution probe.
 - **Analysis copies:** ≤2048px long edge (stills); metadata stripped; original + derived checksums retained; originals never overwritten.
 - **Video frame strategy:** decode/validate (FFprobe/FFmpeg) → deterministic time segments with persisted cursor → sample 1 fps baseline → add scene-change/low-motion candidates → measure blur/exposure/entropy/motion → persist private derived candidates → dedupe across segments → select ≤72 frames → produce ≤8 timestamped 3×3 contact sheets → retain frame/contact-sheet mapping for citations.
 - An unusable/incomplete/blurred/dark/corrupt/duplicated/checklist-incomplete evidence set → `evidence_quality` risk, never a defect verdict.

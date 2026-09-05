@@ -49,6 +49,7 @@ Feature spec: [PRD 01](prd/01-supplier-outreach-drafting.md).
 |---|---|---|---|
 | OUT-E1 | "Prepare supplier email" attempted on a suggested/rejected match | CTA is disabled; action is blocked | `PLAN.md` §5.2 |
 | OUT-E2 | No active template exists | Draft CTA disabled; Ops linked to Master settings | `PLAN.md` §18 |
+| OUT-E2a | Enable atomic quote publication while outreach is disabled, or enable QC AI/buyer visibility before evidence upload | Guarded feature-flag RPC rejects the unsafe dependency change and leaves all flags unchanged | `PLAN.md` §24 |
 | OUT-E3 | Admin tries to activate a template containing an unknown placeholder (e.g., `[.margin]`) | Activation blocked; exact offending token(s) shown | `PLAN.md` §5.3, §18 |
 | OUT-E4 | Two Ops users edit the same draft concurrently; second save uses a stale `p_expected_revision` | Second save rejected as a conflict; first operator's edit is preserved; UI shows compare/reload option | `PLAN.md` §18 |
 | OUT-E5 | Clipboard permission denied by browser | Draft remains visible/selectable as plain text; no error swallows the draft | `PLAN.md` §18 |
@@ -144,9 +145,9 @@ Feature spec: [PRD 04](prd/04-visual-qc-triage-and-review.md).
 | QC-E2 | Upload a 2nd video in the same inspection update | Rejected — max 1 video per update | `PLAN.md` §11.3 |
 | QC-E3 | Video exactly 250 MB (boundary) vs. 250 MB + 1 byte | 250 MB accepted; over rejected | `PLAN.md` §11.3 |
 | QC-E4 | Video exactly 3:00 minutes (boundary) vs. 3:00:01 | 3:00 accepted; over rejected | `PLAN.md` §11.3 |
-| QC-E5 | Upload a MIME type outside the accepted list (e.g., `image/gif`) | Rejected at finalize (declared MIME type / magic bytes check) | `PLAN.md` §11.3 |
+| QC-E5 | Upload a MIME type outside the accepted list (e.g., `image/gif`) | Rejected at reservation/finalize by the declared MIME allowlist | `PLAN.md` §11.3 |
 | QC-E6 | Upload interrupted mid-transfer | TUS resumes; no asset row created until finalize succeeds | `PLAN.md` §18 |
-| QC-E7 | Uploaded file's magic bytes don't match its declared MIME type | Finalize rejects it | `PLAN.md` §11.3 |
+| QC-E7 | Uploaded file's magic bytes don't match its declared MIME type | Worker rejects it before any model request; asset remains non-authoritative and inspection routes to human review/replacement evidence | `PLAN.md` §11.3 |
 | QC-E8 | Corrupt/unusable video (decoder probe fails) | Marked evidence-unusable; replacement requested; **not** treated as a product-defect finding | `PLAN.md` §11.3, §18 |
 | QC-E9 | Evidence set is blurry, dark, incomplete (missing required views), or duplicated | Returned as `evidence_quality` risk category, not a defect verdict | `PLAN.md` §9, §11.3 |
 | QC-E10 | Worker crashes/times out mid-job | Lease expires; job becomes reclaimable; retried up to 3 attempts total with backoff, then dead-letter | `PLAN.md` §17, §18 |

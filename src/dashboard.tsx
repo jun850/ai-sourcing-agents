@@ -79,6 +79,7 @@ import {
   getWorkspaceOpsUnreadCount,
   getWorkspaceInvoiceDetail,
   getWorkspaceRfqProduction,
+  getWorkspaceQcEvidenceUrl,
   decideWorkspaceRfqSample,
   invokeRfqCopilot,
   getRfqCaseById,
@@ -91,6 +92,7 @@ import {
   selectWorkspaceRfqQuote,
   signOut,
   startWorkspaceInvoiceCheckout,
+  subscribeToRfqActivity,
   type RfqAttachment,
   type WorkspaceChatMessage,
   type WorkspaceInvoice,
@@ -2945,22 +2947,30 @@ function ProductionTab({
 }) {
   const [data, setData] = useState<WorkspaceRfqProduction | null>(null);
   const [decisionBusy, setDecisionBusy] = useState(false);
+  const refreshRef = useRef<{ inFlight: boolean; trailing: boolean; timer: ReturnType<typeof setTimeout> | null }>({ inFlight: false, trailing: false, timer: null });
   useEffect(() => {
     let active = true;
-    void getWorkspaceRfqProduction(caseId)
-      .then((next) => {
-        if (active) setData(next);
-      })
-      .catch((cause) => {
-        if (active)
-          onMessage(
-            cause instanceof Error
-              ? cause.message
-              : "Could not load production status.",
-          );
-      });
+    let subscription: { unsubscribe: () => void } | null = null;
+    const refresh = async () => {
+      if (refreshRef.current.inFlight) { refreshRef.current.trailing = true; return; }
+      refreshRef.current.inFlight = true;
+      try { const next = await getWorkspaceRfqProduction(caseId); if (active) setData(next); }
+      catch (cause) { if (active) onMessage(cause instanceof Error ? cause.message : "Could not load production status."); }
+      finally {
+        refreshRef.current.inFlight = false;
+        if (active && refreshRef.current.trailing) { refreshRef.current.trailing = false; void refresh(); }
+      }
+    };
+    const invalidate = () => {
+      if (refreshRef.current.timer) clearTimeout(refreshRef.current.timer);
+      refreshRef.current.timer = setTimeout(() => void refresh(), 180);
+    };
+    void refresh();
+    void subscribeToRfqActivity(caseId, invalidate).then((next) => { if (active) subscription = next; else next.unsubscribe(); }).catch(() => undefined);
     return () => {
       active = false;
+      if (refreshRef.current.timer) clearTimeout(refreshRef.current.timer);
+      subscription?.unsubscribe();
     };
   }, [caseId, onMessage]);
   if (data === null) return <Skeleton variant="rounded" height={320} />;
@@ -3083,6 +3093,25 @@ function ProductionTab({
             ? `Bulk order ${data.order.order_no} is active. Production stage: ${productionStageLabel(data.order.production_stage)}.`
             : "Atelix is coordinating sampling with the selected supplier. A bulk order appears here only after the required invoice is settled."}
         </Typography>
+        {data.production_update && (
+          <Box sx={{ mt: 2, p: 1.75, borderRadius: "10px", backgroundColor: "#f5f8f6" }}>
+            <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: "#718092", letterSpacing: ".06em", textTransform: "uppercase" }}>Latest verified update</Typography>
+            <Typography sx={{ mt: 0.6, fontSize: 13, color: "#344253", lineHeight: 1.55 }}>{data.production_update.note}</Typography>
+            <Typography sx={{ mt: 0.5, fontSize: 11.5, color: "#758091" }}>Source: {data.production_update.source}{data.production_update.next_expected_at ? ` · Next update expected ${new Date(data.production_update.next_expected_at).toLocaleString()}` : ""}</Typography>
+            {data.production_update.evidence_count > 0 && <Typography sx={{ mt: 0.4, fontSize: 11.5, color: "#758091" }}>{data.production_update.evidence_count} evidence reference{data.production_update.evidence_count === 1 ? "" : "s"} recorded by Atelix</Typography>}
+            {data.production_update.exception_severity && <Typography sx={{ mt: 0.75, fontSize: 12, fontWeight: 700, color: "#934c36" }}>{data.production_update.exception_severity.toUpperCase()} exception · {data.production_update.mitigation || "Atelix follow-up in progress"}</Typography>}
+            {data.production_update.required_buyer_action && <Typography sx={{ mt: 0.75, fontSize: 12, fontWeight: 700, color: "#3c5f4b" }}>Action requested: {data.production_update.required_buyer_action}</Typography>}
+          </Box>
+        )}
+        {data.qc_review && (
+          <Box sx={{ mt: 1.25, p: 1.75, borderRadius: "10px", backgroundColor: data.qc_review.decision === "approved" ? "#eef6f1" : "#fff7ed" }}>
+            <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: "#718092", letterSpacing: ".06em", textTransform: "uppercase" }}>Atelix quality review · v{data.qc_review.version}</Typography>
+            <Typography sx={{ mt: 0.6, fontSize: 13, fontWeight: 700, color: "#344253" }}>{data.qc_review.decision === "approved" ? "Approved after human review" : data.qc_review.decision.replaceAll("_", " ")}</Typography>
+            {data.qc_review.summary && <Typography sx={{ mt: 0.4, fontSize: 12.5, color: "#566476", lineHeight: 1.5 }}>{data.qc_review.summary}</Typography>}
+            {data.qc_review.expected_next_update && <Typography sx={{ mt: 0.5, fontSize: 11.5, color: "#758091" }}>Next update expected {new Date(data.qc_review.expected_next_update).toLocaleString()}</Typography>}
+            {data.qc_review.assets.length > 0 && <Box sx={{ mt: 0.75, display: "flex", flexWrap: "wrap", gap: 0.75 }}>{data.qc_review.assets.map((asset) => <MuiButton key={asset.id} size="small" variant="text" sx={{ px: 0.5, minWidth: 0, fontSize: 11.5, textTransform: "none" }} onClick={() => void getWorkspaceQcEvidenceUrl(asset.storage_path).then((signedUrl) => window.open(signedUrl, "_blank", "noopener,noreferrer")).catch((cause) => onMessage(cause instanceof Error ? cause.message : "Could not open reviewed evidence."))}>{asset.original_name}</MuiButton>)}</Box>}
+          </Box>
+        )}
         <Box sx={{ mt: 2.5, display: "grid", gap: 0 }}>
           {stages.map((stage, index) => (
             <Box

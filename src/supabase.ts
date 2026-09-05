@@ -279,6 +279,8 @@ export type WorkspaceRfqProduction = {
   lifecycle: { state: string; sample_ready_at: string | null; sample_decision: "approved" | "declined" | null; sample_decided_at: string | null } | null;
   invoices: Partial<Record<"sample" | "bulk", { id: string; invoice_no: string; phase: "sample" | "bulk"; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null }>>;
   events: Array<{ id: string; event_type: string; phase: "sample" | "bulk" | null; actor_profile_id: string | null; actor_name: string | null; note: string | null; metadata: Record<string, unknown>; created_at: string }>;
+  production_update?: { id: string; phase: "sample" | "bulk"; stage: string; note: string; source: string; received_at: string; evidence_count: number; next_expected_at: string | null; exception_severity: string | null; mitigation: string | null; required_buyer_action: string | null; revision: number; published_at: string } | null;
+  qc_review?: { id: string; version: number; decision: string; summary: string | null; reviewed_at: string; expected_next_update: string | null; assets: Array<{ id: string; storage_path: string; original_name: string; content_type: string; byte_size: number; created_at: string }> } | null;
   /** legacy shape retained only so older workspace views tolerate historic responses */
   order?: { id: string; order_no: string; status: string; total: number; placed_at: string | null; production_stage: string | null } | null;
   invoice?: { id: string; invoice_no: string; status: string; effective_status: string; total_cents: number; balance_cents: number; due_date: string | null } | null;
@@ -646,6 +648,12 @@ export async function uploadWorkspaceAvatar(userId: string, file: File) {
   const { error } = await client().storage.from("uploads").upload(path, file, { contentType: file.type, upsert: false });
   rpcError(error);
   return client().storage.from("uploads").getPublicUrl(path).data.publicUrl;
+}
+export async function getWorkspaceQcEvidenceUrl(storagePath: string) {
+  const { data, error } = await client().storage.from("rfq-qc-evidence").createSignedUrl(storagePath, 300);
+  rpcError(error);
+  if (!data?.signedUrl) throw new Error("Could not create a private evidence link.");
+  return data.signedUrl;
 }
 export async function signInWithMagicLink(email: string, redirectTo: string) {
   const { error } = await client().functions.invoke("request-magic-link", {
@@ -1370,6 +1378,19 @@ export async function subscribeToRfqOpsMessages(
     },
   };
 }
+
+export async function subscribeToRfqActivity(caseId: string, onChange: () => void) {
+  const db = client();
+  await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
+  let hasSubscribed = false;
+  const channel = db.channel(`rfq:${caseId}:activity`, { config: { private: true } })
+    .on("broadcast", { event: "rfq_activity_changed" }, onChange)
+    .subscribe((status) => { if (status === "SUBSCRIBED") { if (hasSubscribed) onChange(); hasSubscribed = true; } });
+  const { data: { subscription: authSubscription } } = db.auth.onAuthStateChange((_event, session) => {
+    if (!localIntoolsAdmin && session?.access_token) void db.realtime.setAuth(session.access_token);
+  });
+  return { unsubscribe: () => { authSubscription.unsubscribe(); void db.removeChannel(channel); } };
+}
 export async function subscribeToRfqOpsPresence(conversationId: string, presence: RfqOpsPresence, onSync: (people: RfqOpsPresence[]) => void) {
   const db = client();
   await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
@@ -1804,6 +1825,14 @@ export type IntoolsOutreachSettings = {
   instruction: string;
   example: { subject: string | null; body: string | null };
 };
+export type HumanLoopFeatureFlag = "outreach_templates_enabled" | "atomic_quote_publication_enabled" | "production_updates_enabled" | "qc_evidence_upload_enabled" | "qc_ai_shadow_enabled" | "qc_buyer_visibility_enabled" | "rfq_activity_realtime_enabled";
+export type HumanLoopFeatureFlags = Record<HumanLoopFeatureFlag, boolean>;
+export async function getIntoolsHumanLoopFeatureFlags() {
+  return intoolsRpc<HumanLoopFeatureFlags>("intools_get_human_loop_feature_flags");
+}
+export async function setIntoolsHumanLoopFeatureFlag(key: HumanLoopFeatureFlag, enabled: boolean) {
+  return intoolsRpc<HumanLoopFeatureFlags>("intools_set_human_loop_feature_flag", { p_key: key, p_enabled: enabled });
+}
 export type IntoolsOutreachDraft = {
   id: string;
   rfq_case_id: string;
@@ -1871,6 +1900,140 @@ export async function updateIntoolsOrderProductionStage(orderId: string, stage: 
     p_stage: stage,
     p_note: note ?? null,
   });
+}
+export type IntoolsProductionUpdate = {
+  id: string;
+  rfq_case_id: string;
+  phase: "sample" | "bulk";
+  stage: string;
+  note: string;
+  source: string;
+  received_at: string;
+  evidence_references: string[];
+  next_expected_at: string | null;
+  exception_severity: "low" | "medium" | "high" | "critical" | null;
+  mitigation: string | null;
+  required_buyer_action: string | null;
+  status: "published" | "superseded";
+  revision: number;
+  published_by: string;
+  published_at: string;
+};
+export type IntoolsQcAsset = {
+  id: string;
+  original_name: string;
+  content_type: string;
+  byte_size: number;
+  processing_state: string;
+  buyer_visible: boolean;
+  created_at: string;
+};
+export type IntoolsQcInspection = {
+  id: string;
+  rfq_case_id: string;
+  order_id: string;
+  phase: "sample" | "bulk";
+  category: "apparel" | "fabric" | "trim" | "fashion_accessory" | "skincare" | "beauty";
+  substate: string;
+  revision: number;
+  current_analysis_run_id: string | null;
+  current_review_id: string | null;
+  updated_at: string;
+  checklist: { id: string; version: number; required_views: string[]; criteria: string[]; capture_instructions: string };
+  assets: IntoolsQcAsset[];
+  findings: Array<{ id: string; category: string; severity: string; summary: string; evidence: { frame_id?: string; timestamp_ms?: number | null }; checklist_reference: string | null }>;
+  review: { id: string; version: number; decision: string; rationale: string; buyer_visible_asset_ids: string[]; reviewed_at: string } | null;
+};
+export type IntoolsRfqOperations = {
+  case: IntoolsRfqCase;
+  matches: Array<IntoolsRfqSupplierMatch & { supplier: IntoolsSupplier; quote?: IntoolsRfqQuote }>;
+  production_updates: IntoolsProductionUpdate[];
+  features: { production_updates_enabled: boolean; qc_evidence_upload_enabled: boolean; qc_ai_shadow_enabled: boolean; qc_buyer_visibility_enabled: boolean };
+  qc_inspection: IntoolsQcInspection | null;
+  next_actions: { can_start_qc: boolean; can_ship: boolean };
+};
+export async function getIntoolsRfqOperations(caseId: string) {
+  return intoolsRpc<IntoolsRfqOperations>("intools_get_rfq_operations", { p_case_id: caseId });
+}
+export async function publishIntoolsRfqProductionUpdate(caseId: string, payload: {
+  phase: "sample" | "bulk"; stage: string; note: string; source: string; receivedAt?: string | null;
+  evidenceReferences?: string[]; nextExpectedAt?: string | null; exceptionSeverity?: string | null;
+  mitigation?: string | null; requiredBuyerAction?: string | null;
+}, expectedRevision: number) {
+  return intoolsRpc<IntoolsProductionUpdate>("intools_publish_rfq_production_update", { p_case_id: caseId, p_payload: {
+    phase: payload.phase, stage: payload.stage, note: payload.note, source: payload.source,
+    received_at: payload.receivedAt || new Date().toISOString(), evidence_references: payload.evidenceReferences || [],
+    next_expected_at: payload.nextExpectedAt || null, exception_severity: payload.exceptionSeverity || null,
+    mitigation: payload.mitigation || null, required_buyer_action: payload.requiredBuyerAction || null,
+  }, p_expected_revision: expectedRevision });
+}
+export async function beginIntoolsManualQcReview(caseId: string, category: IntoolsQcInspection["category"]) {
+  return intoolsRpc<IntoolsQcInspection>("intools_begin_manual_qc_review", { p_case_id: caseId, p_category: category });
+}
+export async function reserveIntoolsQcUpload(caseId: string, inspectionId: string, assetId: string, file: File) {
+  return intoolsRpc<{ asset_id: string; bucket: string; storage_path: string; expires_at: string }>("intools_reserve_qc_upload", { p_case_id: caseId, p_inspection_id: inspectionId, p_asset_id: assetId, p_filename: file.name, p_content_type: file.type, p_byte_size: file.size });
+}
+export async function finalizeIntoolsQcUpload(assetId: string, storagePath: string, sha256: string) {
+  return intoolsRpc<{ asset: IntoolsQcAsset; analysis_job_id: string | null }>("intools_finalize_qc_upload", { p_asset_id: assetId, p_storage_path: storagePath, p_sha256: sha256 });
+}
+async function validateQcFileInBrowser(file: File) {
+  if (file.type.startsWith("image/")) {
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap || bitmap.width < 1 || bitmap.height < 1) throw new Error("This image could not be decoded.");
+    bitmap.close();
+    return;
+  }
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const duration = await new Promise<number>((resolve, reject) => {
+      const video = document.createElement("video");
+      const timer = window.setTimeout(() => reject(new Error("The video metadata could not be read.")), 10000);
+      video.preload = "metadata";
+      video.onloadedmetadata = () => { clearTimeout(timer); resolve(video.duration); };
+      video.onerror = () => { clearTimeout(timer); reject(new Error("This video could not be decoded.")); };
+      video.src = objectUrl;
+    });
+    if (!Number.isFinite(duration) || duration <= 0 || duration > 180) throw new Error("QC videos must be three minutes or shorter.");
+  } finally { URL.revokeObjectURL(objectUrl); }
+}
+export async function uploadIntoolsQcEvidence(caseId: string, inspectionId: string, file: File, onProgress?: (percent: number) => void) {
+  const { Upload } = await import("tus-js-client");
+  const allowed = new Set(["image/jpeg","image/png","image/webp","video/mp4","video/quicktime","video/webm"]);
+  if (!allowed.has(file.type) || file.size < 1 || file.size > 250 * 1024 * 1024) throw new Error("Choose an allowed QC image or video up to 250 MB.");
+  await validateQcFileInBrowser(file);
+  const session = await getSession();
+  if (!session?.access_token || !url || !publishableKey) throw new Error("Please sign in again before uploading evidence.");
+  const resumeKey = `atelix:qc-upload:${caseId}:${inspectionId}:${file.name}:${file.size}:${file.lastModified}`;
+  const assetId = window.localStorage.getItem(resumeKey) || crypto.randomUUID();
+  window.localStorage.setItem(resumeKey, assetId);
+  const reservation = await reserveIntoolsQcUpload(caseId, inspectionId, assetId, file);
+  const storageUrl = new URL(url);
+  if (storageUrl.hostname.endsWith(".supabase.co")) storageUrl.hostname = storageUrl.hostname.replace(/\.supabase\.co$/, ".storage.supabase.co");
+  storageUrl.pathname = "/storage/v1/upload/resumable";
+  const upload = new Upload(file, {
+    endpoint: storageUrl.toString(),
+    headers: { Authorization: `Bearer ${session.access_token}`, apikey: publishableKey, "x-upsert": "false" },
+    metadata: { bucketName: reservation.bucket, objectName: reservation.storage_path, contentType: file.type, cacheControl: "3600" },
+    chunkSize: 6 * 1024 * 1024,
+    retryDelays: [0, 3000, 5000, 10000, 20000],
+    removeFingerprintOnSuccess: true,
+    onProgress: (uploaded, total) => onProgress?.(Math.round(uploaded / total * 100)),
+  });
+  const previous = await upload.findPreviousUploads();
+  if (previous.length > 0) upload.resumeFromPreviousUpload(previous[0]);
+  await new Promise<void>((resolve, reject) => {
+    upload.options.onSuccess = () => resolve();
+    upload.options.onError = (cause) => reject(new Error(`QC upload paused: ${cause.message}`));
+    upload.start();
+  });
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const finalized = await finalizeIntoolsQcUpload(assetId, reservation.storage_path, sha256);
+  window.localStorage.removeItem(resumeKey);
+  return finalized;
+}
+export async function reviewIntoolsQcInspection(inspectionId: string, analysisRunId: string | null, decision: "approved" | "rework_required" | "reinspection_required" | "insufficient_evidence", note: string, buyerVisibleAssetIds: string[], expectedRevision: number, findingDispositions: Array<{ finding_id: string; disposition: "accepted" | "dismissed" | "amended"; note?: string }>, buyerVisibleSummary: string, expectedNextUpdate: string | null) {
+  return intoolsRpc("intools_review_qc_inspection", { p_inspection_id: inspectionId, p_analysis_run_id: analysisRunId, p_decision: decision, p_note: note, p_buyer_visible_asset_ids: buyerVisibleAssetIds, p_expected_revision: expectedRevision, p_finding_dispositions: findingDispositions, p_buyer_visible_summary: buyerVisibleSummary.trim() || null, p_expected_next_update: expectedNextUpdate });
 }
 export async function createIntoolsRfqPhaseInvoice(caseId: string, phase: "sample" | "bulk", payload: { dueDate?: string | null; notes?: string | null; items: IntoolsInvoiceItemPayload[] }) {
   return intoolsRpc<IntoolsInvoiceDetail>("intools_create_rfq_phase_invoice", { p_case_id: caseId, p_phase: phase, p_payload: payload });
