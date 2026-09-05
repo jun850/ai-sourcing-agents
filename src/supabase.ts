@@ -1751,6 +1751,12 @@ export async function generateIntoolsRfqSupplierMatches(rfqCaseId: string, refre
     );
   return payload as IntoolsRfqSupplierMatch[];
 }
+export async function addIntoolsRfqSupplierMatch(rfqCaseId: string, factoryId: string) {
+  return intoolsRpc<IntoolsRfqSupplierMatch>("intools_add_rfq_supplier_match", {
+    p_case_id: rfqCaseId,
+    p_factory_id: factoryId,
+  });
+}
 export async function setIntoolsRfqSupplierMatchStatus(matchId: string, status: "suggested" | "selected" | "approved" | "rejected") {
   return intoolsRpc<IntoolsRfqSupplierMatch>("intools_set_rfq_supplier_match_status", {
     p_match_id: matchId,

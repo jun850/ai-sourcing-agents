@@ -11,6 +11,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material";
 import {
   approveRegistrationRequest,
+  addIntoolsRfqSupplierMatch,
   activateIntoolsRfqOutreachTemplate,
   archiveIntoolsAgentKnowledge,
   archiveIntoolsSupplier,
@@ -724,7 +725,7 @@ function SkeletonRows() {
   );
 }
 
-function Notice({ tone, children }: { tone: "danger" | "success"; children: ReactNode }) {
+function Notice({ tone, children }: { tone: "danger" | "success" | "info"; children: ReactNode }) {
   return (
     <div
       role={tone === "danger" ? "alert" : "status"}
@@ -757,6 +758,47 @@ function templatePreview(value: string) {
   };
   return Object.entries(sample).reduce((next, [token, replacement]) => next.split(token).join(replacement), value);
 }
+
+const HUMAN_LOOP_FLAG_ORDER: HumanLoopFeatureFlag[] = [
+  "outreach_templates_enabled",
+  "atomic_quote_publication_enabled",
+  "production_updates_enabled",
+  "qc_evidence_upload_enabled",
+  "qc_ai_shadow_enabled",
+  "qc_buyer_visibility_enabled",
+  "rfq_activity_realtime_enabled",
+];
+
+const HUMAN_LOOP_FLAG_META: Record<HumanLoopFeatureFlag, { title: string; description: string }> = {
+  outreach_templates_enabled: {
+    title: "Supplier outreach templates",
+    description: "Editable supplier drafts are available in Requests.",
+  },
+  atomic_quote_publication_enabled: {
+    title: "Reviewed quote publication",
+    description: "Ops can publish a quote after supplier evidence is recorded.",
+  },
+  production_updates_enabled: {
+    title: "Verified production updates",
+    description: "Ops can publish attributed production updates to the RFQ timeline.",
+  },
+  qc_evidence_upload_enabled: {
+    title: "QC evidence upload",
+    description: "Ops can upload private inspection evidence for human review.",
+  },
+  qc_ai_shadow_enabled: {
+    title: "AI QC shadow mode",
+    description: "AI can suggest findings while human review remains authoritative.",
+  },
+  qc_buyer_visibility_enabled: {
+    title: "Buyer QC visibility",
+    description: "Reviewed QC evidence can be selected for buyer visibility.",
+  },
+  rfq_activity_realtime_enabled: {
+    title: "RFQ activity realtime",
+    description: "Open operator drawers can refresh when RFQ activity changes.",
+  },
+};
 
 function MasterSettingsView({ onToast }: { onToast: (message: string) => void }) {
   const [settings, setSettings] = useState<IntoolsOutreachSettings | null>(null);
@@ -836,14 +878,43 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
       {!settings && !error && <SkeletonRows />}
       {settings && (
         <SurfacePanel>
-          {featureFlags && <div style={{ padding: 18, borderBottom: `1px solid ${C.line}` }}>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Controlled rollout</h2>
-            <p style={{ margin: "5px 0 12px", color: C.dim, fontSize: 12.5 }}>All authority remains in guarded Supabase operations. Enable dependent capabilities in order and keep AI QC in shadow mode until reviewed evidence is reliable.</p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {(Object.keys(featureFlags) as HumanLoopFeatureFlag[]).map((key) => <button key={key} disabled={busy} aria-pressed={featureFlags[key]} onClick={() => void toggleFeature(key)} style={btnStyle(featureFlags[key] ? "success" : "neutral", "sm")}>{label(key)} · {featureFlags[key] ? "On" : "Off"}</button>)}
+          {featureFlags && <div style={{ padding: "22px 20px 20px", borderBottom: `1px solid ${C.line}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, letterSpacing: "-0.01em" }}>Controlled rollout</h2>
+                <p style={{ margin: "6px 0 0", color: C.dim, fontSize: 12.5, lineHeight: 1.55, maxWidth: 680 }}>All authority remains in guarded Supabase operations. Enable dependent capabilities in order; AI QC stays advisory until reviewed evidence is reliable.</p>
+              </div>
+              <span style={{ ...statusPill("active"), whiteSpace: "nowrap" }}>{Object.values(featureFlags).filter(Boolean).length} of {HUMAN_LOOP_FLAG_ORDER.length} enabled</span>
+            </div>
+            <div style={{ marginTop: 18, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 1, overflow: "hidden", border: `1px solid ${C.border}`, borderRadius: 12, background: C.border }}>
+              {HUMAN_LOOP_FLAG_ORDER.map((key) => {
+                const enabled = featureFlags[key];
+                const meta = HUMAN_LOOP_FLAG_META[key];
+                return (
+                  <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 14, minHeight: 82, padding: "14px 15px", background: C.surface }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: C.text }}>{meta.title}</div>
+                      <div style={{ marginTop: 4, color: C.dim, fontSize: 11.5, lineHeight: 1.45 }}>{meta.description}</div>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-pressed={enabled}
+                      aria-label={`${meta.title}: ${enabled ? "On" : "Off"}. Toggle`}
+                      onClick={() => void toggleFeature(key)}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 7, flexShrink: 0, border: 0, borderRadius: 999, padding: "5px 9px 5px 6px", background: enabled ? "#e3f1e8" : "#eef1f4", color: enabled ? TONES.success.color : C.dim, fontFamily: "inherit", fontSize: 11.5, fontWeight: 800, cursor: busy ? "wait" : "pointer" }}
+                    >
+                      <span aria-hidden="true" style={{ position: "relative", display: "inline-flex", alignItems: "center", width: 28, height: 16, borderRadius: 999, background: enabled ? C.moss : "#b9c1ca", transition: "background 140ms ease" }}>
+                        <span style={{ position: "absolute", left: 3, width: 12, height: 12, borderRadius: "50%", background: C.surface, boxShadow: "0 1px 2px rgba(20,32,44,.18)", transform: `translateX(${enabled ? 10 : 0}px)`, transition: "transform 140ms ease" }} />
+                      </span>
+                      {enabled ? "On" : "Off"}
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>}
-          <div style={{ padding: 18, borderBottom: `1px solid ${C.line}` }}>
+          <div style={{ padding: "20px", borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Supplier outreach email</h2>
@@ -852,36 +923,47 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
               <span style={statusPill(settings.active_template ? "active" : "draft")}>{settings.active_template ? `Active v${settings.active_template.version}` : "No active version"}</span>
             </div>
           </div>
-          <div style={{ display: "grid", gap: 14, padding: 18 }} aria-busy={busy}>
-            <Field label="Subject template">
-              <input value={subject} maxLength={240} onChange={(event) => setSubject(event.target.value)} style={inputStyle} />
-            </Field>
-            <Field label="Body template">
-              <textarea value={body} maxLength={12000} rows={13} onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 250, resize: "vertical", padding: 12, lineHeight: 1.5 }} />
-            </Field>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.head }}>Supported placeholders</div>
-              <p style={{ margin: "5px 0 8px", color: C.dim, fontSize: 12.5, lineHeight: 1.5 }}>{settings.instruction}</p>
-              <code style={{ display: "block", whiteSpace: "normal", color: C.text, fontSize: 12, lineHeight: 1.8 }}>{settings.placeholders.join("  ")}</code>
-            </div>
-            <div aria-label="Non-production template preview" style={{ paddingTop: 4 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.head }}>Non-production preview</div>
-              <div style={{ marginTop: 7, padding: 12, borderRadius: 10, background: "#f6f8fa", color: C.text, fontSize: 12.5 }}>
-                <strong>{templatePreview(subject)}</strong>
-                <div style={{ marginTop: 9, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{templatePreview(body)}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.15fr) minmax(280px, .85fr)", gap: 22, padding: "20px" }} aria-busy={busy}>
+            <div style={{ display: "grid", alignContent: "start", gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Template editor</div>
+                <p style={{ margin: "5px 0 0", color: C.dim, fontSize: 12, lineHeight: 1.5 }}>Create a draft version, then activate it when Ops has reviewed the copy.</p>
+              </div>
+              <Field label="Subject template">
+                <input value={subject} maxLength={240} onChange={(event) => setSubject(event.target.value)} style={{ ...inputStyle, height: 40 }} />
+              </Field>
+              <Field label="Body template">
+                <textarea value={body} maxLength={12000} rows={13} onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 280, resize: "vertical", padding: 12, lineHeight: 1.55 }} />
+              </Field>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button disabled={busy} onClick={() => void saveVersion()} style={btnStyle("primary")}>Save as new version</button>
+                <button disabled={busy || !selected || selected.status === "active"} onClick={() => selected && void activate(selected.id)} style={btnStyle("success")}>Activate selected version</button>
+                <button disabled={busy || !restorable} onClick={() => restorable && void activate(restorable.id)} style={btnStyle("neutral")}>Restore last active version</button>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button disabled={busy} onClick={() => void saveVersion()} style={btnStyle("primary")}>Save as new version</button>
-              <button disabled={busy || !selected || selected.status === "active"} onClick={() => selected && void activate(selected.id)} style={btnStyle("success")}>Activate selected version</button>
-              <button disabled={busy || !restorable} onClick={() => restorable && void activate(restorable.id)} style={btnStyle("neutral")}>Restore last active version</button>
+            <div style={{ display: "grid", alignContent: "start", gap: 18 }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Supported placeholders</div>
+                <p style={{ margin: "6px 0 9px", color: C.dim, fontSize: 12, lineHeight: 1.55 }}>{settings.instruction}</p>
+                <code style={{ display: "block", padding: "10px 11px", borderRadius: 9, background: "#f6f8fa", color: C.text, fontSize: 11.5, lineHeight: 1.8, overflowWrap: "anywhere" }}>{settings.placeholders.join("  ")}</code>
+              </div>
+              <div aria-label="Non-production template preview">
+                <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Non-production preview</div>
+                <div style={{ marginTop: 7, padding: 13, borderRadius: 10, background: "#f6f8fa", color: C.text, fontSize: 12.5, minHeight: 150 }}>
+                  <strong>{templatePreview(subject)}</strong>
+                  <div style={{ marginTop: 9, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{templatePreview(body)}</div>
+                </div>
+              </div>
             </div>
           </div>
           <div style={{ borderTop: `1px solid ${C.line}` }}>
-            <div style={{ padding: "12px 18px", fontSize: 12, fontWeight: 800, color: C.head }}>Template audit history</div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline", padding: "14px 20px 10px" }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: C.head }}>Template audit history</div>
+              <div style={{ color: C.faint, fontSize: 11.5 }}>Immutable versions</div>
+            </div>
             <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
               {settings.versions.map((version) => (
-                <li key={version.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 18px", borderTop: `1px solid ${C.line}` }}>
+                <li key={version.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 20px", borderTop: `1px solid ${C.line}` }}>
                   <input type="radio" name="template-version" checked={selectedId === version.id} onChange={() => { setSelectedId(version.id); setSubject(version.subject_template); setBody(version.body_template); }} aria-label={`Select template version ${version.version}`} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>Version {version.version} · {shortDate(version.created_at)}</span>
                   <span style={statusPill(version.status)}>{label(version.status)}</span>
@@ -914,6 +996,15 @@ function Field({ label: fieldLabel, children }: { label: string; children: React
       {fieldLabel}
       {children}
     </label>
+  );
+}
+
+function ReadOnlyQuoteValue({ label: fieldLabel, value }: { label: string; value: string }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontSize: 11.5, fontWeight: 700, color: C.dim }}>{fieldLabel}</div>
+      <div style={{ marginTop: 3, fontSize: 13.5, color: C.text, overflowWrap: "anywhere" }}>{value || "—"}</div>
+    </div>
   );
 }
 
@@ -2398,6 +2489,8 @@ function RequestDrawerBody({
   onGenerateInvoice: (input: { rfqCaseId: string; buyerProfileId: string; description: string; amount: string; phase: "sample" }) => void;
 }) {
   const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [supplierDirectory, setSupplierDirectory] = useState<IntoolsSupplier[]>([]);
+  const [supplierDirectoryLoading, setSupplierDirectoryLoading] = useState(true);
   const [caseRecord, setCaseRecord] = useState<IntoolsRfqCase | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -2452,6 +2545,14 @@ function RequestDrawerBody({
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    let active = true;
+    void listIntoolsSuppliers()
+      .then((suppliers) => { if (active) setSupplierDirectory(suppliers); })
+      .catch(() => undefined)
+      .finally(() => { if (active) setSupplierDirectoryLoading(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     let active = true;
     let subscription: { unsubscribe: () => void } | null = null;
@@ -2509,6 +2610,9 @@ function RequestDrawerBody({
     await act(
       row.match.id,
       async () => {
+        if (!caseRecord || !["awaiting_supplier", "supplier_replied", "buyer_review"].includes(caseRecord.status)) {
+          throw new Error("This RFQ is still a draft. Submit it before publishing a reviewed quote.");
+        }
         if (totalCents <= 0) throw new Error("Enter a positive total price before publishing this quote.");
         await publishIntoolsRfqQuoteReviewed(row.quote?.id ?? null, {
           rfqCaseId: rfq.id,
@@ -2522,6 +2626,14 @@ function RequestDrawerBody({
         }, row.quote?.revision ?? 0);
       },
       "Quote published to the buyer’s Quotes tab.",
+    );
+  }
+
+  async function addSupplier(supplier: IntoolsSupplier) {
+    await act(
+      `directory:${supplier.id}`,
+      () => addIntoolsRfqSupplierMatch(rfq.id, supplier.id),
+      `${supplier.name} added to this RFQ. Review and approve the match before outreach.`,
     );
   }
 
@@ -2600,8 +2712,17 @@ function RequestDrawerBody({
     const q = supplierQuery.trim().toLowerCase();
     if (!q) return true;
     const supplier = row.supplier;
-    return `${supplier?.name || ""} ${supplier?.region || ""} ${supplier?.type || ""}`.toLowerCase().includes(q);
+    return `${supplier?.name || ""} ${supplier?.region || ""} ${supplier?.loc || ""} ${supplier?.type || ""} ${supplier?.area || ""} ${supplier?.port || ""} ${(supplier?.tags || []).join(" ")}`.toLowerCase().includes(q);
   });
+  const query = supplierQuery.trim().toLowerCase();
+  const matchedFactoryIds = new Set(matches.map((row) => row.match.factory_id));
+  const directoryResults = query
+    ? supplierDirectory.filter((supplier) => {
+      if (matchedFactoryIds.has(supplier.id)) return false;
+      return `${supplier.name} ${supplier.region || ""} ${supplier.loc || ""} ${supplier.type || ""} ${supplier.area || ""} ${supplier.port || ""} ${(supplier.tags || []).join(" ")}`.toLowerCase().includes(query);
+    }).slice(0, 50)
+    : [];
+  const quotePublicationEligible = ["awaiting_supplier", "supplier_replied", "buyer_review"].includes(caseRecord?.status || "");
 
   return (
     <DrawerShell
@@ -2730,14 +2851,15 @@ function RequestDrawerBody({
         type="text"
         value={supplierQuery}
         onChange={(event) => setSupplierQuery(event.target.value)}
-        placeholder="Search matches by name, region or type"
-        aria-label="Search supplier matches"
+        placeholder="Search all suppliers by name, region, city or type"
+        aria-label="Search all suppliers by name, region, city or type"
         style={{ ...inputStyle, width: "100%", height: 32, fontSize: 12.5, marginBottom: 8 }}
       />
       {loading && <SkeletonRows />}
-      {!loading && filtered.length === 0 && (
-        <p style={{ margin: "6px 0 10px", fontSize: 12.5, color: C.faint }}>No supplier matches for this request yet.</p>
+      {!loading && filtered.length === 0 && !supplierDirectoryLoading && directoryResults.length === 0 && (
+        <p style={{ margin: "6px 0 10px", fontSize: 12.5, color: C.faint }}>{query ? "No suppliers found in the directory." : "No supplier matches for this request yet."}</p>
       )}
+      {!loading && query && supplierDirectoryLoading && <p style={{ margin: "6px 0 10px", fontSize: 12.5, color: C.faint }}>Searching the supplier directory…</p>}
       {!loading &&
         filtered.map((row) => {
           const status = row.match.status;
@@ -2795,37 +2917,50 @@ function RequestDrawerBody({
                       Prepare supplier email
                     </button>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
-                    <Field label="Unit price (USD)">
-                      <input disabled={quoteLocked} value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
-                    </Field>
-                    <Field label="MOQ">
-                      <input disabled={quoteLocked} value={draft.moq} onChange={(event) => setDraft(row, { moq: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
-                    </Field>
-                    <Field label="Lead time (days)">
-                      <input disabled={quoteLocked} value={draft.leadTime} onChange={(event) => setDraft(row, { leadTime: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
-                    </Field>
-                    <Field label="Total price (USD)">
-                      <input disabled={quoteLocked} value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
-                    </Field>
-                  </div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9, fontSize: 12, color: "#3b4453", cursor: "pointer" }}>
-                    <input
-                      type="checkbox"
-                      disabled={quoteLocked}
-                      checked={draft.recommended}
-                      onChange={(event) => setDraft(row, { recommended: event.target.checked })}
-                      style={{ width: 15, height: 15, accentColor: C.moss, cursor: "pointer" }}
-                    />
-                    Mark as recommended
-                  </label>
-                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                    <button disabled={busy || quoteLocked} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
-                      Publish reviewed quote
-                    </button>
-                    {row.quote?.status === "published" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Visible to buyer</span>}
-                    {row.quote?.status === "selected" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected by buyer · sampling invoice ready</span>}
-                  </div>
+                  {quoteLocked ? (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: "12px 18px" }}>
+                        <ReadOnlyQuoteValue label="Unit price (USD)" value={draft.unitPrice} />
+                        <ReadOnlyQuoteValue label="MOQ" value={draft.moq} />
+                        <ReadOnlyQuoteValue label="Lead time (days)" value={draft.leadTime} />
+                        <ReadOnlyQuoteValue label="Total price (USD)" value={draft.total} />
+                      </div>
+                      <div style={{ marginTop: 12, fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>
+                        {row.quote?.status === "selected" ? "Selected by buyer · sampling invoice ready" : "Published to buyer · quote terms locked"}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                        <Field label="Unit price (USD)">
+                          <input value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                        </Field>
+                        <Field label="MOQ">
+                          <input value={draft.moq} onChange={(event) => setDraft(row, { moq: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                        </Field>
+                        <Field label="Lead time (days)">
+                          <input value={draft.leadTime} onChange={(event) => setDraft(row, { leadTime: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                        </Field>
+                        <Field label="Total price (USD)">
+                          <input value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
+                        </Field>
+                      </div>
+                      <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9, fontSize: 12, color: "#3b4453", cursor: "pointer" }}>
+                        <input
+                          type="checkbox"
+                          checked={draft.recommended}
+                          onChange={(event) => setDraft(row, { recommended: event.target.checked })}
+                          style={{ width: 15, height: 15, accentColor: C.moss, cursor: "pointer" }}
+                        />
+                        Mark as recommended
+                      </label>
+                      <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                        <button disabled={busy || !quotePublicationEligible} title={quotePublicationEligible ? undefined : "Submit this RFQ before publishing reviewed supplier quotes."} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
+                          {quotePublicationEligible ? "Publish reviewed quote" : "Submit RFQ to publish"}
+                        </button>
+                      </div>
+                    </>
+                  )}
                   {status === "selected" && (
                     <div style={{ marginTop: 8, fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected for invoice</div>
                   )}
@@ -2834,6 +2969,30 @@ function RequestDrawerBody({
             </div>
           );
         })}
+      {!loading && directoryResults.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ marginBottom: 6, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".03em", color: C.faint }}>All supplier records</div>
+          <div style={{ marginBottom: 8, fontSize: 12, color: C.dim }}>Search results outside the recommendations. Add one to review it for this RFQ.</div>
+          {directoryResults.map((supplier) => {
+            const eligible = supplier.verify_state === "verified" && supplier.broker_status === "approved" && !supplier.archived_at;
+            const supplierBusy = busyIds.has(`directory:${supplier.id}`);
+            return (
+              <div key={supplier.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: "1px solid #f0f2f5" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, overflowWrap: "anywhere" }}>{supplier.name}</div>
+                  <div style={{ fontSize: 11.5, color: C.dim }}>{supplier.region || supplier.loc || "Region not recorded"} · {label(supplier.type || "supplier")}</div>
+                </div>
+                <button disabled={!eligible || supplierBusy} title={eligible ? undefined : "Only verified, approved, and non-archived suppliers can be added."} onClick={() => void addSupplier(supplier)} style={btnStyle(eligible ? "neutral" : "neutral", "sm")}>
+                  {supplierBusy ? "Adding…" : eligible ? "Add to RFQ" : "Not eligible"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!loading && !quotePublicationEligible && (
+        <Notice tone="info">This RFQ is still {label(caseRecord?.status || "draft")}. Submit it before publishing reviewed supplier quotes; adding or approving supplier matches remains available.</Notice>
+      )}
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="success">{notice}</Notice>}
       {outreachDraft && <OutreachDraftModal initial={outreachDraft} onClose={() => setOutreachDraft(null)} onChanged={() => { void load(false); onChanged(); }} />}

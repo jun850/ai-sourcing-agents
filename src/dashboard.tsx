@@ -2364,6 +2364,7 @@ function RfqDocumentPanel({
   onSubmit,
   onMessage,
   onQuoteSelected,
+  isDraft,
   agentStatus,
   changedFields,
   undoToken,
@@ -2393,6 +2394,7 @@ function RfqDocumentPanel({
   onSubmit: () => void;
   onMessage: (message: string) => void;
   onQuoteSelected: () => void;
+  isDraft: boolean;
   agentStatus: AgentStatus | null;
   changedFields: Array<keyof RfqFields>;
   undoToken?: string | null;
@@ -2402,7 +2404,10 @@ function RfqDocumentPanel({
   justSubmitted?: boolean;
 }) {
   const editing = phase === "editing";
-  const canEditRfq = !editing && phase !== "submitted";
+  // The persisted server status is authoritative. A draft must remain
+  // editable even if a stale route phase was restored during navigation.
+  const canEditRfq = isDraft && !editing && phase !== "submitted";
+  const canSubmitRfq = isDraft && phase !== "submitted";
   const rail = layout === "rail";
   return (
     <Box
@@ -2616,7 +2621,7 @@ function RfqDocumentPanel({
                 </MuiButton>
               </Stack>
             ) : (
-              phase !== "submitted" && (
+              canSubmitRfq && (
                 <Stack
                   direction="row"
                   justifyContent="flex-end"
@@ -3385,10 +3390,13 @@ function RfqWorkspace({
   onMessage: (message: string) => void;
   onAgentDraftPatched: (fields: RfqFields, revision: number, intake?: RfqIntake | null) => void;
 }) {
-  const persistedPhase = phaseForPersistedStatus(status);
+  const isDraft = status === "draft";
+  const persistedPhase = isDraft ? "review" : phaseForPersistedStatus(status);
   const restoredSubmitted =
-    initialPhase === undefined && persistedPhase === "submitted";
-  const [phase, setPhase] = useState<RfqPhase>(initialPhase ?? persistedPhase);
+    initialPhase === undefined && !isDraft;
+  const [phase, setPhase] = useState<RfqPhase>(
+    isDraft && initialPhase === "drafting" ? "drafting" : persistedPhase,
+  );
   const [fields, setFields] = useState<RfqFields>(initialFields);
   const [draft, setDraft] = useState<RfqFields>(initialFields);
   const [intake, setIntake] = useState<RfqIntake>(() => initialIntake ?? classifyRfqIntake(brief));
@@ -3756,8 +3764,7 @@ function RfqWorkspace({
     setTab("Timeline");
   }
 
-  const draftingPhase =
-    phase === "drafting" || phase === "review" || phase === "editing";
+  const draftingPhase = isDraft && phase !== "submitted";
   const preparingDocument = phase === "drafting";
   const justSubmitted = phase === "submitted" && !restoredSubmitted;
   const baseStatus =
@@ -3794,6 +3801,7 @@ function RfqWorkspace({
       onSubmit={submitRfq}
       onMessage={onMessage}
       onQuoteSelected={() => setStatusOverride("quote_selected")}
+      isDraft={isDraft}
       agentStatus={agentStatus}
       changedFields={changedFields}
       undoToken={undoToken}
