@@ -3923,7 +3923,7 @@ function RfqWorkspace({
   );
 }
 
-type DesignStage = "drafting" | "review" | "quoted" | "production" | "delivered";
+type DesignStage = "drafting" | "review" | "quoted" | "production" | "delivered" | "archived";
 const DESIGN_STAGE_META: Record<
   DesignStage,
   { label: string; dot: string; bg: string; ink: string }
@@ -3933,6 +3933,7 @@ const DESIGN_STAGE_META: Record<
   quoted: { label: "Quoted", dot: "#88b863", bg: "#eff6e9", ink: "#4a7a3e" },
   production: { label: "In production", dot: "#4b7657", bg: "#eef4ee", ink: "#3d6548" },
   delivered: { label: "Delivered", dot: "#5f8767", bg: "#edf5ef", ink: "#4e7756" },
+  archived: { label: "Archived", dot: "#8b929c", bg: "#f0f1f3", ink: "#596779" },
 };
 function designStageFor(status: string): DesignStage {
   switch (status) {
@@ -3949,6 +3950,8 @@ function designStageFor(status: string): DesignStage {
       return "production";
     case "closed":
       return "delivered";
+    case "archived":
+      return "archived";
     default:
       return "drafting";
   }
@@ -3960,6 +3963,7 @@ const DESIGN_STAGE_TABS = [
   "Quoted",
   "In production",
   "Delivered",
+  "Archived",
 ] as const;
 type DesignStageTab = (typeof DESIGN_STAGE_TABS)[number];
 
