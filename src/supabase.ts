@@ -1639,6 +1639,7 @@ export type IntoolsRfqCase = {
   quote_count: number;
   lifecycle_state: string | null;
   order: { id: string; order_no: string; status: string; production_stage: string | null } | null;
+  outreach_enabled?: boolean;
   submitted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -1667,6 +1668,10 @@ export type IntoolsRfqQuote = {
   factory_id: string;
   factory_name: string;
   factory_region: string | null;
+  revision?: number;
+  supplier_response_event_id?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
 };
 export type IntoolsRfqQuotePayload = {
   rfqCaseId: string;
@@ -1758,6 +1763,91 @@ export async function setIntoolsRfqQuoteTotal(quoteId: string, quoteTotalCents: 
 }
 export async function publishIntoolsRfqQuote(quoteId: string) {
   return intoolsRpc<IntoolsRfqQuote>("intools_publish_rfq_quote", { p_quote_id: quoteId });
+}
+export async function publishIntoolsRfqQuoteReviewed(quoteId: string | null, payload: IntoolsRfqQuotePayload & { quoteTotalCents: number }, expectedRevision = 0) {
+  return intoolsRpc<IntoolsRfqQuote>("intools_publish_rfq_quote_reviewed", {
+    p_quote_id: quoteId,
+    p_payload: {
+      rfq_case_id: payload.rfqCaseId,
+      factory_id: payload.factoryId,
+      unit_price_cents: payload.unitPriceCents,
+      quote_total_cents: payload.quoteTotalCents,
+      currency: "usd",
+      moq: payload.moq,
+      lead_time_days: payload.leadTimeDays,
+      certifications: payload.certifications,
+      certification_note: payload.certificationNote ?? null,
+      recommended: payload.recommended ?? false,
+      notes: payload.notes ?? null,
+    },
+    p_expected_revision: expectedRevision,
+  });
+}
+
+export type IntoolsOutreachTemplateVersion = {
+  id: string;
+  locale: "en";
+  version: number;
+  subject_template: string;
+  body_template: string;
+  status: "draft" | "active" | "retired";
+  created_by: string | null;
+  activated_by: string | null;
+  created_at: string;
+  activated_at: string | null;
+};
+export type IntoolsOutreachSettings = {
+  capability_enabled: boolean;
+  active_template: IntoolsOutreachTemplateVersion | null;
+  versions: IntoolsOutreachTemplateVersion[];
+  placeholders: string[];
+  instruction: string;
+  example: { subject: string | null; body: string | null };
+};
+export type IntoolsOutreachDraft = {
+  id: string;
+  rfq_case_id: string;
+  match_id: string;
+  template_version_id: string;
+  template_version: number;
+  subject: string;
+  body: string;
+  resolved_fields: Record<string, string>;
+  status: "draft" | "copied" | "contacted" | "superseded";
+  revision: number;
+  created_at: string;
+  updated_at: string;
+  last_editor: string;
+  case_no: string;
+  supplier_name: string;
+  events: Array<{ id: string; event_type: string; note: string | null; metadata: Record<string, unknown>; created_at: string }>;
+};
+export async function getIntoolsRfqOutreachSettings() {
+  return intoolsRpc<IntoolsOutreachSettings>("intools_get_rfq_outreach_settings");
+}
+export async function saveIntoolsRfqOutreachTemplate(subject: string, body: string, expectedVersion: number) {
+  return intoolsRpc<IntoolsOutreachTemplateVersion>("intools_save_rfq_outreach_template", { p_subject: subject, p_body: body, p_expected_version: expectedVersion });
+}
+export async function activateIntoolsRfqOutreachTemplate(templateVersionId: string) {
+  return intoolsRpc<IntoolsOutreachTemplateVersion>("intools_activate_rfq_outreach_template", { p_template_version_id: templateVersionId });
+}
+export async function prepareIntoolsRfqOutreachDraft(caseId: string, matchId: string) {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_prepare_rfq_outreach_draft", { p_case_id: caseId, p_match_id: matchId });
+}
+export async function updateIntoolsRfqOutreachDraft(draftId: string, subject: string, body: string, expectedRevision: number) {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_update_rfq_outreach_draft", { p_draft_id: draftId, p_subject: subject, p_body: body, p_expected_revision: expectedRevision });
+}
+export async function resetIntoolsRfqOutreachDraft(draftId: string, expectedRevision: number) {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_reset_rfq_outreach_draft", { p_draft_id: draftId, p_expected_revision: expectedRevision });
+}
+export async function recordIntoolsRfqOutreachCopy(draftId: string, part: "subject" | "body" | "all") {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_record_rfq_outreach_copy", { p_draft_id: draftId, p_part: part });
+}
+export async function markIntoolsRfqSupplierContacted(draftId: string, note?: string | null) {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_mark_rfq_supplier_contacted", { p_draft_id: draftId, p_note: note?.trim() || null });
+}
+export async function recordIntoolsRfqSupplierResponse(draftId: string, note: string, evidenceReference: string) {
+  return intoolsRpc<{ event_id: string; draft: IntoolsOutreachDraft }>("intools_record_rfq_supplier_response", { p_draft_id: draftId, p_note: note.trim() || null, p_evidence_reference: evidenceReference.trim() });
 }
 export async function declineIntoolsRfqQuote(quoteId: string) {
   return intoolsRpc<IntoolsRfqQuote>("intools_decline_rfq_quote", { p_quote_id: quoteId });

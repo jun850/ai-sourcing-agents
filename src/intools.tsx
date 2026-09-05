@@ -11,6 +11,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material";
 import {
   approveRegistrationRequest,
+  activateIntoolsRfqOutreachTemplate,
   archiveIntoolsAgentKnowledge,
   archiveIntoolsSupplier,
   assertIntoolsAdmin,
@@ -19,6 +20,7 @@ import {
   createIntoolsInvoice,
   declineRegistrationRequest,
   generateIntoolsRfqSupplierMatches,
+  getIntoolsRfqOutreachSettings,
   getIntoolsBuyerUnreadCount,
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
@@ -36,23 +38,28 @@ import {
   listIntoolsSuppliers,
   loginLocalIntools,
   promoteIntoolsSupplierImportRows,
+  prepareIntoolsRfqOutreachDraft,
   publishIntoolsAgentKnowledge,
-  publishIntoolsRfqQuote,
+  publishIntoolsRfqQuoteReviewed,
   publishIntoolsRfqSample,
   recordIntoolsManualPayment,
+  recordIntoolsRfqOutreachCopy,
+  recordIntoolsRfqSupplierResponse,
+  resetIntoolsRfqOutreachDraft,
   runIntoolsSupplierImportDryRun,
   saveIntoolsSupplier,
+  saveIntoolsRfqOutreachTemplate,
   sendIntoolsInvoice,
-  setIntoolsRfqQuoteTotal,
   setIntoolsRfqSupplierMatchStatus,
   setIntoolsSupplierBrokerStatus,
   setIntoolsSupplierBrokerStatusBulk,
+  markIntoolsRfqSupplierContacted,
   updateIntoolsInvoice,
   updateIntoolsOrderProductionStage,
   updateIntoolsOrderStatus,
   updateIntoolsRfqStatus,
+  updateIntoolsRfqOutreachDraft,
   uploadIntoolsAgentKnowledge,
-  upsertIntoolsRfqQuote,
   type IntoolsAgentKnowledgeDocument,
   type IntoolsInvoice,
   type IntoolsInvoiceDetail,
@@ -60,6 +67,8 @@ import {
   type IntoolsOrderDetail,
   type IntoolsRegistrationRequest,
   type IntoolsRfqCase,
+  type IntoolsOutreachDraft,
+  type IntoolsOutreachSettings,
   type IntoolsRfqQuote,
   type IntoolsRfqSupplierMatch,
   type IntoolsSupplier,
@@ -353,9 +362,10 @@ type Section =
   | "suppliers"
   | "knowledge"
   | "messages"
-  | "audit";
+  | "audit"
+  | "settings";
 
-type GenericSection = Exclude<Section, "analytics" | "messages">;
+type GenericSection = Exclude<Section, "analytics" | "messages" | "settings">;
 
 const NAV_ORDER: Section[] = [
   "analytics",
@@ -367,6 +377,7 @@ const NAV_ORDER: Section[] = [
   "knowledge",
   "messages",
   "audit",
+  "settings",
 ];
 
 type BulkAction = {
@@ -529,6 +540,7 @@ const SECTION_LABEL: Record<Section, string> = {
   knowledge: "Knowledge",
   messages: "Messages",
   audit: "Audit history",
+  settings: "Master settings",
 };
 
 type Row = {
@@ -718,6 +730,139 @@ function Notice({ tone, children }: { tone: "danger" | "success"; children: Reac
   );
 }
 
+function templatePreview(value: string) {
+  const sample: Record<string, string> = {
+    "[.case_no]": "ATL-RFQ-SAMPLE",
+    "[.product]": "Non-production sample product",
+    "[.quantity]": "Not provided by buyer",
+    "[.material]": "Not provided by buyer",
+    "[.certifications]": "Not provided by buyer",
+    "[.colors]": "Not provided by buyer",
+    "[.sizes]": "Not provided by buyer",
+    "[.budget]": "Non-production sample budget",
+    "[.timeline]": "Not provided by buyer",
+    "[.supplier_name]": "Non-production sample supplier",
+  };
+  return Object.entries(sample).reduce((next, [token, replacement]) => next.split(token).join(replacement), value);
+}
+
+function MasterSettingsView({ onToast }: { onToast: (message: string) => void }) {
+  const [settings, setSettings] = useState<IntoolsOutreachSettings | null>(null);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async (preferredId?: string) => {
+    setError("");
+    try {
+      const next = await getIntoolsRfqOutreachSettings();
+      setSettings(next);
+      const selected = next.versions.find((item) => item.id === preferredId)
+        || next.active_template
+        || next.versions[0];
+      if (selected) {
+        setSelectedId(selected.id);
+        setSubject(selected.subject_template);
+        setBody(selected.body_template);
+      }
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not load Master settings."));
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  async function saveVersion() {
+    if (!settings) return;
+    setBusy(true);
+    setError("");
+    try {
+      const version = await saveIntoolsRfqOutreachTemplate(subject, body, Math.max(0, ...settings.versions.map((item) => item.version)));
+      await load(version.id);
+      onToast(`Supplier outreach template version ${version.version} saved as draft.`);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not save this template version."));
+    } finally { setBusy(false); }
+  }
+
+  async function activate(templateId: string) {
+    setBusy(true);
+    setError("");
+    try {
+      const version = await activateIntoolsRfqOutreachTemplate(templateId);
+      await load(version.id);
+      onToast(`Supplier outreach template version ${version.version} activated.`);
+    } catch (cause) {
+      setError(errorMessage(cause, "Could not activate this template version."));
+    } finally { setBusy(false); }
+  }
+
+  const selected = settings?.versions.find((item) => item.id === selectedId) || null;
+  const restorable = settings?.versions.find((item) => item.status === "retired") || null;
+  return (
+    <section aria-labelledby="master-settings-title">
+      <div style={{ marginBottom: 18 }}>
+        <h1 id="master-settings-title" style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: "-0.02em" }}>Master settings</h1>
+        <p style={{ margin: "6px 0 0", color: C.dim, fontSize: 14, maxWidth: 620 }}>Versioned operational defaults. Activated templates are immutable and every change remains attributable.</p>
+      </div>
+      {!settings && !error && <SkeletonRows />}
+      {settings && (
+        <SurfacePanel>
+          <div style={{ padding: 18, borderBottom: `1px solid ${C.line}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>Supplier outreach email</h2>
+                <p style={{ margin: "5px 0 0", color: C.dim, fontSize: 12.5 }}>English · {settings.capability_enabled ? "available in Requests" : "rollout disabled"}</p>
+              </div>
+              <span style={statusPill(settings.active_template ? "active" : "draft")}>{settings.active_template ? `Active v${settings.active_template.version}` : "No active version"}</span>
+            </div>
+          </div>
+          <div style={{ display: "grid", gap: 14, padding: 18 }} aria-busy={busy}>
+            <Field label="Subject template">
+              <input value={subject} maxLength={240} onChange={(event) => setSubject(event.target.value)} style={inputStyle} />
+            </Field>
+            <Field label="Body template">
+              <textarea value={body} maxLength={12000} rows={13} onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 250, resize: "vertical", padding: 12, lineHeight: 1.5 }} />
+            </Field>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.head }}>Supported placeholders</div>
+              <p style={{ margin: "5px 0 8px", color: C.dim, fontSize: 12.5, lineHeight: 1.5 }}>{settings.instruction}</p>
+              <code style={{ display: "block", whiteSpace: "normal", color: C.text, fontSize: 12, lineHeight: 1.8 }}>{settings.placeholders.join("  ")}</code>
+            </div>
+            <div aria-label="Non-production template preview" style={{ paddingTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: C.head }}>Non-production preview</div>
+              <div style={{ marginTop: 7, padding: 12, borderRadius: 10, background: "#f6f8fa", color: C.text, fontSize: 12.5 }}>
+                <strong>{templatePreview(subject)}</strong>
+                <div style={{ marginTop: 9, whiteSpace: "pre-wrap", lineHeight: 1.55 }}>{templatePreview(body)}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button disabled={busy} onClick={() => void saveVersion()} style={btnStyle("primary")}>Save as new version</button>
+              <button disabled={busy || !selected || selected.status === "active"} onClick={() => selected && void activate(selected.id)} style={btnStyle("success")}>Activate selected version</button>
+              <button disabled={busy || !restorable} onClick={() => restorable && void activate(restorable.id)} style={btnStyle("neutral")}>Restore last active version</button>
+            </div>
+          </div>
+          <div style={{ borderTop: `1px solid ${C.line}` }}>
+            <div style={{ padding: "12px 18px", fontSize: 12, fontWeight: 800, color: C.head }}>Template audit history</div>
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {settings.versions.map((version) => (
+                <li key={version.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 18px", borderTop: `1px solid ${C.line}` }}>
+                  <input type="radio" name="template-version" checked={selectedId === version.id} onChange={() => { setSelectedId(version.id); setSubject(version.subject_template); setBody(version.body_template); }} aria-label={`Select template version ${version.version}`} />
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5 }}>Version {version.version} · {shortDate(version.created_at)}</span>
+                  <span style={statusPill(version.status)}>{label(version.status)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </SurfacePanel>
+      )}
+      {error && <Notice tone="danger">{error}</Notice>}
+    </section>
+  );
+}
+
 const inputStyle: CSSProperties = {
   height: 36,
   padding: "0 10px",
@@ -790,6 +935,12 @@ function NavGlyph({ section }: { section: Section }) {
       <>
         <circle cx="12" cy="12" r="8" />
         <path d="M12 8v4l3 2" />
+      </>
+    ),
+    settings: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.6v-.09A1.7 1.7 0 0 0 8.55 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.2 15a1.7 1.7 0 0 0-.6-1A1.7 1.7 0 0 0 2.5 13.6H2V9.6h.5A1.7 1.7 0 0 0 4.2 8a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 8.55 4.6a1.7 1.7 0 0 0 1-.6A1.7 1.7 0 0 0 9.95 3H14v.09A1.7 1.7 0 0 0 15.05 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.13.37.35.7.64.95.3.25.67.39 1.06.4H21v4h-.09a1.7 1.7 0 0 0-1.51.65Z" />
       </>
     ),
   };
@@ -2138,6 +2289,70 @@ type MatchRow = {
 };
 type QuoteDraft = { unitPrice: string; moq: string; leadTime: string; total: string; recommended: boolean };
 
+function OutreachDraftModal({ initial, onClose, onChanged }: { initial: IntoolsOutreachDraft; onClose: () => void; onChanged: () => void }) {
+  const [draft, setDraft] = useState(initial);
+  const [subject, setSubject] = useState(initial.subject);
+  const [body, setBody] = useState(initial.body);
+  const [contactNote, setContactNote] = useState("");
+  const [responseNote, setResponseNote] = useState("");
+  const [evidenceReference, setEvidenceReference] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const dirty = subject !== draft.subject || body !== draft.body;
+
+  async function persist() {
+    if (!dirty) return draft;
+    const next = await updateIntoolsRfqOutreachDraft(draft.id, subject, body, draft.revision);
+    setDraft(next); setSubject(next.subject); setBody(next.body);
+    return next;
+  }
+  async function run(action: () => Promise<void>, fallback: string) {
+    setBusy(true); setError(""); setNotice("");
+    try { await action(); } catch (cause) { setError(errorMessage(cause, fallback)); } finally { setBusy(false); }
+  }
+  async function copy(part: "subject" | "body" | "all") {
+    await run(async () => {
+      const saved = await persist();
+      const value = part === "subject" ? saved.subject : part === "body" ? saved.body : `${saved.subject}\n\n${saved.body}`;
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable. The draft remains selectable below.");
+      await navigator.clipboard.writeText(value);
+      const next = await recordIntoolsRfqOutreachCopy(saved.id, part);
+      setDraft(next);
+      setNotice(part === "all" ? "Subject and body copied. This does not mark the supplier contacted." : `${label(part)} copied. This does not mark the supplier contacted.`);
+    }, "Could not copy this draft. You can still select the text manually.");
+  }
+
+  return (
+    <ModalShell title="Prepare supplier email" hint={`${draft.supplier_name} · ${draft.case_no}`} onClose={onClose} footer={<>
+      <button disabled={busy} onClick={onClose} style={btnStyle("neutral")}>Close</button>
+      {draft.status !== "contacted" && <button disabled={busy || !dirty} onClick={() => void run(async () => { const next = await persist(); setNotice(`Draft revision ${next.revision} saved.`); }, "Could not save this draft.")} style={btnStyle("primary")}>Save changes</button>}
+      {draft.status !== "contacted" && <button disabled={busy} onClick={() => void run(async () => { const saved = await persist(); const next = await markIntoolsRfqSupplierContacted(saved.id, contactNote); setDraft(next); setNotice("Supplier marked contacted. Clipboard copying alone never performs this action."); onChanged(); }, "Could not mark this supplier contacted.")} style={btnStyle("success")}>Mark supplier as contacted</button>}
+    </>}>
+      <div style={{ display: "grid", gap: 12 }} aria-busy={busy}>
+        <Field label="Email subject"><input disabled={draft.status === "contacted"} value={subject} maxLength={240} onChange={(event) => setSubject(event.target.value)} style={inputStyle} /></Field>
+        <Field label="Email body"><textarea disabled={draft.status === "contacted"} value={body} maxLength={12000} rows={12} onChange={(event) => setBody(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 230, resize: "vertical", padding: 12, lineHeight: 1.5 }} /></Field>
+        <p style={{ margin: 0, color: C.dim, fontSize: 12, lineHeight: 1.5 }}>Use placeholders such as <code>[.product]</code> and <code>[.budget]</code>. Values are inserted from the submitted RFQ and approved supplier record. Missing RFQ values appear as <code>Not provided by buyer</code>.</p>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button disabled={busy} onClick={() => void copy("subject")} style={btnStyle("neutral", "sm")}>Copy subject</button>
+          <button disabled={busy} onClick={() => void copy("body")} style={btnStyle("neutral", "sm")}>Copy body</button>
+          <button disabled={busy} onClick={() => void copy("all")} style={btnStyle("neutral", "sm")}>Copy all</button>
+          {draft.status !== "contacted" && <button disabled={busy} onClick={() => void run(async () => { const next = await resetIntoolsRfqOutreachDraft(draft.id, draft.revision); setDraft(next); setSubject(next.subject); setBody(next.body); setNotice(`Reset from active template version ${next.template_version}.`); }, "Could not reset from the active template.")} style={btnStyle("neutral", "sm")}>Reset from latest master template</button>}
+        </div>
+        {draft.status !== "contacted" && <Field label="External contact note (optional)"><input value={contactNote} maxLength={2000} onChange={(event) => setContactNote(event.target.value)} style={inputStyle} /></Field>}
+        {draft.status === "contacted" && <div style={{ display: "grid", gap: 10, paddingTop: 4 }}>
+          <Field label="Supplier response evidence reference"><input required value={evidenceReference} maxLength={1000} onChange={(event) => setEvidenceReference(event.target.value)} placeholder="Email thread, document, or call-note reference" style={inputStyle} /></Field>
+          <Field label="Response note (optional)"><textarea value={responseNote} maxLength={2000} rows={3} onChange={(event) => setResponseNote(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 76, resize: "vertical", padding: 10 }} /></Field>
+          <div><button disabled={busy || !evidenceReference.trim()} onClick={() => void run(async () => { await recordIntoolsRfqSupplierResponse(draft.id, responseNote, evidenceReference); setNotice("Supplier response recorded with its evidence reference. No quote was published."); onChanged(); }, "Could not record this supplier response.")} style={btnStyle("primary", "sm")}>Record supplier response</button></div>
+        </div>}
+        <div style={{ color: C.faint, fontSize: 11.5 }}>Status: {label(draft.status)} · Template v{draft.template_version} · Revision {draft.revision} · Last editor {draft.last_editor}</div>
+        {error && <Notice tone="danger">{error}</Notice>}
+        {notice && <Notice tone="success">{notice}</Notice>}
+      </div>
+    </ModalShell>
+  );
+}
+
 function RequestDrawerBody({
   rfq,
   onClose,
@@ -2158,6 +2373,7 @@ function RequestDrawerBody({
   const [drafts, setDrafts] = useState<Record<string, QuoteDraft>>({});
   const [supplierQuery, setSupplierQuery] = useState("");
   const [productionNote, setProductionNote] = useState("");
+  const [outreachDraft, setOutreachDraft] = useState<IntoolsOutreachDraft | null>(null);
 
   const load = useCallback(async (refresh = false) => {
     setLoading(true);
@@ -2235,21 +2451,28 @@ function RequestDrawerBody({
     await act(
       row.match.id,
       async () => {
-        const quote = await upsertIntoolsRfqQuote(row.quote?.id ?? null, {
+        if (totalCents <= 0) throw new Error("Enter a positive total price before publishing this quote.");
+        await publishIntoolsRfqQuoteReviewed(row.quote?.id ?? null, {
           rfqCaseId: rfq.id,
           factoryId: row.match.factory_id,
           unitPriceCents,
+          quoteTotalCents: totalCents,
           moq: Math.round(Number(draft.moq) || 0),
           leadTimeDays: Math.round(Number(draft.leadTime) || 0),
           certifications: [],
           recommended: draft.recommended,
-        });
-        if (totalCents <= 0) throw new Error("Enter a positive total price before publishing this quote.");
-        await setIntoolsRfqQuoteTotal(quote.id, totalCents);
-        await publishIntoolsRfqQuote(quote.id);
+        }, row.quote?.revision ?? 0);
       },
       "Quote published to the buyer’s Quotes tab.",
     );
+  }
+
+  async function prepareOutreach(row: MatchRow) {
+    setBusyIds((current) => new Set(current).add(row.match.id));
+    setError(""); setNotice("");
+    try { setOutreachDraft(await prepareIntoolsRfqOutreachDraft(rfq.id, row.match.id)); }
+    catch (cause) { setError(errorMessage(cause, "Could not prepare the supplier email.")); }
+    finally { setBusyIds((current) => { const next = new Set(current); next.delete(row.match.id); return next; }); }
   }
 
   const productionAction = (() => {
@@ -2411,6 +2634,16 @@ function RequestDrawerBody({
                     border: status === "selected" ? "1px solid #cfe3d5" : "none",
                   }}
                 >
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                    <button
+                      disabled={busy || !caseRecord?.outreach_enabled}
+                      title={caseRecord?.outreach_enabled ? undefined : "Enable supplier outreach templates before preparing email."}
+                      onClick={() => void prepareOutreach(row)}
+                      style={btnStyle("primary", "sm")}
+                    >
+                      Prepare supplier email
+                    </button>
+                  </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
                     <Field label="Unit price (USD)">
                       <input disabled={quoteLocked} value={draft.unitPrice} onChange={(event) => setDraft(row, { unitPrice: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
@@ -2437,7 +2670,7 @@ function RequestDrawerBody({
                   </label>
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                     <button disabled={busy || quoteLocked} onClick={() => void saveQuote(row)} style={btnStyle("neutral", "sm")}>
-                      Save quote
+                      Publish reviewed quote
                     </button>
                     {row.quote?.status === "published" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Visible to buyer</span>}
                     {row.quote?.status === "selected" && <span style={{ alignSelf: "center", fontSize: 11.5, fontWeight: 700, color: "#1f6b43" }}>Selected by buyer · sampling invoice ready</span>}
@@ -2452,6 +2685,7 @@ function RequestDrawerBody({
         })}
       {error && <Notice tone="danger">{error}</Notice>}
       {notice && <Notice tone="success">{notice}</Notice>}
+      {outreachDraft && <OutreachDraftModal initial={outreachDraft} onClose={() => setOutreachDraft(null)} onChanged={() => { void load(false); onChanged(); }} />}
     </DrawerShell>
   );
 }
@@ -3545,7 +3779,7 @@ export function Intools() {
     );
 
   const section = route.section;
-  const isGeneric = section !== "analytics" && section !== "messages";
+  const isGeneric = section !== "analytics" && section !== "messages" && section !== "settings";
   const meta = isGeneric ? SECTIONS[section as GenericSection] : null;
 
   return (
@@ -3676,6 +3910,7 @@ export function Intools() {
               </div>
 
               {section === "analytics" && <IntoolsAnalytics />}
+              {section === "settings" && <MasterSettingsView onToast={showToast} />}
               {section === "messages" && (
                 <RfqOpsMessagesWorkspace
                   mode="intools"

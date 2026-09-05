@@ -132,6 +132,8 @@ No visual mockups exist in the source documents; the schematics below are a lite
 - Subject/body are editable and independently copyable.
 - Copy never means sent.
 - Only an approved, currently eligible supplier can be marked contacted.
+- Reset uses the latest active template without overwriting another operator's newer edit.
+- A supplier response requires an evidence reference and does not publish commercial terms.
 
 ## 6. States and error handling
 

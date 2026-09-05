@@ -236,8 +236,10 @@ See [`data-flows.md`](data-flows.md) for the full set (end-to-end flowchart, plu
 | `intools_activate_rfq_outreach_template` | `p_template_version_id` | Locks locale, retires previous active version, activates selected version, appends audit event — one transaction. |
 | `intools_prepare_rfq_outreach_draft` | `p_case_id, p_match_id` | Revalidates RFQ submission + match approval + supplier eligibility; resolves active template from authoritative records; returns one saved draft. |
 | `intools_update_rfq_outreach_draft` | `p_draft_id, p_subject, p_body, p_expected_revision` | Admin-only optimistic update; stale revision → conflict, no overwrite. |
+| `intools_reset_rfq_outreach_draft` | `p_draft_id, p_expected_revision` | Revalidates eligibility and renders the latest active template from allowlisted authoritative fields; optimistic update + supersession event. |
 | `intools_record_rfq_outreach_copy` | `p_draft_id, p_part` (`subject`/`body`/`all`) | Records copy event; returns unchanged draft; does **not** mark contacted. |
 | `intools_mark_rfq_supplier_contacted` | `p_draft_id, p_note` | Revalidates match/supplier/RFQ state; records external contact event; updates outreach status; advances RFQ to `awaiting_supplier` when appropriate. |
+| `intools_record_rfq_supplier_response` | `p_draft_id, p_note, p_evidence_reference` | Requires a contacted draft and evidence reference; appends supplier-response event; advances RFQ to `supplier_replied`; never creates/publishes quote terms. |
 
 ### II.2.2 Quote RPC (`PLAN.md` §15.2)
 

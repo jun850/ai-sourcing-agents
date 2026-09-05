@@ -51,8 +51,9 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
 - Opening an RFQ from Requests keeps the Requests navigation item selected and
   preserves that request context on refresh/deep link.
 - Intools navigation is a dark `#1c2430` collapsible left sidebar: the atelix
-  wordmark, nine route-backed section links (Analytics, Invoices, Orders,
-  Requests, Sign-up requests, Suppliers, Knowledge, Messages, Audit history),
+  wordmark, ten route-backed section links (Analytics, Invoices, Orders,
+  Requests, Sign-up requests, Suppliers, Knowledge, Messages, Audit history,
+  Master settings),
   and an operator pill. The active link shows a moss left bar and a tinted row
   when expanded, or a moss glyph chip when collapsed to 72px. Each canonical
   `/intools/<section>` path owns its section, and `/intools/<section>/<id>` opens
@@ -107,7 +108,7 @@ Atelix uses the existing Green Room vocabulary from the consolidated Vite applic
   contracts and preserve server-authoritative status boundaries.
 - Keep the Intools sign-up queue private, status-filterable, and explicit about
   the manual approval gate; never show it to non-admin users.
-- Every Intools section except Analytics and Messages renders through one shared
+- Every Intools record section except Analytics, Messages, and Master settings renders through one shared
   list: a quiet filter row (full-width search plus rounded status chips, moss for
   the active chip), an optional select-all header, then one bounded 14px-radius
   panel of rectangular divided rows. Each row has a checkbox, a 30px section-

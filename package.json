@@ -20,6 +20,7 @@
     "qa:intools-supplier-bulk": "node scripts/qa-intools-supplier-bulk.mjs",
     "qa:intools-analytics": "node scripts/qa-intools-analytics.mjs",
     "qa:endpoint-contracts": "node scripts/qa-endpoint-contracts.mjs",
+    "qa:human-loop-outreach": "node scripts/qa-human-loop-outreach.mjs",
     "suppliers:import": "node --experimental-strip-types scripts/suppliers/import.ts",
     "suppliers:crawl-apparelx-makerlist": "node scripts/suppliers/crawl-apparelx-makerlist.mjs",
     "qa:apparelx-makerlist": "node scripts/qa-apparelx-makerlist.mjs",

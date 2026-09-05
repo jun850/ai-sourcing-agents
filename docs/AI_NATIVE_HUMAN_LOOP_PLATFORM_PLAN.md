@@ -826,6 +826,10 @@ Revalidates RFQ submission, match approval, and supplier eligibility. Resolves t
 
 Performs an admin-only optimistic update. A stale revision returns a conflict and does not overwrite another operator's edit.
 
+#### `intools_reset_rfq_outreach_draft(p_draft_id, p_expected_revision)`
+
+Revalidates the approved match, renders the latest active master template from the same allowlisted authoritative fields, creates a supersession event, and updates the current draft with optimistic concurrency.
+
 #### `intools_record_rfq_outreach_copy(p_draft_id, p_part)`
 
 `p_part` is `subject`, `body`, or `all`. Records the copy event and returns the unchanged draft. It does not mark the supplier contacted.
@@ -833,6 +837,10 @@ Performs an admin-only optimistic update. A stale revision returns a conflict an
 #### `intools_mark_rfq_supplier_contacted(p_draft_id, p_note)`
 
 Revalidates match/supplier/RFQ state, records the external contact event, updates outreach status, and advances the RFQ to `awaiting_supplier` when appropriate.
+
+#### `intools_record_rfq_supplier_response(p_draft_id, p_note, p_evidence_reference)`
+
+Records that Ops received an external supplier response, requires a non-empty evidence reference, appends an immutable event, and advances the RFQ to `supplier_replied`. It does not create or publish commercial terms.
 
 ### 15.2 Quote RPC
 

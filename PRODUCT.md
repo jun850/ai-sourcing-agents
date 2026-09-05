@@ -77,12 +77,12 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   `pending_review`; Intools exposes the queue and approval action only after
   the server confirms an administrator role.
 - Intools is one operator shell: a dark, collapsible left sidebar (wordmark,
-  nine section links, operator pill), a slim top bar (dashboard link,
+  ten section links, operator pill), a slim top bar (dashboard link,
   notifications, avatar), and one work surface. Its sections are Analytics,
   Invoices, Orders, Requests, Sign-up requests, Suppliers, Knowledge, Messages,
-  and Audit history. There is no separate "RFQ review" surface; Requests is the
+  Audit history, and Master settings. There is no separate "RFQ review" surface; Requests is the
   single RFQ queue.
-- Every section except Analytics and Messages is one bounded operational list:
+- Every record section except Analytics, Messages, and Master settings is one bounded operational list:
   a quiet filter row (search + status chips), rectangular selectable rows with a
   section-accent lead chip and a pill status, and a moss bulk-action toolbar when
   rows are selected. Bulk actions run the same guarded per-record server
@@ -101,7 +101,7 @@ Atelix is not a public catalogue, seller storefront, cart, wishlist, or self-ser
   supplier upload, knowledge upload) and bulk-destructive confirmation; a single
   bottom toast confirms each completed action.
 - Intools top-level workspaces use canonical private routes
-  `/intools/<section>` for the nine sections, with `/intools/<section>/<id>`
+  `/intools/<section>` for the ten sections, with `/intools/<section>/<id>`
   opening that record's drawer. `/intools` resolves to `/intools/analytics`, and
   the retired `/intools/rfq` (and `/intools/rfq/<id>`) paths redirect to
   `/intools/requests` so older links keep working. `/intools` and
