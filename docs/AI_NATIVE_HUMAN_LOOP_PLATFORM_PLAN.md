@@ -573,16 +573,16 @@ Automatic QC must remain best-effort shadow processing. A runtime timeout, exhau
 
 ### 11.2 OpenRouter policy
 
-Create a dedicated preset:
+Use this model directly by default:
+
+```text
+google/gemini-3.7-flash
+```
+
+An optional dedicated preset may override the model only when explicitly configured:
 
 ```text
 @preset/marketplace-qc-triage
-```
-
-Initial model:
-
-```text
-google/gemini-3.5-flash-lite
 ```
 
 The request must use:

@@ -151,7 +151,7 @@ sequenceDiagram
     participant Storage as Supabase Storage (rfq-qc-evidence)
     participant Scheduler as Supabase Pro Vault + pg_cron + pg_net
     participant Worker as Vercel Hobby Python Function (OpenCV)
-    participant OR as OpenRouter (@preset/marketplace-qc-triage)
+    participant OR as OpenRouter (Gemini 3.7 Flash)
     actor Buyer
 
     Ops->>DB: intools_reserve_qc_upload(case_id, inspection_id, asset_id, filename, content_type, byte_size)

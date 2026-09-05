@@ -44,7 +44,7 @@ flowchart TB
     end
 
     subgraph AI["Model providers"]
-        OpenRouterQC["OpenRouter<br/>@preset/marketplace-qc-triage"]
+        OpenRouterQC["OpenRouter<br/>Google Gemini 3.7 Flash"]
         OpenRouterCopilot["OpenRouter<br/>@preset/marketplace-copilot<br/>(baseline RFQ copilot, unchanged)"]
     end
 
@@ -217,7 +217,7 @@ See [`data-flows.md`](data-flows.md) for the full set (end-to-end flowchart, plu
 | Durable scheduler | Supabase Pro Vault + `pg_cron` + `pg_net`; authenticated trigger every two minutes | `PLAN.md` §11.1 |
 | Async media processing | Separate native Vercel Hobby Python Function project rooted at `workers/qc`; Python 3.12 runtime; 300s/2 GB/1-vCPU platform ceiling; 240s application budget | `PLAN.md` §11.1 |
 | Media tooling | OpenCV | `PLAN.md` §11.1, §11.3 |
-| AI — visual QC | OpenRouter, preset `@preset/marketplace-qc-triage`, initial model `google/gemini-3.5-flash-lite` | `PLAN.md` §11.2 |
+| AI — visual QC | OpenRouter, model `google/gemini-3.7-flash`; optional preset override only when explicitly configured | `PLAN.md` §11.2 |
 | AI — RFQ copilot (baseline, unchanged by this plan) | OpenRouter, preset `@preset/marketplace-copilot` | `PRODUCT.md` §Workspace flow contract |
 | Realtime | Supabase Broadcast (private channels) | `PLAN.md` §15.7 |
 | Payments | Stripe Checkout + webhooks | `PRODUCT.md`; `AGENTS.md`; `PLAN.md` §2.3 |
@@ -283,7 +283,7 @@ Topic: `rfq:<rfq_case_id>:activity`. Payload: `{ "event_id": "uuid", "event_type
 
 ### II.2.8 OpenRouter QC request (`PLAN.md` §11.2)
 
-Preset `@preset/marketplace-qc-triage`, model `google/gemini-3.5-flash-lite`:
+Model `google/gemini-3.7-flash`; an optional preset may override it only when explicitly configured:
 
 ```json
 {

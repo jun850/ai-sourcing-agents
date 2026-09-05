@@ -188,8 +188,9 @@ async def analyze(client: httpx.AsyncClient, context: dict[str, Any], derived: l
     }, separators=(",", ":"))}]
     for _, image_path in derived:
         content.append({"type": "image_url", "image_url": {"url": data_url(image_path)}})
+    selected_model = os.getenv("OPENROUTER_QC_PRESET", "").strip() or os.getenv("OPENROUTER_QC_MODEL", "google/gemini-3.7-flash").strip() or "google/gemini-3.7-flash"
     request = {
-        "model": os.getenv("OPENROUTER_QC_PRESET", "@preset/marketplace-qc-triage") or os.getenv("OPENROUTER_QC_MODEL", "google/gemini-3.5-flash-lite"),
+        "model": selected_model,
         "messages": [{"role": "user", "content": content}],
         "provider": {"require_parameters": True, "zdr": True, "data_collection": "deny"},
         "response_format": {"type": "json_schema", "json_schema": {"name": "atelix_qc_visual_risk", "strict": True, "schema": schema}},
