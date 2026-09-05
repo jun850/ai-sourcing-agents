@@ -371,7 +371,7 @@ END; $$;
 ALTER TABLE public.rfq_lifecycle_events DROP CONSTRAINT IF EXISTS rfq_lifecycle_events_event_type_check;
 ALTER TABLE public.rfq_lifecycle_events ADD CONSTRAINT rfq_lifecycle_events_event_type_check CHECK(event_type IN ('proposal_selected','invoice_created','invoice_sent','invoice_paid','sample_ready','sample_approved','sample_declined','outreach_contacted','supplier_response_recorded','quote_published','bulk_started','stage_changed','production_update_published','qc_analysis_ready','qc_review_published','cancelled'));
 ALTER TABLE public.admin_audit_log DROP CONSTRAINT IF EXISTS admin_audit_log_target_table_check;
-ALTER TABLE public.admin_audit_log ADD CONSTRAINT admin_audit_log_target_table_check CHECK(target_table IN ('factories','products','content_pages','widget_instances','intools_media_assets','platform_settings','rfq_outreach_template_versions','rfq_supplier_outreach_drafts','rfq_supplier_outreach_events','rfq_quotes','rfq_production_updates','rfq_qc_checklist_versions','rfq_qc_reviews'));
+ALTER TABLE public.admin_audit_log ADD CONSTRAINT admin_audit_log_target_table_check CHECK(target_table IN ('factories','products','content_pages','widget_instances','intools_media_assets','country_shipping_rates','rfq_cases','platform_settings','rfq_outreach_template_versions','rfq_supplier_outreach_drafts','rfq_supplier_outreach_events','rfq_quotes','rfq_qc_inspections','rfq_production_updates','rfq_qc_checklist_versions','rfq_qc_reviews'));
 
 CREATE OR REPLACE FUNCTION public.intools_get_rfq_operations(p_case_id uuid)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path='' AS $$
