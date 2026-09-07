@@ -376,7 +376,7 @@ function PasswordSetup(){
 export function App(){
   const [path,setPath]=useState(location.pathname); const [authReady,setAuthReady]=useState(false); const [authError,setAuthError]=useState(""); const [authAttempt,setAuthAttempt]=useState(0);
   useEffect(()=>{const listener=()=>setPath(location.pathname);addEventListener("popstate",listener);return()=>removeEventListener("popstate",listener)},[]);
-  useEffect(()=>{const section=path.startsWith("/dashboard")?"Dashboard":path==="/intools" || path.startsWith("/intools/")?"Intools":path==="/sign-in"||path==="/sign-up"?"Sign in":path==="/"?"AI sourcing agents for global brands":"Fashion sourcing";document.title=`${section} — Atelix`;},[path]);
+  useEffect(()=>{if(path==="/"){document.title="Atelix AI";return;}const section=path.startsWith("/dashboard")?"Dashboard":path==="/intools" || path.startsWith("/intools/")?"Intools":path==="/sign-in"||path==="/sign-up"?"Sign in":"Fashion sourcing";document.title=`${section} — Atelix`;},[path]);
   useEffect(()=>{ let active=true; let settled=false; let timeoutId: number | undefined; setAuthReady(false); setAuthError(""); if (!path.startsWith("/dashboard")) { setAuthReady(true); return; }
     const complete=(session: Awaited<ReturnType<typeof getSession>>)=>{ if (!active || settled) return; settled=true; if (timeoutId) window.clearTimeout(timeoutId); if (!session) { const next=`/sign-in?next=${encodeURIComponent(sanitizeInternalPath(path))}`; history.replaceState({},"",next); setPath("/sign-in"); return; } setAuthReady(true); };
     const authSubscription=supabase?.auth.onAuthStateChange((_,session)=>complete(session)).data.subscription;
