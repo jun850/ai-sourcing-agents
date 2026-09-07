@@ -19,7 +19,11 @@ const WORKSPACE_INTAKE_SOURCE_PATH = join(HERE, "..", "src", "rfq-intake.ts");
 const SUPABASE_SOURCE_PATH = join(HERE, "..", "src", "supabase.ts");
 const CASES = JSON.parse(readFileSync(FIXTURE_PATH, "utf8"));
 const { classifyRfqIntake, extractProductPhrase, extractProductPhrases } = await import(new URL("../src/rfq-intake.ts", import.meta.url));
+const { classifyIntake, detectLanguage, immediateQuestion } = await import(new URL("../supabase/functions/_shared/rfq-intake.ts", import.meta.url));
 const INTAKE_SOURCE = readFileSync(INTAKE_SOURCE_PATH, "utf8");
+const AGENT_SOURCE = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "broker-rfq-agent.ts"), "utf8");
+const PHRASES_SOURCE = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "rfq-phrases.ts"), "utf8");
+const ROUTING_SOURCE = readFileSync(join(HERE, "..", "supabase", "functions", "_shared", "supplier-routing.ts"), "utf8");
 const WORKSPACE_INTAKE_SOURCE = readFileSync(WORKSPACE_INTAKE_SOURCE_PATH, "utf8");
 const SUPABASE_SOURCE = readFileSync(SUPABASE_SOURCE_PATH, "utf8");
 const PRESET = "@preset/marketplace-copilot";
@@ -302,6 +306,55 @@ test("product-phrase rule remains in the drafting agent contract", () => {
   assert.match(agent, /extractProductPhrases/);
   assert.match(intake, /whole descriptor \+ head-noun phrase/i);
   assert.match(intake, /short-sleeve blouse/);
+});
+
+test("per-message language detection covers JA/ZH/ID/EN and stays neutral on short replies", () => {
+  assert.equal(detectLanguage("コットン・シルク混紡のパーカーを100着発注したいです"), "ja");
+  assert.equal(detectLanguage("我想订购100件棉丝混纺连帽衫"), "zh");
+  assert.equal(detectLanguage("Kami ingin memesan 100 potong hoodie katun sutra untuk produksi"), "id");
+  assert.equal(detectLanguage("We want to order 100 cotton silk hoodies"), "en");
+  assert.equal(detectLanguage("black"), null);
+  assert.equal(detectLanguage(""), null);
+});
+
+test("non-English briefs still reach the right intake route", () => {
+  const ja = classifyIntake("コットン・シルク混紡のパーカーを100着、完全なOEM生産で発注したいです");
+  assert.equal(ja.subtype, "oem");
+  assert.equal(ja.category, "apparel");
+  const zh = classifyIntake("我们需要采购500米真丝面料");
+  assert.equal(zh.category, "fabric");
+  const id = classifyIntake("Kami butuh 1000 potong kaos katun");
+  assert.equal(id.category, "apparel");
+});
+
+test("clarifying questions are localized to the buyer's language", () => {
+  assert.notEqual(immediateQuestion("oem", "ja"), immediateQuestion("oem", "en"));
+  assert.match(immediateQuestion("oem", "ja"), /[ぁ-んァ-ン一-龯]/);
+  assert.match(immediateQuestion("fabric", "zh"), /[一-鿿]/);
+  assert.match(immediateQuestion("apparel", "id"), /catat/i);
+});
+
+test("drafting agent always runs the multilingual model pass and follows message language", () => {
+  assert.match(AGENT_SOURCE, /async function extractBriefWithAgent/);
+  assert.match(AGENT_SOURCE, /function detectRfqLanguage/);
+  assert.match(AGENT_SOURCE, /const extracted = action === "message"\s*\n?\s*\? await extractBriefWithAgent/);
+  assert.match(AGENT_SOURCE, /const language: Lang = action === "message"/);
+  // The shared capture contract keeps the advanced-term guarantees.
+  assert.match(AGENT_SOURCE, /const CAPTURE_RULES =/);
+  assert.match(AGENT_SOURCE, /EXW, FCA, FAS, FOB, CFR, CIF, CPT, CIP, DAP, DPU, DDP/);
+  assert.match(AGENT_SOURCE, /Write every `reply` and `question` in/);
+});
+
+test("fixed assistant phrases are translated for every supported language", () => {
+  for (const lang of ["en:", "ja:", "zh:", "id:"]) assert.match(PHRASES_SOURCE, new RegExp(`\\b${lang}\\s*\\{`));
+  assert.match(PHRASES_SOURCE, /staleRevision:/);
+  assert.match(PHRASES_SOURCE, /savedFirstFollowUp:/);
+});
+
+test("supplier routing prior reads non-English intent cues", () => {
+  assert.match(ROUTING_SOURCE, /const CUE = \{/);
+  assert.match(ROUTING_SOURCE, /緊急|至急/);
+  assert.match(ROUTING_SOURCE, /mendesak|segera/);
 });
 
 console.log(`\n${passed} offline RFQ agent contract tests passed; no network or paid model calls made.`);

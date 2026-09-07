@@ -102,6 +102,27 @@ function factValue(ctx: RoutingContext, key: string): string {
   return hit ? hit.value.toLowerCase() : "";
 }
 
+// Buyers describe the same intent in any language. These keyword groups let the
+// deterministic routing prior read Japanese / Chinese / Indonesian briefs; the
+// model path already interprets them natively.
+const CUE = {
+  priceLow: /low cost|lowest price|price sensitive|tight budget|cost sensitive|affordable|cheap|格安|激安|低コスト|なるべく安|コスト重視|低予算|低成本|低价|价格敏感|尽量便宜|低预算|murah|hemat|harga miring|anggaran terbatas/,
+  priceHigh: /premium|luxury|high[- ]end|willing to pay|no budget constraint|top tier|高級|ハイエンド|プレミアム|予算に糸目|高端|高档|奢侈|不在乎价格|mewah|kelas atas|premium/,
+  qualityHigh: /luxury|heirloom|fine|high quality|premium finish|investment piece|couture|impeccable|高品質|最高級|上質|ラグジュアリー|高品质|高质量|顶级|做工精细|精细做工|berkualitas tinggi|kualitas premium|kualitas terbaik/,
+  qualityLow: /basic|value|budget make|simple make|entry level|簡易|普及品|入门|普通款|低配|sederhana|standar/,
+  construction: /\b(construction|stitch|seam|gsm|finish|lining|canvas)\b|縫製|仕立て|裏地|芯地|ステッチ|做工|工艺|车缝|里布|jahitan|konstruksi|lapisan/,
+  techPack: /tech[ -]?pack|テックパック|技術資料|技术包|技術パッケージ|spesifikasi teknis|paket teknis/,
+  intricate: /embellish|multi-panel|multi panel|tailored|structured|pleated|hand-finished|hand finished|intricate|刺繍|多パネル|立体裁断|プリーツ|手仕上げ|刺绣|多片|立裁|褶皱|手工|bordir|lipit|jahitan tangan|berstruktur/,
+  premiumHouse: /luxury house|premium curation|curated maker|atelier|couture|artisan house|アトリエ|高級メゾン|工房|奢侈品牌|高定|rumah mode|atelier/,
+  urgent: /urgent|rush|asap|as soon as possible|quick turnaround|緊急|至急|急ぎ|なるはや|なるべく早|加急|尽快|紧急|mendesak|segera|secepatnya/,
+  smallRun: /small run|sample order|low moq|small batch|小ロット|小口|少量|サンプル発注|試作|小批量|打样|样品|jumlah kecil|batch kecil|pesanan sampel/,
+};
+const DURATION_UNIT: [RegExp, "day" | "week" | "month"][] = [
+  [/日|天|hari/, "day"],
+  [/週間?|周|minggu/, "week"],
+  [/ヶ?月|か月|カ月|箇月|个月|個月|bulan/, "month"],
+];
+
 export function extractSignals(ctx: RoutingContext): RoutingSignals {
   const blob = textBlob(ctx);
   const budget = `${briefField(ctx, "budget")} ${factValue(ctx, "budget")} ${blob}`;
@@ -109,43 +130,49 @@ export function extractSignals(ctx: RoutingContext): RoutingSignals {
   const timeline = `${briefField(ctx, "timeline")} ${factValue(ctx, "timeline")} ${blob}`;
 
   let price: Tier = "unstated";
-  if (/low cost|lowest price|price sensitive|tight budget|cost sensitive|affordable|cheap/.test(budget)) price = "low";
-  else if (/premium|luxury|high[- ]end|willing to pay|no budget constraint|top tier/.test(budget)) price = "high";
-  else if (/\$\s?\d/.test(budget) || /\bmid[- ]range\b/.test(budget)) price = "mid";
+  if (CUE.priceLow.test(budget)) price = "low";
+  else if (CUE.priceHigh.test(budget)) price = "high";
+  else if (/[$¥￥€]\s?\d|\d\s?(?:usd|rmb|cny|jpy|idr|rp|元|円|ドル|ルピア)|\bmid[- ]range\b/i.test(budget)) price = "mid";
 
   let quality: Tier = "unstated";
-  if (/luxury|heirloom|fine|high quality|premium finish|investment piece|couture|impeccable/.test(blob)) quality = "high";
-  else if (/basic|value|budget make|simple make|entry level/.test(blob)) quality = "low";
-  else if (/\b(construction|stitch|seam|gsm|finish|lining|canvas)\b/.test(blob)) quality = "mid";
+  if (CUE.qualityHigh.test(blob)) quality = "high";
+  else if (CUE.qualityLow.test(blob)) quality = "low";
+  else if (CUE.construction.test(blob)) quality = "mid";
 
   const bomCount = (ctx.bom_lines ?? []).length;
   let complexity: ComplexityTier = "unstated";
   if (bomCount >= 5) complexity = "high";
   else if (bomCount >= 2) complexity = "mid";
   else if (bomCount >= 1) complexity = "simple";
-  if (/tech[ -]?pack/.test(blob) || (ctx.reference_facts ?? []).some((f) => f.field_key === "tech_pack")) {
+  if (CUE.techPack.test(blob) || (ctx.reference_facts ?? []).some((f) => f.field_key === "tech_pack")) {
     complexity = complexity === "high" ? "high" : complexity === "mid" ? "high" : "mid";
   }
-  if (/embellish|multi-panel|multi panel|tailored|structured|pleated|hand-finished|hand finished|intricate/.test(blob)) {
+  if (CUE.intricate.test(blob)) {
     complexity = complexity === "unstated" || complexity === "simple" ? "mid" : "high";
   }
 
   const premiumCuration =
-    /luxury house|premium curation|curated maker|atelier|couture|artisan house/.test(blob) ||
+    CUE.premiumHouse.test(blob) ||
     (quality === "high" && price === "high");
 
   let leadTime: RoutingSignals["leadTime"] = "unstated";
   const m = timeline.match(/(?:within|in|under|by)\s*(\d+)\s*(day|week|month)/);
+  const cjkDuration = timeline.match(/(\d+)\s*(日|天|hari|週間?|周|minggu|ヶ?月|か月|カ月|箇月|个月|個月|bulan)/);
   if (m) {
     const n = Number(m[1]);
     const days = m[2] === "day" ? n : m[2] === "week" ? n * 7 : n * 30;
     leadTime = days < 30 ? "urgent" : "normal";
-  } else if (/urgent|rush|asap|as soon as possible|quick turnaround/.test(timeline)) leadTime = "urgent";
+  } else if (cjkDuration) {
+    const n = Number(cjkDuration[1]);
+    const unit = DURATION_UNIT.find(([re]) => re.test(cjkDuration[2]))?.[1] ?? "month";
+    const days = unit === "day" ? n : unit === "week" ? n * 7 : n * 30;
+    leadTime = days < 30 ? "urgent" : "normal";
+  } else if (CUE.urgent.test(timeline)) leadTime = "urgent";
 
   let moq: Tier = "unstated";
   const q = quantity.match(/(\d[\d,]*)\s*(pc|pcs|piece|unit|units)?/);
   const qn = q ? Number(q[1].replace(/,/g, "")) : NaN;
-  if (/small run|sample order|low moq|small batch/.test(`${quantity} ${blob}`)) moq = "low";
+  if (CUE.smallRun.test(`${quantity} ${blob}`)) moq = "low";
   else if (!Number.isNaN(qn)) moq = qn < 500 ? "low" : qn <= 5000 ? "mid" : "high";
 
   const populatedFields = Object.values(
