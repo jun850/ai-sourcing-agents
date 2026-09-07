@@ -477,12 +477,14 @@ export function RfqOpsMessagesWorkspace({
                 </Stack>
               )}
               <Box
+                className="rfq-ops-composer"
                 sx={{
                   display: "flex",
-                  alignItems: "flex-end",
+                  alignItems: "center",
                   gap: 0.75,
                   p: 0.75,
                   pl: 1,
+                  border: "1px solid transparent",
                   borderRadius: "13px",
                   backgroundColor: "#fff",
                   boxShadow: "0 3px 8px rgba(32,41,54,.06)",

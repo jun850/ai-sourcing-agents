@@ -280,6 +280,13 @@ button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guid
 .conversation-composer textarea:focus,
 .conversation-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
 
+/* Ops/intools messages composer: same borderless contract. */
+.rfq-ops-composer,
+.rfq-ops-composer:focus-within { border-color: transparent !important; outline: 0 !important; }
+.rfq-ops-composer textarea,
+.rfq-ops-composer textarea:focus,
+.rfq-ops-composer textarea:focus-visible { border: 0 !important; outline: 0 !important; box-shadow: none !important; }
+
 @media (max-width: 760px) {
   body.nav-is-open { overflow: hidden; }
 

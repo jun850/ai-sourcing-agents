@@ -4220,7 +4220,23 @@ export function Intools() {
             </div>
           </header>
 
-          <main id="main-content" style={{ flex: 1, overflowY: "auto", padding: "24px clamp(14px, 4vw, 32px) 60px" }}>
+          <main
+            id="main-content"
+            style={
+              section === "messages"
+                ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden" }
+                : { flex: 1, overflowY: "auto", padding: "24px clamp(14px, 4vw, 32px) 60px" }
+            }
+          >
+            {section === "messages" ? (
+              <RfqOpsMessagesWorkspace
+                mode="intools"
+                selectedCaseId={route.id}
+                onSelectCase={(id) => navigate(sectionPath("messages", id))}
+                unreadCount={pendingBadges.messages ?? null}
+                onUnreadCount={refreshBadges}
+              />
+            ) : (
             <div style={{ maxWidth: 1180, margin: "0 auto" }}>
               <div
                 style={{
@@ -4272,15 +4288,6 @@ export function Intools() {
 
               {section === "analytics" && <IntoolsAnalytics />}
               {section === "settings" && <MasterSettingsView onToast={showToast} />}
-              {section === "messages" && (
-                <RfqOpsMessagesWorkspace
-                  mode="intools"
-                  selectedCaseId={route.id}
-                  onSelectCase={(id) => navigate(sectionPath("messages", id))}
-                  unreadCount={pendingBadges.messages ?? null}
-                  onUnreadCount={refreshBadges}
-                />
-              )}
               {isGeneric && (
                 <SectionListView
                   key={section}
@@ -4301,6 +4308,7 @@ export function Intools() {
                 />
               )}
             </div>
+            )}
           </main>
         </div>
 
