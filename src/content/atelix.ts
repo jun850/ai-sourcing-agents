@@ -871,8 +871,9 @@ export const atelixContent = {
     wordmarkPunctuation: ".",
     wordmarkHref: "/",
     description: "Connecting global brand owners with Asia suppliers.",
-    companyName: "ARCANA KENCANA WANGSA",
+    companyName: "Atelix AI",
     addressGroups: [
+      { country: "United States", lines: ["8 The Green, STE R", "Dover, DE 19901, USA"] },
       { country: "Australia", lines: ["240 Gordon Street, VIC, Australia"] },
       { country: "Indonesia", lines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"] },
       { country: "China", lines: ["No. 57 Tiyu Xi Rd", "Guangzhou, China"] },
