@@ -115,9 +115,13 @@ export type ProductionPreviewContent = {
   orderLabel: string;
   progressLabel: string;
   update: string;
-  latestLabel: string;
+  updateTimestamp: string;
   progressAriaLabel: string;
-  progressSteps: number;
+  progressSteps: readonly {
+    title: string;
+    description: string;
+    timestamp: string;
+  }[];
 };
 
 export type JourneyStepContent = {
@@ -587,7 +591,7 @@ export const atelixContent = {
         companies: [
           { id: "nancy", name: "&Nancy", category: "Garment manufacturing", meta: "Verified OEM factory", tone: "blue" },
           { id: "aliansa", name: "Aliansa Co., Ltd.", category: "Garment manufacturing", meta: "Verified OEM factory", tone: "green" },
-          { id: "xinyuan-fashion", name: "XinYuan Fashion", category: "Garment manufacturing", meta: "Verified OEM factory", tone: "slate" },
+          { id: "megaya-bali", name: "Megaya Bali", category: "Garment manufacturing", meta: "Verified OEM factory", tone: "slate" },
         ],
       },
       quotes: {
@@ -596,7 +600,7 @@ export const atelixContent = {
         rows: [
           { id: "nancy", supplier: "&Nancy", badge: "Verified", unitCost: "Quote", moq: "On request", tone: "blue" },
           { id: "aliansa", supplier: "Aliansa Co., Ltd.", badge: "Verified", unitCost: "Quote", moq: "On request", tone: "green" },
-          { id: "xinyuan-fashion", supplier: "XinYuan Fashion", badge: "Verified", unitCost: "Quote", moq: "On request", tone: "slate" },
+          { id: "megaya-bali", supplier: "Megaya Bali", badge: "Verified", unitCost: "Quote", moq: "On request", tone: "slate" },
         ],
       },
       negotiation: {
@@ -610,11 +614,16 @@ export const atelixContent = {
       },
       production: {
         orderLabel: "Order #PO-1847",
-        progressLabel: "Week 3 of 8",
-        update: "Production update received",
-        latestLabel: "Latest",
+        progressLabel: "Week 4 of 6",
+        update: "We just received a production update",
+        updateTimestamp: "10:05 PM",
         progressAriaLabel: "Production progress",
-        progressSteps: 4,
+        progressSteps: [
+          { title: "Cutting", description: "Fabric cutting completed", timestamp: "Yesterday, 2:30 PM" },
+          { title: "Sewing", description: "95% complete", timestamp: "Today, 9:15 AM" },
+          { title: "QC check", description: "On-site QC check passed", timestamp: "Today, 11:00 AM" },
+          { title: "Dispatch", description: "Not started", timestamp: "Upcoming" },
+        ],
       },
     },
   },
@@ -681,11 +690,11 @@ export const atelixContent = {
           price: "from $3.95/pc",
         },
         {
-          id: "xinyuan-fashion",
-          name: "XinYuan Fashion",
+          id: "megaya-bali",
+          name: "Megaya Bali",
           score: "Verified",
           category: "Garment manufacturing",
-          location: "China (Dongguan area)",
+          location: "Denpasar, Indonesia",
           orders: "340+ orders shipped",
           price: "from $2.60/pc",
         },
@@ -730,11 +739,11 @@ export const atelixContent = {
           price: "from $3.95/pc",
         },
         {
-          id: "xinyuan-fashion",
-          name: "XinYuan Fashion",
+          id: "megaya-bali",
+          name: "Megaya Bali",
           score: "Verified",
           category: "Garment manufacturing",
-          location: "China (Dongguan area)",
+          location: "Denpasar, Indonesia",
           orders: "340+ orders shipped",
           price: "from $2.60/pc",
         },
@@ -878,7 +887,7 @@ export const atelixContent = {
       { country: "Indonesia", lines: ["Jl. Kemanggisan Ilir 3 No C9", "DKI Jakarta, Indonesia"] },
       { country: "China", lines: ["No. 57 Tiyu Xi Rd", "Guangzhou, China"] },
     ],
-    addressEmail: "info@arcanawangsa.com",
+    addressEmail: "info@atelix.app",
     linkGroups: [
       {
         id: "sourcing",
@@ -910,13 +919,13 @@ export const atelixContent = {
       emailPlaceholder: "Your work email",
       subscribeLabel: "Subscribe",
       footnote: "Work email only.",
-      contactEmail: "info@arcanawangsa.com",
+      contactEmail: "info@atelix.app",
       mailtoSubject: "Atelix newsletter updates",
       mailtoBodyTemplate: "Please add {email} to the Atelix newsletter.",
     },
     copyright: "© Atelix, 2026. All rights reserved.",
-    contactEmail: "info@arcanawangsa.com",
-    contact: "info@arcanawangsa.com",
+    contactEmail: "info@atelix.app",
+    contact: "info@atelix.app",
     newsletterSubject: "Atelix newsletter updates",
     newsletterBody: "Please add {email} to the Atelix newsletter.",
     intro: "Connecting global brand owners with Asia suppliers.",

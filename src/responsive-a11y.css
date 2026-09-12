@@ -501,3 +501,93 @@ button, .button, .supplier-link, .site-nav a, .footer-links a, .info-back, .guid
   .site-header .nav-actions .supplier-link,
   .site-header .nav-actions .header-cta { display: inline-flex; width: 100%; min-height: 44px; padding-inline: 10px; font-size: 12px; }
 }
+
+/* Tablet keeps the compact public header. The earlier medium-desktop scale
+   made the 84px navigation collide with the brand rail at browser zoom and
+   device-pixel-ratio combinations. */
+@media (min-width: 761px) and (max-width: 1199px) {
+  .site-header {
+    width: min(520px, calc(100% - 48px));
+    min-height: 48px;
+    height: 48px;
+    padding: 2px 4px 2px 14px;
+  }
+
+  .site-header .wordmark {
+    margin-right: auto;
+    font-size: 17px;
+    letter-spacing: -1.3px;
+  }
+
+  .site-header .header-actions {
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+  }
+
+  .site-header .header-actions > .supplier-link,
+  .site-header .header-actions > .header-cta {
+    display: none;
+  }
+
+  .site-header .menu-toggle {
+    display: grid;
+  }
+
+  .site-header .site-nav {
+    position: absolute !important;
+    inset: auto !important;
+    top: calc(100% + 10px) !important;
+    right: 0 !important;
+    bottom: auto !important;
+    left: 0 !important;
+    display: none !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 8px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 16px !important;
+    background: #fff !important;
+    box-shadow: 0 8px 16px rgba(18, 23, 20, .12) !important;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateY(-8px);
+  }
+
+  .site-header .site-nav.is-open {
+    display: grid !important;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .site-header .site-nav > a {
+    min-height: 44px;
+    padding: 0 12px;
+    border-radius: 10px;
+    color: var(--dark);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .site-header .nav-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .site-header .nav-actions .supplier-link,
+  .site-header .nav-actions .header-cta {
+    display: inline-flex;
+    width: 100%;
+    min-height: 44px;
+    padding-inline: 10px;
+    font-size: 12px;
+  }
+}

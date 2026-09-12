@@ -15,7 +15,11 @@ import { journeyMotion } from "./motion";
 export type { JourneyContent, JourneyPreviewKind } from "../content/atelix";
 
 type PreviewContent<K extends JourneyPreviewKind> = JourneyContent["previews"][K];
-type PreviewProps<K extends JourneyPreviewKind> = { content: PreviewContent<K> };
+type PreviewProps<K extends JourneyPreviewKind> = {
+  content: PreviewContent<K>;
+  productionProgress?: MotionValue<number>;
+  reduced?: boolean;
+};
 
 function BriefPreview({ content }: PreviewProps<"brief">) {
   return (
@@ -101,7 +105,29 @@ function NegotiationPreview({ content }: PreviewProps<"negotiation">) {
   );
 }
 
-function ProductionPreview({ content }: PreviewProps<"production">) {
+function ProductionStep({ step, index, activeStep, reduced }: { step: PreviewContent<"production">["progressSteps"][number]; index: number; activeStep: MotionValue<number>; reduced: boolean }) {
+  const stepOpacity = useTransform(activeStep, [index - 0.75, index - 0.1, index + 0.9], [0.42, 1, 1]);
+  const stepScale = useTransform(activeStep, [index - 0.15, index], [0.8, 1]);
+  const stepColor = useTransform(activeStep, [index - 0.1, index], ["#dfe5df", "#86b960"]);
+  const detailOpacity = useTransform(activeStep, [index - 0.1, index + 0.35], [0.45, 1]);
+
+  return (
+    <motion.li style={{ opacity: reduced ? 1 : stepOpacity }}>
+      <motion.span aria-hidden="true" style={{ backgroundColor: reduced ? "#86b960" : stepColor, scale: reduced ? 1 : stepScale }} />
+      <span className="journey-production-step-copy">
+        <b>{step.title}</b>
+        <motion.small style={{ opacity: reduced ? 1 : detailOpacity }}>{step.description}</motion.small>
+        <time>{step.timestamp}</time>
+      </span>
+    </motion.li>
+  );
+}
+
+function ProductionPreview({ content, productionProgress, reduced = false }: PreviewProps<"production">) {
+  const fallbackProgress = useSpring(0, { stiffness: 110, damping: 28, mass: 0.22 });
+  const activeProgress = productionProgress ?? fallbackProgress;
+  const activeStep = useTransform(activeProgress, [0, 0.2, 0.45, 0.7, 1], [0, 0.15, 1.15, 2.15, 3.2]);
+
   return (
     <div className="journey-preview journey-preview--production">
       <div className="journey-preview-heading">
@@ -109,17 +135,15 @@ function ProductionPreview({ content }: PreviewProps<"production">) {
         <em>{content.progressLabel}</em>
       </div>
       <p className="journey-production-update">
-        <span className="journey-pulse" aria-hidden="true" />
-        <span>{content.update}</span>
-        <small>{content.latestLabel}</small>
+        <motion.span className="journey-pulse" aria-hidden="true" animate={reduced ? undefined : { rotate: 360 }} transition={reduced ? undefined : { duration: 2.4, ease: "linear", repeat: Infinity }} />
+        <span className="journey-production-update-copy">
+          <b>Production update</b>
+          <span>{content.update}</span>
+        </span>
+        <time>{content.updateTimestamp}</time>
       </p>
       <ol className="journey-production-steps" aria-label={content.progressAriaLabel}>
-        {Array.from({ length: content.progressSteps }, (_, index) => (
-          <li className={index === 0 ? "is-complete" : undefined} key={index}>
-            <span aria-hidden="true" />
-            <span>{index + 1}</span>
-          </li>
-        ))}
+        {content.progressSteps.map((step, index) => <ProductionStep key={step.title} step={step} index={index} activeStep={activeStep} reduced={reduced} />)}
       </ol>
     </div>
   );
@@ -137,7 +161,7 @@ export const journeyPreviewRegistry = {
   production: ProductionPreview,
 } satisfies PreviewRegistry;
 
-function JourneyPreview({ kind, previews }: { kind: JourneyPreviewKind; previews: JourneyContent["previews"] }) {
+function JourneyPreview({ kind, previews, productionProgress, reduced }: { kind: JourneyPreviewKind; previews: JourneyContent["previews"]; productionProgress?: MotionValue<number>; reduced: boolean }) {
   switch (kind) {
     case "brief": {
       const Preview = journeyPreviewRegistry.brief;
@@ -157,7 +181,7 @@ function JourneyPreview({ kind, previews }: { kind: JourneyPreviewKind; previews
     }
     case "production": {
       const Preview = journeyPreviewRegistry.production;
-      return <Preview content={previews.production} />;
+      return <Preview content={previews.production} productionProgress={productionProgress} reduced={reduced} />;
     }
   }
 }
@@ -216,7 +240,7 @@ function JourneyCard({ step, index, totalSteps, previews, reduced, journeyProgre
         <small className="journey-step-label">{step.label}</small>
         <h3>{step.title}</h3>
         <p className="journey-card-description">{step.description}</p>
-        <JourneyPreview kind={step.preview} previews={previews} />
+        <JourneyPreview kind={step.preview} previews={previews} productionProgress={step.preview === "production" ? checkpointProgress : undefined} reduced={reduced} />
       </motion.article>
       <motion.span
         className="journey-dot journey-dot-desktop journey-dot--desktop"
