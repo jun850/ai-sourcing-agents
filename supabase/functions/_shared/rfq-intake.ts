@@ -17,17 +17,17 @@ const NON_EN_MODE: [ProcurementMode, RegExp][] = [
   ["wholesale", /卸売|既製品|在庫品|現貨|成品批发|grosir|barang jadi|siap kirim/i],
 ];
 const NON_EN_CATEGORY: [IntakeCategory, RegExp][] = [
-  ["leather", /レザー|革|皮革|真皮|kulit/i],
-  ["trims_labels", /ボタン|ファスナー|ジッパー|織ネーム|下げ札|ラベル|タグ|纽扣|拉链|织唛|吊牌|标签|kancing|ritsleting|label|hangtag/i],
-  ["packaging", /パッケージ|ポリ袋|化粧箱|カートン|包装|폴리백|包装盒|纸箱|kemasan|polybag|kardus|kotak/i],
-  ["fibre_yarn", /繊維|糸|紡績|フィラメント|纤维|纱线|纱|benang|serat/i],
-  ["fabric", /生地|布地|ファブリック|織物|編み地|ニット地|面料|布料|坯布|梭织|针织面料|kain|bahan kain|tekstil/i],
   ["apparel", /パーカー|フーディ|スウェット|Tシャツ|シャツ|ブラウス|ズボン|パンツ|スカート|ワンピース|ドレス|ジャケット|コート|ニット|セーター|カーディガン|衣類|アパレル|服|卫衣|连帽衫|衬衫|裤子|裙子|连衣裙|夹克|外套|毛衣|针织衫|服装|成衣|kaos|kemeja|celana|rok|gaun|dress|jaket|hoodie|sweater|pakaian|busana/i],
   ["footwear", /靴|シューズ|スニーカー|ブーツ|サンダル|鞋|运动鞋|靴子|凉鞋|sepatu|sandal/i],
   ["bags_accessories", /バッグ|かばん|リュック|財布|ベルト|帽子|スカーフ|包|背包|钱包|腰带|帽子|围巾|tas|ransel|dompet|ikat pinggang|topi|syal/i],
   ["jewelry", /ジュエリー|アクセサリー|指輪|ネックレス|ブレスレット|イヤリング|首饰|珠宝|戒指|项链|手链|耳环|perhiasan|cincin|kalung|gelang|anting/i],
   ["beauty_personal_care", /化粧品|スキンケア|コスメ|化妆品|护肤|香水|kosmetik|perawatan kulit|parfum/i],
   ["home_textiles", /寝具|カーテン|クッション|タオル|テーブルリネン|床品|窗帘|抱枕|毛巾|桌布|seprai|gorden|bantal|handuk/i],
+  ["trims_labels", /ボタン|ファスナー|ジッパー|織ネーム|下げ札|ラベル|タグ|纽扣|拉链|织唛|吊牌|标签|kancing|ritsleting|label|hangtag/i],
+  ["packaging", /パッケージ|ポリ袋|化粧箱|カートン|包装|폴리백|包装盒|纸箱|kemasan|polybag|kardus|kotak/i],
+  ["leather", /レザー|革|皮革|真皮|kulit/i],
+  ["fibre_yarn", /繊維|糸|紡績|フィラメント|纤维|纱线|纱|benang|serat/i],
+  ["fabric", /生地|布地|ファブリック|織物|編み地|ニット地|面料|布料|坯布|梭织|针织面料|kain|bahan kain|tekstil/i],
 ];
 function nonEnglishMode(message: string): ProcurementMode {
   for (const [mode, re] of NON_EN_MODE) if (re.test(message)) return mode;
@@ -37,7 +37,44 @@ function nonEnglishCategory(message: string): IntakeCategory {
   for (const [category, re] of NON_EN_CATEGORY) if (re.test(message)) return category;
   return "unclassified";
 }
-export function classifyIntake(message: string) { const text = message.toLowerCase(); const englishMode: ProcurementMode = /\b(private label|private-label)\b/.test(text) ? "private_label" : /\b(white label|white-label)\b/.test(text) ? "white_label" : /\b(oem|original equipment manufacturer)\b/.test(text) ? "oem" : /\b(odm|original design manufacturer)\b/.test(text) ? "odm" : /\b(cmt|cut[ -]?make[ -]?trim)\b/.test(text) ? "cmt" : /\b(blank|unbranded)\b/.test(text) ? "blank" : /\b(wholesale|stock product|ready made|ready-made)\b/.test(text) ? "wholesale" : "unspecified"; const procurementMode: ProcurementMode = englishMode !== "unspecified" ? englishMode : nonEnglishMode(message); const englishCategory: IntakeCategory = /\b(leather|suede|nubuck)\b/.test(text) ? "leather" : /\b(interlining|fusible|fusing)\b/.test(text) ? "interlining" : /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/.test(text) ? "trims_labels" : /\b(packaging|polybag|carton|box|tissue paper|mailer)\b/.test(text) ? "packaging" : /\b(fibre|fiber|yarn|spun|filament)\b/.test(text) ? "fibre_yarn" : /\b(shirts?|t-?shirts?|tees?|blouses?|tunics?|henleys?|trousers?|pants?|slacks?|chinos?|jeans|joggers?|sweatpants?|leggings?|jeggings?|shorts?|skirts?|skorts?|culottes?|dress(?:es)?|gowns?|jumpsuits?|playsuits?|rompers?|overalls?|dungarees?|jackets?|blazers?|coats?|parkas?|hoodies?|sweatshirts?|sweaters?|jumpers?|pullovers?|cardigans?|knitwear|vests?|waistcoats?|garments?|apparel|clothing|uniforms?|scrubs?|coveralls?|polos?|tank ?tops?|crop ?tops?|activewear|sportswear|loungewear|sleepwear|pyjamas?|pajamas?|swimwear|swimsuits?|bikinis?|lingerie|underwear|socks?)\b/.test(text) ? "apparel" : /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/.test(text) ? "fabric" : /\b(shoe|shoes|footwear|sneaker|boot|sandal)\b/.test(text) ? "footwear" : /\b(bag|bags|handbag|backpack|wallet|belt|hat|cap|scarf|accessor)\b/.test(text) ? "bags_accessories" : /\b(jewell?ry|ring|bracelet|necklace|earring)\b/.test(text) ? "jewelry" : /\b(cosmetic|skincare|beauty|personal care|fragrance)\b/.test(text) ? "beauty_personal_care" : /\b(home textile|bedding|curtain|cushion|towel|table linen)\b/.test(text) ? "home_textiles" : "unclassified"; const category: IntakeCategory = englishCategory !== "unclassified" ? englishCategory : nonEnglishCategory(message); const subtype: IntakeSubtype = procurementMode === "unspecified" ? category : procurementMode; const route = procurementMode !== "unspecified" ? (["wholesale", "blank", "private_label", "white_label", "oem", "odm"].includes(procurementMode) ? "finished_goods" : "production_or_materials") : category === "unclassified" ? "unclassified" : finished.has(category) ? "finished_goods" : "production_or_materials"; return { route, subtype, category, procurementMode, confidence: subtype === "unclassified" ? "low" : procurementMode === "unspecified" ? "medium" : "high" }; }
+export function classifyIntake(message: string) {
+  const text = message.toLowerCase();
+  const englishMode: ProcurementMode = /\b(private label|private-label)\b/.test(text) ? "private_label"
+    : /\b(white label|white-label)\b/.test(text) ? "white_label"
+      : /\b(oem|original equipment manufacturer)\b/.test(text) ? "oem"
+        : /\b(odm|original design manufacturer)\b/.test(text) ? "odm"
+          : /\b(cmt|cut[ -]?make[ -]?trim)\b/.test(text) ? "cmt"
+            : /\b(blank|unbranded)\b/.test(text) ? "blank"
+              : /\b(wholesale|stock product|ready made|ready-made)\b/.test(text) ? "wholesale"
+                : "unspecified";
+  const procurementMode: ProcurementMode = englishMode !== "unspecified" ? englishMode : nonEnglishMode(message);
+  const finishedCategory: IntakeCategory = /\b(shirts?|t-?shirts?|tees?|blouses?|tunics?|henleys?|trousers?|pants?|slacks?|chinos?|jeans|joggers?|sweatpants?|leggings?|jeggings?|shorts?|skirts?|skorts?|culottes?|dress(?:es)?|gowns?|jumpsuits?|playsuits?|rompers?|overalls?|dungarees?|jackets?|blazers?|coats?|parkas?|hoodies?|sweatshirts?|sweaters?|jumpers?|pullovers?|cardigans?|knitwear|vests?|waistcoats?|garments?|apparel|clothing|uniforms?|scrubs?|coveralls?|polos?|tank ?tops?|crop ?tops?|activewear|sportswear|loungewear|sleepwear|pyjamas?|pajamas?|swimwear|swimsuits?|bikinis?|lingerie|underwear|socks?)\b/.test(text) ? "apparel"
+    : /\b(shoes?|footwear|sneakers?|boots?|sandals?)\b/.test(text) ? "footwear"
+      : /\b(bags?|handbags?|backpacks?|wallets?|belts?|hats?|caps?|scar(?:f|ves)|accessor(?:y|ies))\b/.test(text) ? "bags_accessories"
+        : /\b(jewell?ry|rings?|bracelets?|necklaces?|earrings?)\b/.test(text) ? "jewelry"
+          : /\b(cosmetics?|skincare|beauty|personal care|fragrances?)\b/.test(text) ? "beauty_personal_care"
+            : /\b(home textiles?|bedding|curtains?|cushions?|towels?|table linens?)\b/.test(text) ? "home_textiles"
+              : "unclassified";
+  const componentCategory: IntakeCategory = /\b(interlining|fusible|fusing)\b/.test(text) ? "interlining"
+    : /\b(buttons?|zippers?|zip|trims?|labels?|hangtags?)\b/.test(text) ? "trims_labels"
+      : /\b(packaging|polybag|carton|box|tissue paper|mailer)\b/.test(text) ? "packaging"
+        : "unclassified";
+  const componentForFinished = /\b(interlining|fusible|fusing|buttons?|zippers?|zip|trims?|labels?|hangtags?|packaging|polybag|carton|box|tissue paper|mailer)\b[^.!?]{0,48}\bfor\b/.test(text);
+  const englishCategory: IntakeCategory = componentCategory !== "unclassified" && (finishedCategory === "unclassified" || componentForFinished) ? componentCategory
+    : finishedCategory !== "unclassified" ? finishedCategory
+      : /\b(leather|suede|nubuck)\b/.test(text) ? "leather"
+        : /\b(fibre|fiber|yarn|spun|filament)\b/.test(text) ? "fibre_yarn"
+          : /\b(fabric|textile|yardage|meters?|metres?|gsm|oz\b|woven|knit|cotton|silk|linen|wool|cashmere|viscose|rayon|polyester|nylon|denim|twill|satin|chiffon|jersey)\b/.test(text) ? "fabric"
+            : "unclassified";
+  const category: IntakeCategory = englishCategory !== "unclassified" ? englishCategory : nonEnglishCategory(message);
+  const subtype: IntakeSubtype = procurementMode === "unspecified" ? category : procurementMode;
+  const route = procurementMode !== "unspecified"
+    ? (["wholesale", "blank", "private_label", "white_label", "oem", "odm"].includes(procurementMode) ? "finished_goods" : "production_or_materials")
+    : category === "unclassified" ? "unclassified"
+      : finished.has(category) ? "finished_goods"
+        : "production_or_materials";
+  return { route, subtype, category, procurementMode, confidence: subtype === "unclassified" ? "low" : procurementMode === "unspecified" ? "medium" : "high" };
+}
 
 export type Lang = "en" | "ja" | "zh" | "id";
 export const LANGS: Lang[] = ["en", "ja", "zh", "id"];

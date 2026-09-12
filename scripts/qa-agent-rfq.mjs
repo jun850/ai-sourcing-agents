@@ -225,6 +225,39 @@ test("production request contract names the exact preset", () => {
 test("fibre-and-meter fabric request reaches the fabric route", () => {
   assert.match(INTAKE_SOURCE, /cotton\|silk/);
   assert.match(INTAKE_SOURCE, /meters\?\|metres\?/);
+  assert.deepEqual(classifyIntake("Need 500 meters of cotton fabric"), {
+    route: "production_or_materials",
+    subtype: "fabric",
+    category: "fabric",
+    procurementMode: "unspecified",
+    confidence: "medium",
+  });
+});
+
+test("material-qualified finished goods stay on finished-goods routes", () => {
+  const cases = [
+    ["We need 500 leather jackets", "apparel"],
+    ["Source 1,000 cotton tote bags", "bags_accessories"],
+    ["Need 300 silk scarves", "bags_accessories"],
+    ["レザージャケットを500着作りたい", "apparel"],
+    ["tas kulit 500 buah", "bags_accessories"],
+    ["需要500个皮革包", "bags_accessories"],
+  ];
+  for (const [brief, category] of cases) {
+    const intake = classifyIntake(brief);
+    assert.equal(intake.category, category, brief);
+    assert.equal(intake.route, "finished_goods", brief);
+    const browserIntake = classifyRfqIntake(brief);
+    assert.equal(browserIntake.items[0]?.category, category, `${brief} (browser)`);
+    assert.equal(browserIntake.route, "finished_goods", `${brief} (browser)`);
+  }
+  assert.equal(classifyIntake("Looking for leather hides").category, "leather");
+  assert.equal(classifyRfqIntake("Looking for leather hides").items[0]?.category, "leather");
+  assert.equal(classifyIntake("Need custom labels for shirts").category, "trims_labels");
+  assert.equal(classifyRfqIntake("Need custom labels for shirts").items[0]?.category, "trims_labels");
+  const complexFinishedBrief = "Private label jackets with individual polybag packaging and custom neck labels";
+  assert.equal(classifyIntake(complexFinishedBrief).category, "apparel");
+  assert.equal(classifyRfqIntake(complexFinishedBrief).items[0]?.category, "apparel");
 });
 
 test("all requested procurement modes have deterministic routes", () => {
