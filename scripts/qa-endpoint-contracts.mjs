@@ -65,9 +65,11 @@ assert.match(stripeWebhook, /Invalid webhook signature/);
 assert.match(stripeWebhook, /stripe_claim_webhook_event/);
 assert.match(stripeCheckout, /invoice_checkout_create_attempt/);
 assert.match(stripeCheckout, /p_environment: mode\(\)/);
-assert.match(approveRegistration, /inviteUserByEmail/);
-assert.match(approveRegistration, /request\.status === "invited"/);
-assert.match(approveRegistration, /resetPasswordForEmail/);
+assert.match(approveRegistration, /auth\.admin\.generateLink/);
+assert.match(approveRegistration, /\? "invite" : "recovery"/);
+assert.match(approveRegistration, /type: "recovery"/);
+assert.match(approveRegistration, /https:\/\/api\.resend\.com\/emails/);
+assert.match(approveRegistration, /if \(!response\.ok\)/);
 assert.match(approveRegistration, /auth\/callback\?next=/);
 
 assert.doesNotMatch(source, /VITE_(?:SUPABASE_SERVICE_ROLE|STRIPE_SECRET|STRIPE_WEBHOOK|OPENROUTER)/);
