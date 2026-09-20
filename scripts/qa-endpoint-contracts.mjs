@@ -60,10 +60,15 @@ assert.match(server, /"intools_list_agent_knowledge"/);
 
 const stripeWebhook = await readFile(join(functionDirectory, "stripe-webhook/index.ts"), "utf8");
 const stripeCheckout = await readFile(join(functionDirectory, "stripe-checkout/index.ts"), "utf8");
+const approveRegistration = await readFile(join(functionDirectory, "approve-registration/index.ts"), "utf8");
 assert.match(stripeWebhook, /Invalid webhook signature/);
 assert.match(stripeWebhook, /stripe_claim_webhook_event/);
 assert.match(stripeCheckout, /invoice_checkout_create_attempt/);
 assert.match(stripeCheckout, /p_environment: mode\(\)/);
+assert.match(approveRegistration, /inviteUserByEmail/);
+assert.match(approveRegistration, /request\.status === "invited"/);
+assert.match(approveRegistration, /resetPasswordForEmail/);
+assert.match(approveRegistration, /auth\/callback\?next=/);
 
 assert.doesNotMatch(source, /VITE_(?:SUPABASE_SERVICE_ROLE|STRIPE_SECRET|STRIPE_WEBHOOK|OPENROUTER)/);
 console.log(`endpoint contracts passed (${clientRpcs.size} RPCs, ${browserFunctions.size} browser functions)`);

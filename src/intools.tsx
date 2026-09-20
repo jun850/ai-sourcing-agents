@@ -3238,6 +3238,7 @@ function RegistrationDrawerBody({ id, onClose, onChanged }: { id: string; onClos
     );
 
   const pending = request.status === "pending_review";
+  const invited = request.status === "invited";
   return (
     <DrawerShell
       title={request.name}
@@ -3247,13 +3248,17 @@ function RegistrationDrawerBody({ id, onClose, onChanged }: { id: string; onClos
       footer={
         pending ? (
           <>
-            <button disabled={busy} onClick={() => void run(() => approveRegistrationRequest(request.id), "Request approved.")} style={btnStyle("success")}>
-              Approve
+            <button disabled={busy} onClick={() => void run(() => approveRegistrationRequest(request.id), "Request approved and invitation sent.")} style={btnStyle("success")}>
+              Approve and send invitation
             </button>
             <button disabled={busy} onClick={() => void run(() => declineRegistrationRequest(request.id), "Request declined.")} style={btnStyle("danger")}>
               Decline
             </button>
           </>
+        ) : invited ? (
+          <button disabled={busy} onClick={() => void run(() => approveRegistrationRequest(request.id), "Password setup email sent again.")} style={btnStyle("primary")}>
+            Resend setup email
+          </button>
         ) : undefined
       }
     >

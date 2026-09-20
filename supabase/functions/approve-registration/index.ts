@@ -15,10 +15,17 @@ Deno.serve(async (req) => {
     const db = admin();
     const { data: request, error: lookupError } = await db.from("registration_requests").select("*").eq("id", requestId).maybeSingle();
     if (lookupError || !request || !["pending_review", "approved", "invited"].includes(request.status)) throw new Error("Registration request not available.");
-    if (request.status === "invited") return corsJson(req, request);
+    const redirectTo = `${siteUrl()}/auth/callback?next=${encodeURIComponent("/auth/set-password")}`;
+    if (request.status === "invited") {
+      const { error: resendError } = await db.auth.resetPasswordForEmail(request.email, { redirectTo });
+      if (resendError) throw new Error("Could not resend the password setup email.");
+      const { data: resent, error: updateError } = await db.from("registration_requests").update({ invitation_requested_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", requestId).select("*").single();
+      if (updateError || !resent) throw new Error("The password setup email was sent but the request could not be updated.");
+      return corsJson(req, resent);
+    }
     const { error: inviteError } = await db.auth.admin.inviteUserByEmail(request.email, {
       data: { full_name: request.name, company_name: request.company_name },
-      redirectTo: `${siteUrl()}/auth/callback?next=${encodeURIComponent("/auth/set-password")}`,
+      redirectTo,
     });
     if (inviteError) throw new Error("Could not send the user invitation.");
     const { data: invited, error: updateError } = await db.from("registration_requests").update({ status: "invited", reviewed_by: reviewer.id, reviewed_at: new Date().toISOString(), invitation_requested_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", requestId).select("*").single();
