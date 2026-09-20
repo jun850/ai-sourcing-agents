@@ -11,6 +11,7 @@ import {
 import { ThemeProvider, createTheme } from "@mui/material";
 import {
   approveRegistrationRequest,
+  acceptIntoolsSupplierCandidates,
   addIntoolsRfqSupplierMatch,
   activateIntoolsRfqOutreachTemplate,
   archiveIntoolsAgentKnowledge,
@@ -20,6 +21,7 @@ import {
   createIntoolsRfqPhaseInvoice,
   createIntoolsInvoice,
   declineRegistrationRequest,
+  declineIntoolsSupplierCandidates,
   generateIntoolsRfqSupplierMatches,
   getIntoolsRfqOperations,
   getIntoolsRfqOutreachSettings,
@@ -28,6 +30,7 @@ import {
   getIntoolsInvoiceDetail,
   getIntoolsOrderDetail,
   getIntoolsSupplierDetail,
+  getIntoolsSupplierCandidate,
   getLocalIntoolsSession,
   getSession,
   getUserDisplayName,
@@ -39,6 +42,7 @@ import {
   listIntoolsRfqCases,
   listIntoolsRfqQuotes,
   listIntoolsSuppliers,
+  listIntoolsSupplierCandidates,
   loginLocalIntools,
   promoteIntoolsSupplierImportRows,
   prepareIntoolsRfqOutreachDraft,
@@ -65,6 +69,8 @@ import {
   updateIntoolsOrderStatus,
   updateIntoolsRfqStatus,
   updateIntoolsRfqOutreachDraft,
+  updateIntoolsSupplierCandidate,
+  updateIntoolsSupplierCandidatesBulk,
   beginIntoolsManualQcReview,
   reviewIntoolsQcInspection,
   uploadIntoolsQcEvidence,
@@ -85,6 +91,7 @@ import {
   type IntoolsProductionUpdate,
   type IntoolsQcInspection,
   type IntoolsSupplier,
+  type IntoolsSupplierCandidate,
   type IntoolsSupplierDetail,
   type IntoolsSupplierImportRow,
   type IntoolsSupplierPayload,
@@ -152,6 +159,8 @@ const STATUS_TONE: Record<string, keyof typeof TONES> = {
   reviewed: "primary",
   archived: "neutral",
   pending_review: "warning",
+  candidate: "warning",
+  email_failed: "danger",
   approved: "success",
   accepted: "success",
   declined: "danger",
@@ -497,17 +506,18 @@ const SECTIONS: Record<GenericSection, SectionMeta> = {
   },
   suppliers: {
     label: "Suppliers",
-    description: "Private reviewed supplier records. Nothing here is exposed publicly.",
+    description: "Review supplier candidates and maintain private, approved partner records.",
     searchPlaceholder: "Search suppliers",
     emptyText: "Reviewed supplier records will appear here.",
     selectable: true,
     columnLabels: ["Region", "Type"],
-    filters: ["all", "approved", "review", "rejected", "archived"],
+    filters: ["all", "candidate", "approved", "review", "declined", "rejected", "email_failed", "archived"],
     primaryActions: [
       { key: "new", label: "New supplier" },
       { key: "upload", label: "Bulk upload" },
     ],
     bulkActions: [
+      { key: "edit", label: "Edit selected", status: "", tone: "primary" },
       { key: "approve", label: "Approve selected", status: "approved", tone: "success" },
       { key: "reject", label: "Reject selected", status: "rejected", tone: "danger" },
       { key: "archive", label: "Archive selected", status: "archived", tone: "neutral", confirm: true, archives: true },
@@ -619,8 +629,8 @@ async function loadRows(section: GenericSection): Promise<Row[]> {
     }));
   }
   if (section === "suppliers") {
-    const data = await listIntoolsSuppliers();
-    return data.map((supplier: IntoolsSupplier) => {
+    const [data, candidates] = await Promise.all([listIntoolsSuppliers(), listIntoolsSupplierCandidates(200)]);
+    const suppliers = data.map((supplier: IntoolsSupplier) => {
       const brokerStatus =
         supplier.archived_at != null
           ? "archived"
@@ -642,6 +652,21 @@ async function loadRows(section: GenericSection): Promise<Row[]> {
         archived: supplier.archived_at != null,
       };
     });
+    const candidateRows = candidates.map((candidate: IntoolsSupplierCandidate) => ({
+      id: `candidate:${candidate.id}`,
+      title: candidate.company_name,
+      subtitle: `${candidate.contact_name} · ${candidate.email}`,
+      status: candidate.status === "declined"
+        ? "declined"
+        : candidate.partner_email_status === "failed"
+          ? "email_failed"
+          : "candidate",
+      cols: [
+        candidate.country_code || "Country not filled",
+        `${candidate.categories[0] || "Category not filled"} · ${candidate.completed_field_count}/${candidate.total_field_count} fields filled`,
+      ],
+    }));
+    return [...candidateRows, ...suppliers];
   }
   if (section === "knowledge") {
     const data = await listIntoolsAgentKnowledge(null, null);
@@ -1387,6 +1412,9 @@ function SectionListView({
   const [selected, setSelected] = useState<string[]>([]);
   const [busyBulk, setBusyBulk] = useState(false);
   const [confirmAction, setConfirmAction] = useState<BulkAction | null>(null);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditField, setBulkEditField] = useState("countryCode");
+  const [bulkEditValue, setBulkEditValue] = useState("");
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -1432,6 +1460,45 @@ function SectionListView({
     if (!ids.length) return;
     setBusyBulk(true);
     try {
+      if (section === "suppliers") {
+        const candidateIds = ids.filter((id) => id.startsWith("candidate:")).map((id) => id.slice("candidate:".length));
+        const supplierIds = ids.filter((id) => !id.startsWith("candidate:"));
+        if (candidateIds.length > 50) throw new Error("Review up to 50 supplier candidates at a time.");
+        let updated = 0;
+        let skipped = 0;
+        if (action.key === "approve") {
+          if (candidateIds.length) {
+            const result = await acceptIntoolsSupplierCandidates(candidateIds);
+            updated += result.accepted.length;
+            skipped += result.skipped.length;
+          }
+          if (supplierIds.length) {
+            const result = await setIntoolsSupplierBrokerStatusBulk(supplierIds, "approved");
+            updated += result.updated_count;
+            skipped += result.skipped_region_count || 0;
+          }
+        } else if (action.key === "reject") {
+          if (candidateIds.length) updated += (await declineIntoolsSupplierCandidates(candidateIds)).updated_count;
+          if (supplierIds.length) updated += (await setIntoolsSupplierBrokerStatusBulk(supplierIds, "rejected")).updated_count;
+        } else {
+          const queue = [...supplierIds];
+          const workers = Array.from({ length: Math.min(4, queue.length) }, async () => {
+            while (queue.length) {
+              const supplierId = queue.shift();
+              if (!supplierId) return;
+              const detail = await getIntoolsSupplierDetail(supplierId);
+              await archiveIntoolsSupplier(supplierId, detail.updated_at, false);
+              updated += 1;
+            }
+          });
+          await Promise.all(workers);
+          skipped += candidateIds.length;
+        }
+        onToast(`${updated} record${updated === 1 ? "" : "s"} updated${skipped ? ` · ${skipped} skipped` : ""}.`);
+        setSelected([]);
+        await reload();
+        return;
+      }
       const results = await Promise.allSettled(ids.map((id) => applyRowAction(section, id, action)));
       const ok = results.filter((r) => r.status === "fulfilled").length;
       const failed = results.length - ok;
@@ -1442,10 +1509,29 @@ function SectionListView({
       );
       setSelected([]);
       await reload();
+    } catch (cause) {
+      onToast(errorMessage(cause, "The bulk action could not be completed."));
     } finally {
       setBusyBulk(false);
       setConfirmAction(null);
     }
+  }
+
+  async function saveBulkCandidateEdit() {
+    const candidateIds = selected.filter((id) => id.startsWith("candidate:")).map((id) => id.slice("candidate:".length));
+    if (!candidateIds.length) { onToast("Select at least one supplier candidate to bulk edit."); return; }
+    if (candidateIds.length > 50) { onToast("Edit up to 50 supplier candidates at a time."); return; }
+    if (!bulkEditValue.trim()) { onToast("Enter a value for the selected field."); return; }
+    setBusyBulk(true);
+    try {
+      const value = bulkEditField === "categories" ? bulkEditValue.split(",").map((entry) => entry.trim()).filter(Boolean) : bulkEditValue.trim();
+      const result = await updateIntoolsSupplierCandidatesBulk(candidateIds, bulkEditField, value);
+      const skipped = selected.length - candidateIds.length;
+      onToast(`${result.updated_count} candidate${result.updated_count === 1 ? "" : "s"} updated${skipped ? ` · ${skipped} supplier records skipped` : ""}.`);
+      setBulkEditOpen(false); setBulkEditValue(""); setSelected([]);
+      await reload();
+    } catch (cause) { onToast(errorMessage(cause, "The candidates could not be updated.")); }
+    finally { setBusyBulk(false); }
   }
 
   function onPrimary(key: string) {
@@ -1558,7 +1644,7 @@ function SectionListView({
               <button
                 key={action.key}
                 disabled={busyBulk}
-                onClick={() => (action.confirm ? setConfirmAction(action) : void runBulk(action))}
+                onClick={() => action.key === "edit" ? setBulkEditOpen(true) : (action.confirm ? setConfirmAction(action) : void runBulk(action))}
                 style={btnStyle(action.tone, "sm")}
               >
                 {action.label}
@@ -1779,6 +1865,25 @@ function SectionListView({
             {confirmAction.label.replace(" selected", "")} {selected.length} record
             {selected.length === 1 ? "" : "s"}? This is recorded server-side.
           </p>
+        </ModalShell>
+      )}
+      {bulkEditOpen && section === "suppliers" && (
+        <ModalShell
+          title="Edit supplier candidates"
+          hint="Bulk edit · up to 50 candidates"
+          onClose={() => setBulkEditOpen(false)}
+          footer={<><button disabled={busyBulk} onClick={() => setBulkEditOpen(false)} style={btnStyle("neutral")}>Cancel</button><button disabled={busyBulk || !bulkEditValue.trim()} onClick={() => void saveBulkCandidateEdit()} style={btnStyle("primary")}>Apply edit</button></>}
+        >
+          <div style={{ display:"grid",gap:12 }}>
+            <p style={{ margin:0,fontSize:13,color:C.dim,lineHeight:1.5 }}>Apply one shared value to the selected candidate records. Existing approved supplier records are skipped.</p>
+            <Field label="Field">
+              <select value={bulkEditField} onChange={(event) => { setBulkEditField(event.target.value); setBulkEditValue(""); }} style={inputStyle}>
+                <option value="countryCode">Supplier country</option><option value="categories">Manufacturing categories</option><option value="language">Preferred language</option>
+                <option value="externalQc">External quality control</option><option value="thirdPartyQc">Third-party quality control</option><option value="catalog">Product catalog</option><option value="paymentTerms">Payment terms</option>
+              </select>
+            </Field>
+            <Field label={bulkEditField === "categories" ? "Value (comma-separated)" : "Value"}><input value={bulkEditValue} onChange={(event) => setBulkEditValue(event.target.value)} style={inputStyle} autoFocus /></Field>
+          </div>
         </ModalShell>
       )}
     </>
@@ -3057,6 +3162,109 @@ function RequestDrawerBody({
   );
 }
 
+/* -- Supplier candidate drawer -- */
+type SupplierCandidateDraft = {
+  companyName: string; contactName: string; email: string; phone: string; countryCode: string; address: string;
+  yearsInBusiness: string; website: string; language: string; companyOverview: string; categories: string; leadTime: string;
+  moq: string; monthlyCapacity: string; externalQc: string; exportsAbroad: string; certifications: string; thirdPartyQc: string;
+  catalog: string; paymentTerms: string; notes: string;
+};
+function supplierCandidateDraft(candidate: IntoolsSupplierCandidate): SupplierCandidateDraft {
+  const payload = candidate.payload || {};
+  const value = (key: string) => typeof payload[key] === "string" ? String(payload[key]) : "";
+  return {
+    companyName: candidate.company_name || "", contactName: candidate.contact_name || "", email: candidate.email || "", phone: candidate.phone || "",
+    countryCode: candidate.country_code || "", address: candidate.address || "", yearsInBusiness: candidate.years_in_business == null ? "" : String(candidate.years_in_business),
+    website: value("website"), language: candidate.language || "", companyOverview: value("companyOverview"), categories: (candidate.categories || []).join(", "),
+    leadTime: candidate.lead_time_days == null ? "" : String(candidate.lead_time_days), moq: candidate.moq || "", monthlyCapacity: candidate.monthly_capacity || "",
+    externalQc: value("externalQc"), exportsAbroad: value("exportsAbroad") || (candidate.exports_abroad ? "Yes" : "No"), certifications: value("certifications"),
+    thirdPartyQc: value("thirdPartyQc"), catalog: value("catalog"), paymentTerms: value("paymentTerms"), notes: value("notes"),
+  };
+}
+function supplierCandidatePayload(draft: SupplierCandidateDraft) {
+  return { ...draft, categories: draft.categories.split(",").map((value) => value.trim()).filter(Boolean) };
+}
+function SupplierCandidateDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
+  const [candidate, setCandidate] = useState<IntoolsSupplierCandidate | null>(null);
+  const [draft, setDraft] = useState<SupplierCandidateDraft | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(async () => {
+    try { setCandidate(await getIntoolsSupplierCandidate(id)); }
+    catch (cause) { setError(errorMessage(cause, "Could not load this supplier candidate.")); }
+  }, [id]);
+  useEffect(() => { void load(); }, [load]);
+
+  async function run(fn: () => Promise<unknown>, message: string) {
+    setBusy(true); setError(""); setNotice("");
+    try { await fn(); setNotice(message); await load(); onChanged(); }
+    catch (cause) { setError(errorMessage(cause, "The action could not be completed.")); }
+    finally { setBusy(false); }
+  }
+  async function saveCandidate() {
+    if (!candidate || !draft) return;
+    if (!draft.companyName.trim() || !draft.contactName.trim() || !draft.email.trim() || !draft.phone.trim() || !draft.address.trim() || !draft.categories.trim()) {
+      setError("Company, contact, email, phone, address, and at least one category are required."); return;
+    }
+    await run(async () => {
+      await updateIntoolsSupplierCandidate(candidate.id, supplierCandidatePayload(draft), candidate.updated_at);
+      setDraft(null);
+    }, "Candidate information saved.");
+  }
+  async function acceptCandidate() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await acceptIntoolsSupplierCandidates([candidate!.id]);
+      if (!result.accepted.length) throw new Error(result.skipped[0]?.reason || "This candidate could not be accepted.");
+      onChanged();
+      onClose();
+    } catch (cause) {
+      setError(errorMessage(cause, "The supplier was accepted, but the partner email needs attention."));
+      await load();
+      onChanged();
+    } finally { setBusy(false); }
+  }
+  if (!candidate) return <DrawerShell title="Supplier candidate" subtitle={id} onClose={onClose}>{error ? <Notice tone="danger">{error}</Notice> : <SkeletonRows />}</DrawerShell>;
+  const display = supplierCandidateDraft(candidate);
+  const fields: Array<[string, keyof SupplierCandidateDraft]> = [
+    ["Company name","companyName"],["Main contact name","contactName"],["Contact email","email"],["Contact phone","phone"],["Supplier country","countryCode"],
+    ["Address","address"],["Years in business","yearsInBusiness"],["Company website","website"],["Preferred language","language"],["Company overview","companyOverview"],
+    ["Manufacturing categories","categories"],["Typical lead time (days)","leadTime"],["Minimum MOQ","moq"],["Max monthly capacity","monthlyCapacity"],
+    ["Open to external quality control","externalQc"],["Exported to the USA","exportsAbroad"],["Certifications","certifications"],
+    ["Accepts third-party quality control","thirdPartyQc"],["Has a product catalog","catalog"],["Preferred payment terms","paymentTerms"],["Additional notes","notes"],
+  ];
+  const emailNeedsRetry = candidate.status === "approved" && candidate.partner_email_sent_at == null;
+  return <DrawerShell
+    title={candidate.company_name}
+    subtitle={`${candidate.contact_name} · ${candidate.email}`}
+    status={candidate.partner_email_status === "failed" ? "email_failed" : candidate.status === "pending_manual_review" ? "candidate" : candidate.status}
+    onClose={onClose}
+    footer={draft ? <><button disabled={busy} onClick={() => setDraft(null)} style={btnStyle("neutral")}>Cancel</button><button disabled={busy} onClick={() => void saveCandidate()} style={btnStyle("success")}>Save changes</button></> : <>
+      <button disabled={busy || candidate.status === "declined"} onClick={() => void acceptCandidate()} style={btnStyle("success")}>{emailNeedsRetry ? "Retry partner email" : "Accept as partner"}</button>
+      <button disabled={busy || candidate.status !== "pending_manual_review"} onClick={() => void run(() => declineIntoolsSupplierCandidates([candidate.id]), "Supplier candidate declined.")} style={btnStyle("danger")}>Decline</button>
+      <button disabled={busy || candidate.status === "approved"} onClick={() => setDraft(display)} style={btnStyle("primary")}>Edit</button>
+    </>}
+  >
+    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:9,background:"#f5f7f9",marginBottom:12,fontSize:12.5,color:C.head }}>
+      <strong>{candidate.completed_field_count}/{candidate.total_field_count} fields filled</strong>
+      <span>{candidate.missing_fields.length ? `${candidate.missing_fields.length} not filled` : "Complete"}</span>
+    </div>
+    {candidate.partner_email_status === "failed" && <Notice tone="danger">Partner email failed: {candidate.partner_email_last_error || "Provider error"}. The supplier record was accepted; retry only the email.</Notice>}
+    {draft ? <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(190px,1fr))",gap:10 }} aria-busy={busy}>
+      {fields.map(([field,key]) => <Field key={key} label={field}>{key === "companyOverview" || key === "notes" || key === "address" ? <textarea value={draft[key]} onChange={(event) => setDraft((current) => current ? { ...current, [key]: event.target.value } : current)} style={{ ...inputStyle,minHeight:76,padding:9,resize:"vertical" }} /> : <input value={draft[key]} onChange={(event) => setDraft((current) => current ? { ...current, [key]: event.target.value } : current)} style={inputStyle} />}</Field>)}
+    </div> : <FieldRows rows={fields.map(([field,key]) => [field, display[key].trim() || "Not filled"])} />}
+    <GroupLabel>Review status</GroupLabel>
+    <FieldRows rows={[
+      ["Application status", label(candidate.status)], ["Partner email", label(candidate.partner_email_status)],
+      ["Submitted", shortDate(candidate.created_at)], ["Reviewed", candidate.reviewed_at ? shortDate(candidate.reviewed_at) : "Not reviewed"],
+      ["Accepted supplier record", candidate.accepted_supplier_id || "Not created"],
+    ]} />
+    {error && <Notice tone="danger">{error}</Notice>}
+    {notice && <Notice tone="success">{notice}</Notice>}
+  </DrawerShell>;
+}
+
 /* -- Supplier drawer -- */
 type SupplierEditDraft = {
   slug: string; name: string; type: string; region: string; loc: string; years: string; moq: string; lead: string; capacity: string;
@@ -3966,7 +4174,9 @@ function DetailRouter({
         }
       />
     );
-  if (section === "suppliers") return <SupplierDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
+  if (section === "suppliers") return id.startsWith("candidate:")
+    ? <SupplierCandidateDrawerBody id={id.slice("candidate:".length)} onClose={onClose} onChanged={onChanged} />
+    : <SupplierDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
   if (section === "registrations") return <RegistrationDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
   if (section === "knowledge") return <KnowledgeDrawerBody id={id} onClose={onClose} onChanged={onChanged} />;
   if (section === "requests") {

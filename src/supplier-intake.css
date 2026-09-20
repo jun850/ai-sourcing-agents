@@ -27,6 +27,11 @@ body.supplier-intake-open { overflow: hidden; }
 .supplier-intake-success h3 { margin: 22px 0 10px; font-size: 26px; letter-spacing: -.04em; }
 .supplier-intake-success p { max-width: 480px; margin: 0; color: var(--supplier-modal-muted); font-size: 16px; line-height: 1.55; }
 .supplier-intake-success-close { min-height: 46px; margin-top: 26px; padding: 0 24px; border: 1px solid #ced8d0; border-radius: 999px; background: #fff; color: var(--supplier-modal-green); font: inherit; font-weight: 700; cursor: pointer; }
+.supplier-intake-dialog .MuiInputLabel-root.Mui-focused { color: #526176; }
+.supplier-intake-dialog .MuiOutlinedInput-root.Mui-focused { box-shadow: none; outline: 2px solid #8b96a4; outline-offset: 2px; }
+.supplier-intake-dialog .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline { border-color: #8b96a4; border-width: 1px; }
+.supplier-intake-dialog .MuiRadio-root.Mui-focusVisible,
+.supplier-intake-dialog .MuiCheckbox-root.Mui-focusVisible { border-radius: 4px; outline: 2px solid #8b96a4; outline-offset: 1px; }
 
 @media (max-width: 760px) {
   .supplier-intake-backdrop { place-items: stretch; padding: 12px; }

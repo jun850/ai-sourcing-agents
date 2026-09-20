@@ -18,7 +18,7 @@ import {
 import { submitSupplierIntake } from "./supabase";
 
 type SupplierValues = {
-  companyName: string; contactName: string; email: string; phone: string; address: string;
+  companyName: string; contactName: string; email: string; phone: string; countryCode: string; address: string;
   yearsInBusiness: string; website: string; language: string; companyOverview: string; categories: string[];
   leadTime: string; moq: string; monthlyCapacity: string; externalQc: string; exportsAbroad: string;
   certifications: string; thirdPartyQc: string; catalog: string;
@@ -26,15 +26,15 @@ type SupplierValues = {
 };
 
 const initialValues: SupplierValues = {
-  companyName: "", contactName: "", email: "", phone: "", address: "", yearsInBusiness: "", website: "",
+  companyName: "", contactName: "", email: "", phone: "", countryCode: "", address: "", yearsInBusiness: "", website: "",
   language: "", companyOverview: "", categories: [], leadTime: "", moq: "", monthlyCapacity: "", externalQc: "", exportsAbroad: "",
   certifications: "", thirdPartyQc: "", catalog: "", paymentTerms: "", notes: "",
 };
 
 const languages = ["English", "Indonesian", "Mandarin", "Vietnamese", "Japanese", "Malay"];
 const categories = [
-  "Textile / Garment / Apparel", "Essential Oil / Skincare / Fragrance", "Furniture / Homegoods",
-  "Hardware / Utilities", "Electronics", "Beauty / Skincare / Lifestyle", "Other",
+  "Apparel / cut-and-sew", "Fabric / textile", "Trims / labels", "Accessories",
+  "Footwear", "Packaging", "Other fashion manufacturing",
 ];
 
 type Props = { open: boolean; onClose: () => void; returnFocusRef: RefObject<HTMLButtonElement | null> };
@@ -122,7 +122,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
     const next: Record<string, string> = {};
     const required: Array<[keyof SupplierValues, string]> = [
       ["companyName", "Add your company name."], ["contactName", "Add a main contact name."], ["email", "Add a work email."],
-      ["phone", "Add a contact phone number."], ["address", "Add your company address."], ["yearsInBusiness", "Add the years you have been in business."],
+      ["phone", "Add a contact phone number."], ["countryCode", "Add your supplier country."], ["address", "Add your company address."], ["yearsInBusiness", "Add the years you have been in business."],
       ["language", "Choose a communication language."], ["companyOverview", "Tell us briefly about your company."], ["leadTime", "Add a typical lead time."],
       ["moq", "Add your minimum MOQ."], ["monthlyCapacity", "Add your monthly capacity."], ["externalQc", "Choose an option."], ["exportsAbroad", "Choose an option."],
       ["thirdPartyQc", "Choose an option."], ["catalog", "Choose an option."], ["paymentTerms", "Add your preferred payment terms."],
@@ -177,6 +177,7 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
           <TextField label="Main contact name" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.contactName} onChange={(event) => setValue("contactName", event.target.value)} error={!!errors.contactName} helperText={errors.contactName} autoComplete="name" />
           <TextField label="Contact email" required fullWidth type="email" value={values.email} onChange={(event) => setValue("email", event.target.value)} error={!!errors.email} helperText={errors.email} autoComplete="email" />
           <TextField label="Contact phone" required fullWidth type="tel" value={values.phone} onChange={(event) => setValue("phone", event.target.value)} error={!!errors.phone} helperText={errors.phone} autoComplete="tel" />
+          <TextField label="Supplier country" required fullWidth value={values.countryCode} onChange={(event) => setValue("countryCode", event.target.value)} error={!!errors.countryCode} helperText={errors.countryCode || "Use the full country name, for example Indonesia."} autoComplete="country-name" />
           <TextField label="Address" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.address} onChange={(event) => setValue("address", event.target.value)} error={!!errors.address} helperText={errors.address} autoComplete="street-address" />
           <TextField label="Years in business" required fullWidth inputMode="numeric" value={values.yearsInBusiness} onChange={(event) => setValue("yearsInBusiness", event.target.value)} error={!!errors.yearsInBusiness} helperText={errors.yearsInBusiness} />
           <TextField label={<OptionalLabel label="Company website" />} fullWidth type="url" placeholder="https://" value={values.website} onChange={(event) => setValue("website", event.target.value)} autoComplete="url" />

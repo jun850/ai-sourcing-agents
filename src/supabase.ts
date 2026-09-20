@@ -513,6 +513,38 @@ export type IntoolsSupplierDetail = IntoolsSupplier & {
   audit: IntoolsInvoiceAudit[];
   intake?: Record<string, unknown> | null;
 };
+export type IntoolsSupplierCandidate = {
+  id: string;
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  country_code: string | null;
+  address: string;
+  categories: string[];
+  language: string;
+  years_in_business: number | null;
+  lead_time_days: number | null;
+  moq: string;
+  monthly_capacity: string;
+  exports_abroad: boolean;
+  export_regions: string[];
+  payload: Record<string, unknown>;
+  status: "pending_manual_review" | "approved" | "declined" | "archived";
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  accepted_supplier_id: string | null;
+  partner_email_status: "not_sent" | "pending" | "sent" | "failed";
+  partner_email_attempted_at: string | null;
+  partner_email_sent_at: string | null;
+  partner_email_provider_id: string | null;
+  partner_email_last_error: string | null;
+  missing_fields: string[];
+  completed_field_count: number;
+  total_field_count: number;
+  created_at: string;
+  updated_at: string;
+};
 export type IntoolsSupplierPayload = Partial<
   Pick<
     IntoolsSupplier,
@@ -1584,6 +1616,39 @@ export async function approveRegistrationRequest(requestId: string) {
 }
 export async function listIntoolsSuppliers() {
   return intoolsRpc<IntoolsSupplier[]>("intools_list_suppliers");
+}
+export async function listIntoolsSupplierCandidates(limit = 200) {
+  return intoolsRpc<IntoolsSupplierCandidate[]>("intools_list_supplier_candidates", { p_limit: limit });
+}
+export async function getIntoolsSupplierCandidate(candidateId: string) {
+  return intoolsRpc<IntoolsSupplierCandidate>("intools_get_supplier_candidate", { p_candidate_id: candidateId });
+}
+export async function updateIntoolsSupplierCandidate(candidateId: string, payload: Record<string, unknown>, expectedUpdatedAt: string) {
+  return intoolsRpc<IntoolsSupplierCandidate>("intools_update_supplier_candidate", {
+    p_candidate_id: candidateId,
+    p_payload: payload,
+    p_expected_updated_at: expectedUpdatedAt,
+  });
+}
+export async function declineIntoolsSupplierCandidates(candidateIds: string[]) {
+  return intoolsRpc<{ updated_count: number; status: "declined" }>("intools_decline_supplier_intakes", { p_candidate_ids: candidateIds });
+}
+export async function updateIntoolsSupplierCandidatesBulk(candidateIds: string[], field: string, value: string | string[]) {
+  return intoolsRpc<{ updated_count: number; field: string }>("intools_update_supplier_candidates_bulk", {
+    p_candidate_ids: candidateIds,
+    p_field: field,
+    p_value: value,
+  });
+}
+export async function acceptIntoolsSupplierCandidates(candidateIds: string[]) {
+  const { data, error } = await client().functions.invoke("supplier-candidate-review", { body: { candidateIds } });
+  rpcError(error);
+  if (data?.error) throw new Error(String(data.error));
+  return data as {
+    accepted: Array<{ intake_id: string; supplier_id: string; email: string }>;
+    skipped: Array<{ intake_id: string; reason: string }>;
+    emailStatus: "sent" | "not_sent";
+  };
 }
 export type IntoolsSearchConsoleRow = { label: string; clicks: number; impressions: number; ctr: number; position: number };
 export type IntoolsCustomerDistribution = { label: string; customers: number; percentage: number };
