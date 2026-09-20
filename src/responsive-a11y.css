@@ -53,7 +53,51 @@ body { overflow-x: clip; }
 .intools-root { min-height: 100dvh; }
 /* On narrow screens the operational list keeps title + status; the middle text
    columns fold away rather than forcing horizontal task scrolling. */
-@media (max-width: 640px) { .intools-root .intools-list-col { display: none; } }
+@media (max-width: 1024px) {
+  .intools-root .intools-list-col { display: none; }
+  .intools-root .intools-sidebar:not(.is-collapsed) {
+    position: fixed;
+    z-index: 42;
+    inset: 0 auto 0 0;
+    height: 100dvh !important;
+    box-shadow: 12px 0 32px rgba(20, 26, 34, .2);
+  }
+  .intools-sidebar-scrim {
+    position: fixed;
+    z-index: 41;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    padding: 0;
+    border: 0;
+    background: rgba(20, 26, 34, .42);
+    cursor: pointer;
+  }
+  .intools-main { padding-inline: 20px !important; }
+  .intools-filter-row { align-items: stretch !important; }
+  .intools-filter-search { flex-basis: 100% !important; min-width: 0 !important; }
+  .intools-filter-tabs {
+    width: 100%;
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding: 1px 1px 7px;
+    scrollbar-width: thin;
+  }
+  .intools-drawer { width: min(520px, calc(100vw - 72px)) !important; }
+}
+
+@media (pointer: coarse) {
+  .intools-sidebar-toggle,
+  .intools-topbar-action { width: 44px !important; height: 44px !important; }
+  .intools-sidebar-link { min-height: 44px; }
+  .intools-filter-tabs button { min-height: 44px; }
+}
+
+@media (max-width: 760px) {
+  .intools-main { padding: 18px 14px 48px !important; }
+  .intools-topbar { padding-inline: 12px !important; }
+  .intools-drawer { width: calc(100vw - 16px) !important; }
+}
 
 .route-loading:has(.route-skeleton--auth) { display: grid; place-items: center; background: linear-gradient(130deg, #f7faf5, #e9f2e8); }
 .route-skeleton--auth { width: min(520px, 100%); }

@@ -342,7 +342,9 @@ export type IntoolsRegistrationRequest = {
   annual_revenue: string;
   phone: string | null;
   country_code: string | null;
-  status: "pending_review" | "approved" | "declined" | "invited";
+  status: "pending_review" | "approved" | "declined" | "invited" | "accepted";
+  auth_user_id: string | null;
+  accepted_at: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
   invitation_requested_at: string | null;

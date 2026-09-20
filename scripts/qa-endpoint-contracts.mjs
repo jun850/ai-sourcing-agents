@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(fileURLToPath(new URL("..", import.meta.url)));
 const source = await readFile(join(root, "src/supabase.ts"), "utf8");
+const intools = await readFile(join(root, "src/intools.tsx"), "utf8");
 const server = await readFile(join(root, "server/index.mjs"), "utf8");
 const copilotApi = await readFile(join(root, "api/rfq-copilot.js"), "utf8");
 const visitorCountryApi = await readFile(join(root, "api/visitor-country.js"), "utf8");
@@ -71,6 +72,12 @@ assert.match(approveRegistration, /type: "recovery"/);
 assert.match(approveRegistration, /https:\/\/api\.resend\.com\/emails/);
 assert.match(approveRegistration, /if \(!response\.ok\)/);
 assert.match(approveRegistration, /auth\/callback\?next=/);
+assert.match(approveRegistration, /setup\.confirmedAt \? "accepted" : "invited"/);
+assert.match(intools, /Authenticated buyers must never remain on an Intools deep link\./);
+assert.match(intools, /navigate\("\/dashboard"\)/);
+assert.match(migrationSql, /on_auth_user_confirmed_registration/);
+assert.match(migrationSql, /status = 'accepted'/);
+assert.match(migrationSql, /'pending_review','approved','declined','invited','accepted'/);
 
 assert.doesNotMatch(source, /VITE_(?:SUPABASE_SERVICE_ROLE|STRIPE_SECRET|STRIPE_WEBHOOK|OPENROUTER)/);
 console.log(`endpoint contracts passed (${clientRpcs.size} RPCs, ${browserFunctions.size} browser functions)`);

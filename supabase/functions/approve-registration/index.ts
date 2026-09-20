@@ -33,7 +33,11 @@ async function createSetupLink(
   if (result.error || !result.data.properties?.action_link) {
     throw new Error("Could not create a secure password setup link.");
   }
-  return result.data.properties.action_link;
+  return {
+    actionLink: result.data.properties.action_link,
+    authUserId: result.data.user.id,
+    confirmedAt: result.data.user.email_confirmed_at,
+  };
 }
 
 async function sendSetupEmail(email: string, actionLink: string) {
@@ -75,9 +79,18 @@ Deno.serve(async (req) => {
     const { data: request, error: lookupError } = await db.from("registration_requests").select("*").eq("id", requestId).maybeSingle();
     if (lookupError || !request || !["pending_review", "approved", "invited"].includes(request.status)) throw new Error("Registration request not available.");
     const redirectTo = `${siteUrl()}/auth/callback?next=${encodeURIComponent("/auth/set-password")}`;
-    const actionLink = await createSetupLink(db, request, redirectTo);
-    await sendSetupEmail(request.email, actionLink);
-    const { data: invited, error: updateError } = await db.from("registration_requests").update({ status: "invited", reviewed_by: reviewer.id, reviewed_at: new Date().toISOString(), invitation_requested_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", requestId).select("*").single();
+    const setup = await createSetupLink(db, request, redirectTo);
+    await sendSetupEmail(request.email, setup.actionLink);
+    const now = new Date().toISOString();
+    const { data: invited, error: updateError } = await db.from("registration_requests").update({
+      status: setup.confirmedAt ? "accepted" : "invited",
+      auth_user_id: setup.authUserId,
+      accepted_at: setup.confirmedAt || null,
+      reviewed_by: reviewer.id,
+      reviewed_at: request.reviewed_at || now,
+      invitation_requested_at: now,
+      updated_at: now,
+    }).eq("id", requestId).select("*").single();
     if (updateError || !invited) throw new Error("The provider accepted the invitation but the request could not be updated.");
     return corsJson(req, invited);
   } catch (error) { return corsJson(req, { error: error instanceof Error ? error.message : "Could not approve this request." }, 400); }

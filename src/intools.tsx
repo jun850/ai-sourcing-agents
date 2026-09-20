@@ -153,6 +153,7 @@ const STATUS_TONE: Record<string, keyof typeof TONES> = {
   archived: "neutral",
   pending_review: "warning",
   approved: "success",
+  accepted: "success",
   declined: "danger",
   invited: "info",
   verified: "success",
@@ -487,7 +488,7 @@ const SECTIONS: Record<GenericSection, SectionMeta> = {
     emptyText: "Access requests will appear here for review.",
     selectable: true,
     columnLabels: ["Company", "Sourcing", "Requested"],
-    filters: ["all", "pending_review", "approved", "invited", "declined"],
+    filters: ["all", "pending_review", "approved", "invited", "accepted", "declined"],
     primaryActions: [],
     bulkActions: [
       { key: "approve", label: "Approve selected", status: "approved", tone: "success" },
@@ -1153,6 +1154,7 @@ function Sidebar({
 }) {
   return (
     <aside
+      className={`intools-sidebar${collapsed ? " is-collapsed" : ""}`}
       style={{
         width: collapsed ? 72 : 248,
         flexShrink: 0,
@@ -1160,7 +1162,6 @@ function Sidebar({
         display: "flex",
         flexDirection: "column",
         height: "100%",
-        transition: "width 160ms ease",
       }}
     >
       <div
@@ -1181,6 +1182,7 @@ function Sidebar({
           </div>
         )}
         <button
+          className="intools-sidebar-toggle"
           type="button"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={onToggle}
@@ -1219,6 +1221,7 @@ function Sidebar({
           const badge = badges[section] || 0;
           return (
             <button
+              className="intools-sidebar-link"
               key={section}
               type="button"
               onClick={() => onSelect(section)}
@@ -1463,8 +1466,9 @@ function SectionListView({
     <>
       <PrimaryActionBridge section={section} onPrimary={onPrimary} />
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
+      <div className="intools-filter-row" style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 14 }}>
         <input
+          className="intools-filter-search"
           type="text"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
@@ -1483,7 +1487,7 @@ function SectionListView({
           }}
         />
         {meta.filters.length > 1 && (
-          <div role="tablist" aria-label="Filter" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div className="intools-filter-tabs" role="tablist" aria-label="Filter" style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {meta.filters.map((value) => {
               const isActive = value === filter;
               return (
@@ -1859,6 +1863,7 @@ function ModalShell({
       }}
     >
       <div
+        className="intools-modal"
         ref={containerRef}
         role="dialog"
         aria-modal="true"
@@ -1933,6 +1938,7 @@ function DrawerShell({
       }}
     >
       <div
+        className="intools-drawer"
         ref={containerRef}
         role="dialog"
         aria-modal="true"
@@ -4012,7 +4018,8 @@ export function Intools() {
   const [ready, setReady] = useState(false);
   const [localLogin, setLocalLogin] = useState(false);
   const [operatorName, setOperatorName] = useState("");
-  const [collapsed, setCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth < 960);
+  const [collapsed, setCollapsed] = useState(() => typeof window !== "undefined" && window.innerWidth <= 1024);
+  const [tabletLayout, setTabletLayout] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 1024px)").matches);
   const [toast, setToast] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [modal, setModal] = useState<
@@ -4036,6 +4043,17 @@ export function Intools() {
     addEventListener("popstate", listener);
     return () => removeEventListener("popstate", listener);
   }, [forceRoute]);
+
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1024px)");
+    const syncTabletLayout = () => {
+      setTabletLayout(query.matches);
+      if (query.matches) setCollapsed(true);
+    };
+    syncTabletLayout();
+    query.addEventListener("change", syncTabletLayout);
+    return () => query.removeEventListener("change", syncTabletLayout);
+  }, []);
 
   useEffect(() => {
     if (location.pathname === "/intools") { navigate("/intools/analytics"); return; }
@@ -4096,7 +4114,13 @@ export function Intools() {
         setAccess("permission");
         return;
       }
-      await assertIntoolsAdmin();
+      try {
+        await assertIntoolsAdmin();
+      } catch {
+        // Authenticated buyers must never remain on an Intools deep link.
+        navigate("/dashboard");
+        return;
+      }
       if (!active) return;
       setOperatorName(await getUserDisplayName(session.user));
       setReady(true);
@@ -4111,8 +4135,9 @@ export function Intools() {
   }, [refreshBadges]);
 
   const selectSection = useCallback((next: Section) => {
+    if (tabletLayout) setCollapsed(true);
     navigate(sectionPath(next));
-  }, []);
+  }, [tabletLayout]);
 
   const closeDetail = useCallback(() => {
     navigate(sectionPath(route.section));
@@ -4170,8 +4195,17 @@ export function Intools() {
           operatorName={operatorName}
           badges={pendingBadges}
         />
+        {tabletLayout && !collapsed && (
+          <button
+            type="button"
+            className="intools-sidebar-scrim"
+            aria-label="Close navigation"
+            onClick={() => setCollapsed(true)}
+          />
+        )}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", height: "100%" }}>
           <header
+            className="intools-topbar"
             style={{
               height: 60,
               flexShrink: 0,
@@ -4185,6 +4219,7 @@ export function Intools() {
             }}
           >
             <button
+              className="intools-topbar-action"
               aria-label="Back to dashboard"
               onClick={() => navigate("/dashboard")}
               style={{
@@ -4226,6 +4261,7 @@ export function Intools() {
           </header>
 
           <main
+            className="intools-main"
             id="main-content"
             style={
               section === "messages"
