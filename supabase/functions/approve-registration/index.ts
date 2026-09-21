@@ -2,6 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { admin, corsJson, preflight, requireAdmin, requireAllowedOrigin, siteUrl } from "../_shared/stripe.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const EMAIL_LOGO_URL = "https://bobwfxvxzjovpgmmqsew.supabase.co/storage/v1/object/public/uploads/system/branding/atelix-ai-horizontal-email-v1.png";
+const SUPPORT_EMAIL = "info@atelix.app";
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => ({
@@ -55,7 +57,74 @@ async function sendSetupEmail(name: string, email: string, actionLink: string) {
   const from = atelixSender();
   if (!resendKey) throw new Error("Invitation email delivery is not configured.");
 
-  const greeting = name.trim() ? `Hi ${name.trim()},` : "Hi,";
+  const greeting = name.trim() ? `Hi ${name.trim()},` : "Hi there,";
+  const safeGreeting = escapeHtml(greeting);
+  const safeActionLink = escapeHtml(actionLink);
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      @media only screen and (max-width: 620px) {
+        .email-shell { padding: 30px 22px !important; }
+        .email-logo { width: 184px !important; }
+        .email-title { font-size: 36px !important; }
+        .email-copy { font-size: 18px !important; }
+        .email-button { display: block !important; padding: 19px 24px !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:#ffffff;color:#090d0a;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;">Your Atelix access has been approved. Create your password to continue.</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+      <tr>
+        <td align="center" class="email-shell" style="padding:42px 24px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:620px;">
+            <tr>
+              <td style="padding-bottom:72px;">
+                <img class="email-logo" src="${EMAIL_LOGO_URL}" width="220" alt="Atelix AI" style="display:block;width:220px;max-width:100%;height:auto;border:0;">
+              </td>
+            </tr>
+            <tr>
+              <td class="email-title" style="font-size:46px;font-weight:700;letter-spacing:-1.8px;line-height:1.08;padding-bottom:38px;">
+                Create your Atelix password
+              </td>
+            </tr>
+            <tr>
+              <td class="email-copy" style="font-size:20px;line-height:1.5;padding-bottom:18px;">
+                ${safeGreeting} 👋
+              </td>
+            </tr>
+            <tr>
+              <td class="email-copy" style="font-size:20px;line-height:1.5;padding-bottom:20px;">
+                Your Atelix access has been approved.
+              </td>
+            </tr>
+            <tr>
+              <td class="email-copy" style="font-size:20px;line-height:1.5;padding-bottom:58px;">
+                Create your password to open your sourcing workspace.
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding-bottom:58px;">
+                <a class="email-button" href="${safeActionLink}" style="display:inline-block;background:#0b442d;color:#ffffff;padding:21px 44px;border-radius:14px;font-size:18px;font-weight:700;text-decoration:none;">
+                  Create your password
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="font-size:16px;line-height:1.55;color:#323a35;">
+                This secure link will expire in 1 hour. If you were not expecting this invitation, you can ignore this email or contact
+                <a href="mailto:${SUPPORT_EMAIL}" style="color:#5f9342;font-weight:700;text-decoration:none;">${SUPPORT_EMAIL}</a>.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -63,9 +132,9 @@ async function sendSetupEmail(name: string, email: string, actionLink: string) {
     body: JSON.stringify({
       from,
       to: [email],
-      subject: "Set up your Atelix account",
-      text: `${greeting}\n\nYour Atelix access has been approved. Set up your password to open your sourcing workspace:\n${actionLink}\n\nThis secure link expires. If you were not expecting this email, you can ignore it.\n\nAtelix`,
-      html: `<div style="background:#f4f7f3;padding:32px 16px;font-family:Arial,sans-serif;color:#202936"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;padding:32px"><div style="font-size:22px;font-weight:700;letter-spacing:-.03em;color:#183d2d">atelix<span style="color:#5e8b68">.</span></div><p style="margin:28px 0 12px;line-height:1.6">${escapeHtml(greeting)}</p><p style="margin:0 0 24px;line-height:1.6">Your Atelix access has been approved. Set up your password to open your sourcing workspace.</p><p style="margin:0 0 28px"><a href="${escapeHtml(actionLink)}" style="display:inline-block;border-radius:999px;background:#183d2d;color:#fff;padding:13px 22px;font-weight:700;text-decoration:none">Set up your password</a></p><p style="margin:0;color:#687383;font-size:13px;line-height:1.55">This secure link expires. If you were not expecting this email, you can ignore it.</p></div></div>`,
+      subject: "Create your Atelix password",
+      text: `${greeting} 👋\n\nYour Atelix access has been approved. Create your password to open your sourcing workspace:\n${actionLink}\n\nThis secure link will expire in 1 hour. If you were not expecting this invitation, you can ignore this email or contact ${SUPPORT_EMAIL}.\n\nAtelix AI`,
+      html,
     }),
   });
   const responseText = await response.text();

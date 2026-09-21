@@ -18,6 +18,7 @@ import {
   archiveIntoolsSupplier,
   assertIntoolsAdmin,
   cancelIntoolsInvoice,
+  closeIntoolsRfqResponseOpportunity,
   createIntoolsRfqPhaseInvoice,
   createIntoolsInvoice,
   declineRegistrationRequest,
@@ -31,6 +32,10 @@ import {
   getIntoolsOrderDetail,
   getIntoolsSupplierDetail,
   getIntoolsSupplierCandidate,
+  getIntoolsSupplierIntelligence,
+  getIntoolsSupplierIntelligenceForCase,
+  getIntoolsSupplierIntelligenceOverview,
+  getIntoolsSupplierOrderOutcome,
   getLocalIntoolsSession,
   getSession,
   getUserDisplayName,
@@ -50,6 +55,7 @@ import {
   publishIntoolsRfqQuoteReviewed,
   publishIntoolsRfqProductionUpdate,
   publishIntoolsRfqSample,
+  publishIntoolsSupplierOrderOutcome,
   recordIntoolsManualPayment,
   recordIntoolsRfqOutreachCopy,
   recordIntoolsRfqSupplierResponse,
@@ -62,6 +68,9 @@ import {
   setIntoolsHumanLoopFeatureFlag,
   setIntoolsSupplierBrokerStatus,
   setIntoolsSupplierBrokerStatusBulk,
+  setIntoolsSupplierLearningFreeze,
+  setIntoolsAgentLearningPromotionState,
+  setIntoolsSupplierIntelligenceDefaults,
   subscribeToRfqActivity,
   markIntoolsRfqSupplierContacted,
   updateIntoolsInvoice,
@@ -93,6 +102,9 @@ import {
   type IntoolsSupplier,
   type IntoolsSupplierCandidate,
   type IntoolsSupplierDetail,
+  type IntoolsSupplierIntelligence,
+  type IntoolsSupplierIntelligenceOverview,
+  type IntoolsSupplierOrderOutcome,
   type IntoolsSupplierImportRow,
   type IntoolsSupplierPayload,
 } from "./supabase";
@@ -510,8 +522,8 @@ const SECTIONS: Record<GenericSection, SectionMeta> = {
     searchPlaceholder: "Search suppliers",
     emptyText: "Reviewed supplier records will appear here.",
     selectable: true,
-    columnLabels: ["Region", "Type"],
-    filters: ["all", "candidate", "approved", "review", "declined", "rejected", "email_failed", "archived"],
+    columnLabels: ["Region", "Type", "Intelligence"],
+    filters: ["all", "candidate", "approved", "review", "declined", "rejected", "email_failed", "archived", "incomplete_defaults"],
     primaryActions: [
       { key: "new", label: "New supplier" },
       { key: "upload", label: "Bulk upload" },
@@ -574,6 +586,7 @@ type Row = {
   status: string | null;
   cols: string[];
   archived?: boolean;
+  incompleteDefaults?: boolean;
 };
 
 /* ------------------------------------------------------------------ data adapters */
@@ -648,8 +661,10 @@ async function loadRows(section: GenericSection): Promise<Row[]> {
         cols: [
           supplier.region || supplier.loc || "—",
           label(supplier.type || "—"),
+          `${label(supplier.performance_basis || "baseline")} · ${supplier.default_moq_units && supplier.default_lead_time_days ? "defaults complete" : "defaults incomplete"}`,
         ],
         archived: supplier.archived_at != null,
+        incompleteDefaults:!supplier.default_moq_units || !supplier.default_lead_time_days,
       };
     });
     const candidateRows = candidates.map((candidate: IntoolsSupplierCandidate) => ({
@@ -866,19 +881,22 @@ const HUMAN_LOOP_FLAG_META: Record<HumanLoopFeatureFlag, { title: string; descri
 function MasterSettingsView({ onToast }: { onToast: (message: string) => void }) {
   const [settings, setSettings] = useState<IntoolsOutreachSettings | null>(null);
   const [featureFlags, setFeatureFlags] = useState<HumanLoopFeatureFlags | null>(null);
+  const [intelligenceOverview,setIntelligenceOverview]=useState<IntoolsSupplierIntelligenceOverview | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [selectedId, setSelectedId] = useState("");
   const [editorMode, setEditorMode] = useState<"source" | "preview">("source");
+  const [learningControlNote,setLearningControlNote]=useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async (preferredId?: string) => {
     setError("");
     try {
-      const [next, flags] = await Promise.all([getIntoolsRfqOutreachSettings(), getIntoolsHumanLoopFeatureFlags()]);
+      const [next, flags, intelligence] = await Promise.all([getIntoolsRfqOutreachSettings(), getIntoolsHumanLoopFeatureFlags(),getIntoolsSupplierIntelligenceOverview()]);
       setSettings(next);
       setFeatureFlags(flags);
+      setIntelligenceOverview(intelligence);
       const selected = next.versions.find((item) => item.id === preferredId)
         || next.active_template
         || next.versions[0];
@@ -931,6 +949,22 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
     finally { setBusy(false); }
   }
 
+  async function setLearningFreeze(frozen:boolean) {
+    if (!learningControlNote.trim()) return;
+    setBusy(true); setError("");
+    try { await setIntoolsSupplierLearningFreeze(frozen,learningControlNote); setLearningControlNote(""); await load(selectedId); onToast(frozen ? "Supplier learning promotions frozen." : "Supplier learning freeze lifted. Frozen candidates remain frozen."); }
+    catch (cause) { setError(errorMessage(cause,"Could not update the learning freeze.")); }
+    finally { setBusy(false); }
+  }
+
+  async function setPromotionState(id:string,state:"canary"|"production"|"rolled_back"|"frozen") {
+    if (!learningControlNote.trim()) return;
+    setBusy(true); setError("");
+    try { await setIntoolsAgentLearningPromotionState(id,state,learningControlNote); setLearningControlNote(""); await load(selectedId); onToast(`Learning candidate moved to ${label(state)}.`); }
+    catch (cause) { setError(errorMessage(cause,"Could not update this learning candidate.")); }
+    finally { setBusy(false); }
+  }
+
   const selected = settings?.versions.find((item) => item.id === selectedId) || null;
   const restorable = settings?.versions.find((item) => item.status === "retired") || null;
   return (
@@ -978,6 +1012,13 @@ function MasterSettingsView({ onToast }: { onToast: (message: string) => void })
                 );
               })}
             </div>
+            {intelligenceOverview && <div style={{ marginTop:18,padding:"16px 18px",border:`1px solid ${C.border}`,borderRadius:12,background:C.surface }}>
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}><div style={{ fontSize:14,fontWeight:800,color:C.text }}>Supplier learning controls</div><span style={statusPill(intelligenceOverview.learning_frozen ? "hold" : "active")}>{intelligenceOverview.learning_frozen ? "Frozen" : "Active"}</span></div>
+              <div style={{ marginTop:6,fontSize:12.5,lineHeight:1.5,color:C.dim }}>Methodology v{intelligenceOverview.methodology_version} · paid experiments ${(intelligenceOverview.paid_learning_spent_microusd/1_000_000).toLocaleString("en-US",{style:"currency",currency:"USD"})} of ${(intelligenceOverview.paid_learning_cap_microusd/1_000_000).toLocaleString("en-US",{style:"currency",currency:"USD"})} this month. Baselines remain excluded from learning and routing.</div>
+              <div style={{ marginTop:10,display:"flex",gap:14,flexWrap:"wrap",fontSize:12,color:C.faint }}><span>{intelligenceOverview.outcomes_pending} outcome reviews pending</span><span>{intelligenceOverview.promotions.length} promotion records</span><span>Automatic canary cap: 1% or 20 runs</span></div>
+              <div style={{ marginTop:12,display:"flex",alignItems:"flex-end",gap:8,flexWrap:"wrap" }}><div style={{ minWidth:240,flex:"1 1 280px" }}><Field label="Required control note"><input value={learningControlNote} maxLength={2000} onChange={(event)=>setLearningControlNote(event.target.value)} placeholder="Reason and evidence reference" style={inputStyle} /></Field></div><button disabled={busy || !learningControlNote.trim()} onClick={()=>void setLearningFreeze(!intelligenceOverview.learning_frozen)} style={btnStyle(intelligenceOverview.learning_frozen ? "neutral" : "danger","sm")}>{intelligenceOverview.learning_frozen ? "Lift global freeze" : "Freeze learning"}</button></div>
+              {intelligenceOverview.promotions.map((promotion)=><div key={promotion.id} style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${C.line}`,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap" }}><div><div style={{ fontSize:12.5,fontWeight:700,color:C.text }}>{promotion.agent_role} · {promotion.candidate_version}</div><div style={{ marginTop:3,fontSize:11.5,color:C.faint }}>{label(promotion.state)} · {promotion.held_out_cases} held-out · {promotion.improvement_points ?? 0} improvement points · {promotion.protected_failures} protected failures</div></div><div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>{promotion.state === "candidate" && <button disabled={busy || intelligenceOverview.learning_frozen || !learningControlNote.trim()} onClick={()=>void setPromotionState(promotion.id,"canary")} style={btnStyle("neutral","sm")}>Start canary</button>}{promotion.state === "canary" && <button disabled={busy || intelligenceOverview.learning_frozen || !learningControlNote.trim()} onClick={()=>void setPromotionState(promotion.id,"production")} style={btnStyle("neutral","sm")}>Promote</button>}{!["rolled_back","frozen"].includes(promotion.state) && <><button disabled={busy || !learningControlNote.trim()} onClick={()=>void setPromotionState(promotion.id,"rolled_back")} style={btnStyle("neutral","sm")}>Roll back</button><button disabled={busy || !learningControlNote.trim()} onClick={()=>void setPromotionState(promotion.id,"frozen")} style={btnStyle("danger","sm")}>Freeze</button></>}</div></div>)}
+            </div>}
           </div>}
           <div style={{ padding: "30px 24px 26px", borderBottom: `1px solid ${C.line}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
@@ -1445,7 +1486,7 @@ function SectionListView({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((row) => {
-      const matchesFilter = filter === "all" ? true : row.status === filter;
+      const matchesFilter = filter === "all" ? true : filter === "incomplete_defaults" ? row.incompleteDefaults === true : row.status === filter;
       const text = `${row.title} ${row.subtitle} ${row.cols.join(" ")}`.toLowerCase();
       return matchesFilter && (!q || text.includes(q));
     }).sort((left, right) => Number(Boolean(left.archived)) - Number(Boolean(right.archived)));
@@ -2574,6 +2615,7 @@ type MatchRow = {
   quote: IntoolsRfqQuote | undefined;
 };
 type QuoteDraft = { unitPrice: string; moq: string; leadTime: string; total: string; recommended: boolean };
+type OutcomeDraft = { outcome: IntoolsSupplierOrderOutcome["outcome"]; promised: string; revised: string; actual: string; supplierResponsible: boolean; hadDefect: boolean; hadRework: boolean; sampleIterations: string; evidence: string; note: string };
 
 function OutreachDraftModal({ initial, onClose, onChanged }: { initial: IntoolsOutreachDraft; onClose: () => void; onChanged: () => void }) {
   const [draft, setDraft] = useState(initial);
@@ -2582,6 +2624,8 @@ function OutreachDraftModal({ initial, onClose, onChanged }: { initial: IntoolsO
   const [contactNote, setContactNote] = useState("");
   const [responseNote, setResponseNote] = useState("");
   const [evidenceReference, setEvidenceReference] = useState("");
+  const [closeDisposition, setCloseDisposition] = useState<"no_response" | "invalid_contact" | "buyer_withdrawn">("no_response");
+  const [closeNote, setCloseNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -2630,6 +2674,14 @@ function OutreachDraftModal({ initial, onClose, onChanged }: { initial: IntoolsO
           <Field label="Supplier response evidence reference"><input required value={evidenceReference} maxLength={1000} onChange={(event) => setEvidenceReference(event.target.value)} placeholder="Email thread, document, or call-note reference" style={inputStyle} /></Field>
           <Field label="Response note (optional)"><textarea value={responseNote} maxLength={2000} rows={3} onChange={(event) => setResponseNote(event.target.value)} style={{ ...inputStyle, height: "auto", minHeight: 76, resize: "vertical", padding: 10 }} /></Field>
           <div><button disabled={busy || !evidenceReference.trim()} onClick={() => void run(async () => { await recordIntoolsRfqSupplierResponse(draft.id, responseNote, evidenceReference); setNotice("Supplier response recorded with its evidence reference. No quote was published."); onChanged(); }, "Could not record this supplier response.")} style={btnStyle("primary", "sm")}>Record supplier response</button></div>
+          <div style={{ borderTop:`1px solid ${C.border}`,paddingTop:10,display:"grid",gap:8 }}>
+            <div style={{ fontSize:11.5,color:C.dim,lineHeight:1.45 }}>Close only when Ops has verified that this contact opportunity should not remain open. Invalid contacts and buyer-withdrawn requests are excluded from the response rate.</div>
+            <div style={{ display:"grid",gridTemplateColumns:"minmax(0,1fr)",gap:8 }}>
+              <Field label="Close as"><select value={closeDisposition} onChange={(event)=>setCloseDisposition(event.target.value as typeof closeDisposition)} style={inputStyle}><option value="no_response">No response</option><option value="invalid_contact">Invalid contact</option><option value="buyer_withdrawn">Buyer withdrew RFQ</option></select></Field>
+              <Field label="Closure evidence note"><input value={closeNote} maxLength={2000} onChange={(event)=>setCloseNote(event.target.value)} placeholder="Required source or reason" style={inputStyle} /></Field>
+            </div>
+            <div><button disabled={busy || !closeNote.trim()} onClick={() => void run(async () => { await closeIntoolsRfqResponseOpportunity(draft.id,closeDisposition,closeNote); onChanged(); onClose(); }, "Could not close this response opportunity.")} style={btnStyle("neutral","sm")}>Close response opportunity</button></div>
+          </div>
         </div>}
         <div style={{ color: C.faint, fontSize: 11.5 }}>Status: {label(draft.status)} · Template v{draft.template_version} · Revision {draft.revision} · Last editor {draft.last_editor}</div>
         {error && <Notice tone="danger">{error}</Notice>}
@@ -2680,6 +2732,9 @@ function RequestDrawerBody({
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const operationsLoadRef = useRef<{ inFlight: boolean; trailing: boolean; timer: ReturnType<typeof setTimeout> | null }>({ inFlight: false, trailing: false, timer: null });
   const [outreachDraft, setOutreachDraft] = useState<IntoolsOutreachDraft | null>(null);
+  const [intelligenceBySupplier, setIntelligenceBySupplier] = useState<Map<string,IntoolsSupplierIntelligence>>(new Map());
+  const [orderOutcome, setOrderOutcome] = useState<IntoolsSupplierOrderOutcome | null>(null);
+  const [outcomeDraft,setOutcomeDraft]=useState<OutcomeDraft>({ outcome:"delivered",promised:"",revised:"",actual:"",supplierResponsible:true,hadDefect:false,hadRework:false,sampleIterations:"0",evidence:"",note:"" });
 
   const load = useCallback(async (refresh = false) => {
     if (operationsLoadRef.current.inFlight) { operationsLoadRef.current.trailing = true; return; }
@@ -2688,14 +2743,18 @@ function RequestDrawerBody({
     setError("");
     try {
       if (refresh) await generateIntoolsRfqSupplierMatches(rfq.id, true);
-      const operations = await getIntoolsRfqOperations(rfq.id);
+      const [operations,intelligence] = await Promise.all([getIntoolsRfqOperations(rfq.id),getIntoolsSupplierIntelligenceForCase(rfq.id)]);
       setCaseRecord(operations.case);
+      setIntelligenceBySupplier(new Map(intelligence.map((item) => [item.supplier_id,item])));
       setMatches(operations.matches.map((entry) => ({ match: entry, supplier: entry.supplier, quote: entry.quote })));
       setProductionUpdates(operations.production_updates);
       setOperationsFeatures(operations.features);
       setQcInspection(operations.qc_inspection);
       setQcVisibleAssets(new Set(operations.features.qc_buyer_visibility_enabled ? operations.qc_inspection?.review?.buyer_visible_asset_ids || [] : []));
       setQcFindingDispositions((current) => Object.fromEntries((operations.qc_inspection?.findings || []).filter((finding) => current[finding.id]).map((finding) => [finding.id, current[finding.id]])));
+      const outcome=operations.case.order ? await getIntoolsSupplierOrderOutcome(operations.case.order.id) : null;
+      setOrderOutcome(outcome);
+      if (outcome) setOutcomeDraft({ outcome:outcome.outcome,promised:outcome.promised_delivery_date || "",revised:outcome.revised_delivery_date || "",actual:outcome.actual_delivery_date || "",supplierResponsible:outcome.supplier_responsible,hadDefect:outcome.had_defect,hadRework:outcome.had_rework,sampleIterations:String(outcome.sample_iterations),evidence:outcome.evidence_references.join("\n"),note:outcome.note || "" });
     } catch (cause) {
       setError(errorMessage(cause, "Could not load supplier matches for this request."));
     } finally {
@@ -2727,10 +2786,11 @@ function RequestDrawerBody({
   }, [load, rfq.id]);
 
   function baseDraft(row: MatchRow): QuoteDraft {
+    const intelligence=intelligenceBySupplier.get(row.match.factory_id);
     return {
       unitPrice: row.quote ? (row.quote.unit_price_cents / 100).toFixed(2) : "",
-      moq: row.quote ? String(row.quote.moq) : "",
-      leadTime: row.quote ? String(row.quote.lead_time_days) : "",
+      moq: row.quote ? String(row.quote.moq) : intelligence?.default_moq_units ? String(intelligence.default_moq_units) : "",
+      leadTime: row.quote ? String(row.quote.lead_time_days) : intelligence?.default_lead_time_days ? String(intelligence.default_lead_time_days) : "",
       total: row.quote?.quote_total_cents ? (row.quote.quote_total_cents / 100).toFixed(2) : "",
       recommended: row.quote?.recommended || false,
     };
@@ -2866,6 +2926,16 @@ function RequestDrawerBody({
     setQcNote(""); setQcBuyerSummary(""); setQcExpectedNext(""); setQcFindingDispositions({});
   }
 
+  async function publishOutcome() {
+    if (!caseRecord?.order) return;
+    await act(caseRecord.order.id,() => publishIntoolsSupplierOrderOutcome(caseRecord.order!.id,{
+      outcome:outcomeDraft.outcome,promisedDeliveryDate:outcomeDraft.promised || null,revisedDeliveryDate:outcomeDraft.revised || null,
+      actualDeliveryDate:outcomeDraft.actual || null,supplierResponsible:outcomeDraft.supplierResponsible,hadDefect:outcomeDraft.hadDefect,
+      hadRework:outcomeDraft.hadRework,sampleIterations:Math.max(0,Math.round(Number(outcomeDraft.sampleIterations)||0)),
+      evidenceReferences:outcomeDraft.evidence.split("\n").map((item)=>item.trim()).filter(Boolean),note:outcomeDraft.note || null,
+    },orderOutcome?.version || 0),"Reviewed supplier outcome published and performance recalculated.");
+  }
+
   const qcFindingsComplete = Boolean(qcInspection && qcInspection.findings.every((finding) => qcFindingDispositions[finding.id] && (qcFindingDispositions[finding.id].disposition !== "amended" || qcFindingDispositions[finding.id].note.trim())));
 
   const selectedRow = matches.find((row) => row.quote?.status === "selected");
@@ -2961,6 +3031,31 @@ function RequestDrawerBody({
           {productionException && <Field label="Mitigation or follow-up"><input value={productionMitigation} maxLength={2000} onChange={(event) => setProductionMitigation(event.target.value)} style={{ ...inputStyle, height: 34 }} /></Field>}
           <button title={operationsFeatures.production_updates_enabled ? undefined : "Enable production updates in Master settings."} disabled={!operationsFeatures.production_updates_enabled || busyIds.has(rfq.id) || !productionNote.trim() || !productionSource.trim() || Boolean(productionException && !productionMitigation.trim())} onClick={() => void publishProductionUpdate()} style={btnStyle("primary", "sm")}>Publish verified update</button>
           {productionUpdates[0] && <div style={{ fontSize: 11.5, color: C.dim }}>Latest v{productionUpdates[0].revision}: {productionUpdates[0].note}</div>}
+        </div>
+      )}
+
+      {caseRecord?.order && (
+        <div style={{ marginTop:14,padding:12,borderRadius:9,background:"#f8faf9",display:"grid",gap:9 }}>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12 }}>
+            <div style={{ fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".03em",color:C.faint }}>Reviewed supplier outcome</div>
+            <span style={statusPill(orderOutcome ? "active" : "draft")}>{orderOutcome ? `Published v${orderOutcome.version}` : "Not published"}</span>
+          </div>
+          <div style={{ fontSize:11.5,color:C.dim,lineHeight:1.45 }}>Available after manual nomination and order creation. Only a published human review contributes to supplier performance.</div>
+          <div style={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8 }}>
+            <Field label="Outcome"><select value={outcomeDraft.outcome} onChange={(event)=>setOutcomeDraft((current)=>{ const outcome=event.target.value as OutcomeDraft["outcome"]; return {...current,outcome,supplierResponsible:outcome === "supplier_failed",hadDefect:outcome === "delivered" ? current.hadDefect : false,hadRework:outcome === "delivered" ? current.hadRework : false}; })} style={{ ...inputStyle,height:34 }}><option value="delivered">Delivered</option><option value="supplier_failed">Supplier failed</option><option value="buyer_cancelled">Buyer cancelled</option></select></Field>
+            <Field label="Sample iterations"><input type="number" min="0" step="1" value={outcomeDraft.sampleIterations} onChange={(event)=>setOutcomeDraft((current)=>({...current,sampleIterations:event.target.value}))} style={{ ...inputStyle,height:34 }} /></Field>
+            <Field label="Original promised delivery"><input type="date" value={outcomeDraft.promised} onChange={(event)=>setOutcomeDraft((current)=>({...current,promised:event.target.value}))} style={{ ...inputStyle,height:34 }} /></Field>
+            <Field label="Approved revised delivery"><input type="date" value={outcomeDraft.revised} onChange={(event)=>setOutcomeDraft((current)=>({...current,revised:event.target.value}))} style={{ ...inputStyle,height:34 }} /></Field>
+            <Field label="Actual delivery"><input type="date" value={outcomeDraft.actual} onChange={(event)=>setOutcomeDraft((current)=>({...current,actual:event.target.value}))} style={{ ...inputStyle,height:34 }} /></Field>
+          </div>
+          <div style={{ display:"flex",gap:16,flexWrap:"wrap" }}>
+            <label style={{ display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.dim }}><input type="checkbox" disabled checked={outcomeDraft.supplierResponsible} readOnly />Supplier responsible</label>
+            <label style={{ display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.dim }}><input type="checkbox" disabled={outcomeDraft.outcome!=="delivered"} checked={outcomeDraft.hadDefect} onChange={(event)=>setOutcomeDraft((current)=>({...current,hadDefect:event.target.checked}))} />Confirmed defect</label>
+            <label style={{ display:"flex",alignItems:"center",gap:7,fontSize:12,color:C.dim }}><input type="checkbox" disabled={outcomeDraft.outcome!=="delivered"} checked={outcomeDraft.hadRework} onChange={(event)=>setOutcomeDraft((current)=>({...current,hadRework:event.target.checked}))} />Rework required</label>
+          </div>
+          <Field label="Evidence references (one per line)"><textarea rows={2} value={outcomeDraft.evidence} onChange={(event)=>setOutcomeDraft((current)=>({...current,evidence:event.target.value}))} style={{ ...inputStyle,height:"auto",minHeight:58,resize:"vertical",padding:9 }} /></Field>
+          <Field label="Review note"><textarea rows={2} maxLength={4000} value={outcomeDraft.note} onChange={(event)=>setOutcomeDraft((current)=>({...current,note:event.target.value}))} style={{ ...inputStyle,height:"auto",minHeight:58,resize:"vertical",padding:9 }} /></Field>
+          <button disabled={busyIds.has(caseRecord.order.id) || !outcomeDraft.evidence.split("\n").some((item)=>item.trim()) || (outcomeDraft.outcome === "delivered" ? caseRecord.order.production_stage !== "delivered" || !outcomeDraft.actual : !["cancelled","disputed"].includes(caseRecord.order.status))} title={outcomeDraft.outcome === "delivered" && caseRecord.order.production_stage !== "delivered" ? "Mark fulfillment delivered before publishing its outcome." : !outcomeDraft.evidence.trim() ? "Add at least one evidence reference before publishing." : undefined} onClick={()=>void publishOutcome()} style={btnStyle("success","sm")}>Publish reviewed outcome</button>
         </div>
       )}
 
@@ -3107,6 +3202,7 @@ function RequestDrawerBody({
                           <input value={draft.total} onChange={(event) => setDraft(row, { total: event.target.value })} style={{ ...inputStyle, height: 30, fontSize: 12.5 }} />
                         </Field>
                       </div>
+                      {intelligenceBySupplier.get(row.match.factory_id)?.default_moq_units && intelligenceBySupplier.get(row.match.factory_id)?.default_lead_time_days ? <div style={{ marginTop:7,fontSize:11.5,color:C.faint }}>MOQ and lead time were prefilled from the supplier default. Confirm both against the current supplier response before publishing.</div> : <div role="status" style={{ marginTop:7,fontSize:11.5,color:"#8a6520" }}>No complete supplier defaults are available. Enter current supplier-confirmed MOQ and lead time.</div>}
                       <label style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 9, fontSize: 12, color: "#3b4453", cursor: "pointer" }}>
                         <input
                           type="checkbox"
@@ -3287,6 +3383,9 @@ function supplierEditPayload(draft: SupplierEditDraft): IntoolsSupplierPayload {
 }
 function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: () => void; onChanged: () => void }) {
   const [detail, setDetail] = useState<IntoolsSupplierDetail | null>(null);
+  const [intelligence,setIntelligence]=useState<IntoolsSupplierIntelligence | null>(null);
+  const [defaultMoq,setDefaultMoq]=useState("");
+  const [defaultLead,setDefaultLead]=useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -3294,7 +3393,10 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
 
   const load = useCallback(async () => {
     try {
-      setDetail(await getIntoolsSupplierDetail(id));
+      const [nextDetail,nextIntelligence]=await Promise.all([getIntoolsSupplierDetail(id),getIntoolsSupplierIntelligence(id)]);
+      setDetail(nextDetail); setIntelligence(nextIntelligence);
+      setDefaultMoq(nextIntelligence.default_moq_units ? String(nextIntelligence.default_moq_units) : "");
+      setDefaultLead(nextIntelligence.default_lead_time_days ? String(nextIntelligence.default_lead_time_days) : "");
     } catch (cause) {
       setError(errorMessage(cause, "Could not load this supplier."));
     }
@@ -3326,6 +3428,12 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
       await saveIntoolsSupplier(detail.id, supplierEditPayload(draft), detail.updated_at);
       setDraft(null);
     }, "Supplier information saved.");
+  }
+  async function saveDefaults() {
+    if (!detail) return;
+    const moq=Math.round(Number(defaultMoq)||0); const lead=Math.round(Number(defaultLead)||0);
+    if (moq<=0 || lead<=0) { setError("Enter positive whole-number MOQ and lead time defaults."); return; }
+    await run(()=>setIntoolsSupplierIntelligenceDefaults(detail.id,moq,lead),"Supplier quote defaults verified and saved.");
   }
 
   if (error && !detail)
@@ -3393,6 +3501,16 @@ function SupplierDrawerBody({ id, onClose, onChanged }: { id: string; onClose: (
           ["Company overview", detail.bio || "—"],
         ]}
       />}
+      {intelligence && <div style={{ marginTop:16,padding:12,borderRadius:10,background:"#f8faf9",display:"grid",gap:10 }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",gap:12 }}><GroupLabel>Supplier intelligence</GroupLabel><span style={statusPill(intelligence.performance.deliveryRate.basis === "baseline" ? "draft" : "active")}>{label(intelligence.performance.deliveryRate.basis)}</span></div>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8 }}>
+          <Field label="Default MOQ (units)"><input type="number" min="1" step="1" value={defaultMoq} onChange={(event)=>setDefaultMoq(event.target.value)} style={{ ...inputStyle,height:34 }} /></Field>
+          <Field label="Default lead time (days)"><input type="number" min="1" step="1" value={defaultLead} onChange={(event)=>setDefaultLead(event.target.value)} style={{ ...inputStyle,height:34 }} /></Field>
+        </div>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,fontSize:12,color:C.dim }}><div>Delivery <strong>{Number(intelligence.performance.deliveryRate.value).toFixed(0)}%</strong> · {label(intelligence.performance.deliveryRate.basis)}</div><div>Response <strong>{Number(intelligence.performance.responseRate.value).toFixed(0)}%</strong> · {label(intelligence.performance.responseRate.basis)}</div></div>
+        <div style={{ fontSize:11.5,color:C.faint,lineHeight:1.45 }}>Defaults prefill future nominated-supplier quotes only. Ops must confirm each quote; historical quotes and invoices never change.</div>
+        <button disabled={busy || !defaultMoq || !defaultLead} onClick={()=>void saveDefaults()} style={{ ...btnStyle("neutral","sm"),width:"fit-content" }}>Save verified defaults</button>
+      </div>}
       {detail.source_contacts.length > 0 && (
         <>
           <GroupLabel>Source contacts</GroupLabel>

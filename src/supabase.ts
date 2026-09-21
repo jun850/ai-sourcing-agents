@@ -273,6 +273,22 @@ export type WorkspaceRfqQuote = {
   factory_name: string;
   factory_region: string | null;
   factory_years: number | null;
+  performance?: SupplierPerformance;
+};
+export type PerformanceMetric = {
+  value: number;
+  basis: "baseline" | "observed" | "historical";
+  sampleSize: number;
+};
+export type SupplierPerformance = {
+  deliveryRate: PerformanceMetric;
+  responseRate: PerformanceMetric;
+  affectedOrderRate: PerformanceMetric | null;
+  onTimeRate: PerformanceMetric | null;
+  qualifyingOrders: number;
+  methodologyVersion: number;
+  revision: number;
+  updatedAt: string;
 };
 export type WorkspaceRfqProduction = {
   quote: { id: string; unit_price_cents: number; moq: number; lead_time_days: number; selected_at: string | null; factory_name: string; factory_region: string | null } | null;
@@ -472,6 +488,46 @@ export type IntoolsSupplier = {
   broker_reviewed_by?: string | null;
   broker_reviewed_at?: string | null;
   imported_at?: string | null;
+  default_moq_units?: number | null;
+  default_lead_time_days?: number | null;
+  performance_basis?: "baseline" | "observed" | "historical";
+};
+export type IntoolsSupplierIntelligence = {
+  supplier_id: string;
+  default_moq_units: number | null;
+  default_lead_time_days: number | null;
+  source: "seeded" | "ops_entered" | null;
+  verified_at?: string | null;
+  performance: SupplierPerformance;
+};
+export type IntoolsSupplierOrderOutcome = {
+  id: string;
+  order_id: string;
+  version: number;
+  outcome: "delivered" | "supplier_failed" | "buyer_cancelled";
+  promised_delivery_date: string | null;
+  revised_delivery_date: string | null;
+  actual_delivery_date: string | null;
+  supplier_responsible: boolean;
+  had_defect: boolean;
+  had_rework: boolean;
+  sample_iterations: number;
+  evidence_references: string[];
+  note: string | null;
+  reviewed_at: string;
+};
+export type IntoolsSupplierIntelligenceOverview = {
+  suppliers: number;
+  defaults_complete: number;
+  delivery_observed: number;
+  response_observed: number;
+  outcomes_pending: number;
+  methodology_version: number;
+  paid_learning_cap_microusd: number;
+  paid_learning_spent_microusd: number;
+  learning_frozen: boolean;
+  performance_trend: Array<{ date:string; delivery_rate:number|null; response_rate:number|null }>;
+  promotions: Array<{ id:string; agent_role:string; candidate_version:string; state:"candidate"|"canary"|"production"|"rolled_back"|"frozen"; held_out_cases:number; improvement_points:number|null; protected_failures:number; canary_percent:number; canary_execution_cap:number; updated_at:string }>;
 };
 export type IntoolsSupplierProduct = {
   id: string;
@@ -1425,6 +1481,19 @@ export async function subscribeToRfqActivity(caseId: string, onChange: () => voi
   });
   return { unsubscribe: () => { authSubscription.unsubscribe(); void db.removeChannel(channel); } };
 }
+export async function subscribeToSupplierPerformance(supplierIds: string[], onChange: (supplierId: string, revision: number) => void, onReconnect?: () => void) {
+  const db = client();
+  await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
+  const channels = [...new Set(supplierIds)].slice(0, 3).map((supplierId) => {
+    let subscribedOnce=false;
+    return db.channel(`supplier:${supplierId}:performance`, { config: { private: true } })
+    .on("broadcast", { event: "supplier_performance_changed" }, (payload) => {
+      const body = payload.payload as { supplierId?: string; snapshotRevision?: number };
+      if (body.supplierId === supplierId && Number.isInteger(body.snapshotRevision)) onChange(supplierId, body.snapshotRevision!);
+    }).subscribe((status) => { if (status === "SUBSCRIBED") { if (subscribedOnce) onReconnect?.(); subscribedOnce=true; } });
+  });
+  return { unsubscribe: () => { channels.forEach((channel) => { void db.removeChannel(channel); }); } };
+}
 export async function subscribeToRfqOpsPresence(conversationId: string, presence: RfqOpsPresence, onSync: (people: RfqOpsPresence[]) => void) {
   const db = client();
   await db.realtime.setAuth(await getRfqOpsRealtimeAccessToken());
@@ -1667,6 +1736,21 @@ export async function getIntoolsSupplierDetail(supplierId: string) {
   return intoolsRpc<IntoolsSupplierDetail>("intools_get_supplier_detail", {
     p_supplier_id: supplierId,
   });
+}
+export async function getIntoolsSupplierIntelligence(supplierId: string) {
+  return intoolsRpc<IntoolsSupplierIntelligence>("intools_get_supplier_intelligence", { p_supplier_id: supplierId });
+}
+export async function setIntoolsSupplierIntelligenceDefaults(supplierId: string, moq: number, leadTimeDays: number) {
+  return intoolsRpc<IntoolsSupplierIntelligence>("intools_set_supplier_intelligence_defaults", { p_supplier_id: supplierId, p_moq: moq, p_lead_time_days: leadTimeDays });
+}
+export async function getIntoolsSupplierIntelligenceOverview() {
+  return intoolsRpc<IntoolsSupplierIntelligenceOverview>("intools_get_supplier_intelligence_overview");
+}
+export async function setIntoolsSupplierLearningFreeze(frozen: boolean, note: string) {
+  return intoolsRpc<{ learning_frozen:boolean }>("intools_set_supplier_learning_freeze", { p_frozen:frozen,p_note:note.trim() });
+}
+export async function setIntoolsAgentLearningPromotionState(promotionId: string, state: "canary"|"production"|"rolled_back"|"frozen", note: string) {
+  return intoolsRpc("intools_set_agent_learning_promotion_state", { p_promotion_id:promotionId,p_state:state,p_note:note.trim() });
 }
 export async function saveIntoolsSupplier(
   supplierId: string | null,
@@ -1951,6 +2035,9 @@ export async function markIntoolsRfqSupplierContacted(draftId: string, note?: st
 export async function recordIntoolsRfqSupplierResponse(draftId: string, note: string, evidenceReference: string) {
   return intoolsRpc<{ event_id: string; draft: IntoolsOutreachDraft }>("intools_record_rfq_supplier_response", { p_draft_id: draftId, p_note: note.trim() || null, p_evidence_reference: evidenceReference.trim() });
 }
+export async function closeIntoolsRfqResponseOpportunity(draftId: string, disposition: "no_response" | "invalid_contact" | "buyer_withdrawn", note: string) {
+  return intoolsRpc<IntoolsOutreachDraft>("intools_close_rfq_response_opportunity", { p_draft_id: draftId, p_disposition: disposition, p_note: note.trim() });
+}
 export async function declineIntoolsRfqQuote(quoteId: string) {
   return intoolsRpc<IntoolsRfqQuote>("intools_decline_rfq_quote", { p_quote_id: quoteId });
 }
@@ -2025,6 +2112,30 @@ export type IntoolsRfqOperations = {
   qc_inspection: IntoolsQcInspection | null;
   next_actions: { can_start_qc: boolean; can_ship: boolean };
 };
+export async function getIntoolsSupplierIntelligenceForCase(caseId: string) {
+  return intoolsRpc<IntoolsSupplierIntelligence[]>("intools_get_supplier_intelligence_for_case", { p_case_id: caseId });
+}
+export async function getIntoolsSupplierOrderOutcome(orderId: string) {
+  return intoolsRpc<IntoolsSupplierOrderOutcome | null>("intools_get_supplier_order_outcome", { p_order_id: orderId });
+}
+export async function publishIntoolsSupplierOrderOutcome(orderId: string, payload: {
+  outcome: IntoolsSupplierOrderOutcome["outcome"];
+  promisedDeliveryDate?: string | null;
+  revisedDeliveryDate?: string | null;
+  actualDeliveryDate?: string | null;
+  supplierResponsible: boolean;
+  hadDefect: boolean;
+  hadRework: boolean;
+  sampleIterations: number;
+  evidenceReferences: string[];
+  note?: string | null;
+}, expectedVersion: number) {
+  return intoolsRpc<IntoolsSupplierOrderOutcome>("intools_publish_supplier_order_outcome", { p_order_id: orderId, p_payload: {
+    outcome: payload.outcome,promised_delivery_date: payload.promisedDeliveryDate || null,revised_delivery_date: payload.revisedDeliveryDate || null,
+    actual_delivery_date: payload.actualDeliveryDate || null,supplier_responsible: payload.supplierResponsible,had_defect: payload.hadDefect,
+    had_rework: payload.hadRework,sample_iterations: payload.sampleIterations,evidence_references: payload.evidenceReferences,note: payload.note || null,
+  },p_expected_version: expectedVersion });
+}
 export async function getIntoolsRfqOperations(caseId: string) {
   return intoolsRpc<IntoolsRfqOperations>("intools_get_rfq_operations", { p_case_id: caseId });
 }

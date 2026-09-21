@@ -93,6 +93,7 @@ import {
   signOut,
   startWorkspaceInvoiceCheckout,
   subscribeToRfqActivity,
+  subscribeToSupplierPerformance,
   type RfqAttachment,
   type WorkspaceChatMessage,
   type WorkspaceInvoice,
@@ -2132,6 +2133,10 @@ function useQuotesData({
 }) {
   const [quotes, setQuotes] = useState<WorkspaceRfqQuote[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [updatedSupplierId, setUpdatedSupplierId] = useState<string | null>(null);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearUpdateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supplierRevisions = useRef(new Map<string,number>());
   const load = useCallback(async () => {
     try {
       setQuotes(await listWorkspaceRfqQuotes(caseId));
@@ -2142,6 +2147,41 @@ function useQuotesData({
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    quotes?.forEach((quote) => supplierRevisions.current.set(quote.factory_id,Math.max(supplierRevisions.current.get(quote.factory_id) || 0,quote.performance?.revision || 0)));
+  }, [quotes]);
+  const supplierKey = quotes?.map((quote) => quote.factory_id).slice(0, 3).join(",") || "";
+  useEffect(() => {
+    let active = true;
+    let subscription: { unsubscribe: () => void } | null = null;
+    let activitySubscription: { unsubscribe: () => void } | null = null;
+    const queueRefresh = (supplierId: string | null) => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(() => {
+        if (!active) return;
+        if (supplierId) setUpdatedSupplierId(supplierId);
+        void load();
+        if (supplierId) {
+          if (clearUpdateTimer.current) clearTimeout(clearUpdateTimer.current);
+          clearUpdateTimer.current = setTimeout(() => setUpdatedSupplierId(null), 600);
+        }
+      }, 180);
+    };
+    const invalidate = (supplierId: string, revision: number) => {
+      if ((supplierRevisions.current.get(supplierId) || 0) >= revision) return;
+      supplierRevisions.current.set(supplierId, revision);
+      queueRefresh(supplierId);
+    };
+    if (supplierKey) void subscribeToSupplierPerformance(supplierKey.split(","), invalidate, () => queueRefresh(null)).then((next) => { if (active) subscription=next; else next.unsubscribe(); }).catch(() => undefined);
+    void subscribeToRfqActivity(caseId,() => queueRefresh(null)).then((next) => { if (active) activitySubscription=next; else next.unsubscribe(); }).catch(() => undefined);
+    const onFocus = () => { if (active) void load(); };
+    window.addEventListener("focus", onFocus);
+    return () => {
+      active=false; subscription?.unsubscribe(); activitySubscription?.unsubscribe(); window.removeEventListener("focus",onFocus);
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      if (clearUpdateTimer.current) clearTimeout(clearUpdateTimer.current);
+    };
+  }, [supplierKey, caseId, load]);
   async function select(quoteId: string) {
     setBusyId(quoteId);
     try {
@@ -2159,7 +2199,55 @@ function useQuotesData({
       setBusyId(null);
     }
   }
-  return { quotes, busyId, select };
+  return { quotes, busyId, select, updatedSupplierId };
+}
+
+function quotePerformance(quote: WorkspaceRfqQuote) {
+  return quote.performance ?? {
+    deliveryRate:{ value:100,basis:"baseline" as const,sampleSize:0 },
+    responseRate:{ value:100,basis:"baseline" as const,sampleSize:0 },
+    affectedOrderRate:null,onTimeRate:null,qualifyingOrders:0,methodologyVersion:1,revision:0,updatedAt:"",
+  };
+}
+
+function performanceBasis(quote: WorkspaceRfqQuote) {
+  const performance=quotePerformance(quote);
+  const metrics = [performance.deliveryRate,performance.responseRate,performance.affectedOrderRate,performance.onTimeRate].filter(Boolean);
+  if (metrics.some((metric) => metric?.basis === "observed")) return "observed" as const;
+  if (metrics.some((metric) => metric?.basis === "historical")) return "historical" as const;
+  return "baseline" as const;
+}
+
+function SupplierPerformanceSummary({ quote, compact=false, updated=false }: { quote: WorkspaceRfqQuote; compact?: boolean; updated?: boolean }) {
+  const performance=quotePerformance(quote);
+  const basis=performanceBasis(quote);
+  const title=basis === "baseline" ? "Atelix baseline" : basis === "observed" ? "Verified performance" : "Historical performance";
+  const explanation=basis === "baseline"
+    ? "Starting value used until Atelix has enough reviewed activity for this supplier. It is not a measured performance claim."
+    : basis === "observed" ? "Calculated from reviewed Atelix activity in the current measurement window." : "Last qualified result; there is not enough recent activity to recalculate it.";
+  const metric=(label:string,value:number,sampleSize:number) => <Box><Typography sx={{ fontSize:10.5,color:"#8a95a3" }}>{label}</Typography><Typography sx={{ mt:.1,fontSize:compact ? 13 : 15,fontWeight:800,color:"#202936",fontVariantNumeric:"tabular-nums" }}>{value.toFixed(value%1 ? 1 : 0)}%{!compact && sampleSize>0 && <Box component="span" sx={{ ml:.5,fontSize:10.5,fontWeight:500,color:"#8a95a3" }}>· {sampleSize}</Box>}</Typography></Box>;
+  return <Box data-supplier-performance sx={{ mt:1.25,pt:1.15,borderTop:"1px solid #eef0f3",animation:updated ? "supplier-performance-crossfade 180ms ease-out" : "none","@keyframes supplier-performance-crossfade":{ from:{ opacity:.25 },to:{ opacity:1 } },"@media (prefers-reduced-motion: reduce)":{ animation:"none" } }}>
+    {updated && <Box component="span" role="status" aria-live="polite" sx={{ position:"absolute",width:1,height:1,p:0,m:-1,overflow:"hidden",clip:"rect(0,0,0,0)",whiteSpace:"nowrap",border:0 }}>Supplier performance updated.</Box>}
+    <Tooltip arrow title={explanation}>
+      <Box component="span" tabIndex={0} aria-label={`${title}. ${explanation}`} sx={{ display:"inline-flex",alignItems:"center",px:.8,py:.3,borderRadius:"999px",fontSize:10,fontWeight:800,color:basis === "baseline" ? "#7a6331" : "#356246",backgroundColor:basis === "baseline" ? "#faf3e5" : "#edf5ef","&:focus-visible":{ outline:"2px solid #64748b",outlineOffset:"2px" } }}>{title}</Box>
+    </Tooltip>
+    <Box sx={{ mt:.9,display:"grid",gridTemplateColumns:compact ? "repeat(2,minmax(0,1fr))" : "repeat(2,minmax(0,1fr))",gap:1 }}>
+      {metric("Delivery",Number(performance.deliveryRate.value),performance.deliveryRate.sampleSize)}
+      {metric("Response",Number(performance.responseRate.value),performance.responseRate.sampleSize)}
+      {!compact && performance.affectedOrderRate && metric("Orders affected",Number(performance.affectedOrderRate.value),performance.affectedOrderRate.sampleSize)}
+      {!compact && performance.onTimeRate && metric("On time",Number(performance.onTimeRate.value),performance.onTimeRate.sampleSize)}
+    </Box>
+  </Box>;
+}
+
+function QuoteCardSkeleton({ compact=false }: { compact?: boolean }) {
+  return <Box aria-hidden="true" sx={{ border:"1px solid #e7ebf0",borderRadius:compact ? "12px" : "14px",p:compact ? 1.75 : 2,backgroundColor:"#fff",display:"grid",gap:1.15,minHeight:compact ? 176 : 292 }}>
+    <Skeleton width="58%" height={24} />
+    <Skeleton width="42%" height={16} />
+    <Box sx={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:1 }}><Skeleton height={34} /><Skeleton height={34} /></Box>
+    <Box sx={{ pt:1,borderTop:"1px solid #eef0f3",display:"grid",gap:.8 }}><Skeleton variant="rounded" width={104} height={20} /><Box sx={{ display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:1 }}><Skeleton height={34} /><Skeleton height={34} /></Box></Box>
+    {!compact && <><Skeleton width="76%" height={16} /><Skeleton variant="rounded" height={36} /></>}
+  </Box>;
 }
 
 function QuotesRail({
@@ -2171,7 +2259,7 @@ function QuotesRail({
   onMessage: (message: string) => void;
   onSelected: () => void;
 }) {
-  const { quotes, busyId, select } = useQuotesData({ caseId, onMessage, onSelected });
+  const { quotes, busyId, select, updatedSupplierId } = useQuotesData({ caseId, onMessage, onSelected });
   return (
     <Box>
       <Typography
@@ -2188,7 +2276,7 @@ function QuotesRail({
       {quotes === null ? (
         <Stack spacing={1.25}>
           {[0, 1, 2].map((row) => (
-            <Skeleton key={row} variant="rounded" height={104} />
+            <QuoteCardSkeleton key={row} compact />
           ))}
         </Stack>
       ) : quotes.length === 0 ? (
@@ -2245,8 +2333,12 @@ function QuotesRail({
                         : "1px solid #e7ebf0",
                       borderRadius: "12px",
                       p: 1.75,
-                      backgroundColor: selected ? "#f7fbf7" : "#fff",
+                      backgroundColor: updatedSupplierId === quote.factory_id ? "#eef5f0" : selected ? "#f7fbf7" : "#fff",
                       opacity: decided && !selected ? 0.6 : 1,
+                      transition:"background-color 180ms ease-out, border-color 180ms ease-out, opacity 180ms ease-out",
+                      animation:"quote-card-enter 160ms ease-out",
+                      "@keyframes quote-card-enter":{ from:{ opacity:0 },to:{ opacity:1 } },
+                      "@media (prefers-reduced-motion: reduce)":{ transition:"none",animation:"none" },
                     }}
                   >
                     <Box
@@ -2292,6 +2384,7 @@ function QuotesRail({
                         .filter(Boolean)
                         .join(" · ") || "Reviewed supplier"}
                     </Typography>
+                    <SupplierPerformanceSummary quote={quote} compact updated={updatedSupplierId === quote.factory_id} />
                     <Box
                       sx={{
                         mt: 1.25,
@@ -2705,7 +2798,7 @@ function QuotesTab({
   onMessage: (message: string) => void;
   onSelected: () => void;
 }) {
-  const { quotes, busyId, select } = useQuotesData({ caseId, onMessage, onSelected });
+  const { quotes, busyId, select, updatedSupplierId } = useQuotesData({ caseId, onMessage, onSelected });
   if (quotes === null)
     return (
       <Box
@@ -2716,7 +2809,7 @@ function QuotesTab({
         }}
       >
         {[1, 2, 3].map((row) => (
-          <Skeleton key={row} variant="rounded" height={220} />
+          <QuoteCardSkeleton key={row} />
         ))}
       </Box>
     );
@@ -2776,10 +2869,14 @@ function QuotesTab({
                 flexDirection: "column",
                 border: selected ? "2px solid #4b7657" : "1px solid #e7ebf0",
                 borderRadius: "14px",
-                backgroundColor: "#fff",
+                backgroundColor: updatedSupplierId === quote.factory_id ? "#eef5f0" : "#fff",
                 overflow: "hidden",
                 opacity: decided && !selected ? 0.55 : 1,
                 boxShadow: "none",
+                transition:"background-color 180ms ease-out, border-color 180ms ease-out, opacity 180ms ease-out",
+                animation:"quote-card-enter 160ms ease-out",
+                "@keyframes quote-card-enter":{ from:{ opacity:0 },to:{ opacity:1 } },
+                "@media (prefers-reduced-motion: reduce)":{ transition:"none",animation:"none" },
               }}
             >
               <Box
@@ -2879,6 +2976,7 @@ function QuotesTab({
                   </Typography>
                 </Stack>
                 {quoteCertBadge(quote)}
+                <SupplierPerformanceSummary quote={quote} updated={updatedSupplierId === quote.factory_id} />
               </Stack>
               <Box sx={{ p: 2, pt: 0 }}>
                 {selected ? (
