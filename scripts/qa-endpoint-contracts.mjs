@@ -72,6 +72,8 @@ assert.match(approveRegistration, /\? "invite" : "recovery"/);
 assert.match(approveRegistration, /type: "recovery"/);
 assert.match(approveRegistration, /https:\/\/api\.resend\.com\/emails/);
 assert.match(approveRegistration, /if \(!response\.ok\)/);
+assert.match(approveRegistration, /Invitation email delivery must use a verified @atelix\.app sender/);
+assert.match(approveRegistration, /Set up your password to open your sourcing workspace/);
 assert.match(approveRegistration, /auth\/callback\?next=/);
 assert.match(approveRegistration, /setup\.confirmedAt \? "accepted" : "invited"/);
 assert.match(supplierCandidateReview, /intools_accept_supplier_intakes/);

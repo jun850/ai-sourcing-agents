@@ -43,6 +43,15 @@ function OptionalLabel({ label }: { label: string }) {
   return <>{label} <Box component="span" sx={{ color: "text.secondary", fontWeight: 400 }}>(optional)</Box></>;
 }
 
+/**
+ * Keep every supplier-intake label in its final, notched position. Moving a
+ * label between the input body and outline after a supplier starts typing is
+ * visually noisy and makes the field boundary harder to follow.
+ */
+function SupplierTextField(props: React.ComponentProps<typeof TextField>) {
+  return <TextField {...props} slotProps={{ inputLabel: { shrink: true } }} />;
+}
+
 function RadioField({ label, name, options, value, error, row = true, onChange }: { label: string; name: string; options: string[]; value: string; error?: string; row?: boolean; onChange: (value: string) => void }) {
   return (
     <FormControl component="fieldset" required error={!!error} sx={{ gridColumn: "1 / -1" }}>
@@ -173,21 +182,21 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
 
       <Section title="Company & contact" first>
         <FieldGrid>
-          <TextField inputRef={firstFieldRef} label="Company name" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.companyName} onChange={(event) => setValue("companyName", event.target.value)} error={!!errors.companyName} helperText={errors.companyName} autoComplete="organization" />
-          <TextField label="Main contact name" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.contactName} onChange={(event) => setValue("contactName", event.target.value)} error={!!errors.contactName} helperText={errors.contactName} autoComplete="name" />
-          <TextField label="Contact email" required fullWidth type="email" value={values.email} onChange={(event) => setValue("email", event.target.value)} error={!!errors.email} helperText={errors.email} autoComplete="email" />
-          <TextField label="Contact phone" required fullWidth type="tel" value={values.phone} onChange={(event) => setValue("phone", event.target.value)} error={!!errors.phone} helperText={errors.phone} autoComplete="tel" />
-          <TextField label="Supplier country" required fullWidth value={values.countryCode} onChange={(event) => setValue("countryCode", event.target.value)} error={!!errors.countryCode} helperText={errors.countryCode || "Use the full country name, for example Indonesia."} autoComplete="country-name" />
-          <TextField label="Address" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.address} onChange={(event) => setValue("address", event.target.value)} error={!!errors.address} helperText={errors.address} autoComplete="street-address" />
-          <TextField label="Years in business" required fullWidth inputMode="numeric" value={values.yearsInBusiness} onChange={(event) => setValue("yearsInBusiness", event.target.value)} error={!!errors.yearsInBusiness} helperText={errors.yearsInBusiness} />
-          <TextField label={<OptionalLabel label="Company website" />} fullWidth type="url" placeholder="https://" value={values.website} onChange={(event) => setValue("website", event.target.value)} autoComplete="url" />
+          <SupplierTextField inputRef={firstFieldRef} label="Company name" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.companyName} onChange={(event) => setValue("companyName", event.target.value)} error={!!errors.companyName} helperText={errors.companyName} autoComplete="organization" />
+          <SupplierTextField label="Main contact name" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.contactName} onChange={(event) => setValue("contactName", event.target.value)} error={!!errors.contactName} helperText={errors.contactName} autoComplete="name" />
+          <SupplierTextField label="Contact email" required fullWidth type="email" value={values.email} onChange={(event) => setValue("email", event.target.value)} error={!!errors.email} helperText={errors.email} autoComplete="email" />
+          <SupplierTextField label="Contact phone" required fullWidth type="tel" value={values.phone} onChange={(event) => setValue("phone", event.target.value)} error={!!errors.phone} helperText={errors.phone} autoComplete="tel" />
+          <SupplierTextField label="Supplier country" required fullWidth value={values.countryCode} onChange={(event) => setValue("countryCode", event.target.value)} error={!!errors.countryCode} helperText={errors.countryCode || "Use the full country name, for example Indonesia."} autoComplete="country-name" />
+          <SupplierTextField label="Address" required fullWidth sx={{ gridColumn: "1 / -1" }} value={values.address} onChange={(event) => setValue("address", event.target.value)} error={!!errors.address} helperText={errors.address} autoComplete="street-address" />
+          <SupplierTextField label="Years in business" required fullWidth inputMode="numeric" value={values.yearsInBusiness} onChange={(event) => setValue("yearsInBusiness", event.target.value)} error={!!errors.yearsInBusiness} helperText={errors.yearsInBusiness} />
+          <SupplierTextField label={<OptionalLabel label="Company website" />} fullWidth type="url" placeholder="https://" value={values.website} onChange={(event) => setValue("website", event.target.value)} autoComplete="url" />
         </FieldGrid>
       </Section>
 
       <Section title="Communication">
         <FieldGrid>
           <RadioField label="Preferred language of communication" name="language" options={languages} value={values.language} error={errors.language} row={false} onChange={(value) => setValue("language", value)} />
-          <TextField label="Tell us about your company" required fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} placeholder="What you make, who you serve, what makes you different…" value={values.companyOverview} onChange={(event) => setValue("companyOverview", event.target.value)} error={!!errors.companyOverview} helperText={errors.companyOverview || "Two or three sentences: what you make, who you serve, and what makes you different."} />
+          <SupplierTextField label="Tell us about your company" required fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} placeholder="What you make, who you serve, what makes you different…" value={values.companyOverview} onChange={(event) => setValue("companyOverview", event.target.value)} error={!!errors.companyOverview} helperText={errors.companyOverview || "Two or three sentences: what you make, who you serve, and what makes you different."} />
         </FieldGrid>
       </Section>
 
@@ -197,16 +206,16 @@ export function SupplierIntakeModal({ open, onClose, returnFocusRef }: Props) {
 
       <Section title="Operations">
         <FieldGrid>
-          <TextField label="Typical lead time (days)" required fullWidth inputMode="numeric" value={values.leadTime} onChange={(event) => setValue("leadTime", event.target.value)} error={!!errors.leadTime} helperText={errors.leadTime} />
-          <TextField label="Minimum MOQ" required fullWidth placeholder="e.g. 1,000 units" value={values.moq} onChange={(event) => setValue("moq", event.target.value)} error={!!errors.moq} helperText={errors.moq} />
-          <TextField label="Max monthly order capacity" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50,000 units / 20 MT" value={values.monthlyCapacity} onChange={(event) => setValue("monthlyCapacity", event.target.value)} error={!!errors.monthlyCapacity} helperText={errors.monthlyCapacity} />
+          <SupplierTextField label="Typical lead time (days)" required fullWidth inputMode="numeric" value={values.leadTime} onChange={(event) => setValue("leadTime", event.target.value)} error={!!errors.leadTime} helperText={errors.leadTime} />
+          <SupplierTextField label="Minimum MOQ" required fullWidth placeholder="e.g. 1,000 units" value={values.moq} onChange={(event) => setValue("moq", event.target.value)} error={!!errors.moq} helperText={errors.moq} />
+          <SupplierTextField label="Max monthly order capacity" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50,000 units / 20 MT" value={values.monthlyCapacity} onChange={(event) => setValue("monthlyCapacity", event.target.value)} error={!!errors.monthlyCapacity} helperText={errors.monthlyCapacity} />
           <RadioField label="Open to external quality control?" name="externalQc" options={["Yes", "No", "Maybe"]} value={values.externalQc} error={errors.externalQc} onChange={(value) => setValue("externalQc", value)} />
           <RadioField label="Has the company exported to the USA?" name="exportsAbroad" options={["Yes", "No"]} value={values.exportsAbroad} error={errors.exportsAbroad} onChange={(value) => setValue("exportsAbroad", value)} />
-          <TextField label={<OptionalLabel label="Certifications" />} fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. Sedex, WRAP, OEKO-TEX" value={values.certifications} onChange={(event) => setValue("certifications", event.target.value)} />
+          <SupplierTextField label={<OptionalLabel label="Certifications" />} fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. Sedex, WRAP, OEKO-TEX" value={values.certifications} onChange={(event) => setValue("certifications", event.target.value)} />
           <RadioField label="Does the company accept third-party quality control?" name="thirdPartyQc" options={["Yes", "No"]} value={values.thirdPartyQc} error={errors.thirdPartyQc} onChange={(value) => setValue("thirdPartyQc", value)} />
           <RadioField label="Do you have a product catalog?" name="catalog" options={["Yes", "No"]} value={values.catalog} error={errors.catalog} onChange={(value) => setValue("catalog", value)} />
-          <TextField label="Preferred payment terms" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50% deposit, 50% before shipment" value={values.paymentTerms} onChange={(event) => setValue("paymentTerms", event.target.value)} error={!!errors.paymentTerms} helperText={errors.paymentTerms} />
-          <TextField label={<OptionalLabel label="Anything else we should know?" />} fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} value={values.notes} onChange={(event) => setValue("notes", event.target.value)} />
+          <SupplierTextField label="Preferred payment terms" required fullWidth sx={{ gridColumn: "1 / -1" }} placeholder="e.g. 50% deposit, 50% before shipment" value={values.paymentTerms} onChange={(event) => setValue("paymentTerms", event.target.value)} error={!!errors.paymentTerms} helperText={errors.paymentTerms} />
+          <SupplierTextField label={<OptionalLabel label="Anything else we should know?" />} fullWidth multiline minRows={3} sx={{ gridColumn: "1 / -1" }} value={values.notes} onChange={(event) => setValue("notes", event.target.value)} />
         </FieldGrid>
       </Section>
     </div><footer className="supplier-intake-footer"><button className="supplier-intake-submit" type="submit" disabled={busy}>{busy ? "Recording intake…" : <>Submit supplier intake <ArrowRight size={18} aria-hidden="true" /></>}</button></footer></form>}
