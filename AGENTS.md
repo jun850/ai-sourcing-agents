@@ -21,3 +21,13 @@
   change must check both `/dashboard` and the post-login RFQ workspace states;
   run `npm run qa:dashboard-prompt`, build, and the RFQ contract tests before
   release. Do not restore the old bordered or green-ring treatment.
+
+## Agent access and B2A
+
+Before changing discovery, public content, APIs/MCP, backend boundaries, or database models, read [agent access](docs/agent-access.md). Support authorized agent discovery, evaluation, and task completion through the smallest useful existing interface. Preserve product scope, ownership, roles, human review, and payment authority. Public crawl access grants no private-data or action permissions; user-agent strings and robots directives are not security controls.
+
+### Code review rules
+
+- Flag private data or privileged operations exposed for agent convenience; retain existing authorization and approved public projections.
+- Flag unbounded crawl/query/retry work and speculative parallel services; use bounded operations and existing contracts.
+- Flag documentation that presents proposed MCP/API behavior or crawler protection as implemented; require source and deployment evidence appropriate to the claim.
