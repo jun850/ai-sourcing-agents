@@ -42,3 +42,7 @@ This set follows the standard BRD → PRD → SDD/TSD progression, so each docum
 - This documentation set covers the feature wave in `PLAN.md`. It does **not** re-document already-shipped baseline features (auth, Messages, the four buyer surfaces, Intools' original nine sections) beyond what's needed for context — those are already specified in `PRODUCT.md`/`DESIGN.md`/`AGENTS.md`/`CLAUDE.md` and are treated as given.
 - "Final tech stack" and similar TSD-style sections list only technologies the source documents name or the approved infrastructure decision adds (Supabase Pro Postgres/Storage/Vault/cron, native Vercel Hobby Python Functions, OpenCV, OpenRouter, Stripe, the existing Vite frontend). Nothing (e.g., a caching layer or a different cloud) is added just to fill out a template section — where the source is silent, the document says so.
 - Wireframes are literal, text-based layouts of the fields and controls `PLAN.md` explicitly lists (e.g., the outreach modal's stated buttons and status fields) — they are not new visual designs, and none should be treated as approved UI beyond what the source specifies.
+
+## Agent access
+
+For public discovery, API/MCP documentation, backend/schema navigation, and private-data boundaries, read [agent access](agent-access.md).
